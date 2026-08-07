@@ -1,0 +1,62 @@
+package Ranex.ruvo.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "shops")
+public class Shop {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String category;
+
+    @Column(name = "banner_url")
+    private String bannerUrl;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    private String address;
+
+    // Display name for the shop owner (kept for backwards compatibility)
+    private String owner;
+
+    // Actual user id of the account that registered the shop — used to look up
+    // "my shops" regardless of approval status. Should match AuthToken.userId.
+    @Column(name = "owner_id")
+    private String ownerId;
+
+    private String phone;
+
+    private Double rating;
+
+    @Column(name = "delivery_available")
+    private Boolean deliveryAvailable;
+
+    // For Nearby Location
+    private Double latitude;
+    private Double longitude;
+
+    @Column(name = "opening_time")
+    private LocalTime openingTime;
+
+    @Column(name = "closing_time")
+    private LocalTime closingTime;
+
+    @Builder.Default
+    @Column(name = "approved")
+    private Boolean approved = false;
+}

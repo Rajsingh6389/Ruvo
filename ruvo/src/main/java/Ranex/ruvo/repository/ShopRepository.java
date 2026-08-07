@@ -1,0 +1,42 @@
+package Ranex.ruvo.repository;
+
+import Ranex.ruvo.model.Shop;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface ShopRepository extends JpaRepository<Shop, Long> {
+
+    // Only shops that have been approved by an admin
+    List<Shop> findByApprovedTrue();
+
+    // All shops belonging to a given owner, regardless of approval status —
+    // used so an owner can see their own shop while it's Pending Approval
+    List<Shop> findByOwnerId(String ownerId);
+
+    // Approved shops filtered by category
+    List<Shop> findByCategoryAndApprovedTrue(String category);
+
+    // Shops still waiting on admin review (for an admin dashboard)
+    List<Shop> findByApprovedFalse();
+
+    // Haversine formula to find approved shops within X kilometers, nearest first.
+    // Treats approved IS NULL as approved too, in case any legacy rows predate the column.
+    @Query(value = "SELECT * FROM shops s WHERE " +
+           "(s.approved IS NULL OR s.approved = true) AND " +
+           "(6371 * acos(cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
+           "cos(radians(s.longitude) - radians(:userLng)) + " +
+           "sin(radians(:userLat)) * sin(radians(s.latitude)))) <= :radius " +
+           "ORDER BY (6371 * acos(cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
+           "cos(radians(s.longitude) - radians(:userLng)) + " +
+           "sin(radians(:userLat)) * sin(radians(s.latitude)))) ASC",
+           nativeQuery = true)
+    List<Shop> findNearbyShops(
+            @Param("userLat") Double userLat,
+            @Param("userLng") Double userLng,
+            @Param("radius") Double radius);
+}
