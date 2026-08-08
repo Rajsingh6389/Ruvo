@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "RuvoMobile",
+    "slug": "RuvoMobile",
+    "scheme": "ruvomobile",
+    "plugins": [
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "ndkVersion": "30.0.15729638"
+          }
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.anonymous.ruvomobile"
+    }
+  }
+}
