@@ -84,23 +84,50 @@ public class ShopController {
 
     // 7. Register a shop with a logo upload (also starts unapproved)
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadShop(@RequestPart("shop") Shop shop,
-                                         @RequestPart("logo") MultipartFile logo) throws IOException {
-        if (shop.getOwnerId() == null || shop.getOwnerId().isBlank()) {
-            return ResponseEntity.badRequest().body("ownerId is required");
+    public ResponseEntity<?> uploadShop(@RequestParam("shop") String shopJson,
+                                         @RequestPart("logo") MultipartFile logo,
+                                         @RequestPart(value = "banner", required = false) MultipartFile banner) {
+        try {
+            org.springframework.boot.json.JsonParser parser = org.springframework.boot.json.JsonParserFactory.getJsonParser();
+            java.util.Map<String, Object> map = parser.parseMap(shopJson);
+            
+            Shop shop = new Shop();
+            shop.setName((String) map.get("name"));
+            shop.setCategory((String) map.get("category"));
+            shop.setAddress((String) map.get("address"));
+            shop.setPhone((String) map.get("phone"));
+            shop.setOwnerId((String) map.get("ownerId"));
+            if (map.get("latitude") != null) shop.setLatitude(Double.parseDouble(map.get("latitude").toString()));
+            if (map.get("longitude") != null) shop.setLongitude(Double.parseDouble(map.get("longitude").toString()));
+            if (map.get("deliveryAvailable") != null) shop.setDeliveryAvailable(Boolean.parseBoolean(map.get("deliveryAvailable").toString()));
+            
+            if (shop.getOwnerId() == null || shop.getOwnerId().isBlank()) {
+                return ResponseEntity.badRequest().body("ownerId is required");
+            }
+
+            String uploadDir = "uploads/logos";
+            Files.createDirectories(Paths.get(uploadDir));
+            
+            String logoFilename = UUID.randomUUID().toString() + "_" + logo.getOriginalFilename();
+            Path logoPath = Paths.get(uploadDir, logoFilename);
+            Files.copy(logo.getInputStream(), logoPath);
+            shop.setLogoUrl(logoPath.toString());
+            
+            if (banner != null && !banner.isEmpty()) {
+                String bannerFilename = UUID.randomUUID().toString() + "_banner_" + banner.getOriginalFilename();
+                Path bannerPath = Paths.get(uploadDir, bannerFilename);
+                Files.copy(banner.getInputStream(), bannerPath);
+                shop.setBannerUrl(bannerPath.toString());
+            }
+
+            shop.setId(null);
+            shop.setApproved(false); // Requires admin approval
+            Shop savedShop = shopRepository.save(shop);
+            return ResponseEntity.ok(savedShop);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload shop: " + e.getMessage());
         }
-
-        String uploadDir = "uploads/logos";
-        Files.createDirectories(Paths.get(uploadDir));
-        String filename = UUID.randomUUID().toString() + "_" + logo.getOriginalFilename();
-        Path filePath = Paths.get(uploadDir, filename);
-        Files.copy(logo.getInputStream(), filePath);
-
-        shop.setId(null);
-        shop.setLogoUrl(filePath.toString());
-        shop.setApproved(false); // Requires admin approval
-        Shop savedShop = shopRepository.save(shop);
-        return ResponseEntity.ok(savedShop);
     }
 
     // 8. Admin approval endpoint
