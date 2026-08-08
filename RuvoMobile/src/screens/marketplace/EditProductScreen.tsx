@@ -20,7 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
-import { uploadProduct, addProduct } from '../../services/productService';
+import { updateProduct, updateProductWithImage } from '../../services/productService';
+import type { Product } from '../../services/productService';
 
 const PRIMARY = '#2E7D32';
 const PRIMARY_LIGHT = '#E8F5E9';
@@ -39,25 +40,28 @@ interface FormErrors {
   stockQuantity?: string;
 }
 
-export const AddProductScreen = () => {
+export const EditProductScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { token } = useAuth();
-  const shopId: number = route.params?.shopId;
+  const product: Product = route.params?.product;
 
-  // ── Form State ──
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [brandName, setBrandName] = useState('');
-  const [description, setDescription] = useState('');
-  const [actualPrice, setActualPrice] = useState('');
-  const [sellingPrice, setSellingPrice] = useState('');
-  const [stockQuantity, setStockQuantity] = useState('');
-  const [unit, setUnit] = useState('');
-  const [isAvailable, setIsAvailable] = useState(true);
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageType, setImageType] = useState<string>('image/jpeg');
-  const [imageName, setImageName] = useState<string>('product.jpg');
+  // ── Form State (pre-filled) ──
+  const [name, setName] = useState(product?.name ?? '');
+  const [category, setCategory] = useState(product?.category ?? '');
+  const [brandName, setBrandName] = useState(product?.brandName ?? '');
+  const [description, setDescription] = useState(product?.description ?? '');
+  const [actualPrice, setActualPrice] = useState(product?.actualPrice?.toString() ?? '');
+  const [sellingPrice, setSellingPrice] = useState(product?.sellingPrice?.toString() ?? '');
+  const [stockQuantity, setStockQuantity] = useState(product?.stockQuantity?.toString() ?? '');
+  const [unit, setUnit] = useState(product?.unit ?? '');
+  const [isAvailable, setIsAvailable] = useState(product?.isAvailable ?? true);
+
+  // Image state
+  const [imageUri, setImageUri] = useState<string | null>(null); // null = no new image
+  const [existingImageUrl] = useState<string | null>(product?.imageUrl ?? null);
+  const [imageType, setImageType] = useState('image/jpeg');
+  const [imageName, setImageName] = useState('product.jpg');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
@@ -90,10 +94,8 @@ export const AddProductScreen = () => {
     const newErrors: FormErrors = {};
     if (!name.trim()) newErrors.name = 'Product name is required';
     if (!category) newErrors.category = 'Category is required';
-
     const ap = parseFloat(actualPrice);
     const sp = parseFloat(sellingPrice);
-
     if (!actualPrice.trim() || isNaN(ap) || ap <= 0) {
       newErrors.actualPrice = 'Enter a valid actual price';
     }
@@ -102,143 +104,80 @@ export const AddProductScreen = () => {
     } else if (ap && sp > ap) {
       newErrors.sellingPrice = 'Selling price cannot be greater than actual price';
     }
-
     const sq = parseInt(stockQuantity, 10);
     if (!stockQuantity.trim() || isNaN(sq) || sq < 0) {
       newErrors.stockQuantity = 'Enter a valid stock quantity (0 or more)';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   // ── Submit ──
   const handleSubmit = async () => {
-  console.log('🟢 1. SUBMIT BUTTON CLICKED');
+    if (!validate()) return;
+    if (!token || product?.id == null) {
+      Alert.alert('Error', 'Something went wrong');
+      return;
+    }
 
-  if (!validate()) {
-    console.log('❌ 2. VALIDATION FAILED');
-    return;
-  }
+    setLoading(true);
+    try {
+      const ap = parseFloat(actualPrice);
+      const sp = parseFloat(sellingPrice);
+      const sq = parseInt(stockQuantity, 10);
+      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100 * 100) / 100 : 0;
 
-  console.log('🟢 2. VALIDATION PASSED');
-
-  if (!token) {
-    console.log('❌ NO TOKEN');
-    Alert.alert('Error', 'You are not logged in');
-    return;
-  }
-
-  console.log('🟢 3. TOKEN EXISTS');
-  console.log('🟢 SHOP ID:', shopId);
-  console.log('🟢 IMAGE URI:', imageUri);
-
-  setLoading(true);
-
-  try {
-    const ap = parseFloat(actualPrice);
-    const sp = parseFloat(sellingPrice);
-    const sq = parseInt(stockQuantity, 10);
-
-    const disc =
-      ap > 0
-        ? Math.round(((ap - sp) / ap) * 100 * 100) / 100
-        : 0;
-
-    console.log('🟢 4. Product values prepared');
-
-    if (imageUri) {
-      console.log('🟢 5. IMAGE EXISTS');
-      console.log('Image type:', imageType);
-      console.log('Image name:', imageName);
-
-      console.log('🟢 6. Creating FormData');
-
-      const formData = new FormData();
-
-      console.log('🟢 7. FormData created');
-
-      const productData = JSON.stringify({
-        shopId,
-        name: name.trim(),
-        category,
-        brandName: brandName.trim() || null,
-        description: description.trim() || null,
-        actualPrice: ap,
-        sellingPrice: sp,
-        discount: disc,
-        stockQuantity: sq,
-        unit: unit.trim() || null,
-        isAvailable,
-      });
-
-      console.log('🟢 8. Product JSON created');
-
-      formData.append('product', productData);
-
-      console.log('🟢 9. Product appended');
-
-      formData.append('image', {
-        uri: imageUri,
-        type: imageType,
-        name: imageName,
-      } as any);
-
-      console.log('🟢 10. Image appended');
-
-      console.log('🟢 11. Calling uploadProduct');
-
-      await uploadProduct(formData, token);
-
-      console.log('✅ 12. UPLOAD SUCCESS');
-
-    } else {
-      console.log('🟢 5. NO IMAGE - using JSON API');
-
-      await addProduct(
-        {
-          shopId,
+      if (imageUri) {
+        // New image selected — use multipart
+        const formData = new FormData();
+        const productData = JSON.stringify({
           name: name.trim(),
           category,
-          brandName: brandName.trim() || undefined,
-          description: description.trim() || undefined,
+          brandName: brandName.trim() || null,
+          description: description.trim() || null,
           actualPrice: ap,
           sellingPrice: sp,
           discount: disc,
           stockQuantity: sq,
-          unit: unit.trim() || undefined,
+          unit: unit.trim() || null,
           isAvailable,
-        },
-        token,
-      );
+        });
+        formData.append('product', productData);
+        (formData as any).append('image', {
+          uri: imageUri,
+          type: imageType,
+          name: imageName,
+        });
+        await updateProductWithImage(product.id!, formData, token);
+      } else {
+        // No new image — JSON update
+        await updateProduct(
+          product.id!,
+          {
+            name: name.trim(),
+            category,
+            brandName: brandName.trim() || undefined,
+            description: description.trim() || undefined,
+            actualPrice: ap,
+            sellingPrice: sp,
+            discount: disc,
+            stockQuantity: sq,
+            unit: unit.trim() || undefined,
+            isAvailable,
+          },
+          token,
+        );
+      }
 
-      console.log('✅ JSON PRODUCT SUCCESS');
+      Alert.alert('Success', 'Product updated successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update product');
+    } finally {
+      setLoading(false);
     }
-
-    Alert.alert('Success', 'Product added successfully!', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
-
-  } catch (err: any) {
-    console.log('🔥 ===============================');
-    console.log('🔥 ADD PRODUCT ERROR');
-    console.log('🔥 ERROR:', err);
-    console.log('🔥 MESSAGE:', err?.message);
-    console.log('🔥 STACK:', err?.stack);
-    console.log('🔥 ===============================');
-
-    Alert.alert(
-      'Error',
-      err?.message || 'Failed to add product'
-    );
-
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const discount = computedDiscount();
   const spNum = parseFloat(sellingPrice);
@@ -247,6 +186,8 @@ export const AddProductScreen = () => {
     !isNaN(spNum) && !isNaN(apNum) && spNum > apNum
       ? 'Selling price cannot be greater than actual price'
       : null;
+
+  const displayImageUri = imageUri ?? existingImageUrl;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -261,7 +202,7 @@ export const AddProductScreen = () => {
         >
           <Ionicons name="arrow-back" size={22} color={TEXT} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Product</Text>
+        <Text style={styles.headerTitle}>Edit Product</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -282,9 +223,9 @@ export const AddProductScreen = () => {
               onPress={pickImage}
               activeOpacity={0.8}
             >
-              {imageUri ? (
+              {displayImageUri ? (
                 <View style={styles.imagePreviewWrapper}>
-                  <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                  <Image source={{ uri: displayImageUri }} style={styles.imagePreview} />
                   <View style={styles.changeOverlay}>
                     <Ionicons name="camera" size={20} color="#FFF" />
                     <Text style={styles.changeText}>Change Photo</Text>
@@ -356,16 +297,16 @@ export const AddProductScreen = () => {
                     }}
                   />
                 </View>
-                {errors.actualPrice ? (
-                  <Text style={styles.errorText}>{errors.actualPrice}</Text>
-                ) : null}
+                {errors.actualPrice ? <Text style={styles.errorText}>{errors.actualPrice}</Text> : null}
               </View>
 
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.fieldLabel}>
                   Selling Price <Text style={styles.required}>*</Text>
                 </Text>
-                <View style={[styles.priceInput, (errors.sellingPrice || priceError) ? styles.inputError : null]}>
+                <View
+                  style={[styles.priceInput, (errors.sellingPrice || priceError) ? styles.inputError : null]}
+                >
                   <Text style={styles.currencySymbol}>₹</Text>
                   <TextInput
                     style={styles.priceTextInput}
@@ -379,9 +320,7 @@ export const AddProductScreen = () => {
                     }}
                   />
                 </View>
-                {errors.sellingPrice ? (
-                  <Text style={styles.errorText}>{errors.sellingPrice}</Text>
-                ) : null}
+                {errors.sellingPrice ? <Text style={styles.errorText}>{errors.sellingPrice}</Text> : null}
               </View>
             </View>
 
@@ -401,7 +340,6 @@ export const AddProductScreen = () => {
           {/* ── INVENTORY ── */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionLabel}>INVENTORY</Text>
-
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <Text style={styles.fieldLabel}>
@@ -422,7 +360,6 @@ export const AddProductScreen = () => {
                   <Text style={styles.errorText}>{errors.stockQuantity}</Text>
                 ) : null}
               </View>
-
               <View style={{ flex: 1, marginLeft: 8 }}>
                 <Text style={styles.fieldLabel}>Unit</Text>
                 <TextInput
@@ -459,7 +396,9 @@ export const AddProductScreen = () => {
               <View>
                 <Text style={styles.toggleLabel}>Product Availability</Text>
                 <Text style={styles.toggleSub}>
-                  {isAvailable ? '🟢 Customers can order this product' : '🔴 Product is unavailable for ordering'}
+                  {isAvailable
+                    ? '🟢 Customers can order this product'
+                    : '🔴 Product is unavailable for ordering'}
                 </Text>
               </View>
               <Switch
@@ -482,8 +421,8 @@ export const AddProductScreen = () => {
               <ActivityIndicator color="#FFF" />
             ) : (
               <>
-                <Ionicons name="add-circle-outline" size={20} color="#FFF" />
-                <Text style={styles.submitBtnText}>Add Product</Text>
+                <Ionicons name="save-outline" size={20} color="#FFF" />
+                <Text style={styles.submitBtnText}>Save Changes</Text>
               </>
             )}
           </TouchableOpacity>
@@ -526,12 +465,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
   },
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: SUBTEXT,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 14,
+    fontSize: 11, fontWeight: '700', color: SUBTEXT,
+    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 14,
   },
 
   fieldLabel: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 6 },
@@ -595,57 +530,32 @@ const styles = StyleSheet.create({
   charCounter: { fontSize: 11, color: SUBTEXT, textAlign: 'right', marginTop: 4 },
 
   imagePicker: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
+    borderRadius: 14, overflow: 'hidden',
+    borderWidth: 2, borderColor: BORDER, borderStyle: 'dashed',
   },
-  imagePlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    backgroundColor: BG,
-  },
+  imagePlaceholder: { alignItems: 'center', paddingVertical: 32, backgroundColor: BG },
   imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: TEXT, marginTop: 10 },
   imagePlaceholderSub: { fontSize: 12, color: SUBTEXT, marginTop: 3 },
   imagePreviewWrapper: { position: 'relative' },
   imagePreview: { width: '100%', height: 200 },
   changeOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingVertical: 10,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingVertical: 10,
   },
   changeText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
 
   toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   toggleLabel: { fontSize: 15, fontWeight: '600', color: TEXT, marginBottom: 3 },
   toggleSub: { fontSize: 12, color: SUBTEXT },
 
   submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: PRIMARY,
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 4,
-    elevation: 3,
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: PRIMARY, borderRadius: 16, paddingVertical: 16,
+    marginTop: 4, elevation: 3, shadowColor: PRIMARY,
+    shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
   },
   submitBtnDisabled: { opacity: 0.65 },
   submitBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: 0.3 },

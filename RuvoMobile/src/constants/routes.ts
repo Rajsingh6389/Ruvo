@@ -22,7 +22,9 @@ export const ROUTES = {
   REGISTER_SHOP: 'RegisterShop',
   MY_SHOPS: 'MyShops',
   ADD_PRODUCT: 'AddProduct',
-  
+  MY_PRODUCTS: 'MyProducts',
+  EDIT_PRODUCT: 'EditProduct',
+
   // Admin
   ADMIN_DASHBOARD: 'AdminDashboard',
 } as const;

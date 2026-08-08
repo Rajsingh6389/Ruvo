@@ -156,79 +156,75 @@ const NearbyShopsScreen = () => {
     return (
       <Card
         key={shop.id}
-        style={styles.shopCard}
+        style={[
+          styles.shopCard,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          },
+        ]}
         onPress={() =>
           navigation.navigate(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })
         }
       >
-        <View style={styles.shopRow}>
-          <View style={[styles.logoWrap, { backgroundColor: colors.surface }]}>
-            {shop.logoUrl ? (
-              <Image source={{ uri: shop.logoUrl }} style={styles.logo} resizeMode="cover" />
-            ) : (
-              <Ionicons name="storefront-outline" size={24} color={colors.textSecondary} />
-            )}
-          </View>
-
-          <View style={styles.shopBody}>
-            <View style={styles.shopTitleRow}>
+        <View style={styles.shopInfo}>
+          <View style={styles.shopTitleRow}>
+            <View style={styles.shopTitleContent}>
               <Text
                 style={[styles.shopName, { color: colors.textPrimary }]}
                 numberOfLines={1}
               >
                 {shop.name}
               </Text>
-              {shop.approved === false && (
-                <View style={[styles.pendingBadge, { backgroundColor: '#f59e0b22' }]}>
-                  <Text style={[styles.pendingText, { color: '#f59e0b' }]}>Pending</Text>
-                </View>
-              )}
-            </View>
 
-            {shop.category ? (
-              <Text style={[styles.shopCategory, { color: colors.primary }]} numberOfLines={1}>
+              <Text style={[styles.shopCategory, { color: colors.primary }]}>
                 {shop.category}
               </Text>
-            ) : null}
-
-            <View style={styles.metaRow}>
-              {typeof shop.rating === 'number' && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="star" size={13} color="#f59e0b" />
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                    {shop.rating.toFixed(1)}
-                  </Text>
-                </View>
-              )}
-              {shop.deliveryAvailable && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="bicycle-outline" size={13} color={colors.textSecondary} />
-                  <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                    Delivery
-                  </Text>
-                </View>
-              )}
-              {distance !== null && (
-                <View style={styles.metaItem}>
-                  <Ionicons name="navigate-outline" size={13} color="#22c55e" />
-                  <Text style={[styles.metaText, { color: '#22c55e', fontWeight: '600' }]}>
-                    {distance.toFixed(1)} km
-                  </Text>
-                </View>
-              )}
             </View>
 
-            {shop.address ? (
-              <Text
-                style={[styles.shopAddress, { color: colors.textSecondary }]}
-                numberOfLines={1}
-              >
-                {shop.address}
-              </Text>
-            ) : null}
+            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
           </View>
 
-          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="location-outline" size={13} color={colors.primary} />
+              <Text style={[styles.metaText, { color: colors.primary }]}>
+                0.1 km
+              </Text>
+            </View>
+          </View>
+
+          {shop.address ? (
+            <Text
+              style={[styles.shopAddress, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {shop.address}
+            </Text>
+          ) : null}
+
+          <View style={styles.shopActionRow}>
+            <View style={styles.shopNowPill}>
+              <Ionicons name="bag-handle-outline" size={12} color={colors.primary} />
+              <Text style={[styles.shopNowText, { color: colors.primary }]}>
+                Shop Now
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.shopImageWrap}>
+          {shop.logoUrl ? (
+            <Image
+              source={{ uri: shop.logoUrl }}
+              style={styles.shopImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.shopImagePlaceholder}>
+              <Ionicons name="storefront-outline" size={32} color={colors.primary} />
+            </View>
+          )}
         </View>
       </Card>
     );
@@ -251,7 +247,15 @@ const NearbyShopsScreen = () => {
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.textPrimary }]}>Nearest Shops</Text>
           <TouchableOpacity
-            style={[styles.locateBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            activeOpacity={0.72}
+            accessibilityRole="button"
+            style={[
+              styles.locateBtn,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
             onPress={fetchLocation}
           >
             {isFetchingLocation ? (
@@ -285,6 +289,9 @@ const NearbyShopsScreen = () => {
             return (
               <TouchableOpacity
                 key={category}
+                activeOpacity={0.72}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
                 style={[
                   styles.chip,
                   {
@@ -319,10 +326,52 @@ const NearbyShopsScreen = () => {
                 Get the best quality from shops near you.
               </Text>
             </View>
-            <TouchableOpacity onPress={() => setBannerDismissed(true)}>
+            <TouchableOpacity
+              activeOpacity={0.65}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss local shopping message"
+              hitSlop={8}
+              onPress={() => setBannerDismissed(true)}
+            >
               <Ionicons name="close" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Shopping guidance — informational, not clickable */}
+        {!isLoading && !loadError && visibleShops.length > 0 && (
+          <>
+            <View style={styles.discoveryCard}>
+              <View style={styles.discoveryIconWrap}>
+                <Ionicons name="cart-outline" size={28} color={colors.primary} />
+              </View>
+              <View style={styles.discoveryContent}>
+                <Text style={[styles.discoveryTitle, { color: colors.primary }]}>
+                  Find shops near you
+                </Text>
+                <Text style={[styles.discoveryText, { color: colors.textSecondary }]}>
+                  Tap any shop to explore its products and offers.
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward-circle-outline" size={24} color={colors.primary} />
+            </View>
+
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                  Shops near you
+                </Text>
+                <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+                  Choose a shop to start shopping
+                </Text>
+              </View>
+              <View style={styles.shopCountBadge}>
+                <Text style={[styles.shopCountText, { color: colors.primary }]}>
+                  {visibleShops.length} {visibleShops.length === 1 ? 'shop' : 'shops'}
+                </Text>
+              </View>
+            </View>
+          </>
         )}
 
         {/* List */}
@@ -349,6 +398,90 @@ const NearbyShopsScreen = () => {
         ) : (
           visibleShops.map(renderShop)
         )}
+
+        {!isLoading && !loadError && visibleShops.length > 0 && (
+          <>
+            {/* Trust / value strip — informational */}
+            <View style={styles.trustCard}>
+              <View style={styles.trustIconWrap}>
+                <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
+              </View>
+              <View style={styles.trustContent}>
+                <Text style={[styles.trustTitle, { color: colors.primary }]}>
+                  Shop local with confidence
+                </Text>
+                <Text style={[styles.trustText, { color: colors.textSecondary }]}>
+                  Discover nearby stores and explore what they have in stock.
+                </Text>
+              </View>
+            </View>
+
+            {/* How it works — informational */}
+            <View style={styles.howSection}>
+              <Text style={[styles.howTitle, { color: colors.textPrimary }]}>
+                How it works
+              </Text>
+
+              <View style={styles.stepsRow}>
+                <View style={styles.stepCard}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>1</Text>
+                  </View>
+                  <View style={styles.stepIconWrap}>
+                    <Ionicons name="storefront-outline" size={23} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                    Choose a shop
+                  </Text>
+                  <Text style={[styles.stepText, { color: colors.textSecondary }]}>
+                    Browse shops near you
+                  </Text>
+                </View>
+
+                <Ionicons name="arrow-forward" size={18} color={colors.primary} style={styles.stepArrow} />
+
+                <View style={styles.stepCard}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>2</Text>
+                  </View>
+                  <View style={styles.stepIconWrap}>
+                    <Ionicons name="bag-handle-outline" size={23} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                    Explore products
+                  </Text>
+                  <Text style={[styles.stepText, { color: colors.textSecondary }]}>
+                    See products and offers
+                  </Text>
+                </View>
+
+                <Ionicons name="arrow-forward" size={18} color={colors.primary} style={styles.stepArrow} />
+
+                <View style={styles.stepCard}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>3</Text>
+                  </View>
+                  <View style={styles.stepIconWrap}>
+                    <Ionicons name="cart-outline" size={23} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                    Add to cart
+                  </Text>
+                  <Text style={[styles.stepText, { color: colors.textSecondary }]}>
+                    Add items and order
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.localSupportPill}>
+              <Ionicons name="heart-outline" size={17} color={colors.primary} />
+              <Text style={[styles.localSupportText, { color: colors.primary }]}>
+                Your support helps local businesses grow.
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </Layout>
   );
@@ -367,8 +500,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    minHeight: 38,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -384,7 +518,15 @@ const styles = StyleSheet.create({
   },
   warnText: { flex: 1, color: '#f59e0b', fontSize: 12 },
   chipRow: { gap: 8, paddingVertical: 4, paddingBottom: 12 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 38,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   chipText: { fontSize: 13, fontWeight: '600' },
   promoBanner: {
     flexDirection: 'row',
@@ -397,6 +539,61 @@ const styles = StyleSheet.create({
   promoTextWrap: { flex: 1 },
   promoTitle: { fontSize: 15, fontWeight: '700' },
   promoSubtitle: { fontSize: 12, marginTop: 2 },
+  discoveryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 13,
+    marginBottom: 15,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: '#CFE8D2',
+    backgroundColor: '#F1F8F2',
+  },
+  discoveryIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+    marginRight: 12,
+  },
+  discoveryContent: {
+    flex: 1,
+  },
+  discoveryTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  discoveryText: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  sectionSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  shopCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+    backgroundColor: '#E8F5E9',
+  },
+  shopCountText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
   loading: { marginVertical: 32 },
   statusCard: {
     minHeight: 140,
@@ -410,27 +607,210 @@ const styles = StyleSheet.create({
   statusText: { textAlign: 'center', fontSize: 14, lineHeight: 20 },
   retryBtn: { paddingHorizontal: 22, paddingVertical: 9, borderRadius: 20 },
   retryBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  shopCard: { marginBottom: 10 },
-  shopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logoWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+  shopCard: {
+    height: 126,
+    marginBottom: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  shopInfo: {
+    flex: 1,
+    minWidth: 0,
+    paddingLeft: 13,
+    paddingTop: 10,
+    paddingBottom: 9,
+    paddingRight: 7,
+    justifyContent: 'space-between',
+  },
+  shopTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  shopTitleContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  shopName: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  shopCategory: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  metaText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  shopAddress: {
+    fontSize: 10.5,
+    marginTop: 2,
+  },
+  shopActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  shopNowPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 13,
+    backgroundColor: '#E8F5E9',
+  },
+  shopNowText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  shopImageWrap: {
+    width: 118,
+    height: '100%',
+    backgroundColor: '#F1F5F2',
+  },
+  shopImage: {
+    width: '100%',
+    height: '100%',
+  },
+  shopImagePlaceholder: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    backgroundColor: '#E8F5E9',
   },
-  logo: { width: '100%', height: '100%' },
-  shopBody: { flex: 1 },
-  shopTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  shopName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
-  pendingBadge: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
-  pendingText: { fontSize: 10, fontWeight: '700' },
-  shopCategory: { fontSize: 12, fontWeight: '600', marginTop: 2 },
-  metaRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  metaText: { fontSize: 12 },
-  shopAddress: { fontSize: 12, marginTop: 4 },
+  trustCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    marginTop: 4,
+    borderRadius: 15,
+    backgroundColor: '#F1F8F2',
+    borderWidth: 1,
+    borderColor: '#D8ECDC',
+  },
+  trustIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 11,
+  },
+  trustContent: {
+    flex: 1,
+  },
+  trustTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  trustText: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  howSection: {
+    marginTop: 22,
+  },
+  howTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+  stepsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+  },
+  stepCard: {
+    flex: 1,
+    minHeight: 145,
+    padding: 9,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#CFE8D2',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  stepNumber: {
+    position: 'absolute',
+    top: 7,
+    left: 7,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepNumberText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#2E7D32',
+  },
+  stepIconWrap: {
+    width: 43,
+    height: 43,
+    borderRadius: 14,
+    marginTop: 19,
+    marginBottom: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E8F5E9',
+  },
+  stepTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  stepText: {
+    fontSize: 9,
+    lineHeight: 13,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  stepArrow: {
+    alignSelf: 'center',
+    marginHorizontal: 3,
+  },
+  localSupportPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 13,
+    marginBottom: 8,
+    paddingVertical: 9,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#CFE8D2',
+    backgroundColor: '#FAFDFC',
+  },
+  localSupportText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });
 
 // Named `NearbyShopsScreen` to match the import in AppNavigator.tsx:

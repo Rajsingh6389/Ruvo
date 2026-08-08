@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer, Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -27,21 +27,12 @@ import { RegisterShopScreen }  from '../screens/marketplace/RegisterShopScreen';
 import { MyShopsScreen }       from '../screens/marketplace/MyShopsScreen';
 import { AddProductScreen }    from '../screens/marketplace/AddProductScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
+import { MyProductsScreen }   from '../screens/marketplace/MyProductsScreen';
+import { EditProductScreen }  from '../screens/marketplace/EditProductScreen';
+import { ComingSoonModal } from '../components/ComingSoonModal';
+import ComingSoonScreen from '../screens/ComingSoonScreen';
 
-// ─── Coming Soon placeholder ────────────────────────────────
-const ComingSoonScreen = () => (
-  <View style={css.center}>
-    <Text style={css.emoji}>🚧</Text>
-    <Text style={css.title}>Coming Soon</Text>
-    <Text style={css.sub}>This feature is under active development.</Text>
-  </View>
-);
-const css = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F5' },
-  emoji:  { fontSize: 48, marginBottom: 12 },
-  title:  { fontSize: 22, fontWeight: '700', color: '#212121' },
-  sub:    { fontSize: 14, color: '#757575', marginTop: 6, textAlign: 'center', paddingHorizontal: 32 },
-});
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator<MainTabParamList>();
@@ -94,7 +85,44 @@ interface AppNavigatorProps {
 export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) return null;
+ if (isLoading) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+      }}
+    >
+      <ActivityIndicator
+        size="large"
+        color="#16A34A"
+      />
+
+      <Text
+        style={{
+          marginTop: 14,
+          fontSize: 16,
+          fontWeight: '600',
+          color: '#222222',
+        }}
+      >
+        Loading RuVo...
+      </Text>
+
+      <Text
+        style={{
+          marginTop: 5,
+          fontSize: 12,
+          color: '#777777',
+        }}
+      >
+        Please wait
+      </Text>
+    </View>
+  );
+}
 
   return (
     <NavigationContainer theme={theme}>
@@ -116,6 +144,8 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.REGISTER_SHOP}  component={RegisterShopScreen} />
             <Stack.Screen name={ROUTES.MY_SHOPS}       component={MyShopsScreen} />
             <Stack.Screen name={ROUTES.ADD_PRODUCT}    component={AddProductScreen} />
+            <Stack.Screen name={ROUTES.MY_PRODUCTS}    component={MyProductsScreen} />
+            <Stack.Screen name={ROUTES.EDIT_PRODUCT}   component={EditProductScreen} />
             <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={ComingSoonScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
           </>

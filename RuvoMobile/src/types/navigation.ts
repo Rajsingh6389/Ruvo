@@ -1,5 +1,6 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { ROUTES } from '../constants/routes';
+import type { Product } from '../services/productService';
 
 export type MainTabParamList = {
   [ROUTES.HOME]: undefined;
@@ -20,6 +21,8 @@ export type RootStackParamList = {
   [ROUTES.REGISTER_SHOP]: undefined;
   [ROUTES.MY_SHOPS]: undefined;
   [ROUTES.ADD_PRODUCT]: { shopId: number };
+  [ROUTES.MY_PRODUCTS]: { shopId: number };
+  [ROUTES.EDIT_PRODUCT]: { product: Product };
   [ROUTES.ADMIN_DASHBOARD]: undefined;
   EditProfile: undefined;
 };
