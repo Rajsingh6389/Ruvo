@@ -10,6 +10,8 @@ export type Shop = {
   logoUrl?: string;
   bannerUrl?: string;
   deliveryAvailable?: boolean;
+  approved?: boolean;
+  ownerId?: string;
 };
 
 export type ShopInput = {
@@ -24,6 +26,7 @@ export type ShopInput = {
   bannerUrl?: string;
   logoUrl?: string;
   owner?: string;
+  ownerId?: string;
   deliveryAvailable?: boolean;
   openingTime?: string; // ISO time string
   closingTime?: string;

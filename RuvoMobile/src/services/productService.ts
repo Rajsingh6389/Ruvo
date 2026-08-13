@@ -39,19 +39,23 @@ function authHeaders(token: string) {
 
 export async function getProductsByShop(
   shopId: number | string,
-  token: string,
+  token?: string,
 ): Promise<Product[]> {
 
   const url = `${API_BASE_URL}/api/products/shop/${shopId}`;
 
   console.log('PRODUCT API URL:', url);
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
   });
 
   console.log('PRODUCT API STATUS:', res.status);

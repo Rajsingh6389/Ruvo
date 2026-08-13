@@ -61,7 +61,7 @@ export const ProfileScreen = () => {
       subtitle: 'Track your order history',
       icon: 'receipt',
       color: '#6A1B9A',
-      onPress: () => Alert.alert('sorry for apologies we are implementing this features'),
+      onPress: () => navigation.navigate(ROUTES.ORDER_HISTORY as never),
       showArrow: true,
     },
     {

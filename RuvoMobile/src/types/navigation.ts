@@ -18,6 +18,8 @@ export type RootStackParamList = {
   NearbyShops: undefined;
   ShopDetails: { shopId: number };
   ProductDetails: { productId: number };
+  Checkout: { product: any; quantity: number };
+  OrderHistory: undefined;
   [ROUTES.REGISTER_SHOP]: undefined;
   [ROUTES.MY_SHOPS]: undefined;
   [ROUTES.ADD_PRODUCT]: { shopId: number };

@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
 
   tvScreen: {
     flex: 1,
-    backgroundColor: COLORS.veryLightGreen || '#F3FAF4',
+    backgroundColor: '#F3FAF4',
     borderRadius: 13,
     overflow: 'hidden',
     alignItems: 'center',

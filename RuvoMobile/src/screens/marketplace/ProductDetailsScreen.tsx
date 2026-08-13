@@ -6,9 +6,13 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { placeOrder } from '../../services/orderService';
 
 const GREEN = '#2E7D32';
 const LIGHT_GREEN = '#E8F5E9';
@@ -34,7 +38,74 @@ type Product = {
   isAvailable?: boolean;
 };
 
-export const ProductDetailsScreen = () => {
+/* -------------------------------------------------- */
+/* SMALL COMPONENTS */
+/* -------------------------------------------------- */
+
+const Benefit = ({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+}) => (
+  <View style={styles.benefit}>
+    <Ionicons
+      name={icon}
+      size={22}
+      color={GREEN}
+    />
+    <View>
+      <Text style={styles.benefitTitle}>
+        {title}
+      </Text>
+      <Text style={styles.benefitSubtitle}>
+        {subtitle}
+      </Text>
+    </View>
+  </View>
+);
+
+const Spec = ({
+  icon,
+  title,
+  value,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  value: string;
+}) => (
+  <View style={styles.spec}>
+    <View style={styles.specIcon}>
+      <Ionicons
+        name={icon}
+        size={17}
+        color={GREEN}
+      />
+    </View>
+    <Text style={styles.specTitle}>
+      {title}
+    </Text>
+    <Text
+      style={styles.specValue}
+      numberOfLines={1}
+    >
+      {value}
+    </Text>
+  </View>
+);
+
+const parseUnit = (unit: string) => {
+  const number = parseFloat(unit);
+  if (!Number.isNaN(number) && number > 0) {
+    return number;
+  }
+  return 1;
+};
+
+const ProductDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
@@ -50,6 +121,17 @@ export const ProductDetailsScreen = () => {
 
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { isAuthenticated, userId, token, user } = useAuth();
+
+  const handleBuyNow = () => {
+    if (!isAuthenticated) {
+      Alert.alert('Authentication Required', 'Please login to purchase products.');
+      return;
+    }
+    navigation.navigate('Checkout', { product, quantity });
+  };
 
   const discount = useMemo(() => {
     if (product?.discount !== undefined) {
@@ -488,9 +570,7 @@ export const ProductDetailsScreen = () => {
             styles.addCartButton,
             !available && styles.disabledButton,
           ]}
-          onPress={() => {
-            // Connect your existing cart function here.
-          }}
+          onPress={handleBuyNow}
         >
           <Ionicons
             name="cart-outline"
@@ -505,23 +585,25 @@ export const ProductDetailsScreen = () => {
 
         <TouchableOpacity
           activeOpacity={0.82}
-          disabled={!available}
+          disabled={!available || submitting}
           style={[
             styles.buyButton,
-            !available && styles.disabledOutlineButton,
+            (!available || submitting) && styles.disabledOutlineButton,
           ]}
-          onPress={() => {
-            // Connect your existing buy-now function here.
-          }}
+          onPress={handleBuyNow}
         >
-          <Text
-            style={[
-              styles.buyText,
-              !available && styles.disabledText,
-            ]}
-          >
-            Buy Now
-          </Text>
+          {submitting ? (
+            <ActivityIndicator size="small" color={GREEN} />
+          ) : (
+            <Text
+              style={[
+                styles.buyText,
+                !available && styles.disabledText,
+              ]}
+            >
+              Buy Now
+            </Text>
+          )}
         </TouchableOpacity>
 
       </View>
@@ -530,82 +612,7 @@ export const ProductDetailsScreen = () => {
   );
 };
 
-/* -------------------------------------------------- */
-/* SMALL COMPONENTS */
-/* -------------------------------------------------- */
 
-const Benefit = ({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-}) => (
-  <View style={styles.benefit}>
-
-    <Ionicons
-      name={icon}
-      size={22}
-      color={GREEN}
-    />
-
-    <View>
-      <Text style={styles.benefitTitle}>
-        {title}
-      </Text>
-
-      <Text style={styles.benefitSubtitle}>
-        {subtitle}
-      </Text>
-    </View>
-
-  </View>
-);
-
-const Spec = ({
-  icon,
-  title,
-  value,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  value: string;
-}) => (
-  <View style={styles.spec}>
-
-    <View style={styles.specIcon}>
-      <Ionicons
-        name={icon}
-        size={17}
-        color={GREEN}
-      />
-    </View>
-
-    <Text style={styles.specTitle}>
-      {title}
-    </Text>
-
-    <Text
-      style={styles.specValue}
-      numberOfLines={1}
-    >
-      {value}
-    </Text>
-
-  </View>
-);
-
-const parseUnit = (unit: string) => {
-  const number = parseFloat(unit);
-
-  if (!Number.isNaN(number) && number > 0) {
-    return number;
-  }
-
-  return 1;
-};
 
 /* -------------------------------------------------- */
 /* STYLES */

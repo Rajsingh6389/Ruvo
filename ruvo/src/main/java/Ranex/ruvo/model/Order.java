@@ -1,0 +1,74 @@
+package Ranex.ruvo.model;
+
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.Instant;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "user_id", nullable = false)
+    private String userId;
+
+    @Column(name = "shop_id", nullable = false)
+    private Long shopId;
+
+    @Column(name = "product_id", nullable = false)
+    private Long productId;
+
+    @Column(name = "product_name", nullable = false)
+    private String productName;
+
+    @Column(nullable = false)
+    private Integer quantity;
+
+    @Column(name = "total_amount", nullable = false)
+    private Double totalAmount;
+
+    @Column(name = "payment_method", nullable = false)
+    private String paymentMethod; // e.g. "COD"
+
+    @Column(name = "payment_status", nullable = false)
+    private String paymentStatus; // e.g. "PENDING", "PAID", "FAILED"
+
+    @Column(name = "order_status", nullable = false)
+    private String orderStatus; // e.g. "CONFIRMED", "PAYMENT_PENDING", "PAYMENT_FAILED", "PLACED"
+
+    @Column(name = "delivery_address", nullable = false)
+    private String deliveryAddress;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = Instant.now();
+        updatedAt = Instant.now();
+        if (paymentMethod == null) paymentMethod = "COD";
+        if (paymentStatus == null) {
+            paymentStatus = "COD".equalsIgnoreCase(paymentMethod) ? "PENDING" : "PENDING";
+        }
+        if (orderStatus == null) {
+            orderStatus = "COD".equalsIgnoreCase(paymentMethod) ? "CONFIRMED" : "PAYMENT_PENDING";
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
+}

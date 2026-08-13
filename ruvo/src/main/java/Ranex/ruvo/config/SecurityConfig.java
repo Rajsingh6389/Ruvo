@@ -91,6 +91,15 @@ public class SecurityConfig {
                             "/api/products/shop/**"
                     ).permitAll()
 
+                    .requestMatchers(
+                            "/api/payments/cashfree/return"
+                    ).permitAll()
+
+                    .requestMatchers(
+                            "/api/orders/**",
+                            "/api/payments/**"
+                    ).authenticated()
+
                     .anyRequest().authenticated()
             )
             .addFilterBefore(

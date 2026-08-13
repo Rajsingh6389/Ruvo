@@ -24,6 +24,8 @@ export const ROUTES = {
   ADD_PRODUCT: 'AddProduct',
   MY_PRODUCTS: 'MyProducts',
   EDIT_PRODUCT: 'EditProduct',
+  CHECKOUT: 'Checkout',
+  ORDER_HISTORY: 'OrderHistory',
 
   // Admin
   ADMIN_DASHBOARD: 'AdminDashboard',

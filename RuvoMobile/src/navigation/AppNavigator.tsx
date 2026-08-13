@@ -22,7 +22,7 @@ import { ProfileScreen }     from '../screens/profile/ProfileScreen';
 // ─── Stack Screens ─────────────────────────────────────────
 import { GroceriesScreen }     from '../screens/grocery/GroceriesScreen';
 import { ShopDetailsScreen }   from '../screens/marketplace/ShopDetailsScreen';
-import { ProductDetailsScreen } from '../screens/marketplace/ProductDetailsScreen';
+import ProductDetailsScreen from '../screens/marketplace/ProductDetailsScreen';
 import { RegisterShopScreen }  from '../screens/marketplace/RegisterShopScreen';
 import { MyShopsScreen }       from '../screens/marketplace/MyShopsScreen';
 import { AddProductScreen }    from '../screens/marketplace/AddProductScreen';
@@ -31,6 +31,8 @@ import { MyProductsScreen }   from '../screens/marketplace/MyProductsScreen';
 import { EditProductScreen }  from '../screens/marketplace/EditProductScreen';
 import { ComingSoonModal } from '../components/ComingSoonModal';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
+import CheckoutScreen from '../screens/marketplace/CheckoutScreen';
+import OrderHistoryScreen from '../screens/profile/OrderHistoryScreen';
 
 
 
@@ -147,6 +149,8 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.MY_PRODUCTS}    component={MyProductsScreen} />
             <Stack.Screen name={ROUTES.EDIT_PRODUCT}   component={EditProductScreen} />
             <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={ComingSoonScreen} />
+            <Stack.Screen name={ROUTES.CHECKOUT}       component={CheckoutScreen} />
+            <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
           </>
         )}
