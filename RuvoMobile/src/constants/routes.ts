@@ -29,6 +29,10 @@ export const ROUTES = {
 
   // Admin
   ADMIN_DASHBOARD: 'AdminDashboard',
+
+  // Cart
+  CART: 'Cart',
+  ORDER_SUCCESS: 'OrderSuccess',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

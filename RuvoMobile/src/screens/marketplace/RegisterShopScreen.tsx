@@ -40,6 +40,7 @@ type ShopForm = {
   latitude: string;
   longitude: string;
   deliveryAvailable: boolean;
+  upiId: string;
 };
 
 const CATEGORIES = [
@@ -76,6 +77,7 @@ export const RegisterShopScreen = () => {
         latitude: '',
         longitude: '',
         deliveryAvailable: false,
+        upiId: '',
       },
     });
 
@@ -150,7 +152,7 @@ export const RegisterShopScreen = () => {
         if (!fineGranted && !coarseGranted) {
           Alert.alert(
             'Location permission denied',
-            'Enter your shop latitude and longitude manually.',
+            'Please allow location access in Settings, or enter your shop latitude and longitude manually.',
           );
           setIsFetchingLocation(false);
           return;
@@ -197,13 +199,27 @@ export const RegisterShopScreen = () => {
           setIsFetchingLocation(false);
         },
         error => {
-          Alert.alert('Location error', error.message);
           setIsFetchingLocation(false);
+          // Code 2 = POSITION_UNAVAILABLE (location services off or no provider)
+          if (error.code === 2) {
+            Alert.alert(
+              'Location unavailable',
+              'Please turn on Location Services in your device Settings, then try again. You can also set your location manually using the map.',
+            );
+          } else if (error.code === 3) {
+            Alert.alert(
+              'Location timed out',
+              'Could not get your location in time. Make sure GPS or Wi-Fi is enabled, then try again.',
+            );
+          } else {
+            Alert.alert('Location error', error.message);
+          }
         },
         {
           enableHighAccuracy: false,
-          timeout: 30000,
-          maximumAge: 10000,
+          timeout: 15000,
+          maximumAge: 60000,
+          forceRequestLocation: true,
         },
       );
     } catch (error) {
@@ -244,7 +260,7 @@ export const RegisterShopScreen = () => {
     ) {
       Alert.alert(
         'Invalid location',
-        'Enter a valid latitude and longitude for your shop.',
+        'Make sure to select your shop location on the map.',
       );
       return;
     }
@@ -257,6 +273,7 @@ export const RegisterShopScreen = () => {
       latitude,
       longitude,
       deliveryAvailable: data.deliveryAvailable,
+      upiId: data.upiId.trim(),
       ownerId: user.id.toString(),
     };
 
@@ -591,6 +608,31 @@ export const RegisterShopScreen = () => {
                 />
               )}
             />
+
+            <Controller
+              control={control}
+              name="upiId"
+              rules={{
+                required: 'Shopkeeper UPI is required for payouts.',
+                pattern: {
+                  value: /[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+/,
+                  message: 'Enter a valid UPI ID (e.g. name@okhdfcbank)',
+                },
+              }}
+              render={({
+                field: { onChange, value },
+                fieldState: { error },
+              }) => (
+                <TextInput
+                  label="Shopkeeper UPI ID"
+                  placeholder="name@okbank"
+                  value={value}
+                  onChangeText={onChange}
+                  error={error?.message}
+                  autoCapitalize="none"
+                />
+              )}
+            />
           </Card>
 
           {/* LOCATION */}
@@ -690,12 +732,6 @@ export const RegisterShopScreen = () => {
                       {address}
                     </Text>
                   ) : null}
-
-                  {latitude && longitude ? (
-                    <Text style={styles.coordinatesText}>
-                      {latitude}, {longitude}
-                    </Text>
-                  ) : null}
                 </View>
               </View>
             ) : (
@@ -713,59 +749,7 @@ export const RegisterShopScreen = () => {
               </View>
             )}
 
-            <View style={styles.coordinates}>
-              <View style={styles.coordinateInput}>
-                <Controller
-                  control={control}
-                  name="latitude"
-                  rules={{
-                    required: 'Latitude is required.',
-                    validate: value =>
-                      Number.isFinite(Number(value)) ||
-                      'Enter a valid latitude.',
-                  }}
-                  render={({
-                    field: { onChange, value },
-                    fieldState: { error },
-                  }) => (
-                    <TextInput
-                      label="Latitude"
-                      placeholder="e.g. 28.6139"
-                      value={value}
-                      onChangeText={onChange}
-                      error={error?.message}
-                      keyboardType="decimal-pad"
-                    />
-                  )}
-                />
-              </View>
 
-              <View style={styles.coordinateInput}>
-                <Controller
-                  control={control}
-                  name="longitude"
-                  rules={{
-                    required: 'Longitude is required.',
-                    validate: value =>
-                      Number.isFinite(Number(value)) ||
-                      'Enter a valid longitude.',
-                  }}
-                  render={({
-                    field: { onChange, value },
-                    fieldState: { error },
-                  }) => (
-                    <TextInput
-                      label="Longitude"
-                      placeholder="e.g. 77.2090"
-                      value={value}
-                      onChangeText={onChange}
-                      error={error?.message}
-                      keyboardType="decimal-pad"
-                    />
-                  )}
-                />
-              </View>
-            </View>
           </Card>
 
           {/* MAP */}

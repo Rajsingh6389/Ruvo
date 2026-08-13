@@ -11,8 +11,8 @@ import java.util.List;
 @Repository
 public interface ShopRepository extends JpaRepository<Shop, Long> {
 
-    // Only shops that have been approved by an admin
-    List<Shop> findByApprovedTrue();
+    // Only shops that are approved by an admin AND active
+    List<Shop> findByApprovedTrueAndActiveTrue();
 
     // All shops belonging to a given owner, regardless of approval status —
     // used so an owner can see their own shop while it's Pending Approval
@@ -25,9 +25,11 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByApprovedFalse();
 
     // Haversine formula to find approved shops within X kilometers, nearest first.
-    // Treats approved IS NULL as approved too, in case any legacy rows predate the column.
+    // Treats approved/active IS NULL as true too, in case any legacy rows predate the columns.
     @Query(value = "SELECT * FROM shops s WHERE " +
            "(s.approved IS NULL OR s.approved = true) AND " +
+           "(s.active IS NULL OR s.active = true) AND " +
+           "(s.settlement_blocked IS NULL OR s.settlement_blocked = false) AND " +
            "(6371 * acos(cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
            "cos(radians(s.longitude) - radians(:userLng)) + " +
            "sin(radians(:userLat)) * sin(radians(s.latitude)))) <= :radius " +

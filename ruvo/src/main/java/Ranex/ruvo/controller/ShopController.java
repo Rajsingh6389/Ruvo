@@ -2,6 +2,7 @@ package Ranex.ruvo.controller;
 
 import Ranex.ruvo.model.Shop;
 import Ranex.ruvo.repository.ShopRepository;
+import Ranex.ruvo.util.DistanceUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -14,7 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -86,7 +89,7 @@ public class ShopController {
     ) {
 
         List<Shop> shops =
-                shopRepository.findByApprovedTrue();
+                shopRepository.findByApprovedTrueAndActiveTrue();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -165,29 +168,64 @@ public class ShopController {
 
 
     // =========================================================
-    // 5. Nearby shops
+    // 5. Nearby shops (Now computes distance & wraps response)
     // =========================================================
 
     @GetMapping("/nearby")
-    public ResponseEntity<List<Shop>> getNearbyShops(
+    public ResponseEntity<Map<String, Object>> getNearbyShops(
             @RequestParam Double latitude,
             @RequestParam Double longitude,
             @RequestParam(defaultValue = "5.0") Double radius,
             HttpServletRequest request
     ) {
-
-        List<Shop> nearbyShops =
-                shopRepository.findNearbyShops(
-                        latitude,
-                        longitude,
-                        radius
-                );
-
-        nearbyShops.forEach(shop ->
-                prepareShopResponse(shop, request)
+        List<Shop> nearbyShops = shopRepository.findNearbyShops(
+                latitude, longitude, radius
         );
 
-        return ResponseEntity.ok(nearbyShops);
+        Map<String, Object> response = new HashMap<>();
+
+        if (nearbyShops.isEmpty()) {
+            response.put("serviceAvailable", false);
+            response.put("message", "We are not in your area right now");
+            response.put("exploreAnyway", true);
+            response.put("shops", List.of());
+            return ResponseEntity.ok(response);
+        }
+
+        response.put("serviceAvailable", true);
+        response.put("message", null);
+
+        // Map shops to include distanceKm
+        List<Map<String, Object>> shopDtos = nearbyShops.stream().map(shop -> {
+            prepareShopResponse(shop, request);
+            double distanceKm = DistanceUtils.calculateDistance(
+                    latitude, longitude, shop.getLatitude(), shop.getLongitude()
+            );
+            
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", shop.getId());
+            dto.put("name", shop.getName());
+            dto.put("category", shop.getCategory());
+            dto.put("bannerUrl", shop.getBannerUrl());
+            dto.put("logoUrl", shop.getLogoUrl());
+            dto.put("address", shop.getAddress());
+            dto.put("phone", shop.getPhone());
+            dto.put("rating", shop.getRating());
+            dto.put("deliveryAvailable", shop.getDeliveryAvailable());
+            dto.put("latitude", shop.getLatitude());
+            dto.put("longitude", shop.getLongitude());
+            dto.put("openingTime", shop.getOpeningTime());
+            dto.put("closingTime", shop.getClosingTime());
+            dto.put("approved", shop.getApproved());
+            dto.put("active", shop.getActive());
+            // Added distanceKm for the response array
+            dto.put("distanceKm", Math.round(distanceKm * 10.0) / 10.0);
+            return dto;
+        }).toList();
+
+        response.put("shops", shopDtos);
+        
+        return ResponseEntity.ok(response);
     }
 
 
@@ -233,6 +271,9 @@ public class ShopController {
                 shopRepository.findByCategoryAndApprovedTrue(
                         categoryName
                 );
+        // We filter manually here to minimize query changes if we want it active too, 
+        // assuming standard category browse wants active shops:
+        shops = shops.stream().filter(Shop::getActive).toList();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -276,6 +317,15 @@ public class ShopController {
             shop.setPhone((String) map.get("phone"));
             shop.setOwnerId((String) map.get("ownerId"));
 
+            if (map.containsKey("upiId")) {
+                shop.setUpiId((String) map.get("upiId"));
+            }
+            if (map.containsKey("bankAccountNumber")) {
+                shop.setBankAccountNumber((String) map.get("bankAccountNumber"));
+            }
+            if (map.containsKey("ifscCode")) {
+                shop.setIfscCode((String) map.get("ifscCode"));
+            }
 
             if (map.get("latitude") != null) {
 
@@ -506,5 +556,103 @@ public class ShopController {
         shopRepository.deleteById(id);
 
         return ResponseEntity.ok().build();
+    }
+
+
+    // =========================================================
+    // 10.5 Toggle Active Status (Admin / Owner)
+    // =========================================================
+
+    @PatchMapping("/{id}/active")
+    public ResponseEntity<?> toggleActiveStatus(
+            @PathVariable Long id,
+            @RequestParam boolean active
+    ) {
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+
+        if (shopOpt.isPresent()) {
+            Shop shop = shopOpt.get();
+            shop.setActive(active);
+            return ResponseEntity.ok(shopRepository.save(shop));
+        }
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("Shop not found with id: " + id);
+    }
+
+
+    // =========================================================
+    // 11. Serviceability check
+    //     GET /api/shops/serviceable?latitude=&longitude=
+    //     Returns whether at least one approved shop exists within 5 km.
+    // =========================================================
+
+    @GetMapping("/serviceable")
+    public ResponseEntity<Map<String, Object>> checkServiceability(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude
+    ) {
+        List<Shop> nearbyShops = shopRepository.findNearbyShops(
+                latitude,
+                longitude,
+                DistanceUtils.MAX_DELIVERY_KM
+        );
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("serviceable", !nearbyShops.isEmpty());
+        result.put("nearbyShopCount", nearbyShops.size());
+        return ResponseEntity.ok(result);
+    }
+
+
+    // =========================================================
+    // 12. Pricing for a specific shop
+    //     GET /api/shops/pricing?shopId=&userLat=&userLng=
+    //     Returns deliveryFee, platformFee, distanceKm, serviceable.
+    // =========================================================
+
+    @GetMapping("/pricing")
+    public ResponseEntity<?> getPricing(
+            @RequestParam Long shopId,
+            @RequestParam Double userLat,
+            @RequestParam Double userLng
+    ) {
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(shopId);
+
+        if (shopOpt.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Shop not found with id: " + shopId);
+        }
+
+        Shop shop = shopOpt.get();
+
+        if (shop.getLatitude() == null || shop.getLongitude() == null) {
+            // Shop has no location — use the nearest-neighbour fallback
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("distanceKm", 0.0);
+            fallback.put("deliveryFee", 10.0);
+            fallback.put("platformFee", 5.0);
+            fallback.put("serviceable", true);
+            fallback.put("note", "Shop location not set; using default fees");
+            return ResponseEntity.ok(fallback);
+        }
+
+        double distanceKm = DistanceUtils.calculateDistance(
+                userLat, userLng,
+                shop.getLatitude(), shop.getLongitude()
+        );
+
+        boolean serviceable = DistanceUtils.isServiceable(distanceKm);
+        double deliveryFee  = DistanceUtils.calculateDeliveryFee(distanceKm);
+        double platformFee  = DistanceUtils.calculatePlatformFee(distanceKm);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("distanceKm",  Math.round(distanceKm * 10.0) / 10.0);
+        result.put("deliveryFee", deliveryFee);
+        result.put("platformFee", platformFee);
+        result.put("serviceable", serviceable);
+        return ResponseEntity.ok(result);
     }
 }

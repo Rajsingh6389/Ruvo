@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import RazorpayCheckout from 'react-native-razorpay';
 
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { initializeCheckout, verifyPayment, failPayment, initializeCashfreeCheckout } from '../../services/orderService';
+import { initializeCheckout, initializeCashfreeCheckout, fetchPricing, PricingResult } from '../../services/orderService';
 import { ROUTES } from '../../constants/routes';
+
+import Geolocation from 'react-native-geolocation-service';
 
 export default function CheckoutScreen() {
   const navigation = useNavigation<any>();
@@ -29,20 +30,69 @@ export default function CheckoutScreen() {
   const { product, quantity: initialQuantity } = route.params;
 
   const [quantity, setQuantity] = useState(initialQuantity || 1);
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE' | 'CASHFREE'>('CASHFREE');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CASHFREE'>('CASHFREE');
   const [submitting, setSubmitting] = useState(false);
 
-  // Price calculations
-  const itemTotal = useMemo(() => quantity * product.sellingPrice, [quantity, product.sellingPrice]);
-  const deliveryFee = 30;
-  const discount = 0;
-  const taxes = Math.round(itemTotal * 0.05); // 5% GST
-  const grandTotal = itemTotal + deliveryFee + taxes - discount;
+  // Pricing from backend
+  const [pricing, setPricing] = useState<PricingResult | null>(null);
+  const [pricingLoading, setPricingLoading] = useState(true);
+
+  // Cached user coords for the order call
+  const [userLat, setUserLat] = useState<number | undefined>(undefined);
+  const [userLng, setUserLng] = useState<number | undefined>(undefined);
+
+  // Fetch pricing on mount once we have the shop id
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPricing = async () => {
+      setPricingLoading(true);
+      try {
+        // Get GPS
+        const position = await new Promise<any>((resolve, reject) => {
+          Geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000,
+          });
+        });
+
+        if (cancelled) return;
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setUserLat(lat);
+        setUserLng(lng);
+
+        // Fetch pricing from backend
+        const result = await fetchPricing(product.shopId || 1, lat, lng, token || undefined);
+        if (!cancelled) setPricing(result);
+      } catch (e) {
+        console.warn('Pricing fetch failed:', e);
+        // Fallback defaults if GPS or network fail
+        if (!cancelled) {
+          setPricing({ distanceKm: 0, deliveryFee: 10, platformFee: 5, serviceable: true });
+        }
+      } finally {
+        if (!cancelled) setPricingLoading(false);
+      }
+    };
+
+    loadPricing();
+    return () => { cancelled = true; };
+  }, [product.shopId]);
+
+  // Price calculations (backend fees, no hardcoding)
+  const deliveryFee  = pricing?.deliveryFee  ?? 0;
+  const platformFee  = pricing?.platformFee  ?? 0;
+  const serviceable  = pricing?.serviceable  ?? true;
+  const distanceKm   = pricing?.distanceKm   ?? null;
+
+  const itemTotal  = useMemo(() => quantity * product.sellingPrice, [quantity, product.sellingPrice]);
+  // grandTotal = subtotal + deliveryFee + platformFee (no hardcoded taxes — all from backend)
+  const grandTotal = itemTotal + platformFee + deliveryFee;
 
   const handleDecrease = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1);
-    }
+    if (quantity > 1) setQuantity(quantity - 1);
   };
 
   const handleIncrease = () => {
@@ -64,7 +114,6 @@ export default function CheckoutScreen() {
 
     try {
       if (paymentMethod === 'CASHFREE') {
-        // Cashfree redirect payment flow
         const checkoutRes = await initializeCashfreeCheckout({
           userId: String(userId),
           shopId: product.shopId || 1,
@@ -74,6 +123,8 @@ export default function CheckoutScreen() {
           deliveryAddress: address,
           customerPhone: user?.mobileNumber || undefined,
           customerEmail: user?.email || undefined,
+          userLatitude: userLat,
+          userLongitude: userLng,
         }, token);
 
         setSubmitting(false);
@@ -83,7 +134,6 @@ export default function CheckoutScreen() {
           Alert.alert('Error', checkoutRes.message || 'Failed to initialize Cashfree payment.');
         }
       } else if (paymentMethod === 'COD') {
-        // Cash on Delivery flow - order created instantly
         await initializeCheckout({
           userId: String(userId),
           shopId: product.shopId || 1,
@@ -101,61 +151,6 @@ export default function CheckoutScreen() {
           'Your Cash on Delivery order has been successfully placed.',
           [{ text: 'OK' }]
         );
-      } else {
-        // Online Payment Flow (Razorpay)
-        const checkoutRes = await initializeCheckout({
-          userId: String(userId),
-          shopId: product.shopId || 1,
-          productId: product.id || 0,
-          productName: product.name,
-          quantity,
-          paymentMethod: 'ONLINE',
-          deliveryAddress: address,
-        }, token);
-
-        const options = {
-          description: `RuVo Purchase - ${product.name}`,
-          image: product.imageUrl || 'https://ruvo.in/logo.png',
-          currency: 'INR',
-          key: checkoutRes.keyId,
-          amount: Math.round(grandTotal * 100), // in paise
-          name: 'RuVo Local Store',
-          order_id: checkoutRes.razorpayOrderId,
-          prefill: {
-            email: user?.email || 'customer@ruvo.com',
-            contact: user?.mobileNumber || '9999999999',
-            name: user?.name || 'RuVo Customer',
-          },
-          theme: { color: '#2E7D32' }
-        };
-
-        RazorpayCheckout.open(options)
-          .then(async (data: any) => {
-            try {
-              await verifyPayment({
-                orderId: checkoutRes.orderId,
-                razorpayPaymentId: data.razorpay_payment_id,
-                razorpayOrderId: data.razorpay_order_id,
-                razorpaySignature: data.razorpay_signature,
-              }, token);
-
-              setSubmitting(false);
-              navigation.navigate(ROUTES.MAIN_TABS);
-              Alert.alert(
-                'Payment Successful!',
-                'Your online payment was verified and order has been confirmed.',
-                [{ text: 'OK' }]
-              );
-            } catch (err: any) {
-              setSubmitting(false);
-              Alert.alert('Verification Failed', err.message || 'Verification failed, contact support.');
-            }
-          })
-          .catch(async (error: any) => {
-            await failPayment(checkoutRes.orderId, token).catch(() => null);
-            setSubmitting(false);
-            Alert.alert('Payment Cancelled/Failed', error.description || 'The payment session was cancelled.');
-          });
       }
     } catch (err: any) {
       setSubmitting(false);
@@ -242,22 +237,6 @@ export default function CheckoutScreen() {
           <TouchableOpacity
             style={[styles.paymentOption, { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 10, paddingTop: 10 }]}
             activeOpacity={0.7}
-            onPress={() => setPaymentMethod('ONLINE')}
-          >
-            <Ionicons
-              name={paymentMethod === 'ONLINE' ? 'radio-button-on' : 'radio-button-off'}
-              size={20}
-              color={colors.primary}
-            />
-            <View style={styles.paymentTextCol}>
-              <Text style={[styles.paymentOptionTitle, { color: colors.textPrimary }]}>Razorpay Online</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Pay securely via Razorpay payment gateway</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.paymentOption, { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 10, paddingTop: 10 }]}
-            activeOpacity={0.7}
             onPress={() => setPaymentMethod('COD')}
           >
             <Ionicons
@@ -274,23 +253,57 @@ export default function CheckoutScreen() {
 
         {/* Bill Details */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Bill Details</Text>
-          <View style={styles.billRow}>
-            <Text style={{ color: colors.textSecondary }}>Item Total</Text>
-            <Text style={{ color: colors.textPrimary }}>₹{itemTotal}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>Bill Details</Text>
+            {distanceKm !== null && (
+              <View style={styles.distanceBadge}>
+                <Ionicons name="navigate" size={11} color="#2E7D32" />
+                <Text style={styles.distanceBadgeText}>{distanceKm} km away</Text>
+              </View>
+            )}
           </View>
-          <View style={styles.billRow}>
-            <Text style={{ color: colors.textSecondary }}>Delivery Fee</Text>
-            <Text style={{ color: colors.textPrimary }}>₹{deliveryFee}</Text>
-          </View>
-          <View style={styles.billRow}>
-            <Text style={{ color: colors.textSecondary }}>GST & Taxes</Text>
-            <Text style={{ color: colors.textPrimary }}>₹{taxes}</Text>
-          </View>
-          <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8, paddingTop: 8 }]}>
-            <Text style={[styles.grandTotalText, { color: colors.textPrimary }]}>Grand Total</Text>
-            <Text style={[styles.grandTotalText, { color: colors.primary }]}>₹{grandTotal}</Text>
-          </View>
+
+          {/* Not serviceable banner */}
+          {!serviceable && !pricingLoading && (
+            <View style={styles.unserviceableBanner}>
+              <Ionicons name="close-circle" size={16} color="#D32F2F" />
+              <Text style={styles.unserviceableText}>
+                This shop is outside the 5 km delivery zone.
+              </Text>
+            </View>
+          )}
+
+          {pricingLoading ? (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color="#2E7D32" />
+              <Text style={{ color: colors.textSecondary, marginTop: 8, fontSize: 12 }}>Calculating delivery fees…</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.billRow}>
+                <Text style={{ color: colors.textSecondary }}>Item Total</Text>
+                <Text style={{ color: colors.textPrimary }}>₹{itemTotal}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={{ color: colors.textSecondary }}>Platform Fee</Text>
+                <Text style={{ color: colors.textPrimary }}>₹{platformFee}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={{ color: colors.textSecondary }}>
+                  Delivery Fee{distanceKm !== null ? ` (${distanceKm} km)` : ''}
+                </Text>
+                <Text style={{ color: colors.textPrimary }}>₹{deliveryFee}</Text>
+              </View>
+              <View style={styles.billRow}>
+                <Text style={{ color: colors.textSecondary }}>Platform Fee</Text>
+                <Text style={{ color: colors.textPrimary }}>₹{platformFee}</Text>
+              </View>
+              <View style={[styles.billRow, { borderTopWidth: 1, borderTopColor: colors.border, marginTop: 8, paddingTop: 8 }]}>
+                <Text style={[styles.grandTotalText, { color: colors.textPrimary }]}>Grand Total</Text>
+                <Text style={[styles.grandTotalText, { color: colors.primary }]}>₹{grandTotal}</Text>
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -298,20 +311,27 @@ export default function CheckoutScreen() {
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <View>
           <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Grand Total</Text>
-          <Text style={[styles.footerPrice, { color: colors.textPrimary }]}>₹{grandTotal}</Text>
+          <Text style={[styles.footerPrice, { color: colors.textPrimary }]}>
+            {pricingLoading ? '...' : `₹${grandTotal}`}
+          </Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.checkoutBtn, { backgroundColor: colors.primary }]}
-          disabled={submitting}
+          style={[
+            styles.checkoutBtn,
+            { backgroundColor: (!serviceable || pricingLoading) ? '#A5A5A5' : colors.primary },
+          ]}
+          disabled={submitting || !serviceable || pricingLoading}
           onPress={handlePlaceOrder}
         >
           {submitting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
             <>
-              <Text style={styles.checkoutBtnText}>Place Order</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
+              <Text style={styles.checkoutBtnText}>
+                {!serviceable ? 'Not Deliverable' : 'Place Order'}
+              </Text>
+              {serviceable && <Ionicons name="arrow-forward" size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />}
             </>
           )}
         </TouchableOpacity>
@@ -425,6 +445,35 @@ const styles = StyleSheet.create({
   grandTotalText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  distanceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+  },
+  distanceBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#2E7D32',
+  },
+  unserviceableBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  unserviceableText: {
+    color: '#D32F2F',
+    fontSize: 12,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   footer: {
     flexDirection: 'row',

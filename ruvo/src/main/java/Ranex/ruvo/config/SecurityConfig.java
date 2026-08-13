@@ -97,7 +97,11 @@ public class SecurityConfig {
 
                     .requestMatchers(
                             "/api/orders/**",
-                            "/api/payments/**"
+                            "/api/payments/**",
+                            "/api/delivery/**",
+                            "/api/settlements/**",
+                            "/api/financial/**",
+                            "/api/notifications/**"
                     ).authenticated()
 
                     .anyRequest().authenticated()

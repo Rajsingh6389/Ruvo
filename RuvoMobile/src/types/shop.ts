@@ -30,4 +30,5 @@ export type ShopInput = {
   deliveryAvailable?: boolean;
   openingTime?: string; // ISO time string
   closingTime?: string;
+  upiId?: string;
 };

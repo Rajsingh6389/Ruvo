@@ -48,6 +48,48 @@ public class Order {
     @Column(name = "delivery_address", nullable = false)
     private String deliveryAddress;
 
+    // Delivery & Pricing fields (Phase 2 / Phase 4)
+    @Column(name = "delivery_latitude")
+    private Double deliveryLatitude;
+
+    @Column(name = "delivery_longitude")
+    private Double deliveryLongitude;
+
+    @Column(name = "distance_km")
+    private Double distanceKm;
+
+    @Column(name = "subtotal")
+    private Double subtotal;
+
+    @Column(name = "delivery_fee")
+    private Double deliveryFee;
+
+    @Column(name = "platform_fee")
+    private Double platformFee;
+
+    // Tracking / Assignment fields (Phase 4 / Phase 7)
+    @Column(name = "shop_response_deadline")
+    private Instant shopResponseDeadline;
+
+    @Column(name = "delivery_partner_id")
+    private Long deliveryPartnerId;
+
+    @Column(name = "delivery_otp_hash")
+    private String deliveryOtpHash;
+
+    @Column(name = "delivery_otp_verified")
+    @Builder.Default
+    private Boolean deliveryOtpVerified = false;
+
+    @Column(name = "delivery_otp_expires_at")
+    private Instant deliveryOtpExpiresAt;
+
+    @Column(name = "picked_up_at")
+    private Instant pickedUpAt;
+
+    @Column(name = "delivered_at")
+    private Instant deliveredAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

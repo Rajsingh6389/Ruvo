@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class RazorpayService {
 
-    @Value("${razorpay.key.id}")
+    @Value("${razorpay.key.id:disabled}")
     private String keyId;
 
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:disabled}")
     private String keySecret;
 
     public Order createOrder(double amount, String receipt) throws Exception {

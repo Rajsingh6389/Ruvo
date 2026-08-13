@@ -5,15 +5,18 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { LightTheme } from './src/theme/theme';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { CartProvider } from './src/context/CartContext';
 
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <SafeAreaProvider>
-          <StatusBar barStyle="dark-content" />
-          <AppNavigator theme={LightTheme} />
-        </SafeAreaProvider>
+        <CartProvider>
+          <SafeAreaProvider>
+            <StatusBar barStyle="dark-content" />
+            <AppNavigator theme={LightTheme} />
+          </SafeAreaProvider>
+        </CartProvider>
       </ThemeProvider>
     </AuthProvider>
   );

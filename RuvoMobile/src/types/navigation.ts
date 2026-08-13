@@ -5,6 +5,7 @@ import type { Product } from '../services/productService';
 export type MainTabParamList = {
   [ROUTES.HOME]: undefined;
   [ROUTES.MARKET]: undefined;
+  [ROUTES.CART]: undefined;
   [ROUTES.PROFILE]: undefined;
 };
 
@@ -27,4 +28,6 @@ export type RootStackParamList = {
   [ROUTES.EDIT_PRODUCT]: { product: Product };
   [ROUTES.ADMIN_DASHBOARD]: undefined;
   EditProfile: undefined;
+  Cart: undefined;
+  OrderSuccess: { orderId: number };
 };

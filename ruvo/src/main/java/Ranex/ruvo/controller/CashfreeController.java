@@ -20,16 +20,19 @@ public class CashfreeController {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ProductRepository productRepository;
+    private final Ranex.ruvo.repository.ShopRepository shopRepository;
     private final CashfreeService cashfreeService;
 
     public CashfreeController(
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             ProductRepository productRepository,
+            Ranex.ruvo.repository.ShopRepository shopRepository,
             CashfreeService cashfreeService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
+        this.shopRepository = shopRepository;
         this.cashfreeService = cashfreeService;
     }
 
@@ -43,6 +46,8 @@ public class CashfreeController {
         public String deliveryAddress;
         public String customerPhone;
         public String customerEmail;
+        public Double userLatitude;
+        public Double userLongitude;
     }
 
     @PostMapping("/checkout")
@@ -56,7 +61,33 @@ public class CashfreeController {
             return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock available. Only " + product.getStockQuantity() + " left."));
         }
 
-        Double totalAmount = product.getSellingPrice() * request.quantity;
+        // Fetch Shop to get its location
+        Ranex.ruvo.model.Shop shop = null;
+        if (product.getShopId() != null) {
+            shop = shopRepository.findById(product.getShopId()).orElse(null);
+        }
+        
+        double deliveryFee = 0.0;
+        double platformFee = 0.0;
+
+        if (shop != null && shop.getLatitude() != null && shop.getLongitude() != null
+                && request.userLatitude != null && request.userLongitude != null) {
+            double distanceKm = Ranex.ruvo.util.DistanceUtils.calculateDistance(
+                    request.userLatitude, request.userLongitude,
+                    shop.getLatitude(), shop.getLongitude()
+            );
+            deliveryFee = Ranex.ruvo.util.DistanceUtils.calculateDeliveryFee(distanceKm);
+            platformFee = Ranex.ruvo.util.DistanceUtils.calculatePlatformFee(distanceKm);
+        } else {
+            // Default fees if location missing
+            deliveryFee = 30.0;
+            platformFee = 5.0;
+        }
+
+        double productAmount = product.getSellingPrice() * request.quantity;
+        double taxes = Math.round(productAmount * 0.05);
+        
+        Double totalAmount = productAmount + deliveryFee + platformFee + taxes;
 
         // 1. Create Order in PAYMENT_PENDING status
         Order order = new Order();
@@ -76,10 +107,14 @@ public class CashfreeController {
             // Callback return URL back to server
             String returnUrl = "http://172.16.3.101:8080/api/payments/cashfree/return?order_id=" + savedOrder.getId();
 
+            String shopVendorId = shop != null ? shop.getCashfreeVendorId() : null;
+
             // 2. Call CashfreeService to initialize order
             Map<String, Object> cfResponse = cashfreeService.createOrder(
                     String.valueOf(savedOrder.getId()),
                     totalAmount,
+                    productAmount,
+                    shopVendorId,
                     request.userId,
                     request.customerPhone,
                     request.customerEmail,

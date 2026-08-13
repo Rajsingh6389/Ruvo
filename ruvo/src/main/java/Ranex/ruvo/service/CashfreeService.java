@@ -29,7 +29,7 @@ public class CashfreeService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public Map<String, Object> createOrder(String orderId, double amount, String customerId, String customerPhone, String customerEmail, String returnUrl) throws Exception {
+    public Map<String, Object> createOrder(String orderId, double totalAmount, double productAmount, String shopVendorId, String customerId, String customerPhone, String customerEmail, String returnUrl) throws Exception {
         HttpHeaders headers = new HttpHeaders();
         headers.set("x-client-id", appId);
         headers.set("x-client-secret", clientSecret);
@@ -46,10 +46,21 @@ public class CashfreeService {
 
         JSONObject requestBody = new JSONObject();
         requestBody.put("order_id", orderId);
-        requestBody.put("order_amount", amount);
+        requestBody.put("order_amount", totalAmount);
         requestBody.put("order_currency", "INR");
         requestBody.put("customer_details", customerDetails);
         requestBody.put("order_meta", orderMeta);
+
+        // Append Vendor Splits if the Shop has a registered Cashfree Vendor ID
+        if (shopVendorId != null && !shopVendorId.isBlank() && productAmount > 0) {
+            org.json.JSONArray orderSplits = new org.json.JSONArray();
+            JSONObject shopSplit = new JSONObject();
+            shopSplit.put("vendor_id", shopVendorId);
+            shopSplit.put("amount", productAmount);
+            orderSplits.put(shopSplit);
+            
+            requestBody.put("order_splits", orderSplits);
+        }
 
         HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
         String url = baseUrl + "/orders";
