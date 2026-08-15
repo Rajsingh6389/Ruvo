@@ -24,6 +24,8 @@ export const ROUTES = {
   ADD_PRODUCT: 'AddProduct',
   MY_PRODUCTS: 'MyProducts',
   EDIT_PRODUCT: 'EditProduct',
+  SHOP_ORDERS: 'ShopOrders',
+  SHOPKEEPER_DASHBOARD: 'ShopkeeperDashboard',
   CHECKOUT: 'Checkout',
   ORDER_HISTORY: 'OrderHistory',
 
@@ -33,6 +35,7 @@ export const ROUTES = {
   // Cart
   CART: 'Cart',
   ORDER_SUCCESS: 'OrderSuccess',
+  CUSTOMER_TRACKING: 'CustomerTracking',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

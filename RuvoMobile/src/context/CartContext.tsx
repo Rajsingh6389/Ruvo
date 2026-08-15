@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Alert } from 'react-native';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Product } from '../services/productService';
+import { useToast } from './ToastContext';
 
 export interface CartItem {
   product: Product;
@@ -10,9 +11,10 @@ export interface CartItem {
 interface CartContextData {
   cartItems: CartItem[];
   cartShopId: number | null;
-  addToCart: (product: Product, quantity: number) => void;
+  addToCart: (product: Product, quantity?: number, options?: { silent?: boolean }) => void;
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
+  getQuantity: (productId?: number) => number;
   clearCart: () => void;
   cartTotal: number;
   cartCount: number;
@@ -21,41 +23,66 @@ interface CartContextData {
 const CartContext = createContext<CartContextData>({} as CartContextData);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { showToast } = useToast();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartShopId, setCartShopId] = useState<number | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const addToCart = (product: Product, quantity: number) => {
-    if (cartShopId !== null && cartShopId !== product.shopId) {
-      Alert.alert(
-        'Different Shop',
-        'Your cart already has items from a different shop. Clear cart and add this item?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Clear Cart',
-            style: 'destructive',
-            onPress: () => {
-              setCartItems([{ product, quantity }]);
-              setCartShopId(product.shopId);
-            },
-          },
-        ]
-      );
+  useEffect(() => {
+    let mounted = true;
+    const loadCart = async () => {
+      try {
+        const savedCart = await AsyncStorage.getItem('@ruvo_cart');
+        const savedShop = await AsyncStorage.getItem('@ruvo_cart_shop');
+        if (mounted) {
+          if (savedCart) setCartItems(JSON.parse(savedCart));
+          if (savedShop) setCartShopId(JSON.parse(savedShop));
+        }
+      } catch (e) {
+        console.warn('Failed to load cart', e);
+      } finally {
+        if (mounted) setIsInitialized(true);
+      }
+    };
+    loadCart();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+    AsyncStorage.setItem('@ruvo_cart', JSON.stringify(cartItems)).catch(() => {});
+    AsyncStorage.setItem('@ruvo_cart_shop', JSON.stringify(cartShopId)).catch(() => {});
+  }, [cartItems, cartShopId, isInitialized]);
+
+  const addToCart = (product: Product, quantity = 1, options?: { silent?: boolean }) => {
+    if (!product.id) {
+      if (!options?.silent) showToast('This product cannot be added yet', 'error');
       return;
     }
 
+    const switchedShop = cartShopId !== null && cartShopId !== product.shopId;
+
     setCartItems(prev => {
-      const existing = prev.find(item => item.product.id === product.id);
+      const source = switchedShop ? [] : prev;
+      const existing = source.find(item => item.product.id === product.id);
       if (existing) {
-        return prev.map(item =>
+        return source.map(item =>
           item.product.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
-            : item
+            : item,
         );
       }
-      return [...prev, { product, quantity }];
+      return [...source, { product, quantity }];
     });
     setCartShopId(product.shopId);
+
+    if (options?.silent) return;
+
+    if (switchedShop) {
+      showToast(`Switched shop · ${product.name} added`);
+    } else {
+      showToast(`${product.name} added to cart`);
+    }
   };
 
   const removeFromCart = (productId: number) => {
@@ -73,9 +100,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
     setCartItems(prev =>
       prev.map(item =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+        item.product.id === productId ? { ...item, quantity } : item,
+      ),
     );
+  };
+
+  const getQuantity = (productId?: number) => {
+    if (!productId) return 0;
+    return cartItems.find(item => item.product.id === productId)?.quantity ?? 0;
   };
 
   const clearCart = () => {
@@ -85,7 +117,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const cartTotal = cartItems.reduce(
     (sum, item) => sum + item.product.sellingPrice * item.quantity,
-    0
+    0,
   );
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -97,6 +129,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         addToCart,
         removeFromCart,
         updateQuantity,
+        getQuantity,
         clearCart,
         cartTotal,
         cartCount,

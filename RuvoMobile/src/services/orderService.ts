@@ -29,6 +29,10 @@ export async function initializeCheckout(checkoutData: {
   quantity: number;
   paymentMethod: 'COD' | 'ONLINE';
   deliveryAddress: string;
+  userLatitude?: number;
+  userLongitude?: number;
+  customerName?: string;
+  customerPhone?: string;
 }, token: string): Promise<any> {
   const res = await fetch(`${API_BASE_URL}/api/payments/checkout`, {
     method: 'POST',
@@ -95,6 +99,16 @@ export async function failPayment(orderId: number, token: string): Promise<any> 
 
 export async function getMyOrders(userId: string, token: string): Promise<Order[]> {
   const res = await fetch(`${API_BASE_URL}/api/orders/my-orders?userId=${userId}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return parseOrThrow(res);
+}
+
+export async function getOrder(orderId: number, token: string): Promise<Order> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,

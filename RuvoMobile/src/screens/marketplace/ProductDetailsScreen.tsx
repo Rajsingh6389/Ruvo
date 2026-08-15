@@ -6,14 +6,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { placeOrder } from '../../services/orderService';
+import { useToast } from '../../context/ToastContext';
 import { ROUTES } from '../../constants/routes';
 
 const GREEN = '#2E7D32';
@@ -127,23 +126,28 @@ const ProductDetailsScreen = () => {
 
   const { isAuthenticated, userId, token, user } = useAuth();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please login to add items to cart.');
+      showToast('Please login to add items', 'info');
       return;
     }
     if (!product) return;
-    addToCart({ ...product, id: product.id!, shopId: product.shopId ?? 0, category: product.category ?? '' }, quantity);
-    Alert.alert('Added to Cart! 🛒', `${quantity} × ${product.name} added to your cart.`, [
-      { text: 'Continue Shopping', style: 'cancel' },
-      { text: 'View Cart', onPress: () => navigation.navigate(ROUTES.CART as never) },
-    ]);
+    addToCart(
+      {
+        ...product,
+        id: product.id!,
+        shopId: product.shopId ?? 0,
+        category: product.category ?? '',
+      },
+      quantity,
+    );
   };
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please login to purchase products.');
+      showToast('Please login to purchase', 'info');
       return;
     }
     navigation.navigate('Checkout', { product, quantity });

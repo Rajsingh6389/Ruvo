@@ -30,6 +30,16 @@ public class Order {
     @Column(name = "product_name", nullable = false)
     private String productName;
 
+    // Customer snapshot stored at order creation so shopkeeper sees name + phone
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "customer_phone")
+    private String customerPhone;
+
+    @Column(name = "product_image_url")
+    private String productImageUrl;
+
     @Column(nullable = false)
     private Integer quantity;
 
@@ -101,11 +111,13 @@ public class Order {
         createdAt = Instant.now();
         updatedAt = Instant.now();
         if (paymentMethod == null) paymentMethod = "COD";
+        // Only set defaults if they haven't already been explicitly set
         if (paymentStatus == null) {
-            paymentStatus = "COD".equalsIgnoreCase(paymentMethod) ? "PENDING" : "PENDING";
+            paymentStatus = "COD".equalsIgnoreCase(paymentMethod) ? "COD_PENDING" : "PENDING";
         }
         if (orderStatus == null) {
-            orderStatus = "COD".equalsIgnoreCase(paymentMethod) ? "CONFIRMED" : "PAYMENT_PENDING";
+            // SHOP_PENDING for COD, PAYMENT_PENDING for online — caller should always set these explicitly
+            orderStatus = "COD".equalsIgnoreCase(paymentMethod) ? "SHOP_PENDING" : "PAYMENT_PENDING";
         }
     }
 

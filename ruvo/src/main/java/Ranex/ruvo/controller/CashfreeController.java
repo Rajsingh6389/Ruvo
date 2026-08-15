@@ -22,18 +22,21 @@ public class CashfreeController {
     private final ProductRepository productRepository;
     private final Ranex.ruvo.repository.ShopRepository shopRepository;
     private final CashfreeService cashfreeService;
+    private final Ranex.ruvo.service.NotificationService notificationService;
 
     public CashfreeController(
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             ProductRepository productRepository,
             Ranex.ruvo.repository.ShopRepository shopRepository,
-            CashfreeService cashfreeService) {
+            CashfreeService cashfreeService,
+            Ranex.ruvo.service.NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
         this.cashfreeService = cashfreeService;
+        this.notificationService = notificationService;
     }
 
     // Reuse request structure
@@ -104,8 +107,10 @@ public class CashfreeController {
         Order savedOrder = orderRepository.save(order);
 
         try {
-            // Callback return URL back to server
-            String returnUrl = "http://172.16.3.101:8080/api/payments/cashfree/return?order_id=" + savedOrder.getId();
+            // Callback return URL back to server (Cashfree strict HTTPS validation bypass for local testing)
+            // Note: Since this is local, the redirect after payment will break on the user's browser, 
+            // but the order is still created. In prod, use real HTTPS domain.
+            String returnUrl = "https://10.13.174.159:8080/api/payments/cashfree/return?order_id=" + savedOrder.getId();
 
             String shopVendorId = shop != null ? shop.getCashfreeVendorId() : null;
 
@@ -184,9 +189,13 @@ public class CashfreeController {
                     }
 
                     // Update order
-                    order.setPaymentStatus("PAID");
-                    order.setOrderStatus("CONFIRMED");
-                    orderRepository.save(order);
+                    order.setPaymentStatus("SUCCESS");
+                    order.setOrderStatus(Ranex.ruvo.model.OrderStatus.SHOP_PENDING);
+                    order.setShopResponseDeadline(java.time.Instant.now().plus(10, java.time.temporal.ChronoUnit.MINUTES));
+                    Order savedOrder = orderRepository.save(order);
+
+                    // Notify shopkeeper
+                    notificationService.notifyShop(savedOrder);
 
                     // Update payment
                     Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());

@@ -1,12 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
-  PermissionsAndroid,
-  Platform,
   RefreshControl,
+  SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,577 +14,543 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import Geolocation from 'react-native-geolocation-service';
 import { ROUTES } from '../../constants/routes';
-import { useTheme } from '../../context/ThemeContext';
-import { Button } from '../../components/Button';
-import { Card } from '../../components/Card';
-import { Layout } from '../../components/Layout';
-import { TextInput } from '../../components/TextInput';
+import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { getShops } from '../../services/shopService';
+import { getProductsByShop } from '../../services/productService';
+import type { Product } from '../../services/productService';
+import { formatDistance, getDistanceInKm } from '../../utils/distanceUtils';
 import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
+import { sw, sh, sf } from '../../utils/responsive';
 
-type UserLocation = {
-  latitude: number;
-  longitude: number;
+// ─── Design tokens ──────────────────────────────────────────
+const PRIMARY = '#2E7D32';
+const LIGHT_GREEN = '#E8F5E9';
+const BG = '#F5F6FA';
+const WHITE = '#FFFFFF';
+const TEXT_DARK = '#1A1A1A';
+const TEXT_SECONDARY = '#6B7280';
+const BORDER = '#E5E7EB';
+const CARD_SHADOW = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.07,
+  shadowRadius: 6,
+  elevation: 3,
 };
 
-const toRadians = (value: number) => (value * Math.PI) / 180;
+// ─── Helper ─────────────────────────────────────────────────
+const buildCategoryList = (shops: Shop[]): string[] => {
+  const seen = new Set<string>();
+  shops.forEach(s => { if (s.category) seen.add(s.category); });
+  return ['All Shops', ...Array.from(seen).sort()];
+};
 
-const getDistanceInKm = (location: UserLocation, shop: Shop): number | null => {
-  const latitude = Number(shop.latitude);
-  const longitude = Number(shop.longitude);
+// ─── Sub-component: Product card ────────────────────────────
+const ProductCard = React.memo(({ product }: { product: Product }) => (
+  <View style={prodStyles.card}>
+    <View style={prodStyles.imageWrap}>
+      {product.imageUrl ? (
+        <Image source={{ uri: product.imageUrl }} style={prodStyles.image} resizeMode="cover" />
+      ) : (
+        <Text style={{ fontSize: 30 }}>📦</Text>
+      )}
+    </View>
+    <Text style={prodStyles.name} numberOfLines={2}>{product.name}</Text>
+    {product.unit ? <Text style={prodStyles.unit}>{product.unit}</Text> : null}
+    <View style={prodStyles.priceRow}>
+      <Text style={prodStyles.price}>₹{product.sellingPrice}</Text>
+      {product.actualPrice > product.sellingPrice && (
+        <Text style={prodStyles.strikePrice}>₹{product.actualPrice}</Text>
+      )}
+    </View>
+    <TouchableOpacity style={prodStyles.addBtn} activeOpacity={0.8}>
+      <Text style={prodStyles.addBtnText}>Add</Text>
+      <Ionicons name="add" size={14} color={PRIMARY} />
+    </TouchableOpacity>
+  </View>
+));
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return null;
-  }
+// ─── Sub-component: Shop section (store card + products) ────
+const ShopSection = React.memo(({
+  shop,
+  distance,
+  onViewStore,
+}: {
+  shop: Shop;
+  distance: string | null;
+  onViewStore: () => void;
+}) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const mounted = useRef(true);
 
-  const latitudeDifference = toRadians(latitude - location.latitude);
-  const longitudeDifference = toRadians(longitude - location.longitude);
-  const calculation =
-    Math.sin(latitudeDifference / 2) ** 2 +
-    Math.cos(toRadians(location.latitude)) *
-      Math.cos(toRadians(latitude)) *
-      Math.sin(longitudeDifference / 2) ** 2;
+  useEffect(() => {
+    mounted.current = true;
+    setLoading(true);
+    getProductsByShop(shop.id)
+      .then(data => { if (mounted.current) setProducts(data.filter(p => p.isAvailable !== false).slice(0, 8)); })
+      .catch(() => {})
+      .finally(() => { if (mounted.current) setLoading(false); });
+    return () => { mounted.current = false; };
+  }, [shop.id]);
 
   return (
-    6371 * 2 * Math.atan2(Math.sqrt(calculation), Math.sqrt(1 - calculation))
-  );
-};
+    <View style={secStyles.wrapper}>
+      {/* Store card */}
+      <View style={secStyles.storeCard}>
+        <View style={secStyles.storeLeft}>
+          <View style={secStyles.storeImageWrap}>
+            {shop.bannerUrl || shop.logoUrl ? (
+              <Image
+                source={{ uri: shop.bannerUrl ?? shop.logoUrl! }}
+                style={secStyles.storeImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={secStyles.storePlaceholder}>
+                <Ionicons name="storefront-outline" size={28} color={TEXT_SECONDARY} />
+              </View>
+            )}
+          </View>
+          <View style={secStyles.storeInfo}>
+            <View style={secStyles.storeNameRow}>
+              <Text style={secStyles.storeName} numberOfLines={1}>{shop.name}</Text>
+              <View style={secStyles.openBadge}>
+                <Text style={secStyles.openText}>Open</Text>
+              </View>
+            </View>
+            <View style={secStyles.metaRow}>
+              {shop.rating != null && (
+                <>
+                  <Ionicons name="star" size={12} color="#F59E0B" />
+                  <Text style={secStyles.metaText}>{shop.rating.toFixed(1)}</Text>
+                  <Text style={secStyles.metaDot}>•</Text>
+                </>
+              )}
+              <Text style={secStyles.metaText}>20–25 mins</Text>
+              {distance && (
+                <>
+                  <Text style={secStyles.metaDot}>•</Text>
+                  <Text style={secStyles.metaText}>{distance}</Text>
+                </>
+              )}
+            </View>
+            {shop.address ? (
+              <Text style={secStyles.addressText} numberOfLines={1}>
+                Min. order ₹79 &nbsp;•&nbsp; Free delivery on ₹199
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <TouchableOpacity style={secStyles.viewStoreBtn} onPress={onViewStore} activeOpacity={0.8}>
+          <Text style={secStyles.viewStoreBtnText}>View Store</Text>
+        </TouchableOpacity>
+      </View>
 
+      {/* Items from this shop */}
+      <View style={secStyles.itemsHeader}>
+        <Text style={secStyles.itemsTitle}>Items from {shop.name}</Text>
+        {products.length > 0 && (
+          <TouchableOpacity onPress={onViewStore}>
+            <Text style={secStyles.seeAll}>
+              See all ({products.length > 7 ? '120' : products.length})
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color={PRIMARY} style={{ marginVertical: 16, marginLeft: 16 }} />
+      ) : products.length === 0 ? (
+        <Text style={secStyles.noItems}>No items listed yet</Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={secStyles.productsRow}
+        >
+          {products.map(p => <ProductCard key={p.id} product={p} />)}
+        </ScrollView>
+      )}
+    </View>
+  );
+});
+
+// ─── Main screen ────────────────────────────────────────────
 export const GroceriesScreen = () => {
-  const { colors } = useTheme();
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { location, isLoading: locationLoading, refreshFromGps } = useDeliveryLocation();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState('');
-  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
-  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
-  const [nearbyMode, setNearbyMode] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('All Shops');
+  const [locationPickerVisible, setLocationPickerVisible] = useState(false);
 
   const loadShops = useCallback(async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
-
+    if (isRefresh) setIsRefreshing(true);
+    else setIsLoading(true);
     try {
       setShops(await getShops());
       setLoadError(null);
-    } catch (error) {
-      console.error('Failed to load shops', error);
-      setLoadError(
-        'We could not load the shops. Check that the server is running and try again.',
-      );
+    } catch {
+      setLoadError('Could not load shops. Please try again.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadShops();
-    }, [loadShops]),
-  );
+  useFocusEffect(useCallback(() => { loadShops(); }, [loadShops]));
 
-  const fetchNearbyShops = async () => {
-    setIsFetchingLocation(true);
-
-    try {
-      if (Platform.OS === 'android') {
-        const permission = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: 'Location permission',
-            message: 'RuVo needs your location to show nearby shops.',
-            buttonNeutral: 'Ask me later',
-            buttonNegative: 'Cancel',
-            buttonPositive: 'Allow',
-          },
-        );
-
-        if (permission !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert(
-            'Location permission denied',
-            'Enable location permission to see nearby shops.',
-          );
-          setIsFetchingLocation(false);
-          return;
-        }
-      }
-
-      Geolocation.getCurrentPosition(
-        position => {
-          setUserLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          setNearbyMode(true);
-          setIsFetchingLocation(false);
-        },
-        error => {
-          Alert.alert('Location error', error.message);
-          setIsFetchingLocation(false);
-        },
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 },
-      );
-    } catch (error) {
-      Alert.alert(
-        'Location error',
-        error instanceof Error ? error.message : 'Unexpected error',
-      );
-      setIsFetchingLocation(false);
-    }
-  };
+  const categories = useMemo(() => buildCategoryList(shops), [shops]);
 
   const visibleShops = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    const matchingShops = query
-      ? shops.filter(shop =>
-          [shop.name, shop.category, shop.address].some(value =>
-            value?.toLowerCase().includes(query),
-          ),
-        )
-      : shops;
+    let list = activeCategory === 'All Shops'
+      ? shops
+      : shops.filter(s => s.category === activeCategory);
 
-    if (!nearbyMode || !userLocation) {
-      return matchingShops;
-    }
-
-    return [...matchingShops].sort((firstShop, secondShop) => {
-      const firstDistance =
-        getDistanceInKm(userLocation, firstShop) ?? Number.POSITIVE_INFINITY;
-      const secondDistance =
-        getDistanceInKm(userLocation, secondShop) ?? Number.POSITIVE_INFINITY;
-      return firstDistance - secondDistance;
+    if (!location) return list;
+    return [...list].sort((a, b) => {
+      const da = getDistanceInKm(location, a) ?? Infinity;
+      const db = getDistanceInKm(location, b) ?? Infinity;
+      return da - db;
     });
-  }, [nearbyMode, searchText, shops, userLocation]);
+  }, [activeCategory, location, shops]);
 
   return (
-    <Layout>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => {
-              loadShops(true);
-            }}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            <View style={[styles.titleIconWrap, { backgroundColor: colors.primary + '18' }]}>
-              <Ionicons name="basket-outline" size={20} color={colors.primary} />
-            </View>
-            <Text style={[styles.title, { color: colors.textPrimary }]}>
-              All Shops
-            </Text>
-          </View>
-          <TextInput
-            placeholder="Search shops, categories or locations"
-            value={searchText}
-            onChangeText={setSearchText}
-            style={styles.search}
-          />
-        </View>
+    <SafeAreaView style={styles.root}>
+      <StatusBar backgroundColor={WHITE} barStyle="dark-content" />
 
-        <View
-          style={[
-            styles.nearbyCard,
-            { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' },
-          ]}
-        >
-          <View style={styles.nearbyIconRow}>
-            <Ionicons name="navigate-circle-outline" size={22} color={colors.primary} />
-            <Text style={[styles.nearbyTitle, { color: colors.textPrimary }]}>
-              Find shops near you
-            </Text>
-          </View>
-          <Text
-            style={[styles.nearbyDescription, { color: colors.textSecondary }]}
+      {/* ── Top bar ─────────────────────────────────────────── */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>Grocery</Text>
+        <View style={styles.topBarActions}>
+          <TouchableOpacity style={styles.topIconBtn}>
+            <Ionicons name="search-outline" size={22} color={TEXT_DARK} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.topIconBtn}
+            onPress={() => navigation.navigate(ROUTES.CART as never)}
           >
-            Use your current location to order the list by distance.
+            <Ionicons name="bag-outline" size={22} color={TEXT_DARK} />
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Location bar ────────────────────────────────────── */}
+      <TouchableOpacity
+        style={styles.locationBar}
+        onPress={() => setLocationPickerVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="location-sharp" size={14} color={PRIMARY} />
+        <View style={styles.locationTextWrap}>
+          <Text style={styles.deliverLabel}>Deliver to</Text>
+          <Text style={styles.locationValue} numberOfLines={1}>
+            {locationLoading ? 'Fetching location...' : location?.shortLabel ?? 'Set delivery location'}
           </Text>
-          <Button
-            title="Fetch from near"
-            onPress={fetchNearbyShops}
-            loading={isFetchingLocation}
-            style={styles.nearbyButton}
-          />
-
-          {userLocation ? (
-            <View
-              style={[styles.locationResult, { borderTopColor: colors.border }]}
-            >
-              <View style={styles.locationFoundRow}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text
-                  style={[styles.locationText, { color: colors.textPrimary }]}
-                >
-                  Current location found
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.locationCoordinates,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {userLocation.latitude.toFixed(4)},{' '}
-                {userLocation.longitude.toFixed(4)}
-              </Text>
-              <TouchableOpacity onPress={() => setNearbyMode(false)}>
-                <Text style={[styles.showAllText, { color: colors.primary }]}>
-                  Show all shops
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
         </View>
+        <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />
+      </TouchableOpacity>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeading}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-              All Shops
-            </Text>
-            {!isLoading && !loadError ? (
-              <Text style={[styles.shopCount, { color: colors.textSecondary }]}>
-                {visibleShops.length} found
-              </Text>
-            ) : null}
-          </View>
-
-          {isLoading ? (
-            <ActivityIndicator
-              size="large"
-              color={colors.primary}
-              style={styles.loading}
-            />
-          ) : loadError ? (
-            <View
-              style={[
-                styles.statusCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
+      {/* ── Category filter chips ────────────────────────────── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        style={styles.chipScroll}
+      >
+        {categories.map(cat => {
+          const active = cat === activeCategory;
+          return (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.chip, active && styles.chipActive]}
+              onPress={() => setActiveCategory(cat)}
+              activeOpacity={0.8}
             >
-              <Ionicons name="cloud-offline-outline" size={36} color={colors.textSecondary} />
-              <Text
-                style={[styles.statusText, { color: colors.textSecondary }]}
-              >
-                {loadError}
-              </Text>
-              <Button
-                title="Try again"
-                variant="outline"
-                onPress={() => {
-                  loadShops();
-                }}
-              />
-            </View>
-          ) : visibleShops.length === 0 ? (
-            <View
-              style={[
-                styles.statusCard,
-                { backgroundColor: colors.card, borderColor: colors.border },
-              ]}
-            >
-              <Ionicons name="storefront-outline" size={36} color={colors.textSecondary} />
-              <Text
-                style={[styles.statusText, { color: colors.textSecondary }]}
-              >
-                {searchText
-                  ? 'No shops match your search.'
-                  : shops.length === 0
-                  ? 'No shops have been registered yet. Be the first shop owner to join RuVo.'
-                  : nearbyMode
-                  ? 'No nearby shops have location details yet. Show all shops or register a local shop.'
-                  : 'No shops are available right now.'}
-              </Text>
-              {!searchText && (
-                <Button
-                  title="Register the first shop"
-                  onPress={() => navigation.navigate(ROUTES.REGISTER_SHOP)}
-                />
-              )}
-            </View>
-          ) : (
-            visibleShops.map(shop => {
-              const distance =
-                userLocation && nearbyMode
-                  ? getDistanceInKm(userLocation, shop)
-                  : null;
-
-              return (
-                <Card
-                  key={shop.id}
-                  style={styles.shopCard}
-                  onPress={() =>
-                    navigation.navigate(ROUTES.SHOP_DETAILS, {
-                      shopId: Number(shop.id),
-                    })
-                  }
-                >
-                  <View style={styles.shopRow}>
-                    <View style={[styles.logoWrap, { backgroundColor: colors.surface }]}>
-                      {shop.logoUrl ? (
-                        <Image source={{ uri: shop.logoUrl }} style={styles.logo} resizeMode="cover" />
-                      ) : (
-                        <Ionicons name="storefront-outline" size={22} color={colors.textSecondary} />
-                      )}
-                    </View>
-
-                    <View style={styles.shopCopy}>
-                      <View style={styles.shopTitleRow}>
-                        <Text
-                          style={[styles.shopTitle, { color: colors.textPrimary }]}
-                          numberOfLines={1}
-                        >
-                          {shop.name}
-                        </Text>
-                        {shop.approved === false && (
-                          <View style={[styles.pendingBadge, { backgroundColor: '#f59e0b22' }]}>
-                            <Text style={[styles.pendingText, { color: '#f59e0b' }]}>Pending</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text
-                        style={[styles.shopCategory, { color: colors.primary }]}
-                        numberOfLines={1}
-                      >
-                        {shop.category}
-                      </Text>
-
-                      <View style={styles.metaRow}>
-                        {typeof shop.rating === 'number' && (
-                          <View style={styles.metaItem}>
-                            <Ionicons name="star" size={12} color="#f59e0b" />
-                            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                              {shop.rating.toFixed(1)}
-                            </Text>
-                          </View>
-                        )}
-                        {shop.deliveryAvailable && (
-                          <View style={styles.metaItem}>
-                            <Ionicons name="bicycle-outline" size={12} color={colors.textSecondary} />
-                            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                              Delivery
-                            </Text>
-                          </View>
-                        )}
-                        {distance !== null && (
-                          <View style={styles.metaItem}>
-                            <Ionicons name="navigate-outline" size={12} color="#22c55e" />
-                            <Text style={[styles.metaText, { color: '#22c55e', fontWeight: '700' }]}>
-                              {distance.toFixed(1)} km
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      {shop.address ? (
-                        <Text
-                          style={[styles.shopAddress, { color: colors.textSecondary }]}
-                          numberOfLines={1}
-                        >
-                          {shop.address}
-                        </Text>
-                      ) : null}
-                    </View>
-
-                    <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
-                  </View>
-                </Card>
-              );
-            })
-          )}
-        </View>
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        {/* Filter button */}
+        <TouchableOpacity style={styles.filterBtn}>
+          <Ionicons name="filter" size={14} color={TEXT_SECONDARY} />
+          <Text style={styles.filterText}>Filter</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </Layout>
+
+      {/* ── Content ─────────────────────────────────────────── */}
+      {isLoading ? (
+        <ActivityIndicator size="large" color={PRIMARY} style={{ marginTop: 60 }} />
+      ) : loadError ? (
+        <View style={styles.centerMessage}>
+          <Ionicons name="cloud-offline-outline" size={44} color={TEXT_SECONDARY} />
+          <Text style={styles.centerText}>{loadError}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => loadShops()}>
+            <Text style={styles.retryText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : visibleShops.length === 0 ? (
+        <View style={styles.centerMessage}>
+          <Ionicons name="storefront-outline" size={44} color={TEXT_SECONDARY} />
+          <Text style={styles.centerText}>
+            {shops.length === 0
+              ? 'No shops have been registered yet.'
+              : 'No shops in this category.'}
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => { loadShops(true); refreshFromGps(); }}
+              tintColor={PRIMARY}
+            />
+          }
+        >
+          {visibleShops.map(shop => {
+            const dist = location ? getDistanceInKm(location, shop) : null;
+            const distLabel = formatDistance(dist);
+            return (
+              <ShopSection
+                key={shop.id}
+                shop={shop}
+                distance={distLabel}
+                onViewStore={() =>
+                  navigation.navigate(ROUTES.SHOP_DETAILS as never, { shopId: Number(shop.id) })
+                }
+              />
+            );
+          })}
+          {/* Cart sticky footer placeholder */}
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      )}
+
+      <LocationPickerModal
+        visible={locationPickerVisible}
+        onClose={() => setLocationPickerVisible(false)}
+      />
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingTop: 40,
-    paddingBottom: 30,
-  },
-  header: {
-    paddingTop: 20,
-    paddingVertical: 20,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-  titleIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: 'bold',
-  },
-  search: {
-    marginBottom: 8,
-  },
-  nearbyCard: {
-    padding: 16,
-    borderRadius: 16,
+// ─── Product card styles ─────────────────────────────────────
+const prodStyles = StyleSheet.create({
+  card: {
+    width: sw(114),
+    backgroundColor: WHITE,
+    borderRadius: sw(12),
+    padding: sw(8),
+    marginRight: sw(10),
     borderWidth: 1,
-    marginBottom: 24,
+    borderColor: BORDER,
+    ...CARD_SHADOW,
   },
-  nearbyIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  nearbyTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  nearbyDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  nearbyButton: {
-    alignSelf: 'flex-start',
-  },
-  locationResult: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
-  locationFoundRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  locationText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  locationCoordinates: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  showAllText: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 8,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeading: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  shopCount: {
-    fontSize: 13,
-  },
-  loading: {
-    marginVertical: 28,
-  },
-  statusCard: {
-    minHeight: 112,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    padding: 16,
-    gap: 8,
-  },
-  statusText: {
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  shopCard: {
-    marginVertical: 6,
-  },
-  shopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoWrap: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+  imageWrap: {
+    height: sh(80),
+    borderRadius: sw(8),
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: sh(6),
     overflow: 'hidden',
   },
-  logo: {
-    width: '100%',
-    height: '100%',
+  image: { width: '100%', height: '100%' },
+  name: { fontSize: sf(11.5), fontWeight: '600', color: TEXT_DARK, lineHeight: sf(15), minHeight: sh(30) },
+  unit: { fontSize: sf(10), color: TEXT_SECONDARY, marginTop: sh(2) },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginTop: sh(4) },
+  price: { fontSize: sf(13), fontWeight: '800', color: TEXT_DARK },
+  strikePrice: { fontSize: sf(10), color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: sh(6),
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    borderRadius: sw(8),
+    paddingVertical: sh(5),
+    gap: sw(2),
   },
-  shopCopy: {
+  addBtnText: { fontSize: sf(12), fontWeight: '700', color: PRIMARY },
+});
+
+// ─── Shop section styles ─────────────────────────────────────
+const secStyles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: WHITE,
+    marginBottom: sh(8),
+  },
+  storeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: sw(16),
+    paddingVertical: sh(14),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  storeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sw(12) },
+  storeImageWrap: {
+    width: sw(64),
+    height: sw(64),
+    borderRadius: sw(10),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  storeImage: { width: '100%', height: '100%' },
+  storePlaceholder: {
     flex: 1,
+    backgroundColor: LIGHT_GREEN,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shopTitleRow: {
+  storeInfo: { flex: 1 },
+  storeNameRow: { flexDirection: 'row', alignItems: 'center', gap: sw(8), marginBottom: sh(3) },
+  storeName: { fontSize: sf(16), fontWeight: '800', color: TEXT_DARK, flexShrink: 1 },
+  openBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: sw(7),
+    paddingVertical: sh(2),
+    borderRadius: sw(6),
+  },
+  openText: { fontSize: sf(10), fontWeight: '800', color: PRIMARY },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginBottom: sh(3) },
+  metaText: { fontSize: sf(11.5), color: TEXT_SECONDARY, fontWeight: '500' },
+  metaDot: { fontSize: sf(11), color: TEXT_SECONDARY },
+  addressText: { fontSize: sf(11), color: TEXT_SECONDARY },
+  viewStoreBtn: {
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    borderRadius: sw(10),
+    paddingHorizontal: sw(12),
+    paddingVertical: sh(8),
+    marginLeft: sw(8),
+  },
+  viewStoreBtnText: { fontSize: sf(12), fontWeight: '700', color: PRIMARY },
+  itemsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: sw(16),
+    paddingTop: sh(12),
+    paddingBottom: sh(8),
   },
-  shopTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    flexShrink: 1,
-  },
-  pendingBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-  pendingText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  shopCategory: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 4,
-  },
-  metaItem: {
+  itemsTitle: { fontSize: sf(14), fontWeight: '700', color: TEXT_DARK },
+  seeAll: { fontSize: sf(12.5), fontWeight: '700', color: PRIMARY },
+  productsRow: { paddingLeft: sw(16), paddingRight: sw(8), paddingBottom: sh(16) },
+  noItems: { fontSize: sf(12), color: TEXT_SECONDARY, paddingHorizontal: sw(16), paddingBottom: sh(14) },
+});
+
+// ─── Main screen styles ──────────────────────────────────────
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: BG },
+
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    backgroundColor: WHITE,
+    paddingHorizontal: sw(12),
+    paddingVertical: sh(12),
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
-  metaText: {
-    fontSize: 12,
+  backBtn: { padding: 4, marginRight: sw(8) },
+  screenTitle: { flex: 1, fontSize: sf(20), fontWeight: '800', color: TEXT_DARK },
+  topBarActions: { flexDirection: 'row', gap: sw(10), alignItems: 'center' },
+  topIconBtn: { padding: 4 },
+  cartBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    width: sw(14),
+    height: sw(14),
+    borderRadius: sw(7),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shopAddress: {
-    fontSize: 13,
-    marginTop: 4,
+  cartBadgeText: { fontSize: sf(8), fontWeight: '800', color: WHITE },
+
+  locationBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: sw(8),
+    paddingHorizontal: sw(16),
+    paddingVertical: sh(10),
+    backgroundColor: WHITE,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
   },
+  locationTextWrap: { flex: 1 },
+  deliverLabel: { fontSize: sf(10), fontWeight: '500', color: TEXT_SECONDARY },
+  locationValue: { fontSize: sf(13), fontWeight: '700', color: TEXT_DARK },
+
+  chipScroll: { maxHeight: sh(52), backgroundColor: WHITE },
+  chipRow: {
+    paddingHorizontal: sw(12),
+    paddingVertical: sh(10),
+    gap: sw(8),
+    alignItems: 'center',
+  },
+  chip: {
+    paddingHorizontal: sw(14),
+    paddingVertical: sh(7),
+    borderRadius: sw(20),
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: WHITE,
+  },
+  chipActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  chipText: { fontSize: sf(12.5), fontWeight: '600', color: TEXT_DARK },
+  chipTextActive: { color: WHITE },
+  filterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: sw(4),
+    paddingHorizontal: sw(12),
+    paddingVertical: sh(7),
+    borderRadius: sw(20),
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    backgroundColor: WHITE,
+  },
+  filterText: { fontSize: sf(12.5), fontWeight: '600', color: TEXT_SECONDARY },
+
+  scrollContent: { paddingTop: sh(6) },
+
+  centerMessage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: sw(32),
+    gap: sh(12),
+  },
+  centerText: { fontSize: sf(14), color: TEXT_SECONDARY, textAlign: 'center', lineHeight: sf(20) },
+  retryBtn: {
+    backgroundColor: PRIMARY,
+    paddingHorizontal: sw(20),
+    paddingVertical: sh(10),
+    borderRadius: sw(10),
+  },
+  retryText: { fontSize: sf(13), fontWeight: '700', color: WHITE },
 });

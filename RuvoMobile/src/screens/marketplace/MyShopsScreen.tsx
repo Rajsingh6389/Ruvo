@@ -14,19 +14,21 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getMyShops, Shop } from '../../services/shopService';
 import { ROUTES } from '../../constants/routes';
+import { sw, sh, sf } from '../../utils/responsive';
 
 export const MyShopsScreen = () => {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
-  const { userId, token } = useAuth();
+  const { user, userId, token } = useAuth();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (userId && token) {
-      getMyShops(userId, token)
+    const ownerId = userId || user?.email || user?.id;
+    if (ownerId && token) {
+      getMyShops(String(ownerId), token)
         .then(setShops)
         .catch(err =>
           setError(err.message || 'Failed to load your shops'),
@@ -36,7 +38,7 @@ export const MyShopsScreen = () => {
       setError('User not authenticated properly (id or token missing)');
       setLoading(false);
     }
-  }, [userId, token]);
+  }, [userId, user, token]);
 
   /* -------------------------------------------------------
      LOADING
@@ -417,6 +419,42 @@ export const MyShopsScreen = () => {
             </Text>
           </TouchableOpacity>
 
+          {/* SHOP ORDERS (NEW) */}
+          <TouchableOpacity
+            activeOpacity={0.78}
+            style={[
+              styles.secondaryButton,
+              {
+                borderColor: '#10B981',
+                backgroundColor: '#ECFDF5',
+                marginLeft: 10,
+              },
+            ]}
+            onPress={() =>
+              navigation.navigate(
+                ROUTES.SHOPKEEPER_DASHBOARD,
+                {
+                  shopId: item.id,
+                  shopName: item.name,
+                },
+              )
+            }
+          >
+            <Ionicons
+              name="receipt-outline"
+              size={18}
+              color="#059669"
+            />
+            <Text
+              style={[
+                styles.secondaryButtonText,
+                { color: '#059669', fontSize: 13 },
+              ]}
+            >
+              Orders
+            </Text>
+          </TouchableOpacity>
+
           {/* ADD PRODUCT */}
 
           <TouchableOpacity
@@ -426,6 +464,7 @@ export const MyShopsScreen = () => {
               {
                 borderColor: colors.primary,
                 backgroundColor: '#FFFFFF',
+                marginLeft: 10,
               },
             ]}
             onPress={() =>
@@ -446,10 +485,10 @@ export const MyShopsScreen = () => {
             <Text
               style={[
                 styles.secondaryButtonText,
-                { color: colors.primary },
+                { color: colors.primary, fontSize: 13 },
               ]}
             >
-              Add Product
+              Add
             </Text>
           </TouchableOpacity>
         </View>

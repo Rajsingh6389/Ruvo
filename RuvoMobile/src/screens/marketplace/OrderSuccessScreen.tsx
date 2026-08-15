@@ -41,6 +41,13 @@ const OrderSuccessScreen = () => {
         >
           <Text style={styles.homeButtonText}>Go to Home</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.homeButton, { backgroundColor: '#F0F9FF', marginTop: 12, borderColor: '#3B82F6', borderWidth: 1 }]}
+          onPress={() => navigation.navigate(ROUTES.CUSTOMER_TRACKING as never, { orderId } as never)}
+        >
+          <Text style={[styles.homeButtonText, { color: '#1D4ED8' }]}>Track Order</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

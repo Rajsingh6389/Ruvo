@@ -34,7 +34,11 @@ import { ComingSoonModal } from '../components/ComingSoonModal';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import CheckoutScreen from '../screens/marketplace/CheckoutScreen';
 import CartScreen from '../screens/marketplace/CartScreen';
+import OrderSuccessScreen from '../screens/marketplace/OrderSuccessScreen';
 import OrderHistoryScreen from '../screens/profile/OrderHistoryScreen';
+import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScreen';
+import ShopOrdersScreen from '../screens/marketplace/ShopOrdersScreen';
+import ShopkeeperDashboardScreen from '../screens/marketplace/ShopkeeperDashboardScreen';
 
 
 
@@ -155,8 +159,12 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.ADD_PRODUCT}    component={AddProductScreen} />
             <Stack.Screen name={ROUTES.MY_PRODUCTS}    component={MyProductsScreen} />
             <Stack.Screen name={ROUTES.EDIT_PRODUCT}   component={EditProductScreen} />
+            <Stack.Screen name={ROUTES.SHOP_ORDERS}    component={ShopOrdersScreen} />
+            <Stack.Screen name={ROUTES.SHOPKEEPER_DASHBOARD} component={ShopkeeperDashboardScreen} />
             <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={ComingSoonScreen} />
             <Stack.Screen name={ROUTES.CHECKOUT}       component={CheckoutScreen} />
+            <Stack.Screen name={ROUTES.ORDER_SUCCESS}  component={OrderSuccessScreen} />
+            <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
             <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
           </>
