@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Image,
   TouchableOpacity,
+  Pressable,
   SafeAreaView,
   StatusBar,
   TextInput,
@@ -15,6 +16,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getShopById, Shop } from '../../services/shopService';
 import { getProductsByShop, Product } from '../../services/productService';
+import { useCart } from '../../context/CartContext';
 
 const PRIMARY = '#2E7D32';
 const PRIMARY_DARK = '#256B2A';
@@ -41,6 +43,7 @@ const formatTime = (time?: string) => {
 export const ShopDetailsScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { addToCart, getQuantity, updateQuantity } = useCart();
   const shopId = route.params?.shopId;
 
   const [shop, setShop] = useState<Shop | null>(null);
@@ -194,6 +197,7 @@ export const ShopDetailsScreen = () => {
 
   const renderProduct = ({ item }: { item: Product }) => {
     const isAvailable = item.isAvailable ?? true;
+    const cartQty = getQuantity(item.id);
 
     const discount =
       item.discount != null && item.discount > 0
@@ -209,18 +213,20 @@ export const ShopDetailsScreen = () => {
           : null;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.92}
+      <View
         style={[
           styles.productCard,
           !isAvailable && styles.productCardUnavailable,
         ]}
-        onPress={() =>
-    navigation.navigate('ProductDetails', {
-      product: item,
-    })
-  }
       >
+        <Pressable
+          style={styles.productMainPress}
+          onPress={() =>
+            navigation.navigate('ProductDetails', {
+              product: item,
+            })
+          }
+        >
         <View style={styles.productImageWrap}>
           {item.imageUrl ? (
             <Image
@@ -288,34 +294,53 @@ export const ShopDetailsScreen = () => {
               </Text>
             ) : null}
           </View>
+        </View>
+        </Pressable>
 
-          <View style={styles.productBottomRow}>
-            {isAvailable ? (
-              <TouchableOpacity
+        <View style={styles.addWrap}>
+          {isAvailable ? (
+            cartQty > 0 ? (
+              <View style={styles.qtyStepper}>
+                <Pressable
+                  hitSlop={8}
+                  style={styles.qtyStepBtn}
+                  onPress={() => updateQuantity(item.id!, cartQty - 1)}
+                >
+                  <Ionicons name="remove" size={15} color={PRIMARY} />
+                </Pressable>
+                <Text style={styles.qtyStepText}>{cartQty}</Text>
+                <Pressable
+                  hitSlop={8}
+                  style={styles.qtyStepBtn}
+                  onPress={() => addToCart(item, 1, { silent: true })}
+                >
+                  <Ionicons name="add" size={15} color={PRIMARY} />
+                </Pressable>
+              </View>
+            ) : (
+              <Pressable
+                hitSlop={8}
                 style={styles.addBtn}
-                activeOpacity={0.75}
-                  onPress={() => {
-    // existing add-to-cart function
-  }}
+                onPress={() => addToCart(item, 1)}
               >
                 <Ionicons name="add" size={15} color={PRIMARY} />
                 <Text style={styles.addBtnText}>ADD</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.outOfStockBadge}>
-                <Ionicons
-                  name="close-circle-outline"
-                  size={14}
-                  color="#D32F2F"
-                />
-                <Text style={styles.outOfStockText}>
-                  Out of stock
-                </Text>
-              </View>
-            )}
-          </View>
+              </Pressable>
+            )
+          ) : (
+            <View style={styles.outOfStockBadge}>
+              <Ionicons
+                name="close-circle-outline"
+                size={14}
+                color="#D32F2F"
+              />
+              <Text style={styles.outOfStockText}>
+                Out of stock
+              </Text>
+            </View>
+          )}
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -1118,6 +1143,46 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
+  },
+
+  productMainPress: {
+    flex: 1,
+    flexDirection: 'row',
+    minWidth: 0,
+  },
+
+  addWrap: {
+    justifyContent: 'flex-end',
+    paddingLeft: 6,
+    paddingBottom: 2,
+  },
+
+  qtyStepper: {
+    minWidth: 86,
+    height: 30,
+    borderRadius: 9,
+    backgroundColor: PRIMARY_LIGHT,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+
+  qtyStepBtn: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  qtyStepText: {
+    color: PRIMARY_DARK,
+    fontWeight: '900',
+    fontSize: 12,
+    minWidth: 16,
+    textAlign: 'center',
   },
 
   productCardUnavailable: {

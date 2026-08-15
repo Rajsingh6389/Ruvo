@@ -105,9 +105,18 @@ export async function getShopById(id: number | string): Promise<Shop> {
   return parseOrThrow(res);
 }
 
-export async function getNearbyShops(latitude: number, longitude: number, radius: number = 5.0): Promise<Shop[]> {
-  const res = await fetch(`${API_BASE_URL}/api/shops/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}`);
-  return parseOrThrow(res);
+export async function getNearbyShops(
+  latitude: number,
+  longitude: number,
+  radius: number = 5.0,
+): Promise<Shop[]> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/shops/nearby?latitude=${latitude}&longitude=${longitude}&radius=${radius}`,
+  );
+  const body = await parseOrThrow(res);
+  if (Array.isArray(body)) return body;
+  if (body?.shops && Array.isArray(body.shops)) return body.shops;
+  return [];
 }
 
 // ─── ADMIN ENDPOINTS ──────────────────────────────────────────

@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import { RootStackParamList, MainTabParamList } from '../types/navigation';
 import { ROUTES } from '../constants/routes';
 
@@ -32,8 +33,12 @@ import { EditProductScreen }  from '../screens/marketplace/EditProductScreen';
 import { ComingSoonModal } from '../components/ComingSoonModal';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import CheckoutScreen from '../screens/marketplace/CheckoutScreen';
+import CartScreen from '../screens/marketplace/CartScreen';
+import OrderSuccessScreen from '../screens/marketplace/OrderSuccessScreen';
 import OrderHistoryScreen from '../screens/profile/OrderHistoryScreen';
-import { ShopOrdersScreen } from '../screens/marketplace/ShopOrdersScreen';
+import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScreen';
+import ShopOrdersScreen from '../screens/marketplace/ShopOrdersScreen';
+import ShopkeeperDashboardScreen from '../screens/marketplace/ShopkeeperDashboardScreen';
 
 
 
@@ -45,10 +50,13 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName }> = {
   [ROUTES.HOME]:    { focused: 'home',         outline: 'home-outline' },
   [ROUTES.MARKET]:  { focused: 'storefront',   outline: 'storefront-outline' },
+  [ROUTES.CART]:    { focused: 'cart',          outline: 'cart-outline' },
   [ROUTES.PROFILE]: { focused: 'person-circle', outline: 'person-circle-outline' },
 };
 
-const MainTabs = () => (
+const MainTabs = () => {
+  const { cartCount } = useCart();
+  return (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
@@ -70,16 +78,18 @@ const MainTabs = () => (
       tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       tabBarIcon: ({ focused, color, size }) => {
         const icons = TAB_ICONS[route.name];
-        const iconName = focused ? icons.focused : icons.outline;
+        const iconName = icons ? (focused ? icons.focused : icons.outline) : 'help-outline';
         return <Ionicons name={iconName} size={size} color={color} />;
       },
     })}
   >
     <Tab.Screen name={ROUTES.HOME}    component={HomeScreen}        options={{ tabBarLabel: 'Home' }} />
     <Tab.Screen name={ROUTES.MARKET}  component={NearbyShopsScreen} options={{ tabBarLabel: 'Shops' }} />
+    <Tab.Screen name={ROUTES.CART}    component={CartScreen}        options={{ tabBarLabel: 'Cart', tabBarBadge: cartCount > 0 ? cartCount : undefined }} />
     <Tab.Screen name={ROUTES.PROFILE} component={ProfileScreen}     options={{ tabBarLabel: 'Account' }} />
   </Tab.Navigator>
-);
+  );
+};
 
 interface AppNavigatorProps {
   theme: Theme;
@@ -149,9 +159,12 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.ADD_PRODUCT}    component={AddProductScreen} />
             <Stack.Screen name={ROUTES.MY_PRODUCTS}    component={MyProductsScreen} />
             <Stack.Screen name={ROUTES.EDIT_PRODUCT}   component={EditProductScreen} />
-            <Stack.Screen name={ROUTES.SHOP_ORDERS}   component={ShopOrdersScreen} />
+            <Stack.Screen name={ROUTES.SHOP_ORDERS}    component={ShopOrdersScreen} />
+            <Stack.Screen name={ROUTES.SHOPKEEPER_DASHBOARD} component={ShopkeeperDashboardScreen} />
             <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={ComingSoonScreen} />
             <Stack.Screen name={ROUTES.CHECKOUT}       component={CheckoutScreen} />
+            <Stack.Screen name={ROUTES.ORDER_SUCCESS}  component={OrderSuccessScreen} />
+            <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
             <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
           </>

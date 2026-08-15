@@ -6,13 +6,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { placeOrder } from '../../services/orderService';
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
+import { ROUTES } from '../../constants/routes';
 
 const GREEN = '#2E7D32';
 const LIGHT_GREEN = '#E8F5E9';
@@ -124,10 +125,29 @@ const ProductDetailsScreen = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const { isAuthenticated, userId, token, user } = useAuth();
+  const { addToCart } = useCart();
+  const { showToast } = useToast();
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      showToast('Please login to add items', 'info');
+      return;
+    }
+    if (!product) return;
+    addToCart(
+      {
+        ...product,
+        id: product.id!,
+        shopId: product.shopId ?? 0,
+        category: product.category ?? '',
+      },
+      quantity,
+    );
+  };
 
   const handleBuyNow = () => {
     if (!isAuthenticated) {
-      Alert.alert('Authentication Required', 'Please login to purchase products.');
+      showToast('Please login to purchase', 'info');
       return;
     }
     navigation.navigate('Checkout', { product, quantity });
@@ -570,7 +590,7 @@ const ProductDetailsScreen = () => {
             styles.addCartButton,
             !available && styles.disabledButton,
           ]}
-          onPress={handleBuyNow}
+          onPress={handleAddToCart}
         >
           <Ionicons
             name="cart-outline"

@@ -1,35 +1,58 @@
 package Ranex.ruvo.controller;
 
 import Ranex.ruvo.model.Order;
+import Ranex.ruvo.model.OrderStatus;
 import Ranex.ruvo.model.Payment;
 import Ranex.ruvo.model.Product;
+import Ranex.ruvo.model.Shop;
+import Ranex.ruvo.model.User;
 import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.repository.PaymentRepository;
 import Ranex.ruvo.repository.ProductRepository;
+import Ranex.ruvo.repository.ShopRepository;
+import Ranex.ruvo.repository.UserRepository;
+import Ranex.ruvo.service.NotificationService;
+import Ranex.ruvo.service.PricingService;
 import Ranex.ruvo.service.RazorpayService;
+import Ranex.ruvo.util.DistanceUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/payments")
+@CrossOrigin(origins = "*")
 public class PaymentController {
 
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ProductRepository productRepository;
+    private final ShopRepository shopRepository;
+    private final UserRepository userRepository;
+    private final PricingService pricingService;
+    private final NotificationService notificationService;
     private final RazorpayService razorpayService;
 
     public PaymentController(
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             ProductRepository productRepository,
+            ShopRepository shopRepository,
+            UserRepository userRepository,
+            PricingService pricingService,
+            NotificationService notificationService,
             RazorpayService razorpayService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
+        this.shopRepository = shopRepository;
+        this.userRepository = userRepository;
+        this.pricingService = pricingService;
+        this.notificationService = notificationService;
         this.razorpayService = razorpayService;
     }
 
@@ -40,8 +63,13 @@ public class PaymentController {
         public Long productId;
         public String productName;
         public Integer quantity;
-        public String paymentMethod; // COD or ONLINE
+        public String paymentMethod; // COD or ONLINE / UPI
         public String deliveryAddress;
+        public Double userLatitude;
+        public Double userLongitude;
+        // Customer details (passed from mobile profile context)
+        public String customerName;
+        public String customerPhone;
     }
 
     // Request DTO for Verification
@@ -63,27 +91,60 @@ public class PaymentController {
             return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock available. Only " + product.getStockQuantity() + " left."));
         }
 
-        // Trust server-side price calculation
-        Double totalAmount = product.getSellingPrice() * request.quantity;
+        // Recalculate price securely on server
+        Shop shop = shopRepository.findById(request.shopId).orElse(null);
+        double distanceKm = 0.0;
+        if (shop != null && shop.getLatitude() != null && shop.getLongitude() != null
+                && request.userLatitude != null && request.userLongitude != null) {
+            distanceKm = DistanceUtils.calculateDistance(
+                    request.userLatitude, request.userLongitude,
+                    shop.getLatitude(), shop.getLongitude()
+            );
+        }
 
-        // 1. Create the Order in PENDING status
+        double deliveryFee = pricingService.calculateDeliveryFee(distanceKm);
+        double platformFee = pricingService.calculatePlatformFee(distanceKm);
+        double subtotal = product.getSellingPrice() * request.quantity;
+        double totalAmount = subtotal + deliveryFee + platformFee;
+
+        // Build base order entity
         Order order = new Order();
         order.setUserId(request.userId);
         order.setShopId(request.shopId);
         order.setProductId(request.productId);
         order.setProductName(request.productName);
+        order.setProductImageUrl(product.getImageUrl());
         order.setQuantity(request.quantity);
-        order.setTotalAmount(totalAmount);
-        order.setPaymentMethod(request.paymentMethod);
+        order.setSubtotal(Math.round(subtotal * 100.0) / 100.0);
+        order.setDeliveryFee(deliveryFee);
+        order.setPlatformFee(platformFee);
+        order.setDistanceKm(Math.round(distanceKm * 10.0) / 10.0);
+        order.setTotalAmount(Math.round(totalAmount * 100.0) / 100.0);
         order.setDeliveryAddress(request.deliveryAddress);
+        order.setPaymentMethod(request.paymentMethod != null ? request.paymentMethod : "COD");
+
+        // Snapshot customer details for shopkeeper visibility
+        String customerName = request.customerName;
+        String customerPhone = request.customerPhone;
+        try {
+            Long uid = Long.parseLong(request.userId);
+            User user = userRepository.findById(uid).orElse(null);
+            if (user != null) {
+                customerName = user.getName();
+                customerPhone = user.getMobileNumber();
+            }
+        } catch (NumberFormatException ignored) {}
+        order.setCustomerName(customerName);
+        order.setCustomerPhone(customerPhone);
 
         if ("COD".equalsIgnoreCase(request.paymentMethod)) {
             // Deduct stock immediately for COD
             product.setStockQuantity(product.getStockQuantity() - request.quantity);
             productRepository.save(product);
 
-            order.setPaymentStatus("PENDING");
-            order.setOrderStatus("CONFIRMED");
+            order.setPaymentStatus("COD_PENDING");
+            order.setOrderStatus(OrderStatus.SHOP_PENDING);
+            order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
             Order savedOrder = orderRepository.save(order);
 
             // Log payment
@@ -92,10 +153,13 @@ public class PaymentController {
                     .userId(request.userId)
                     .paymentMethod("COD")
                     .paymentStatus("COD_PENDING")
-                    .amount(totalAmount)
+                    .amount(savedOrder.getTotalAmount())
                     .currency("INR")
                     .build();
             paymentRepository.save(payment);
+
+            // Send notification directly to shopkeeper's dashboard
+            notificationService.notifyShop(savedOrder);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
@@ -104,14 +168,14 @@ public class PaymentController {
                     "message", "Order placed successfully via Cash on Delivery!"
             ));
         } else {
-            // Online Payment Flow (Razorpay)
+            // Online Payment Flow (Razorpay / UPI)
             order.setPaymentStatus("PENDING");
-            order.setOrderStatus("PAYMENT_PENDING");
+            order.setOrderStatus(OrderStatus.PAYMENT_PENDING);
             Order savedOrder = orderRepository.save(order);
 
             try {
                 // Initialize Razorpay Order
-                com.razorpay.Order rzpOrder = razorpayService.createOrder(totalAmount, "receipt_order_" + savedOrder.getId());
+                com.razorpay.Order rzpOrder = razorpayService.createOrder(savedOrder.getTotalAmount(), "receipt_order_" + savedOrder.getId());
                 String rzpOrderId = rzpOrder.get("id");
 
                 // Log pending payment
@@ -120,7 +184,7 @@ public class PaymentController {
                         .userId(request.userId)
                         .paymentMethod("ONLINE")
                         .paymentStatus("PENDING")
-                        .amount(totalAmount)
+                        .amount(savedOrder.getTotalAmount())
                         .currency("INR")
                         .gateway("RAZORPAY")
                         .gatewayOrderId(rzpOrderId)
@@ -132,7 +196,7 @@ public class PaymentController {
                         "orderId", savedOrder.getId(),
                         "paymentMethod", "ONLINE",
                         "razorpayOrderId", rzpOrderId,
-                        "amount", totalAmount,
+                        "amount", savedOrder.getTotalAmount(),
                         "keyId", razorpayService.getKeyId()
                 ));
             } catch (Exception e) {
@@ -162,7 +226,7 @@ public class PaymentController {
 
         if (isValid) {
             // Prevent double-processing
-            if ("PAID".equalsIgnoreCase(order.getPaymentStatus())) {
+            if ("PAID".equalsIgnoreCase(order.getPaymentStatus()) || "SUCCESS".equalsIgnoreCase(order.getPaymentStatus())) {
                 return ResponseEntity.ok(Map.of("success", true, "message", "Payment already verified."));
             }
 
@@ -179,10 +243,11 @@ public class PaymentController {
             product.setStockQuantity(product.getStockQuantity() - order.getQuantity());
             productRepository.save(product);
 
-            // Update order status
-            order.setPaymentStatus("PAID");
-            order.setOrderStatus("CONFIRMED");
-            orderRepository.save(order);
+            // Update order status -> directly to SHOP_PENDING with 10 minute deadline
+            order.setPaymentStatus("SUCCESS");
+            order.setOrderStatus(OrderStatus.SHOP_PENDING);
+            order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
+            Order savedOrder = orderRepository.save(order);
 
             // Update payment transaction logs
             Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());
@@ -194,7 +259,10 @@ public class PaymentController {
                 paymentRepository.save(payment);
             }
 
-            return ResponseEntity.ok(Map.of("success", true, "orderId", order.getId(), "message", "Payment verified and order confirmed successfully!"));
+            // Notify shopkeeper upon payment verification
+            notificationService.notifyShop(savedOrder);
+
+            return ResponseEntity.ok(Map.of("success", true, "orderId", savedOrder.getId(), "message", "Payment verified and order confirmed successfully!"));
         } else {
             // Mark as failed
             order.setPaymentStatus("FAILED");

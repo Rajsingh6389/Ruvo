@@ -178,8 +178,8 @@ export const AuthProvider = ({
       // Don't keep AppNavigator in loading state.
       setIsLoading(false);
 
-      // Load profile after authentication
-      await fetchUser(newToken);
+      // Load profile in background — don't block login completion
+      fetchUser(newToken);
     } catch (error) {
       console.log(
         'RuVo: Login state error:',

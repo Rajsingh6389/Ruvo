@@ -147,6 +147,19 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    // =========================================================
+    // EXPLORE ANYWAY — all available products from approved/active shops
+    // =========================================================
+
+    @GetMapping("/explore")
+    public ResponseEntity<List<Product>> exploreProducts(HttpServletRequest request) {
+        List<Product> products = productRepository.findExploreProducts();
+        products.forEach(p -> prepareProductResponse(p, request));
+        return ResponseEntity.ok()
+            .header("X-Explore-Mode", "true")
+            .body(products);
+    }
+
 
     // =========================================================
     // ADD PRODUCT (JSON body, no image)
