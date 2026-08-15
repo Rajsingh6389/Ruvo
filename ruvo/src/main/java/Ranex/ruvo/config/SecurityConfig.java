@@ -80,8 +80,16 @@ public class SecurityConfig {
                     .requestMatchers(
                             "/auth/**",
                             "/actuator/health",
-                            "/uploads/**"
+                            "/uploads/**",
+                            "/api/partner/register",
+                            "/api/partner/auth/send-otp",
+                            "/api/partner/auth/verify-otp",
+                            "/api/partner/auth/refresh"
                     ).permitAll()
+
+                    .requestMatchers(
+                            "/api/partner/**"
+                    ).hasRole("DELIVERY_PARTNER")
 
                     .requestMatchers(
                             "/api/shops/**"

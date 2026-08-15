@@ -1,0 +1,407 @@
+package Ranex.ruvo.controller;
+
+import Ranex.ruvo.dto.ApiResponse;
+import Ranex.ruvo.model.*;
+import Ranex.ruvo.repository.*;
+import Ranex.ruvo.security.JwtService;
+import jakarta.transaction.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/partner/auth")
+public class PartnerAuthController {
+
+    private final UserRepository users;
+    private final OtpVerificationRepository otps;
+    private final PartnerProfileRepository profiles;
+    private final PartnerDeviceSessionRepository sessions;
+    private final RefreshTokenRepository refreshTokens;
+    private final PasswordEncoder encoder;
+    private final JwtService jwt;
+
+    public PartnerAuthController(UserRepository u, OtpVerificationRepository o, PartnerProfileRepository pr,
+                                 PartnerDeviceSessionRepository s, RefreshTokenRepository r,
+                                 PasswordEncoder e, JwtService j) {
+        this.users = u;
+        this.otps = o;
+        this.profiles = pr;
+        this.sessions = s;
+        this.refreshTokens = r;
+        this.encoder = e;
+        this.jwt = j;
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> sendOtp(@RequestBody Map<String, String> request) {
+        String rawMobile = request.get("mobileNumber");
+        if (rawMobile == null || rawMobile.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("Mobile number is required", null));
+        }
+
+        String mobile = formatMobile(rawMobile);
+        if (!mobile.matches("^\\+91[0-9]{10}$")) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("Invalid Indian mobile number format. Use 10 digits or prefix with +91", null));
+        }
+
+        Optional<OtpVerification> optOtp = otps.findByMobileNumber(mobile);
+        OtpVerification verification;
+        Instant now = Instant.now();
+        String generatedOtp = String.valueOf(100000 + new Random().nextInt(900000));
+
+        if (optOtp.isPresent()) {
+            verification = optOtp.get();
+            if (verification.getResendCooldown() != null && verification.getResendCooldown().isAfter(now)) {
+                long secondsLeft = ChronoUnit.SECONDS.between(now, verification.getResendCooldown());
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(ApiResponse.ok("Please wait " + secondsLeft + " seconds before requesting another OTP", null));
+            }
+            if (verification.getResendCount() >= 5) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(ApiResponse.ok("Maximum OTP request limit reached for today", null));
+            }
+            verification.setOtpCode(generatedOtp);
+            verification.setExpiryTime(now.plus(5, ChronoUnit.MINUTES));
+            verification.setAttempts(0);
+            verification.setResendCooldown(now.plus(60, ChronoUnit.SECONDS));
+            verification.setResendCount(verification.getResendCount() + 1);
+            verification.setVerified(false);
+        } else {
+            verification = OtpVerification.builder()
+                    .mobileNumber(mobile)
+                    .otpCode(generatedOtp)
+                    .expiryTime(now.plus(5, ChronoUnit.MINUTES))
+                    .attempts(0)
+                    .resendCooldown(now.plus(60, ChronoUnit.SECONDS))
+                    .resendCount(1)
+                    .verified(false)
+                    .build();
+        }
+
+        otps.save(verification);
+        System.out.println("====== DEVELOPMENT OTP ======");
+        System.out.println("Mobile: " + mobile);
+        System.out.println("OTP: " + generatedOtp + " (simulated)");
+        System.out.println("=============================");
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("cooldownSeconds", 60);
+        responseData.put("remainingResends", 5 - verification.getResendCount());
+        responseData.put("otpCode", generatedOtp);
+
+        return ResponseEntity.ok(ApiResponse.ok("OTP sent successfully (Simulated)", responseData));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyOtp(@RequestBody Map<String, String> request) {
+        String rawMobile = request.get("mobileNumber");
+        String code = request.get("otpCode");
+        String deviceId = request.get("deviceId");
+        String deviceName = request.get("deviceName");
+        String platform = request.get("platform");
+
+        if (rawMobile == null || code == null || rawMobile.isBlank() || code.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("Mobile number and OTP code are required", null));
+        }
+
+        String mobile = formatMobile(rawMobile);
+        Optional<OtpVerification> optOtp = otps.findByMobileNumber(mobile);
+        if (optOtp.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.ok("No OTP request found for this mobile number", null));
+        }
+
+        OtpVerification verification = optOtp.get();
+        Instant now = Instant.now();
+
+        if (verification.isVerified()) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("This OTP has already been verified", null));
+        }
+        if (verification.getExpiryTime().isBefore(now)) {
+            return ResponseEntity.status(HttpStatus.GONE).body(ApiResponse.ok("OTP has expired. Please request a new one", null));
+        }
+        if (verification.getAttempts() >= 3) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Too many failed attempts. Please request a new OTP", null));
+        }
+
+        if (!verification.getOtpCode().equals(code)) {
+            verification.setAttempts(verification.getAttempts() + 1);
+            otps.save(verification);
+            int attemptsLeft = 3 - verification.getAttempts();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.ok("Incorrect OTP. " + attemptsLeft + " attempts remaining", null));
+        }
+
+        // Successfully verified
+        verification.setVerified(true);
+        otps.save(verification);
+
+        // Find or create User
+        Optional<User> optUser = users.findByMobileNumber(mobile);
+        User user;
+        boolean isNew = false;
+        if (optUser.isPresent()) {
+            user = optUser.get();
+            if (user.getStatus() == AccountStatus.BLOCKED) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Your account has been suspended. Contact support", null));
+            }
+        } else {
+            isNew = true;
+            String placeholderEmail = mobile.replace("+", "") + "@ruvo.partner";
+            user = User.builder()
+                    .name("New Partner")
+                    .email(placeholderEmail)
+                    .mobileNumber(mobile)
+                    .password(encoder.encode(UUID.randomUUID().toString()))
+                    .role(Role.DELIVERY_PARTNER)
+                    .status(AccountStatus.PENDING)
+                    .isAvailable(false)
+                    .build();
+            user = users.save(user);
+        }
+
+        // Setup/Get Partner Profile
+        Optional<PartnerProfile> optProfile = profiles.findByUser(user);
+        PartnerProfile profile;
+        if (optProfile.isPresent()) {
+            profile = optProfile.get();
+        } else {
+            profile = PartnerProfile.builder()
+                    .user(user)
+                    .verificationStatus(VerificationStatus.NEW)
+                    .build();
+            profile = profiles.save(profile);
+        }
+
+        // Create Device Session
+        String sessionId = UUID.randomUUID().toString();
+        PartnerDeviceSession session = PartnerDeviceSession.builder()
+                .user(user)
+                .sessionId(sessionId)
+                .deviceId(deviceId != null ? deviceId : "UNKNOWN_DEVICE")
+                .deviceName(deviceName != null ? deviceName : "Android Device")
+                .platform(platform != null ? platform : "Android")
+                .createdAt(now)
+                .lastActiveAt(now)
+                .expiresAt(now.plus(30, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
+        sessions.save(session);
+
+        // Create Refresh Token
+        String rTokenStr = UUID.randomUUID().toString();
+        RefreshToken rToken = RefreshToken.builder()
+                .token(rTokenStr)
+                .user(user)
+                .expiryDate(now.plus(30, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
+        refreshTokens.save(rToken);
+
+        // Access Token
+        String accessToken = jwt.create(user, sessionId);
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("accessToken", accessToken);
+        responseData.put("refreshToken", rTokenStr);
+        responseData.put("userId", user.getId());
+        responseData.put("role", user.getRole().name());
+        responseData.put("verificationStatus", profile.getVerificationStatus().name());
+        responseData.put("isNew", isNew);
+
+        return ResponseEntity.ok(ApiResponse.ok("Authentication successful", responseData));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> refreshToken(@RequestBody Map<String, String> request) {
+        String tokenStr = request.get("refreshToken");
+        if (tokenStr == null || tokenStr.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("Refresh token is required", null));
+        }
+
+        Optional<RefreshToken> optToken = refreshTokens.findByToken(tokenStr);
+        if (optToken.isEmpty() || optToken.get().isRevoked() || optToken.get().getExpiryDate().isBefore(Instant.now())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Invalid or expired refresh token", null));
+        }
+
+        RefreshToken oldToken = optToken.get();
+        User user = oldToken.getUser();
+
+        // Check if user is blocked
+        if (user.getStatus() == AccountStatus.BLOCKED) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Account is suspended", null));
+        }
+
+        // Rotate refresh token
+        oldToken.setRevoked(true);
+        refreshTokens.save(oldToken);
+
+        Instant now = Instant.now();
+        String newRTokenStr = UUID.randomUUID().toString();
+        RefreshToken newToken = RefreshToken.builder()
+                .token(newRTokenStr)
+                .user(user)
+                .expiryDate(now.plus(30, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
+        refreshTokens.save(newToken);
+
+        // Access Token with a new session or mapping
+        String sessionId = UUID.randomUUID().toString();
+        // Register new temporary session
+        PartnerDeviceSession session = PartnerDeviceSession.builder()
+                .user(user)
+                .sessionId(sessionId)
+                .deviceId("ROTATED_SESSION")
+                .deviceName("Rotated Session")
+                .platform("Web/Android")
+                .createdAt(now)
+                .lastActiveAt(now)
+                .expiresAt(now.plus(30, ChronoUnit.DAYS))
+                .revoked(false)
+                .build();
+        sessions.save(session);
+
+        String accessToken = jwt.create(user, sessionId);
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("accessToken", accessToken);
+        responseData.put("refreshToken", newRTokenStr);
+
+        return ResponseEntity.ok(ApiResponse.ok("Tokens refreshed successfully", responseData));
+    }
+
+    @PostMapping("/logout")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> logout(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String sessionId = jwt.getSessionId(token);
+                if (sessionId != null) {
+                    Optional<PartnerDeviceSession> sessOpt = sessions.findBySessionId(sessionId);
+                    sessOpt.ifPresent(sess -> {
+                        sess.setRevoked(true);
+                        sessions.save(sess);
+                    });
+                }
+                // Revoke latest refresh token of this user
+                String subject = jwt.subject(token);
+                users.findByEmail(subject).ifPresent(user -> {
+                    List<RefreshToken> tokens = refreshTokens.findByUser(user);
+                    for (RefreshToken rt : tokens) {
+                        rt.setRevoked(true);
+                        refreshTokens.save(rt);
+                    }
+                });
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Logged out successfully", null));
+    }
+
+    @PostMapping("/logout-all")
+    @Transactional
+    public ResponseEntity<ApiResponse<Void>> logoutAll(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String subject = jwt.subject(token);
+                users.findByEmail(subject).ifPresent(user -> {
+                    // Revoke all sessions
+                    List<PartnerDeviceSession> activeSess = sessions.findByUser(user);
+                    for (PartnerDeviceSession s : activeSess) {
+                        s.setRevoked(true);
+                        sessions.save(s);
+                    }
+                    // Revoke all refresh tokens
+                    List<RefreshToken> tokens = refreshTokens.findByUser(user);
+                    for (RefreshToken rt : tokens) {
+                        rt.setRevoked(true);
+                        refreshTokens.save(rt);
+                    }
+                });
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Logged out from all devices successfully", null));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<User>> getMe(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String subject = jwt.subject(token);
+                Optional<User> optUser = users.findByEmail(subject);
+                if (optUser.isPresent()) {
+                    return ResponseEntity.ok(ApiResponse.ok("Profile retrieved", optUser.get()));
+                }
+            }
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getSessions(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String subject = jwt.subject(token);
+                Optional<User> optUser = users.findByEmail(subject);
+                if (optUser.isPresent()) {
+                    List<PartnerDeviceSession> activeSessions = sessions.findByUserAndRevokedFalse(optUser.get());
+                    String currentSessionId = jwt.getSessionId(token);
+
+                    List<Map<String, Object>> responseList = new ArrayList<>();
+                    for (PartnerDeviceSession s : activeSessions) {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("sessionId", s.getSessionId());
+                        item.put("deviceId", s.getDeviceId());
+                        item.put("deviceName", s.getDeviceName());
+                        item.put("platform", s.getPlatform());
+                        item.put("lastActiveAt", s.getLastActiveAt());
+                        item.put("isCurrent", s.getSessionId().equals(currentSessionId));
+                        responseList.add(item);
+                    }
+                    return ResponseEntity.ok(ApiResponse.ok("Active sessions retrieved", responseList));
+                }
+            }
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<ApiResponse<Void>> revokeSession(@RequestHeader("Authorization") String authHeader,
+                                                           @PathVariable String sessionId) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String subject = jwt.subject(token);
+                Optional<User> optUser = users.findByEmail(subject);
+                Optional<PartnerDeviceSession> sessOpt = sessions.findBySessionId(sessionId);
+                if (optUser.isPresent() && sessOpt.isPresent() && sessOpt.get().getUser().getId().equals(optUser.get().getId())) {
+                    PartnerDeviceSession s = sessOpt.get();
+                    s.setRevoked(true);
+                    sessions.save(s);
+                    return ResponseEntity.ok(ApiResponse.ok("Session revoked successfully", null));
+                }
+            }
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+    }
+
+    private String formatMobile(String mobile) {
+        String clean = mobile.replaceAll("[^0-9]", "");
+        if (clean.length() == 10) {
+            return "+91" + clean;
+        } else if (clean.length() == 12 && clean.startsWith("91")) {
+            return "+" + clean;
+        }
+        return mobile;
+    }
+}

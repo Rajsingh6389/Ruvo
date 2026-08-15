@@ -453,6 +453,38 @@ export const MyShopsScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={{
+            backgroundColor: '#8B5CF6',
+            marginTop: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRadius: 8,
+            gap: 8,
+          }}
+          onPress={() =>
+            navigation.navigate(
+              ROUTES.SHOP_ORDERS,
+              {
+                shopId: item.id,
+                shopName: item.name,
+              },
+            )
+          }
+        >
+          <Ionicons
+            name="receipt-outline"
+            size={18}
+            color="#FFFFFF"
+          />
+          <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
+            Manage Shop Orders
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   };

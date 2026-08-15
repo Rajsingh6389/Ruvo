@@ -25,6 +25,7 @@ export type RootStackParamList = {
   [ROUTES.ADD_PRODUCT]: { shopId: number };
   [ROUTES.MY_PRODUCTS]: { shopId: number };
   [ROUTES.EDIT_PRODUCT]: { product: Product };
+  [ROUTES.SHOP_ORDERS]: { shopId: number; shopName?: string };
   [ROUTES.ADMIN_DASHBOARD]: undefined;
   EditProfile: undefined;
 };

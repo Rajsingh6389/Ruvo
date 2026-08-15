@@ -19,5 +19,6 @@ public class User {
   @Column(nullable = false, updatable = false) private Instant createdAt;
   private Instant lastLogin;
   @Builder.Default private BigDecimal walletBalance = BigDecimal.ZERO;
-  @PrePersist void created() { if (createdAt == null) createdAt = Instant.now(); if (status == null) status = AccountStatus.PENDING; if (role == null) role = Role.USER; }
+  private Boolean isAvailable;
+  @PrePersist void created() { if (createdAt == null) createdAt = Instant.now(); if (status == null) status = AccountStatus.PENDING; if (role == null) role = Role.USER; if (isAvailable == null) isAvailable = false; }
 }

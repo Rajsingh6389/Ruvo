@@ -1,0 +1,254 @@
+package Ranex.ruvo.controller;
+
+import Ranex.ruvo.dto.ApiResponse;
+import Ranex.ruvo.model.*;
+import Ranex.ruvo.repository.*;
+import Ranex.ruvo.security.JwtService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/partner")
+public class PartnerVerificationController {
+
+    private final UserRepository users;
+    private final PartnerProfileRepository profiles;
+    private final PartnerVehicleRepository vehicles;
+    private final PartnerVerificationRepository verifications;
+    private final JwtService jwt;
+
+    public PartnerVerificationController(UserRepository u, PartnerProfileRepository p, PartnerVehicleRepository v,
+                                         PartnerVerificationRepository vr, JwtService j) {
+        this.users = u;
+        this.profiles = p;
+        this.vehicles = v;
+        this.verifications = vr;
+        this.jwt = j;
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProfile(@RequestHeader("Authorization") String authHeader) {
+        User user = getUserFromHeader(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+        }
+
+        PartnerProfile profile = profiles.findByUser(user)
+                .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
+
+        Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
+        Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("userId", user.getId());
+        responseData.put("name", user.getName());
+        responseData.put("mobileNumber", user.getMobileNumber());
+        responseData.put("email", user.getEmail());
+        responseData.put("verificationStatus", profile.getVerificationStatus().name());
+        responseData.put("adminReason", profile.getAdminReason());
+
+        if (vehicle.isPresent()) {
+            Map<String, Object> vMap = new HashMap<>();
+            vMap.put("vehicleType", vehicle.get().getVehicleType());
+            vMap.put("vehicleNumber", vehicle.get().getVehicleNumber());
+            vMap.put("vehicleModel", vehicle.get().getVehicleModel());
+            vMap.put("vehicleCapacity", vehicle.get().getVehicleCapacity());
+            vMap.put("fuelType", vehicle.get().getFuelType());
+            vMap.put("status", vehicle.get().getStatus().name());
+            responseData.put("vehicle", vMap);
+        } else {
+            responseData.put("vehicle", null);
+        }
+
+        if (verification.isPresent()) {
+            Map<String, Object> kMap = new HashMap<>();
+            kMap.put("fullName", verification.get().getFullName());
+            kMap.put("mobileNumber", verification.get().getMobileNumber());
+            kMap.put("dateOfBirth", verification.get().getDateOfBirth());
+            kMap.put("address", verification.get().getAddress());
+            kMap.put("city", verification.get().getCity());
+            kMap.put("state", verification.get().getState());
+            kMap.put("pincode", verification.get().getPincode());
+            kMap.put("identityDocumentType", verification.get().getIdentityDocumentType());
+            kMap.put("identityDocumentNumber", verification.get().getIdentityDocumentNumber());
+            kMap.put("status", verification.get().getStatus().name());
+            responseData.put("kyc", kMap);
+        } else {
+            responseData.put("kyc", null);
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok("Partner profile retrieved", responseData));
+    }
+
+    @PostMapping("/verification")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> submitVerification(@RequestHeader("Authorization") String authHeader,
+                                                                               @RequestBody Map<String, String> request) {
+        User user = getUserFromHeader(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+        }
+
+        String fullName = request.get("fullName");
+        String dobStr = request.get("dateOfBirth");
+        String address = request.get("address");
+        String city = request.get("city");
+        String state = request.get("state");
+        String pincode = request.get("pincode");
+        String docType = request.get("identityDocumentType");
+        String docNum = request.get("identityDocumentNumber");
+
+        if (fullName == null || address == null || city == null || state == null || pincode == null || docType == null || docNum == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("All required fields must be filled", null));
+        }
+
+        PartnerProfile profile = profiles.findByUser(user)
+                .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
+
+        Optional<PartnerVerification> optVer = verifications.findByPartnerProfile(profile);
+        PartnerVerification verification;
+
+        LocalDate dob = dobStr != null && !dobStr.isBlank() ? LocalDate.parse(dobStr) : null;
+
+        if (optVer.isPresent()) {
+            verification = optVer.get();
+            verification.setFullName(fullName);
+            verification.setDateOfBirth(dob);
+            verification.setAddress(address);
+            verification.setCity(city);
+            verification.setState(state);
+            verification.setPincode(pincode);
+            verification.setIdentityDocumentType(docType);
+            verification.setIdentityDocumentNumber(docNum);
+            verification.setStatus(VerificationStatus.KYC_SUBMITTED);
+        } else {
+            verification = PartnerVerification.builder()
+                    .partnerProfile(profile)
+                    .fullName(fullName)
+                    .mobileNumber(user.getMobileNumber())
+                    .dateOfBirth(dob)
+                    .address(address)
+                    .city(city)
+                    .state(state)
+                    .pincode(pincode)
+                    .identityDocumentType(docType)
+                    .identityDocumentNumber(docNum)
+                    .status(VerificationStatus.KYC_SUBMITTED)
+                    .build();
+        }
+        verifications.save(verification);
+
+        // Update core User details
+        user.setName(fullName);
+        user.setAddress(address);
+        user.setCity(city);
+        user.setState(state);
+        user.setPincode(pincode);
+        if (dob != null) user.setDateOfBirth(dob);
+        users.save(user);
+
+        // Check if both vehicle and KYC are submitted
+        Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
+        if (vehicle.isPresent()) {
+            profile.setVerificationStatus(VerificationStatus.UNDER_REVIEW);
+            profiles.save(profile);
+        }
+
+        Map<String, Object> resData = new HashMap<>();
+        resData.put("verificationStatus", profile.getVerificationStatus().name());
+        return ResponseEntity.ok(ApiResponse.ok("KYC verification details submitted successfully", resData));
+    }
+
+    @PostMapping("/vehicle")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> submitVehicle(@RequestHeader("Authorization") String authHeader,
+                                                                          @RequestBody Map<String, String> request) {
+        User user = getUserFromHeader(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+        }
+
+        String type = request.get("vehicleType");
+        String num = request.get("vehicleNumber");
+        String model = request.get("vehicleModel");
+        String capacity = request.get("vehicleCapacity");
+        String fuel = request.get("fuelType");
+
+        if (type == null || num == null || model == null || capacity == null || fuel == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.ok("All vehicle fields are required", null));
+        }
+
+        PartnerProfile profile = profiles.findByUser(user)
+                .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
+
+        Optional<PartnerVehicle> optVeh = vehicles.findByPartnerProfile(profile);
+        PartnerVehicle vehicle;
+
+        if (optVeh.isPresent()) {
+            vehicle = optVeh.get();
+            vehicle.setVehicleType(type);
+            vehicle.setVehicleNumber(num);
+            vehicle.setVehicleModel(model);
+            vehicle.setVehicleCapacity(capacity);
+            vehicle.setFuelType(fuel);
+            vehicle.setStatus(VerificationStatus.PENDING);
+        } else {
+            vehicle = PartnerVehicle.builder()
+                    .partnerProfile(profile)
+                    .vehicleType(type)
+                    .vehicleNumber(num)
+                    .vehicleModel(model)
+                    .vehicleCapacity(capacity)
+                    .fuelType(fuel)
+                    .status(VerificationStatus.PENDING)
+                    .build();
+        }
+        vehicles.save(vehicle);
+
+        // Check if both vehicle and KYC are submitted
+        Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
+        if (verification.isPresent()) {
+            profile.setVerificationStatus(VerificationStatus.UNDER_REVIEW);
+            profiles.save(profile);
+        }
+
+        Map<String, Object> resData = new HashMap<>();
+        resData.put("verificationStatus", profile.getVerificationStatus().name());
+        return ResponseEntity.ok(ApiResponse.ok("Vehicle details saved successfully", resData));
+    }
+
+    @GetMapping("/verification/status")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getVerificationStatus(@RequestHeader("Authorization") String authHeader) {
+        User user = getUserFromHeader(authHeader);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
+        }
+
+        PartnerProfile profile = profiles.findByUser(user)
+                .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
+
+        Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
+        Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
+
+        Map<String, String> statusMap = new HashMap<>();
+        statusMap.put("profileStatus", profile.getVerificationStatus().name());
+        statusMap.put("adminReason", profile.getAdminReason());
+        statusMap.put("vehicleStatus", vehicle.map(v -> v.getStatus().name()).orElse("MISSING"));
+        statusMap.put("kycStatus", verification.map(k -> k.getStatus().name()).orElse("MISSING"));
+
+        return ResponseEntity.ok(ApiResponse.ok("Verification status retrieved", statusMap));
+    }
+
+    private User getUserFromHeader(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            if (jwt.valid(token)) {
+                String subject = jwt.subject(token);
+                return users.findByEmail(subject).orElse(null);
+            }
+        }
+        return null;
+    }
+}

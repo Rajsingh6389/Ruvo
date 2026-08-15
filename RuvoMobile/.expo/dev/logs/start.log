@@ -1062,3 +1062,92 @@
 {"_e":"devserver:start","_t":1786602018743,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
 {"_e":"metro:config","_t":1786602019411,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
 {"_e":"expo:dev-tools-plugin:load","_t":1786602020024,"plugins":[]}
+{"_e":"metro:instantiate","_t":1786602030584,"atlas":false,"workers":12,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1786603532182,"id":"2","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786603542008,"id":"2","total":1156,"ms":9825.2414}
+{"_e":"metro:client_log","_t":1786603556628,"level":"warn","data":["The global process.env.EXPO_OS is not defined. This should be inlined by babel-preset-expo during transformation."]}
+{"_e":"metro:client_log","_t":1786603556628,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786603556628,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786603556629,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786603556629,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786603556629,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786603556629,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1786603557314,"level":"log","data":["RuVo: Failed to fetch user profile:","[Error: Failed to fetch user profile]"]}
+{"_e":"metro:client_log","_t":1786603614332,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786603614398,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786603614492,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786603614492,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786603614493,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786603615224,"level":"log","data":["RuVo: Failed to fetch user profile:","[Error: Failed to fetch user profile]"]}
+{"_e":"metro:client_log","_t":1786603623037,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786603623132,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:client_log","_t":1786603650862,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786603650924,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:bundling:started","_t":1786603761658,"id":"4","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786603761841,"id":"4","total":1,"ms":182.4364}
+{"_e":"metro:client_log","_t":1786603769219,"level":"warn","data":["The global process.env.EXPO_OS is not defined. This should be inlined by babel-preset-expo during transformation."]}
+{"_e":"metro:client_log","_t":1786603769219,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786603769260,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786603769340,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786603769340,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786603769340,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786603769724,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1786603770877,"level":"log","data":["RuVo: Failed to fetch user profile:","[Error: Failed to fetch user profile]"]}
+{"_e":"metro:client_log","_t":1786603786072,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786603786132,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:bundling:started","_t":1786604736288,"id":"6","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786604736369,"id":"6","total":1,"ms":80.6896}
+{"_e":"metro:client_log","_t":1786604783876,"level":"warn","data":["The global process.env.EXPO_OS is not defined. This should be inlined by babel-preset-expo during transformation."]}
+{"_e":"metro:client_log","_t":1786604783876,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786604783998,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786604784053,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786604784054,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786604784054,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786604784377,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1786604785530,"level":"log","data":["RuVo: Failed to fetch user profile:","[Error: Failed to fetch user profile]"]}
+{"_e":"metro:client_log","_t":1786604798968,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786604799117,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:bundling:started","_t":1786605305531,"id":"8","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786605305593,"id":"8","total":1,"ms":62.4132}
+{"_e":"metro:client_log","_t":1786605313124,"level":"warn","data":["The global process.env.EXPO_OS is not defined. This should be inlined by babel-preset-expo during transformation."]}
+{"_e":"metro:client_log","_t":1786605313124,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786605313372,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786605313483,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786605313483,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786605313483,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786605313820,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1786605315037,"level":"log","data":["RuVo: Failed to fetch user profile:","[Error: Failed to fetch user profile]"]}
+{"_e":"metro:client_log","_t":1786605324743,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786605324855,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:client_log","_t":1786605511992,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786605512429,"level":"log","data":["RuVo: User profile loaded"]}
+{"_e":"metro:client_log","_t":1786605517303,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786605517376,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"metro:bundling:started","_t":1786605633475,"id":"a","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786605633542,"id":"a","total":1,"ms":67.5637}
+{"_e":"metro:client_log","_t":1786605640481,"level":"warn","data":["The global process.env.EXPO_OS is not defined. This should be inlined by babel-preset-expo during transformation."]}
+{"_e":"metro:client_log","_t":1786605640482,"level":"log","data":["RuVo: Initializing authentication..."]}
+{"_e":"metro:client_log","_t":1786605640582,"level":"log","data":["RuVo: Token:","FOUND"]}
+{"_e":"metro:client_log","_t":1786605640694,"level":"log","data":["RuVo: User ID:","2"]}
+{"_e":"metro:client_log","_t":1786605640695,"level":"log","data":["RuVo: Role:","USER"]}
+{"_e":"metro:client_log","_t":1786605640695,"level":"log","data":["RuVo: Fetching user profile..."]}
+{"_e":"metro:client_log","_t":1786605640956,"level":"warn","data":["SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead. See https://github.com/AppAndFlow/react-native-safe-area-context"]}
+{"_e":"metro:client_log","_t":1786605642092,"level":"log","data":["RuVo: User profile loaded"]}
+{"_e":"metro:client_log","_t":1786605653580,"level":"log","data":["PRODUCT API URL:","http://172.16.3.101:8080/api/products/shop/1"]}
+{"_e":"metro:client_log","_t":1786605653650,"level":"log","data":["PRODUCT API STATUS:","200"]}
+{"_e":"root:init","_t":1786611227799,"format":"v0-jsonl","version":"57.0.13"}
+{"_e":"env:mode","_t":1786611227800,"nodeEnv":"development","babelEnv":"development","mode":"development"}
+{"_e":"env:load","_t":1786611227804,"mode":"development","files":[],"env":{}}
+{"_e":"devserver:start","_t":1786611228382,"mode":"development","web":true,"baseUrl":"","asyncRoutes":false,"routerRoot":"../..\\..\\app","serverComponents":false,"serverActions":false,"serverRendering":false,"apiRoutes":false,"exporting":false}
+{"_e":"metro:config","_t":1786611228971,"serverRoot":"../..\\..","projectRoot":"../..\\..","exporting":false,"flags":{"autolinkingModuleResolution":false,"serverActions":false,"serverComponents":false,"reactCompiler":false,"optimizeGraph":false,"treeshaking":false,"logbox":false}}
+{"_e":"expo:dev-tools-plugin:load","_t":1786611229872,"plugins":[]}
+{"_e":"metro:instantiate","_t":1786611241042,"atlas":false,"workers":12,"host":"::","port":8081}
+{"_e":"metro:bundling:started","_t":1786616481641,"id":"1","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786616722344,"id":"1","total":1157,"ms":240702.6177}
+{"_e":"metro:server_log","_t":1786616808136,"level":"error","data":["[timeout] connection terminated with Device for app='%s' on device='%s' after not responding for %s seconds.","com.anonymous.RuvoPartner","RMX3998 - 16 - API 36","60"]}
+{"_e":"metro:bundling:started","_t":1786616927488,"id":"2","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786616953279,"id":"2","total":1,"ms":25790.9221}
+{"_e":"metro:bundling:started","_t":1786616962173,"id":"3","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786616962244,"id":"3","total":1,"ms":71.6145}
+{"_e":"metro:bundling:started","_t":1786616969267,"id":"4","platform":"android","environment":null,"entry":"index.js"}
+{"_e":"metro:bundling:done","_t":1786616969330,"id":"4","total":1,"ms":63.1634}
