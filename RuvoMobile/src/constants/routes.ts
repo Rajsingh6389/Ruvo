@@ -36,6 +36,7 @@ export const ROUTES = {
   CART: 'Cart',
   ORDER_SUCCESS: 'OrderSuccess',
   CUSTOMER_TRACKING: 'CustomerTracking',
+  DELIVERY_ASSIGNMENT: 'DeliveryPartnerAssignment',
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;

@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
 import { updateProduct, updateProductWithImage } from '../../services/productService';
@@ -78,15 +78,22 @@ export const EditProductScreen = () => {
   }, [actualPrice, sellingPrice]);
 
   // ── Image Picker ──
-  const pickImage = () => {
-    launchImageLibrary({ mediaType: 'photo', quality: 0.8 }, (result) => {
-      if (!result.didCancel && result.assets && result.assets.length > 0) {
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
         setImageUri(asset.uri ?? null);
-        setImageType(asset.type ?? 'image/jpeg');
+        setImageType(asset.mimeType ?? 'image/jpeg');
         setImageName(asset.fileName ?? 'product.jpg');
       }
-    });
+    } catch (e) {
+      console.warn('Image pick cancelled or failed', e);
+    }
   };
 
   // ── Validation ──

@@ -252,6 +252,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Order } from '../../types/order';
 import { API_BASE_URL } from '../../config/api';
+import { ROUTES } from '../../constants/routes';
 
 type OrderStatus =
   | 'SHOP_PENDING'
@@ -872,7 +873,7 @@ export default function ShopOrdersScreen() {
             style={styles.assignmentBox}
             onPress={() =>
               navigation.navigate(
-                'DeliveryPartnerAssignment',
+                ROUTES.DELIVERY_ASSIGNMENT,
                 {
                   orderId: item.id,
                   shopId,
@@ -906,7 +907,15 @@ export default function ShopOrdersScreen() {
 
         {/* PARTNER ASSIGNMENT */}
         {isAssigning && (
-          <View style={styles.assignmentBox}>
+          <TouchableOpacity
+            style={styles.assignmentBox}
+            onPress={() =>
+              navigation.navigate(
+                ROUTES.DELIVERY_ASSIGNMENT,
+                { orderId: item.id, shopId }
+              )
+            }
+          >
             <ActivityIndicator
               size="small"
               color="#EA580C"
@@ -918,10 +927,16 @@ export default function ShopOrdersScreen() {
               </Text>
 
               <Text style={styles.assignmentText}>
-                Waiting for a partner to accept...
+                Tap to view assignment progress
               </Text>
             </View>
-          </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={22}
+              color="#EA580C"
+            />
+          </TouchableOpacity>
         )}
 
         {/* PARTNER ASSIGNED */}

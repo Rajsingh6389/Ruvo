@@ -23,6 +23,17 @@ import java.util.Optional;
 /** Simple typed payload so convertAndSend doesn't get ambiguous with Map<K,V>. */
 record LocationPayload(Double latitude, Double longitude) {}
 
+/** Payload describing the current pending delivery request for a shopkeeper poll. */
+record CurrentDeliveryRequestPayload(
+    Long requestId,
+    Long partnerId,
+    String partnerName,
+    String partnerPhone,
+    Double distanceKm,
+    String expiresAt,   // ISO-8601
+    String status       // PENDING | NONE | ASSIGNED
+) {}
+
 @RestController
 @RequestMapping("/api/delivery")
 @CrossOrigin(origins = "*")
@@ -93,9 +104,31 @@ public class DeliveryController {
         DeliveryPartner p = getCurrentPartner();
         if (p == null) return ResponseEntity.status(403).build();
 
-        // Normally we might add a custom query to find by partnerId.
-        // Let's assume we fetch all and filter or add a query in repository
-        return ResponseEntity.ok("Not implemented yet -- get filtered requests");
+        List<Ranex.ruvo.model.DeliveryRequest> pending =
+            deliveryRequestRepository.findByPartnerIdAndStatus(p.getId(), "PENDING");
+
+        // Enrich with order info for display
+        List<java.util.Map<String, Object>> result = pending.stream()
+            .filter(req -> !java.time.Instant.now().isAfter(req.getExpiresAt())) // only non-expired
+            .map(req -> {
+                Order order = orderRepository.findById(req.getOrderId()).orElse(null);
+                java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
+                map.put("requestId", req.getId());
+                map.put("orderId", req.getOrderId());
+                map.put("distanceKm", req.getDistanceKm());
+                map.put("expiresAt", req.getExpiresAt().toString());
+                map.put("status", req.getStatus());
+                if (order != null) {
+                    map.put("deliveryAddress", order.getDeliveryAddress());
+                    map.put("totalAmount", order.getTotalAmount());
+                    map.put("paymentMethod", order.getPaymentMethod());
+                    map.put("deliveryFee", order.getDeliveryFee());
+                }
+                return map;
+            })
+            .toList();
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/requests/{id}/accept")
@@ -225,4 +258,49 @@ public class DeliveryController {
             return ResponseEntity.badRequest().body("Invalid OTP");
         }
     }
+
+    // ===============================================
+    // GET current pending delivery request (shopkeeper poll)
+    // ===============================================
+
+    @GetMapping("/orders/{orderId}/current-request")
+    public ResponseEntity<?> getCurrentRequest(@PathVariable Long orderId) {
+        // Allow shopkeepers (or any authenticated user) to check assignment status
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        // If already assigned, return ASSIGNED sentinel
+        if (OrderStatus.DELIVERY_ASSIGNED.equals(order.getOrderStatus())
+                || OrderStatus.PICKED_UP.equals(order.getOrderStatus())
+                || OrderStatus.OUT_FOR_DELIVERY.equals(order.getOrderStatus())
+                || OrderStatus.DELIVERED.equals(order.getOrderStatus())) {
+            return ResponseEntity.ok(new CurrentDeliveryRequestPayload(
+                null, order.getDeliveryPartnerId(), null, null, null, null, "ASSIGNED"
+            ));
+        }
+
+        // Find latest PENDING request
+        java.util.Optional<Ranex.ruvo.model.DeliveryRequest> reqOpt =
+            deliveryRequestRepository.findTopByOrderIdAndStatusOrderBySentAtDesc(orderId, "PENDING");
+
+        if (reqOpt.isEmpty()) {
+            return ResponseEntity.ok(new CurrentDeliveryRequestPayload(
+                null, null, null, null, null, null, "NONE"
+            ));
+        }
+
+        Ranex.ruvo.model.DeliveryRequest req = reqOpt.get();
+        DeliveryPartner partner = deliveryPartnerRepository.findById(req.getPartnerId()).orElse(null);
+
+        return ResponseEntity.ok(new CurrentDeliveryRequestPayload(
+            req.getId(),
+            req.getPartnerId(),
+            partner != null ? partner.getName() : "Partner",
+            partner != null ? partner.getPhone() : "",
+            req.getDistanceKm(),
+            req.getExpiresAt().toString(),
+            "PENDING"
+        ));
+    }
 }
+

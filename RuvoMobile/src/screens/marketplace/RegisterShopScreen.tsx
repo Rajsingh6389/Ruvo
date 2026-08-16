@@ -16,9 +16,9 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Geolocation from 'react-native-geolocation-service';
+import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { Controller, useForm } from 'react-hook-form';
-import { launchImageLibrary } from 'react-native-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '../../components/Button';
@@ -105,131 +105,76 @@ export const RegisterShopScreen = () => {
     longitudeDelta: 10,
   });
 
-  const selectImage = (kind: 'logo' | 'banner') => {
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        selectionLimit: 1,
-      },
-      response => {
-        if (response.didCancel) return;
+  const selectImage = async (kind: 'logo' | 'banner') => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: true,
+      });
 
-        if (response.errorCode || !response.assets?.[0]) {
-          Alert.alert(
-            'Image error',
-            response.errorMessage || 'Could not select an image.',
-          );
-          return;
-        }
+      if (result.canceled || !result.assets?.[0]) return;
 
-        if (kind === 'logo') {
-          setLogo(response.assets[0]);
-        } else {
-          setBanner(response.assets[0]);
-        }
-      },
-    );
+      const asset = result.assets[0];
+      const imgObj = {
+        uri: asset.uri,
+        type: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || `${kind}.jpg`,
+      };
+
+      if (kind === 'logo') {
+        setLogo(imgObj);
+      } else {
+        setBanner(imgObj);
+      }
+    } catch (err: any) {
+      Alert.alert('Image error', err?.message || 'Could not select an image.');
+    }
   };
 
   const useCurrentLocation = async () => {
     setIsFetchingLocation(true);
 
     try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-        ]);
-
-        const fineGranted =
-          granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
-          PermissionsAndroid.RESULTS.GRANTED;
-
-        const coarseGranted =
-          granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] ===
-          PermissionsAndroid.RESULTS.GRANTED;
-
-        if (!fineGranted && !coarseGranted) {
-          Alert.alert(
-            'Location permission denied',
-            'Please allow location access in Settings, or enter your shop latitude and longitude manually.',
-          );
-          setIsFetchingLocation(false);
-          return;
-        }
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== Location.PermissionStatus.GRANTED) {
+        Alert.alert(
+          'Location permission denied',
+          'Please allow location access in Settings, or enter your shop latitude and longitude manually.',
+        );
+        setIsFetchingLocation(false);
+        return;
       }
 
-      Geolocation.getCurrentPosition(
-        position => {
-          setValue(
-            'latitude',
-            position.coords.latitude.toFixed(6),
-            { shouldValidate: true },
-          );
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
 
-          setValue(
-            'longitude',
-            position.coords.longitude.toFixed(6),
-            { shouldValidate: true },
-          );
+      const lat = location.coords.latitude;
+      const lng = location.coords.longitude;
 
-          setSelectedLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
+      setValue('latitude', lat.toFixed(6), { shouldValidate: true });
+      setValue('longitude', lng.toFixed(6), { shouldValidate: true });
 
-          setMapRegion({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          });
+      setSelectedLocation({ latitude: lat, longitude: lng });
+      setMapRegion({
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
 
-          reverseGeocode(
-            position.coords.latitude,
-            position.coords.longitude,
-          ).then(addressString => {
-            if (addressString) {
-              setValue('address', addressString, {
-                shouldValidate: true,
-              });
-            }
-          });
+      const addressString = await reverseGeocode(lat, lng);
+      if (addressString) {
+        setValue('address', addressString, { shouldValidate: true });
+      }
 
-          setIsFetchingLocation(false);
-        },
-        error => {
-          setIsFetchingLocation(false);
-          // Code 2 = POSITION_UNAVAILABLE (location services off or no provider)
-          if (error.code === 2) {
-            Alert.alert(
-              'Location unavailable',
-              'Please turn on Location Services in your device Settings, then try again. You can also set your location manually using the map.',
-            );
-          } else if (error.code === 3) {
-            Alert.alert(
-              'Location timed out',
-              'Could not get your location in time. Make sure GPS or Wi-Fi is enabled, then try again.',
-            );
-          } else {
-            Alert.alert('Location error', error.message);
-          }
-        },
-        {
-          enableHighAccuracy: false,
-          timeout: 15000,
-          maximumAge: 60000,
-          forceRequestLocation: true,
-        },
-      );
+      setIsFetchingLocation(false);
     } catch (error) {
       Alert.alert(
         'Location error',
-        error instanceof Error
-          ? error.message
-          : 'Unexpected error',
+        error instanceof Error ? error.message : 'Unexpected error',
       );
-
       setIsFetchingLocation(false);
     }
   };

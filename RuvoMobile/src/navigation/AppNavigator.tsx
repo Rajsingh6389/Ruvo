@@ -39,6 +39,7 @@ import OrderHistoryScreen from '../screens/profile/OrderHistoryScreen';
 import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScreen';
 import ShopOrdersScreen from '../screens/marketplace/ShopOrdersScreen';
 import ShopkeeperDashboardScreen from '../screens/marketplace/ShopkeeperDashboardScreen';
+import DeliveryPartnerAssignmentScreen from '../screens/marketplace/DeliveryPartnerAssignmentScreen';
 
 
 
@@ -167,6 +168,7 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
             <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
+            <Stack.Screen name={ROUTES.DELIVERY_ASSIGNMENT} component={DeliveryPartnerAssignmentScreen} />
           </>
         )}
       </Stack.Navigator>

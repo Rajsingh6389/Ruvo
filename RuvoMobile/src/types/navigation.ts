@@ -33,4 +33,5 @@ export type RootStackParamList = {
   Cart: undefined;
   OrderSuccess: { orderId: number };
   CustomerTracking: { orderId: number };
+  DeliveryPartnerAssignment: { orderId: number; shopId: number };
 };

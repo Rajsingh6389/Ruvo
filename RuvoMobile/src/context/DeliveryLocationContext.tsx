@@ -7,8 +7,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
-import Geolocation from 'react-native-geolocation-service';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   composeFullAddress,
@@ -66,30 +65,22 @@ const DeliveryLocationContext = createContext<DeliveryLocationContextData>(
 );
 
 async function requestLocationPermission(): Promise<boolean> {
-  if (Platform.OS !== 'android') return true;
-
-  const granted = await PermissionsAndroid.request(
-    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-    {
-      title: 'Location permission',
-      message: 'RuVo uses your location to fill delivery address and nearby shops.',
-      buttonNeutral: 'Ask me later',
-      buttonNegative: 'Cancel',
-      buttonPositive: 'Allow',
-    },
-  );
-
-  return granted === PermissionsAndroid.RESULTS.GRANTED;
+  try {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    return status === Location.PermissionStatus.GRANTED;
+  } catch {
+    return false;
+  }
 }
 
-function getCurrentPosition(): Promise<Geolocation.GeoPosition> {
-  return new Promise((resolve, reject) => {
-    Geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 20000,
-      maximumAge: 8000,
-    });
+async function getCurrentPosition(): Promise<{ latitude: number; longitude: number }> {
+  const pos = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.Balanced,
   });
+  return {
+    latitude: pos.coords.latitude,
+    longitude: pos.coords.longitude,
+  };
 }
 
 export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) => {
@@ -97,7 +88,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
   const [isLoading, setIsLoading] = useState(true);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const watchId = useRef<number | null>(null);
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null);
   const geocodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const locationRef = useRef<DeliveryLocation | null>(null);
 
@@ -154,8 +145,8 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         return;
       }
 
-      const position = await getCurrentPosition();
-      await applyGps(position.coords.latitude, position.coords.longitude, false);
+      const coords = await getCurrentPosition();
+      await applyGps(coords.latitude, coords.longitude, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not fetch your location.');
     } finally {
@@ -164,9 +155,9 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
   }, [applyGps]);
 
   const stopTracking = useCallback(() => {
-    if (watchId.current != null) {
-      Geolocation.clearWatch(watchId.current);
-      watchId.current = null;
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
     }
     if (geocodeTimer.current) {
       clearTimeout(geocodeTimer.current);
@@ -186,30 +177,31 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     setIsTracking(true);
     setError(null);
 
-    watchId.current = Geolocation.watchPosition(
-      position => {
-        const { latitude, longitude } = position.coords;
-        setLocation(prev =>
-          prev
-            ? { ...prev, latitude, longitude }
-            : prev,
-        );
+    try {
+      const sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.Balanced,
+          distanceInterval: 12,
+          timeInterval: 4000,
+        },
+        (position: Location.LocationObject) => {
+          const { latitude, longitude } = position.coords;
+          setLocation(prev =>
+            prev
+              ? { ...prev, latitude, longitude }
+              : prev,
+          );
 
-        if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
-        geocodeTimer.current = setTimeout(() => {
-          applyGps(latitude, longitude, true).catch(() => {});
-        }, 1200);
-      },
-      err => {
-        setError(err.message);
-      },
-      {
-        enableHighAccuracy: true,
-        distanceFilter: 12,
-        interval: 4000,
-        fastestInterval: 2000,
-      },
-    );
+          if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
+          geocodeTimer.current = setTimeout(() => {
+            applyGps(latitude, longitude, true).catch(() => {});
+          }, 1200);
+        },
+      );
+      locationSubscription.current = sub;
+    } catch (err: any) {
+      setError(err?.message || 'Error tracking location');
+    }
   }, [applyGps, stopTracking]);
 
   const saveAddress = useCallback(
@@ -268,8 +260,6 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       cancelled = true;
       stopTracking();
     };
-    // Load once on mount, then keep a live GPS watch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

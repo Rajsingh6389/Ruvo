@@ -2,20 +2,45 @@
   "expo": {
     "name": "RuvoMobile",
     "slug": "RuvoMobile",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "orientation": "portrait",
     "scheme": "ruvomobile",
-    "plugins": [
-      "expo-asset",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "ndkVersion": "30.0.15729638"
-          }
-        }
-      ]
-    ],
+    "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.anonymous.ruvomobile"
-    }
+      "package": "com.anonymous.ruvomobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "RuVo uses your location to fill delivery address and find nearby shops."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RuVo accesses your photos to let you upload shop logos and product images."
+        }
+      ],
+      "expo-asset",
+      "expo-build-properties",
+      "expo-font"
+    ]
   }
 }

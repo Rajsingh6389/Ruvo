@@ -13,6 +13,10 @@ public interface DeliveryRequestRepository extends JpaRepository<DeliveryRequest
     
     List<DeliveryRequest> findByOrderId(Long orderId);
 
+    java.util.Optional<DeliveryRequest> findTopByOrderIdAndStatusOrderBySentAtDesc(Long orderId, String status);
+
+    List<DeliveryRequest> findByPartnerIdAndStatus(Long partnerId, String status);
+
     List<DeliveryRequest> findByStatusAndExpiresAtBefore(String status, Instant now);
 
     Optional<DeliveryRequest> findByIdAndPartnerId(Long id, Long partnerId);
