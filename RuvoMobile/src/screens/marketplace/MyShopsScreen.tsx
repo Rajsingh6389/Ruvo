@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -160,26 +161,35 @@ export const MyShopsScreen = () => {
           <View style={styles.shopHeader}>
             {/* Shop Icon */}
 
-            <View
-              style={[
-                styles.shopIcon,
-                {
-                  backgroundColor: approved
-                    ? '#E8F5E9'
-                    : '#FFF7E6',
-                },
-              ]}
-            >
-              <Ionicons
-                name="storefront"
-                size={28}
-                color={
-                  approved
-                    ? colors.primary
-                    : '#F59E0B'
-                }
-              />
-            </View>
+            {(() => {
+              const logoUri = item.logoUrl || item.imageUrl || item.bannerUrl;
+              const formattedUri = logoUri ? (logoUri.startsWith('http') ? logoUri : `${API_BASE_URL}${logoUri.startsWith('/') ? '' : '/'}${logoUri}`) : null;
+
+              return formattedUri ? (
+                <Image source={{ uri: formattedUri }} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
+              ) : (
+                <View
+                  style={[
+                    styles.shopIcon,
+                    {
+                      backgroundColor: approved
+                        ? '#E8F5E9'
+                        : '#FFF7E6',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="storefront"
+                    size={28}
+                    color={
+                      approved
+                        ? colors.primary
+                        : '#F59E0B'
+                    }
+                  />
+                </View>
+              );
+            })()}
 
             {/* Main Shop Information */}
 

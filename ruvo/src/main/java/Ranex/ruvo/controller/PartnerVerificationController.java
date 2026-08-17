@@ -98,10 +98,10 @@ public class PartnerVerificationController {
         String city = request.get("city");
         String state = request.get("state");
         String pincode = request.get("pincode");
-        String docType = request.get("identityDocumentType");
-        String docNum = request.get("identityDocumentNumber");
+        String docType = request.getOrDefault("identityDocumentType", "NOT_PROVIDED");
+        String docNum = request.getOrDefault("identityDocumentNumber", "NOT_PROVIDED");
 
-        if (fullName == null || address == null || city == null || state == null || pincode == null || docType == null || docNum == null) {
+        if (fullName == null || address == null || city == null || state == null || pincode == null) {
             return ResponseEntity.badRequest().body(ApiResponse.ok("All required fields must be filled", null));
         }
 
@@ -111,7 +111,14 @@ public class PartnerVerificationController {
         Optional<PartnerVerification> optVer = verifications.findByPartnerProfile(profile);
         PartnerVerification verification;
 
-        LocalDate dob = dobStr != null && !dobStr.isBlank() ? LocalDate.parse(dobStr) : null;
+        LocalDate dob = null;
+        if (dobStr != null && !dobStr.isBlank()) {
+            try {
+                dob = LocalDate.parse(dobStr);
+            } catch (Exception e) {
+                // Ignore parse exception, keep dob null
+            }
+        }
 
         if (optVer.isPresent()) {
             verification = optVer.get();
@@ -246,7 +253,7 @@ public class PartnerVerificationController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                return users.findByEmail(subject).orElse(null);
+                return users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).orElse(null);
             }
         }
         return null;

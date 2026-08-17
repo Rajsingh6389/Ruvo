@@ -51,12 +51,19 @@ export const VehicleDetailsScreen = () => {
         }),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: any = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (e) {
+        throw new Error(`Server response error (${res.status}). Please ensure backend is running.`);
+      }
+
       if (!res.ok) {
         throw new Error(data.message || 'Vehicle details submission failed.');
       }
 
-      await setVerificationStatus(data.data.verificationStatus);
+      await setVerificationStatus(data.data?.verificationStatus || 'UNDER_REVIEW');
       Alert.alert('Success', 'Vehicle registration details saved and submitted for review!');
       navigation.navigate('VerificationStatus');
     } catch (err: any) {

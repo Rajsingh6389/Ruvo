@@ -8,15 +8,23 @@ import {
   Image,
   TouchableOpacity,
   Pressable,
-  SafeAreaView,
   StatusBar,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getShopById, Shop } from '../../services/shopService';
 import { getProductsByShop, Product } from '../../services/productService';
 import { useCart } from '../../context/CartContext';
+import { API_BASE_URL } from '../../config/api';
+
+const formatImageUrl = (url?: string) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
 
 const PRIMARY = '#2E7D32';
 const PRIMARY_DARK = '#256B2A';
@@ -389,9 +397,9 @@ export const ShopDetailsScreen = () => {
             {/* HERO */}
 
             <View style={styles.bannerWrap}>
-              {shop.bannerUrl ? (
+              {formatImageUrl(shop.bannerUrl) ? (
                 <Image
-                  source={{ uri: shop.bannerUrl }}
+                  source={{ uri: formatImageUrl(shop.bannerUrl)! }}
                   style={styles.banner}
                   resizeMode="cover"
                 />
@@ -433,9 +441,9 @@ export const ShopDetailsScreen = () => {
               </View>
 
               <View style={styles.logoWrap}>
-                {shop.logoUrl ? (
+                {formatImageUrl(shop.logoUrl) ? (
                   <Image
-                    source={{ uri: shop.logoUrl }}
+                    source={{ uri: formatImageUrl(shop.logoUrl)! }}
                     style={styles.logo}
                     resizeMode="cover"
                   />

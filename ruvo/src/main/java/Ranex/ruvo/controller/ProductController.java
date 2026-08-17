@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import Ranex.ruvo.service.CloudinaryService;
+
 @RestController
 @RequestMapping("/api/products")
 @CrossOrigin(origins = "*")
@@ -34,6 +36,9 @@ public class ProductController {
 
     @Autowired
     private ShopRepository shopRepository;
+
+    @Autowired
+    private CloudinaryService cloudinaryService;
 
 
     // =========================================================
@@ -57,6 +62,13 @@ public class ProductController {
     private Product prepareProductResponse(Product product, HttpServletRequest request) {
         if (product.getImageUrl() != null) {
             product.setImageUrl(buildFileUrl(product.getImageUrl(), request));
+        }
+        if (product.getImageUrls() != null && !product.getImageUrls().isEmpty()) {
+            java.util.List<String> enriched = new java.util.ArrayList<>();
+            for (String url : product.getImageUrls()) {
+                enriched.add(buildFileUrl(url, request));
+            }
+            product.setImageUrls(enriched);
         }
         return product;
     }
@@ -213,6 +225,7 @@ public class ProductController {
     public ResponseEntity<?> uploadProduct(
             @RequestParam("product") String productJson,
             @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "images", required = false) MultipartFile[] images,
             HttpServletRequest request)
             throws IOException {
 
@@ -271,14 +284,27 @@ public class ProductController {
             return ResponseEntity.badRequest().body("stockQuantity must be a non-negative number");
         }
 
-        // Handle image upload
+        // Handle multiple image upload to Cloudinary
+        if (images != null && images.length > 0) {
+            for (MultipartFile img : images) {
+                if (img != null && !img.isEmpty()) {
+                    String uploadedUrl = cloudinaryService.uploadImage(img, "ruvo/products");
+                    if (uploadedUrl != null) {
+                        product.getImageUrls().add(uploadedUrl);
+                    }
+                }
+            }
+        }
+
+        // Handle single primary image upload
         if (image != null && !image.isEmpty()) {
-            String uploadDir = "uploads/products";
-            Files.createDirectories(Paths.get(uploadDir));
-            String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, filename);
-            Files.copy(image.getInputStream(), filePath)    ;
-            product.setImageUrl("uploads/products/" + filename);
+            String imageUrl = cloudinaryService.uploadImage(image, "ruvo/products");
+            product.setImageUrl(imageUrl);
+            if (!product.getImageUrls().contains(imageUrl)) {
+                product.getImageUrls().add(0, imageUrl);
+            }
+        } else if (product.getImageUrl() == null && !product.getImageUrls().isEmpty()) {
+            product.setImageUrl(product.getImageUrls().get(0));
         }
 
         product.setId(null);
@@ -363,6 +389,7 @@ public class ProductController {
             @PathVariable Long id,
             @RequestPart("product") String productJson,
             @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "images", required = false) MultipartFile[] images,
             HttpServletRequest request)
             throws IOException {
 
@@ -408,14 +435,27 @@ public class ProductController {
                     .body("Selling price cannot be greater than actual price");
         }
 
-        // Handle image upload
+        // Handle multiple image upload to Cloudinary
+        if (images != null && images.length > 0) {
+            for (MultipartFile img : images) {
+                if (img != null && !img.isEmpty()) {
+                    String uploadedUrl = cloudinaryService.uploadImage(img, "ruvo/products");
+                    if (uploadedUrl != null) {
+                        existingProduct.getImageUrls().add(uploadedUrl);
+                    }
+                }
+            }
+        }
+
+        // Handle primary image upload to Cloudinary
         if (image != null && !image.isEmpty()) {
-            String uploadDir = "uploads/products";
-            Files.createDirectories(Paths.get(uploadDir));
-            String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path filePath = Paths.get(uploadDir, filename);
-            Files.copy(image.getInputStream(), filePath);
-            existingProduct.setImageUrl("uploads/products/" + filename);
+            String imageUrl = cloudinaryService.uploadImage(image, "ruvo/products");
+            existingProduct.setImageUrl(imageUrl);
+            if (!existingProduct.getImageUrls().contains(imageUrl)) {
+                existingProduct.getImageUrls().add(0, imageUrl);
+            }
+        } else if (existingProduct.getImageUrl() == null && !existingProduct.getImageUrls().isEmpty()) {
+            existingProduct.setImageUrl(existingProduct.getImageUrls().get(0));
         }
 
         existingProduct.setDiscount(calculateDiscount(existingProduct.getActualPrice(), existingProduct.getSellingPrice()));

@@ -4,6 +4,8 @@ import Ranex.ruvo.model.Shop;
 import Ranex.ruvo.repository.ShopRepository;
 import Ranex.ruvo.util.DistanceUtils;
 
+import Ranex.ruvo.service.CloudinaryService;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class ShopController {
     @Autowired
     private ShopRepository shopRepository;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
 
     // =========================================================
     // Helper: Convert stored path into a public URL
@@ -37,6 +42,10 @@ public class ShopController {
 
         if (filePath == null || filePath.isBlank()) {
             return null;
+        }
+
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            return filePath;
         }
 
         String normalizedPath = filePath.replace("\\", "/");
@@ -73,6 +82,14 @@ public class ShopController {
             shop.setBannerUrl(
                     buildFileUrl(shop.getBannerUrl(), request)
             );
+        }
+
+        if (shop.getImages() != null && !shop.getImages().isEmpty()) {
+            java.util.List<String> enriched = new java.util.ArrayList<>();
+            for (String imgUrl : shop.getImages()) {
+                enriched.add(buildFileUrl(imgUrl, request));
+            }
+            shop.setImages(enriched);
         }
 
         return shop;
@@ -292,7 +309,9 @@ public class ShopController {
             @RequestParam("shop") String shopJson,
             @RequestPart("logo") MultipartFile logo,
             @RequestPart(value = "banner", required = false)
-            MultipartFile banner
+            MultipartFile banner,
+            @RequestPart(value = "images", required = false)
+            MultipartFile[] images
     ) {
 
         try {
@@ -371,110 +390,40 @@ public class ShopController {
 
 
             // ---------------------------------------------
-            // Validate logo
+            // Save logo to Cloudinary
             // ---------------------------------------------
 
             if (logo == null || logo.isEmpty()) {
-
                 return ResponseEntity
                         .badRequest()
                         .body("Shop logo is required");
             }
 
+            String logoUrl = cloudinaryService.uploadImage(logo, "ruvo/shops/logos");
+            shop.setLogoUrl(logoUrl);
 
             // ---------------------------------------------
-            // Create directories
+            // Save banner to Cloudinary
             // ---------------------------------------------
 
-            Path logoDirectory =
-                    Paths.get("uploads/logos");
-
-            Path bannerDirectory =
-                    Paths.get("uploads/banners");
-
-            Files.createDirectories(logoDirectory);
-            Files.createDirectories(bannerDirectory);
-
-
-            // ---------------------------------------------
-            // Save logo
-            // ---------------------------------------------
-
-            String originalLogoName =
-                    logo.getOriginalFilename();
-
-            String logoExtension = "";
-
-            if (originalLogoName != null &&
-                    originalLogoName.contains(".")) {
-
-                logoExtension =
-                        originalLogoName.substring(
-                                originalLogoName.lastIndexOf(".")
-                        );
+            if (banner != null && !banner.isEmpty()) {
+                String bannerUrl = cloudinaryService.uploadImage(banner, "ruvo/shops/banners");
+                shop.setBannerUrl(bannerUrl);
             }
 
-            String logoFilename =
-                    UUID.randomUUID()
-                            + logoExtension;
-
-            Path logoPath =
-                    logoDirectory.resolve(logoFilename);
-
-            Files.copy(
-                    logo.getInputStream(),
-                    logoPath
-            );
-
-
-            // IMPORTANT:
-            // Store relative path in database
-            shop.setLogoUrl(
-                    "uploads/logos/" + logoFilename
-            );
-
-
             // ---------------------------------------------
-            // Save banner
+            // Save gallery images to Cloudinary
             // ---------------------------------------------
 
-            if (banner != null &&
-                    !banner.isEmpty()) {
-
-                String originalBannerName =
-                        banner.getOriginalFilename();
-
-                String bannerExtension = "";
-
-                if (originalBannerName != null &&
-                        originalBannerName.contains(".")) {
-
-                    bannerExtension =
-                            originalBannerName.substring(
-                                    originalBannerName.lastIndexOf(".")
-                            );
+            if (images != null && images.length > 0) {
+                for (MultipartFile img : images) {
+                    if (img != null && !img.isEmpty()) {
+                        String imgUrl = cloudinaryService.uploadImage(img, "ruvo/shops/gallery");
+                        if (imgUrl != null) {
+                            shop.getImages().add(imgUrl);
+                        }
+                    }
                 }
-
-                String bannerFilename =
-                        UUID.randomUUID()
-                                + bannerExtension;
-
-                Path bannerPath =
-                        bannerDirectory.resolve(
-                                bannerFilename
-                        );
-
-                Files.copy(
-                        banner.getInputStream(),
-                        bannerPath
-                );
-
-
-                // Store relative path
-                shop.setBannerUrl(
-                        "uploads/banners/"
-                                + bannerFilename
-                );
             }
 
 

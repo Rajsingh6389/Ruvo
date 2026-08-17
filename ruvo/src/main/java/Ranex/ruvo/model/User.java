@@ -6,15 +6,18 @@ import java.math.BigDecimal;
 import java.time.*;
 
 @Entity @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "mobileNumber")
+})
 public class User {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
   @Column(nullable = false) private String name;
-  @Column(nullable = false) private String email;
-  @Column(nullable = false) private String password;
+  @Column(nullable = true) private String email;
+  @Column(nullable = true) private String password;
   @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
   @Enumerated(EnumType.STRING) @Column(nullable = false) private AccountStatus status;
-  private String mobileNumber, profilePicture, address, city, state, country, pincode, gender, bio, gstNumber, panNumber;
+  @Column(unique = true) private String mobileNumber;
+  private String profilePicture, address, city, state, country, pincode, gender, bio, gstNumber, panNumber;
   private LocalDate dateOfBirth;
   @Column(nullable = false, updatable = false) private Instant createdAt;
   private Instant lastLogin;

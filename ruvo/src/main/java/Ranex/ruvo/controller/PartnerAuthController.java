@@ -26,10 +26,11 @@ public class PartnerAuthController {
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
+    private final Ranex.ruvo.service.SmsService smsService;
 
     public PartnerAuthController(UserRepository u, OtpVerificationRepository o, PartnerProfileRepository pr,
                                  PartnerDeviceSessionRepository s, RefreshTokenRepository r,
-                                 PasswordEncoder e, JwtService j) {
+                                 PasswordEncoder e, JwtService j, Ranex.ruvo.service.SmsService sms) {
         this.users = u;
         this.otps = o;
         this.profiles = pr;
@@ -37,6 +38,7 @@ public class PartnerAuthController {
         this.refreshTokens = r;
         this.encoder = e;
         this.jwt = j;
+        this.smsService = sms;
     }
 
     @PostMapping("/send-otp")
@@ -63,9 +65,13 @@ public class PartnerAuthController {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                         .body(ApiResponse.ok("Please wait " + secondsLeft + " seconds before requesting another OTP", null));
             }
-            if (verification.getResendCount() >= 5) {
+            // Reset resend count if OTP expired or 10 minutes elapsed since last request
+            if (verification.getExpiryTime() != null && verification.getExpiryTime().isBefore(now)) {
+                verification.setResendCount(0);
+            }
+            if (verification.getResendCount() >= 15) {
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                        .body(ApiResponse.ok("Maximum OTP request limit reached for today", null));
+                        .body(ApiResponse.ok("Maximum OTP request limit reached for this session. Please try again after 15 minutes", null));
             }
             verification.setOtpCode(generatedOtp);
             verification.setExpiryTime(now.plus(5, ChronoUnit.MINUTES));
@@ -86,17 +92,13 @@ public class PartnerAuthController {
         }
 
         otps.save(verification);
-        System.out.println("====== DEVELOPMENT OTP ======");
-        System.out.println("Mobile: " + mobile);
-        System.out.println("OTP: " + generatedOtp + " (simulated)");
-        System.out.println("=============================");
+        smsService.sendOtpSms(mobile, generatedOtp);
 
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("cooldownSeconds", 60);
-        responseData.put("remainingResends", 5 - verification.getResendCount());
-        responseData.put("otpCode", generatedOtp);
+        responseData.put("remainingResends", Math.max(0, 15 - verification.getResendCount()));
 
-        return ResponseEntity.ok(ApiResponse.ok("OTP sent successfully (Simulated)", responseData));
+        return ResponseEntity.ok(ApiResponse.ok("OTP sent successfully via SMS", responseData));
     }
 
     @PostMapping("/verify-otp")
@@ -293,7 +295,7 @@ public class PartnerAuthController {
                 }
                 // Revoke latest refresh token of this user
                 String subject = jwt.subject(token);
-                users.findByEmail(subject).ifPresent(user -> {
+                users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).ifPresent(user -> {
                     List<RefreshToken> tokens = refreshTokens.findByUser(user);
                     for (RefreshToken rt : tokens) {
                         rt.setRevoked(true);
@@ -312,7 +314,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                users.findByEmail(subject).ifPresent(user -> {
+                users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).ifPresent(user -> {
                     // Revoke all sessions
                     List<PartnerDeviceSession> activeSess = sessions.findByUser(user);
                     for (PartnerDeviceSession s : activeSess) {
@@ -337,7 +339,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject);
+                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
                 if (optUser.isPresent()) {
                     return ResponseEntity.ok(ApiResponse.ok("Profile retrieved", optUser.get()));
                 }
@@ -352,7 +354,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject);
+                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
                 if (optUser.isPresent()) {
                     List<PartnerDeviceSession> activeSessions = sessions.findByUserAndRevokedFalse(optUser.get());
                     String currentSessionId = jwt.getSessionId(token);
@@ -382,7 +384,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject);
+                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
                 Optional<PartnerDeviceSession> sessOpt = sessions.findBySessionId(sessionId);
                 if (optUser.isPresent() && sessOpt.isPresent() && sessOpt.get().getUser().getId().equals(optUser.get().getId())) {
                     PartnerDeviceSession s = sessOpt.get();

@@ -15,15 +15,19 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email) {
+    public UserDetails loadUserByUsername(String identifier) {
 
-        Ranex.ruvo.model.User u = users.findByEmail(email)
+        Ranex.ruvo.model.User u = users.findByEmail(identifier)
+                .or(() -> users.findByMobileNumber(identifier))
                 .orElseThrow(() ->
                         new UsernameNotFoundException("User not found"));
 
+        String username = u.getMobileNumber() != null ? u.getMobileNumber() : u.getEmail();
+        String pwd = u.getPassword() != null ? u.getPassword() : "";
+
         return org.springframework.security.core.userdetails.User
-                .withUsername(u.getEmail())
-                .password(u.getPassword())
+                .withUsername(username)
+                .password(pwd)
                 .authorities(
                         List.of(
                                 new SimpleGrantedAuthority(

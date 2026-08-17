@@ -1248,17 +1248,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
   Modal,
   ScrollView,
   RefreshControl,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
 import { sw, sh, sf } from '../../utils/responsive';
@@ -1326,6 +1327,7 @@ export default function ShopkeeperDashboardScreen() {
   const route = useRoute<any>();
   const { colors } = useTheme();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
 
   const routeShopId = route.params?.shopId;
   const [currentShopId, setCurrentShopId] = useState<number | undefined>(routeShopId);
@@ -1456,14 +1458,15 @@ export default function ShopkeeperDashboardScreen() {
       });
       const data = await res.json();
       if (res.ok) {
+        showToast('Order accepted', 'success');
         fetchData();
         const targetOrder = orders.find(o => o.id === orderId);
         if (targetOrder) openPartnerModal(targetOrder);
       } else {
-        Alert.alert('Error', data.message || 'Failed to accept');
+        showToast(data.message || 'Failed to accept', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', 'Network error');
+      showToast('Network error', 'error');
     }
   };
 
@@ -1478,7 +1481,37 @@ export default function ShopkeeperDashboardScreen() {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` },
           });
-          if (res.ok) fetchData();
+          if (res.ok) {
+            showToast('Order rejected', 'info');
+            fetchData();
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleCancelByShopkeeper = (orderId: number) => {
+    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order? This cannot be undone.', [
+      { text: 'Back', style: 'cancel' },
+      {
+        text: 'Confirm Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (res.ok) {
+              showToast('Order cancelled successfully', 'info');
+              fetchData();
+            } else {
+              showToast(data.message || 'Failed to cancel order', 'error');
+            }
+          } catch (e) {
+            showToast('Network error while cancelling order', 'error');
+          }
         },
       },
     ]);
@@ -1505,14 +1538,14 @@ export default function ShopkeeperDashboardScreen() {
       );
       const data = await res.json();
       if (res.ok) {
-        Alert.alert('Assigned', `Delivery assigned to ${data.partner || 'Partner'}`);
+        showToast(`Delivery assigned to ${data.partner || 'Partner'}`, 'success');
         setPartnerModalOrder(null);
         fetchData();
       } else {
-        Alert.alert('Error', data.message || 'Failed to assign partner');
+        showToast(data.message || 'Failed to assign partner', 'error');
       }
     } catch (e) {
-      Alert.alert('Error', 'Network error');
+      showToast('Network error', 'error');
     }
     setAssigningPartner(false);
   };
@@ -1521,7 +1554,7 @@ export default function ShopkeeperDashboardScreen() {
     if (!partnerModalOrder) return;
     setAssigningPartner(true);
     setTimeout(() => {
-      Alert.alert('Broadcast Sent', 'Request sent to all nearby RuVo delivery partners. Nearest partner will accept within 1 minute.');
+      showToast('Broadcast sent to nearby partners', 'success');
       setPartnerModalOrder(null);
       setAssigningPartner(false);
       fetchData();
@@ -1529,13 +1562,17 @@ export default function ShopkeeperDashboardScreen() {
   };
 
   // Exclude invalid/failed/cancelled/rejected orders from sales calculations
+  const CANCELLED_STATUSES = ['CANCELLED', 'FAILED', 'SHOP_REJECTED', 'REJECTED', 'PAYMENT_FAILED'];
   const isValidSalesOrder = (o: Order) => {
     const status = (o.orderStatus || '').toUpperCase();
     const paymentStatus = ((o as any).paymentStatus || '').toUpperCase();
-    if (['CANCELLED', 'FAILED', 'SHOP_REJECTED', 'REJECTED'].includes(status)) return false;
+    if (CANCELLED_STATUSES.includes(status)) return false;
     if (['FAILED', 'PAYMENT_FAILED', 'REFUNDED'].includes(paymentStatus)) return false;
     return true;
   };
+
+  // Active delivery statuses — only these qualify for COD cash to collect
+  const ACTIVE_DELIVERY_STATUSES = ['DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
   const validOrders = orders.filter(isValidSalesOrder);
 
@@ -1555,8 +1592,14 @@ export default function ShopkeeperDashboardScreen() {
   const completedOrders = orders.filter(o => o.orderStatus === 'DELIVERED');
 
   // Realized Sales vs Pending COD Cash Breakdown
+  // COD "cash to collect" = only orders that are actually in active delivery or delivered, COD, not yet settled
   const realizedSalesOrders = validOrders.filter(o => ((o as any).paymentStatus || '').toUpperCase() === 'PAID');
-  const pendingCodOrders = validOrders.filter(o => o.paymentMethod === 'COD' && ((o as any).paymentStatus || '').toUpperCase() !== 'PAID');
+  const pendingCodOrders = validOrders.filter(
+    o =>
+      o.paymentMethod === 'COD' &&
+      ((o as any).paymentStatus || '').toUpperCase() !== 'PAID' &&
+      ACTIVE_DELIVERY_STATUSES.includes((o.orderStatus || '').toUpperCase())
+  );
 
   const realizedSales = realizedSalesOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const pendingPartnerCodCash = pendingCodOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -1564,8 +1607,16 @@ export default function ShopkeeperDashboardScreen() {
   const grossPotentialSales = realizedSales + pendingPartnerCodCash;
 
   const todaySales = validTodayOrders.filter(o => ((o as any).paymentStatus || '').toUpperCase() === 'PAID').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const codSales = validOrders.filter(o => o.paymentMethod === 'COD').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const upiSales = validOrders.filter(o => o.paymentMethod !== 'COD').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  // codSales = COD orders that are in active delivery or delivered (not just accepted/pending)
+  const codSales = validOrders.filter(
+    o => o.paymentMethod === 'COD' &&
+    ACTIVE_DELIVERY_STATUSES.includes((o.orderStatus || '').toUpperCase())
+  ).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  // upiSales = non-COD orders that are PAID
+  const upiSales = validOrders.filter(
+    o => o.paymentMethod !== 'COD' &&
+    ((o as any).paymentStatus || '').toUpperCase() === 'PAID'
+  ).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const avgOrderValue = validOrders.length > 0 ? Math.round(totalSales / validOrders.length) : 0;
   const unreadNotifs = notifications.filter(n => !n.isRead).length;
 
@@ -1590,13 +1641,13 @@ export default function ShopkeeperDashboardScreen() {
               );
               const data = await res.json();
               if (res.ok) {
-                Alert.alert('Cash Received!', `Successfully received cash from ${partnerName}. Added to Realized Total Sales.`);
+                showToast(`Cash received from ${partnerName}`, 'success');
                 fetchData();
               } else {
-                Alert.alert('Error', data.message || 'Failed to settle cash');
+                showToast(data.message || 'Failed to settle cash', 'error');
               }
             } catch (e) {
-              Alert.alert('Error', 'Network error while settling cash');
+              showToast('Network error while settling cash', 'error');
             }
           },
         },
@@ -1675,6 +1726,7 @@ export default function ShopkeeperDashboardScreen() {
               onAccept={handleAccept}
               onReject={handleReject}
               onAssignPartner={openPartnerModal}
+              onCancelByShopkeeper={handleCancelByShopkeeper}
               totalOrdersCount={validOrders.length}
               pendingCount={pendingOrders.length}
             />
@@ -2004,6 +2056,7 @@ function OrdersTabContent({
   onAccept,
   onReject,
   onAssignPartner,
+  onCancelByShopkeeper,
   totalOrdersCount,
   pendingCount,
 }: any) {
@@ -2148,6 +2201,25 @@ function OrdersTabContent({
                 <TouchableOpacity style={styles.assignPartnerBannerBtn} onPress={() => onAssignPartner(item)}>
                   <Ionicons name="bicycle" size={18} color="#FFF" />
                   <Text style={styles.assignPartnerBannerText}>Assign Delivery Partner</Text>
+                </TouchableOpacity>
+              )}
+
+              {['SHOP_ACCEPTED', 'DELIVERY_ASSIGNMENT', 'PREPARING', 'READY'].includes(item.orderStatus) && onCancelByShopkeeper && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#FEF2F2',
+                    borderWidth: 1,
+                    borderColor: '#FCA5A5',
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    marginTop: 8,
+                  }}
+                  onPress={() => onCancelByShopkeeper(item.id)}
+                >
+                  <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 12 }}>
+                    Cancel Order (Accepted by mistake)
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>

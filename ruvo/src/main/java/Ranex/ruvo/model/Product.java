@@ -49,6 +49,12 @@ public class Product {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image_url")
+    @Builder.Default
+    private java.util.List<String> imageUrls = new java.util.ArrayList<>();
+
     // Shopkeeper can turn this OFF without deleting the product
     @Column(name = "is_available", nullable = false)
     @Builder.Default

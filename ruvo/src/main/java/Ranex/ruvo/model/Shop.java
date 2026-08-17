@@ -29,6 +29,12 @@ public class Shop {
     @Column(name = "logo_url")
     private String logoUrl;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "shop_images", joinColumns = @JoinColumn(name = "shop_id"))
+    @Column(name = "image_url")
+    @Builder.Default
+    private java.util.List<String> images = new java.util.ArrayList<>();
+
     private String address;
 
     // Display name for the shop owner (kept for backwards compatibility)

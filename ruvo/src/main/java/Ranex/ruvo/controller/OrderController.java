@@ -159,21 +159,36 @@ public class OrderController {
     @GetMapping("/my-orders")
     public ResponseEntity<List<Order>> getMyOrders(@RequestParam String userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
+        List<Order> validOrders = new ArrayList<>();
+
         for (Order o : orders) {
+            // Filter out failed payment orders so customer side is clean
+            if ("PAYMENT_FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
+                "FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
+                "PAYMENT_FAILED".equalsIgnoreCase(o.getOrderStatus()) ||
+                "FAILED".equalsIgnoreCase(o.getOrderStatus())) {
+                continue;
+            }
+
+            // Check 10-minute timeout for delivery partner assignment
+            checkAndTimeoutOrder(o);
+
             if ((o.getProductImageUrl() == null || o.getProductImageUrl().isEmpty()) && o.getProductId() != null) {
                 productRepository.findById(o.getProductId()).ifPresent(p -> {
                     o.setProductImageUrl(p.getImageUrl());
                     orderRepository.save(o);
                 });
             }
+            validOrders.add(o);
         }
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(validOrders);
     }
 
     @GetMapping("/{orderId}")
     public ResponseEntity<?> getOrder(@PathVariable Long orderId) {
         Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null) return ResponseEntity.notFound().build();
+        checkAndTimeoutOrder(order);
         if ((order.getProductImageUrl() == null || order.getProductImageUrl().isEmpty()) && order.getProductId() != null) {
             productRepository.findById(order.getProductId()).ifPresent(p -> {
                 order.setProductImageUrl(p.getImageUrl());
@@ -185,9 +200,9 @@ public class OrderController {
 
     @GetMapping("/shop/{shopId}")
     public ResponseEntity<List<Order>> getShopOrders(@PathVariable Long shopId) {
-        // Validate that the authenticated user owns this shop
         List<Order> orders = orderRepository.findByShopId(shopId);
         for (Order o : orders) {
+            checkAndTimeoutOrder(o);
             if ((o.getProductImageUrl() == null || o.getProductImageUrl().isEmpty()) && o.getProductId() != null) {
                 productRepository.findById(o.getProductId()).ifPresent(p -> {
                     o.setProductImageUrl(p.getImageUrl());
@@ -196,6 +211,55 @@ public class OrderController {
             }
         }
         return ResponseEntity.ok(orders);
+    }
+
+    private void checkAndTimeoutOrder(Order order) {
+        if (order.getDeliveryPartnerId() == null &&
+            (OrderStatus.DELIVERY_ASSIGNMENT.equalsIgnoreCase(order.getOrderStatus()) ||
+             OrderStatus.SHOP_ACCEPTED.equalsIgnoreCase(order.getOrderStatus()))) {
+            Instant refTime = order.getUpdatedAt() != null ? order.getUpdatedAt() : order.getCreatedAt();
+            if (refTime != null && Instant.now().isAfter(refTime.plus(10, ChronoUnit.MINUTES))) {
+                order.setOrderStatus("CANCELLED_NO_PARTNER_FOUND");
+                // Restore product stock
+                if (order.getProductId() != null && order.getQuantity() != null) {
+                    productRepository.findById(order.getProductId()).ifPresent(p -> {
+                        p.setStockQuantity(p.getStockQuantity() + order.getQuantity());
+                        productRepository.save(p);
+                    });
+                }
+                orderRepository.save(order);
+                notificationService.notifyCustomer(order, "Order Cancelled",
+                    "No delivery partner could be assigned within 10 minutes.", "CANCELLED_NO_PARTNER_FOUND");
+            }
+        }
+    }
+
+    @PostMapping("/{orderId}/cancel-by-shopkeeper")
+    public ResponseEntity<?> cancelByShopkeeper(@PathVariable Long orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        // Allow cancellation if order is PENDING, ACCEPTED, or in DELIVERY_ASSIGNMENT before pickup
+        if (OrderStatus.DELIVERY_ASSIGNED.equalsIgnoreCase(order.getOrderStatus()) ||
+            "PICKED_UP".equalsIgnoreCase(order.getOrderStatus()) ||
+            "DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Cannot cancel order after delivery partner has picked it up."));
+        }
+
+        order.setOrderStatus("CANCELLED_BY_SHOP");
+        // Restore stock
+        if (order.getProductId() != null && order.getQuantity() != null) {
+            productRepository.findById(order.getProductId()).ifPresent(p -> {
+                p.setStockQuantity(p.getStockQuantity() + order.getQuantity());
+                productRepository.save(p);
+            });
+        }
+        orderRepository.save(order);
+
+        notificationService.notifyCustomer(order, "Order Cancelled by Shop",
+            "The shopkeeper had to cancel this order. If paid, your refund will be processed.", "CANCELLED_BY_SHOP");
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Order cancelled successfully"));
     }
 
     @PostMapping("/{orderId}/accept")

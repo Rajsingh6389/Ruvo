@@ -27,12 +27,10 @@ export const RegisterScreen = () => {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
-  const [docType, setDocType] = useState('Aadhaar Card');
-  const [docNumber, setDocNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmitProfile = async () => {
-    if (!fullName || !address || !city || !state || !pincode || !docNumber) {
+    if (!fullName || !address || !city || !state || !pincode) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -57,17 +55,22 @@ export const RegisterScreen = () => {
           city: city.trim(),
           state: state.trim(),
           pincode: pincode.trim(),
-          identityDocumentType: docType,
-          identityDocumentNumber: docNumber.trim(),
         }),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: any = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (e) {
+        throw new Error(`Server response error (${res.status}). Please ensure backend is running.`);
+      }
+
       if (!res.ok) {
         throw new Error(data.message || 'Profile submission failed.');
       }
 
-      await setVerificationStatus(data.data.verificationStatus);
+      await setVerificationStatus(data.data?.verificationStatus || 'UNDER_REVIEW');
       Alert.alert('Success', 'Basic profile verification details saved successfully!');
       navigation.navigate('VehicleDetails');
     } catch (err: any) {
@@ -150,35 +153,6 @@ export const RegisterScreen = () => {
             maxLength={6}
           />
 
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Identity Document Type</Text>
-          <View style={styles.docTypeRow}>
-            {['Aadhaar Card', 'PAN Card', 'Driving License'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.docTypeBtn,
-                  { borderColor: colors.border },
-                  docType === type && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => setDocType(type)}
-              >
-                <Text style={[docType === type ? { color: '#FFFFFF', fontWeight: 'bold' } : { color: colors.textPrimary }]}>
-                  {type.split(' ')[0]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Identity Document Number</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="Enter document number"
-            placeholderTextColor={colors.textSecondary}
-            value={docNumber}
-            onChangeText={setDocNumber}
-            autoCapitalize="characters"
-          />
-
           <TouchableOpacity
             style={[styles.btn, { backgroundColor: colors.primary }]}
             onPress={handleSubmitProfile}
@@ -236,21 +210,6 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-  },
-  docTypeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  docTypeBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-    backgroundColor: '#FFFFFF',
   },
   btn: {
     paddingVertical: 14,
