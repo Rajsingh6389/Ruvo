@@ -35,7 +35,7 @@ export const LoginScreen = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,8 +50,7 @@ export const LoginScreen = () => {
         throw new Error(data.message || 'Failed to send OTP.');
       }
 
-      const receivedOtp = data.data.otpCode || '123456';
-      Alert.alert('OTP Sent', `A simulated 6-digit OTP code ${receivedOtp} has been generated.`);
+      Alert.alert('OTP Sent', 'Enter the 6-digit OTP sent to your mobile number.');
       navigation.navigate('OtpVerification', { mobileNumber: '+91' + cleanMobile });
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Check your network connection and try again.');

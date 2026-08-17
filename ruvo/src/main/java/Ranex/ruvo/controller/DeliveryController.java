@@ -74,18 +74,20 @@ public class DeliveryController {
     }
 
     private DeliveryPartner getCurrentPartner() {
-        String email = getCurrentUserEmail();
-        if (email == null) return null;
-        return deliveryPartnerRepository.findByUserId(email).orElse(null);
+        String principal = getCurrentUserEmail();
+        if (principal == null) return null;
+        if (principal.startsWith("identity:")) {
+            try {
+                return deliveryPartnerRepository.findByAuthIdentityId(Long.parseLong(principal.substring("identity:".length()))).orElse(null);
+            } catch (NumberFormatException ignored) { return null; }
+        }
+        return deliveryPartnerRepository.findByUserId(principal).orElse(null);
     }
 
     @PatchMapping("/location")
     public ResponseEntity<?> updateLocation(@RequestParam Double latitude, @RequestParam Double longitude) {
-        String email = getCurrentUserEmail();
-        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserId(email);
-        if (partnerOpt.isEmpty()) return ResponseEntity.status(403).build();
-
-        DeliveryPartner partner = partnerOpt.get();
+        DeliveryPartner partner = getCurrentPartner();
+        if (partner == null) return ResponseEntity.status(403).build();
         partner.setLatitude(latitude);
         partner.setLongitude(longitude);
         deliveryPartnerRepository.save(partner);
@@ -303,4 +305,3 @@ public class DeliveryController {
         ));
     }
 }
-

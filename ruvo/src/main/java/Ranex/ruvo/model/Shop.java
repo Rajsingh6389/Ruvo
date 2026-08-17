@@ -45,6 +45,10 @@ public class Shop {
     @Column(name = "owner_id")
     private String ownerId;
 
+    /** Central identity owning this shop. Legacy ownerId remains during migration. */
+    @Column(name = "auth_identity_id")
+    private Long authIdentityId;
+
     private String phone;
 
     private Double rating;

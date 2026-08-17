@@ -16,6 +16,8 @@ import { AvailableDeliveriesScreen } from '../screens/AvailableDeliveriesScreen'
 import { HistoryScreen } from '../screens/HistoryScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ActiveDeliveryScreen } from '../screens/ActiveDeliveryScreen';
+import { EarningsScreen } from '../screens/EarningsScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 
 // New Screens
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
@@ -38,6 +40,7 @@ export type TabParamList = {
   Home: undefined;
   Deliveries: undefined;
   Earnings: undefined;
+  Notifications: undefined;
   Profile: undefined;
 };
 
@@ -72,6 +75,8 @@ const TabNavigator = () => {
             iconName = focused ? 'bicycle' : 'bicycle-outline';
           } else if (route.name === 'Earnings') {
             iconName = focused ? 'wallet' : 'wallet-outline';
+          } else if (route.name === 'Notifications') {
+            iconName = focused ? 'notifications' : 'notifications-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
@@ -81,7 +86,8 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="Home" component={DashboardScreen} />
       <Tab.Screen name="Deliveries" component={AvailableDeliveriesScreen} />
-      <Tab.Screen name="Earnings" component={HistoryScreen} />
+      <Tab.Screen name="Earnings" component={EarningsScreen} />
+      <Tab.Screen name="Notifications" component={NotificationsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

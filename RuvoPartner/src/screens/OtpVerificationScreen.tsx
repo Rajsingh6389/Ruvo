@@ -47,7 +47,7 @@ export const OtpVerificationScreen = () => {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/otp/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,9 +55,7 @@ export const OtpVerificationScreen = () => {
         body: JSON.stringify({
           mobileNumber,
           otpCode: code,
-          deviceId: 'DEVICE_' + Math.random().toString(36).substring(7).toUpperCase(),
-          deviceName: Platform.OS === 'ios' ? 'Apple iPhone' : 'Android Smartphone',
-          platform: Platform.OS.toUpperCase(),
+          role: 'DELIVERY_PARTNER',
         }),
       });
 
@@ -69,10 +67,10 @@ export const OtpVerificationScreen = () => {
       // Log in and save session
       await login(
         data.data.accessToken,
-        data.data.refreshToken,
+        null,
         data.data.userId.toString(),
         data.data.role,
-        data.data.verificationStatus
+        'NEW'
       );
     } catch (err: any) {
       Alert.alert('Verification Failed', err.message || 'Incorrect OTP code. Try again.');
@@ -85,7 +83,7 @@ export const OtpVerificationScreen = () => {
     if (!cooldown) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,8 +98,7 @@ export const OtpVerificationScreen = () => {
         throw new Error(data.message || 'Failed to resend OTP.');
       }
 
-      const receivedOtp = data.data.otpCode || '123456';
-      Alert.alert('OTP Sent', `Simulated OTP code is ${receivedOtp}.`);
+      Alert.alert('OTP Sent', 'A new OTP was sent to your mobile number.');
       setTimer(59);
       setCooldown(false);
       setCode('');

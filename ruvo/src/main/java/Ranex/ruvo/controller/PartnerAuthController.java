@@ -22,6 +22,8 @@ public class PartnerAuthController {
     private final UserRepository users;
     private final OtpVerificationRepository otps;
     private final PartnerProfileRepository profiles;
+    private final PartnerAccountRepository partnerAccounts;
+    private final DeliveryPartnerRepository deliveryPartners;
     private final PartnerDeviceSessionRepository sessions;
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder encoder;
@@ -29,11 +31,14 @@ public class PartnerAuthController {
     private final Ranex.ruvo.service.SmsService smsService;
 
     public PartnerAuthController(UserRepository u, OtpVerificationRepository o, PartnerProfileRepository pr,
+                                 PartnerAccountRepository pa, DeliveryPartnerRepository dp,
                                  PartnerDeviceSessionRepository s, RefreshTokenRepository r,
                                  PasswordEncoder e, JwtService j, Ranex.ruvo.service.SmsService sms) {
         this.users = u;
         this.otps = o;
         this.profiles = pr;
+        this.partnerAccounts = pa;
+        this.deliveryPartners = dp;
         this.sessions = s;
         this.refreshTokens = r;
         this.encoder = e;
@@ -144,29 +149,46 @@ public class PartnerAuthController {
         verification.setVerified(true);
         otps.save(verification);
 
-        // Find or create User
-        Optional<User> optUser = users.findByMobileNumber(mobile);
+        // Partner identities are deliberately isolated from customer users. A customer
+        // can therefore use the same mobile number in the Customer and Partner apps.
+        Optional<PartnerAccount> optAccount = partnerAccounts.findByMobileNumber(mobile);
         User user;
+        PartnerAccount partnerAccount;
         boolean isNew = false;
-        if (optUser.isPresent()) {
-            user = optUser.get();
+        if (optAccount.isPresent()) {
+            partnerAccount = optAccount.get();
+            user = partnerAccount.getSecurityUser();
             if (user.getStatus() == AccountStatus.BLOCKED) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Your account has been suspended. Contact support", null));
             }
         } else {
             isNew = true;
-            String placeholderEmail = mobile.replace("+", "") + "@ruvo.partner";
+            // Do not attach this partner session to an existing customer user.
+            String placeholderEmail = "partner-" + UUID.randomUUID() + "@ruvo.internal";
             user = User.builder()
                     .name("New Partner")
                     .email(placeholderEmail)
-                    .mobileNumber(mobile)
                     .password(encoder.encode(UUID.randomUUID().toString()))
                     .role(Role.DELIVERY_PARTNER)
                     .status(AccountStatus.PENDING)
                     .isAvailable(false)
                     .build();
             user = users.save(user);
+            partnerAccount = partnerAccounts.save(PartnerAccount.builder()
+                    .mobileNumber(mobile)
+                    .securityUser(user)
+                    .build());
         }
+
+        // Keep the existing assignment engine in sync with partner authentication.
+        final User partnerUser = user;
+        deliveryPartners.findByUserId(partnerUser.getEmail()).orElseGet(() ->
+                deliveryPartners.save(DeliveryPartner.builder()
+                        .userId(partnerUser.getEmail())
+                        .name(partnerUser.getName())
+                        .phone(mobile)
+                        .active(true).available(false).approved(false)
+                        .build()));
 
         // Setup/Get Partner Profile
         Optional<PartnerProfile> optProfile = profiles.findByUser(user);

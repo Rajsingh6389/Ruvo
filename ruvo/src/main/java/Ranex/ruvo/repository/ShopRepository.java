@@ -17,6 +17,7 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     // All shops belonging to a given owner, regardless of approval status —
     // used so an owner can see their own shop while it's Pending Approval
     List<Shop> findByOwnerId(String ownerId);
+    List<Shop> findByAuthIdentityId(Long authIdentityId);
 
     // Approved shops filtered by category
     List<Shop> findByCategoryAndApprovedTrue(String category);

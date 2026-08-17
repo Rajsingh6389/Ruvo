@@ -10,5 +10,6 @@ import java.util.Optional;
 public interface PartnerProfileRepository extends JpaRepository<PartnerProfile, Long> {
     Optional<PartnerProfile> findByUser(User user);
     Optional<PartnerProfile> findByUserId(Long userId);
+    Optional<PartnerProfile> findByAuthIdentityId(Long authIdentityId);
     List<PartnerProfile> findByVerificationStatus(VerificationStatus status);
 }

@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 
 export const ProfileScreen = () => {
   const { colors } = useTheme();
-  const { user, logout } = useAuth();
+  const { user, logout, verificationStatus } = useAuth();
   const navigation = useNavigation<any>();
 
   const handleLogout = () => {
@@ -52,19 +52,22 @@ export const ProfileScreen = () => {
         
         <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Email Address</Text>
-            <Text style={[styles.infoVal, { color: colors.textPrimary }]}>{user?.email || 'N/A'}</Text>
-          </View>
-
-          <View style={[styles.infoRow, styles.borderTop]}>
             <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Mobile Number</Text>
             <Text style={[styles.infoVal, { color: colors.textPrimary }]}>{user?.mobileNumber || 'N/A'}</Text>
           </View>
 
           <View style={[styles.infoRow, styles.borderTop]}>
             <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Account Status</Text>
-            <Text style={[styles.infoVal, { color: colors.success, fontWeight: 'bold' }]}>Active (Approved)</Text>
+            <Text style={[styles.infoVal, { color: verificationStatus === 'APPROVED' ? colors.success : colors.error, fontWeight: 'bold' }]}>{verificationStatus.replaceAll('_', ' ')}</Text>
           </View>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Vehicle</Text>
+        <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 24 }]}>
+          {user?.vehicle ? <>
+            <View style={styles.infoRow}><Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Type</Text><Text style={[styles.infoVal, { color: colors.textPrimary }]}>{user.vehicle.vehicleType}</Text></View>
+            <View style={[styles.infoRow, styles.borderTop]}><Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Number</Text><Text style={[styles.infoVal, { color: colors.textPrimary }]}>{user.vehicle.vehicleNumber}</Text></View>
+          </> : <Text style={[styles.infoLabel, { color: colors.textSecondary, paddingVertical: 14 }]}>Vehicle details have not been submitted.</Text>}
         </View>
 
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Security</Text>

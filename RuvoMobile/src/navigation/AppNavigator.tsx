@@ -24,22 +24,16 @@ import { ProfileScreen }     from '../screens/profile/ProfileScreen';
 import { GroceriesScreen }     from '../screens/grocery/GroceriesScreen';
 import { ShopDetailsScreen }   from '../screens/marketplace/ShopDetailsScreen';
 import ProductDetailsScreen from '../screens/marketplace/ProductDetailsScreen';
-import { RegisterShopScreen }  from '../screens/marketplace/RegisterShopScreen';
-import { MyShopsScreen }       from '../screens/marketplace/MyShopsScreen';
-import { AddProductScreen }    from '../screens/marketplace/AddProductScreen';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
-import { MyProductsScreen }   from '../screens/marketplace/MyProductsScreen';
-import { EditProductScreen }  from '../screens/marketplace/EditProductScreen';
+import { UseRuvoShopScreen } from '../screens/UseRuvoShopScreen';
 import { ComingSoonModal } from '../components/ComingSoonModal';
 import ComingSoonScreen from '../screens/ComingSoonScreen';
 import CheckoutScreen from '../screens/marketplace/CheckoutScreen';
 import CartScreen from '../screens/marketplace/CartScreen';
 import OrderSuccessScreen from '../screens/marketplace/OrderSuccessScreen';
 import OrderHistoryScreen from '../screens/profile/OrderHistoryScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScreen';
-import ShopOrdersScreen from '../screens/marketplace/ShopOrdersScreen';
-import ShopkeeperDashboardScreen from '../screens/marketplace/ShopkeeperDashboardScreen';
-import DeliveryPartnerAssignmentScreen from '../screens/marketplace/DeliveryPartnerAssignmentScreen';
 
 
 
@@ -155,20 +149,13 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.NEARBY_SHOPS}   component={NearbyShopsScreen} />
             <Stack.Screen name={ROUTES.SHOP_DETAILS}   component={ShopDetailsScreen} />
             <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} />
-            <Stack.Screen name={ROUTES.REGISTER_SHOP}  component={RegisterShopScreen} />
-            <Stack.Screen name={ROUTES.MY_SHOPS}       component={MyShopsScreen} />
-            <Stack.Screen name={ROUTES.ADD_PRODUCT}    component={AddProductScreen} />
-            <Stack.Screen name={ROUTES.MY_PRODUCTS}    component={MyProductsScreen} />
-            <Stack.Screen name={ROUTES.EDIT_PRODUCT}   component={EditProductScreen} />
-            <Stack.Screen name={ROUTES.SHOP_ORDERS}    component={ShopOrdersScreen} />
-            <Stack.Screen name={ROUTES.SHOPKEEPER_DASHBOARD} component={ShopkeeperDashboardScreen} />
-            <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={ComingSoonScreen} />
+            <Stack.Screen name={ROUTES.REGISTER_SHOP}  component={UseRuvoShopScreen} />
+            <Stack.Screen name={ROUTES.EDIT_PROFILE}   component={EditProfileScreen} />
             <Stack.Screen name={ROUTES.CHECKOUT}       component={CheckoutScreen} />
             <Stack.Screen name={ROUTES.ORDER_SUCCESS}  component={OrderSuccessScreen} />
             <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
             <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
-            <Stack.Screen name={ROUTES.DELIVERY_ASSIGNMENT} component={DeliveryPartnerAssignmentScreen} />
           </>
         )}
       </Stack.Navigator>

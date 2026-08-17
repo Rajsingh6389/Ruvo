@@ -84,12 +84,18 @@ public class SecurityConfig {
                             "/api/partner/register",
                             "/api/partner/auth/send-otp",
                             "/api/partner/auth/verify-otp",
-                            "/api/partner/auth/refresh"
+                            "/api/partner/auth/refresh",
+                            "/api/auth/otp/send",
+                            "/api/auth/otp/verify"
                     ).permitAll()
 
                     .requestMatchers(
                             "/api/partner/**"
                     ).hasRole("DELIVERY_PARTNER")
+
+                    .requestMatchers(
+                            "/api/shop/**"
+                    ).hasRole("SHOP_OWNER")
 
                     .requestMatchers(
                             "/api/shops/**"

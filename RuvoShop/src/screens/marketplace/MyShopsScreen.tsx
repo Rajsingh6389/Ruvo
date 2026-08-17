@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getMyShops, Shop } from '../../services/shopService';
+import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
 import { sw, sh, sf } from '../../utils/responsive';
 
@@ -24,21 +26,31 @@ export const MyShopsScreen = () => {
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const ownerId = userId || user?.email || user?.id;
+  const loadShops = async (isRefresh = false) => {
+    const ownerId = userId || user?.id;
+    isRefresh ? setRefreshing(true) : setLoading(true);
+    setError(null);
     if (ownerId && token) {
-      getMyShops(String(ownerId), token)
-        .then(setShops)
-        .catch(err =>
-          setError(err.message || 'Failed to load your shops'),
-        )
-        .finally(() => setLoading(false));
+      try {
+        setShops(await getMyShops(String(ownerId), token));
+      } catch (err: any) {
+        setError(err.message || 'Failed to load your shops');
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
     } else {
       setError('User not authenticated properly (id or token missing)');
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    loadShops();
   }, [userId, user, token]);
 
   /* -------------------------------------------------------
@@ -461,7 +473,7 @@ export const MyShopsScreen = () => {
                 { color: '#059669', fontSize: 13 },
               ]}
             >
-              Orders
+              DashBoard
             </Text>
           </TouchableOpacity>
 
@@ -625,6 +637,7 @@ export const MyShopsScreen = () => {
           Math.random().toString()
         }
         renderItem={renderShop}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadShops(true)} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
@@ -677,6 +690,15 @@ export const MyShopsScreen = () => {
                   {shops.length}
                 </Text>
               </View>
+              <TouchableOpacity
+                accessibilityRole="button"
+                onPress={() => loadShops(true)}
+                style={[styles.refreshButton, { borderColor: colors.primary }]}
+                disabled={refreshing}
+              >
+                <Ionicons name="refresh" size={16} color={colors.primary} />
+                <Text style={[styles.refreshButtonText, { color: colors.primary }]}>{refreshing ? 'Refreshing' : 'Refresh'}</Text>
+              </TouchableOpacity>
             </View>
 
             {/* ERROR */}
@@ -845,6 +867,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  refreshButton: {
+    height: 36,
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  refreshButtonText: { fontSize: 12, fontWeight: '700' },
 
   /* INFO CARD */
 

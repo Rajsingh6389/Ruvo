@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../config/api';
+import { partnerService, PartnerProfile } from '../services/partnerService';
 
 export type User = {
-  id: number;
+  userId: number;
   name: string;
-  email: string;
   mobileNumber: string;
-  role: string;
-  isAvailable: boolean;
-  walletBalance: number;
+  verificationStatus: string;
+  adminReason?: string | null;
+  vehicle?: PartnerProfile['vehicle'];
+  isAvailable?: boolean;
 };
 
 interface AuthContextType {
@@ -20,7 +22,7 @@ interface AuthContextType {
   userId: string | null;
   user: User | null;
   verificationStatus: string;
-  login: (accessToken: string, refreshToken: string, userId: string, role: string, verificationStatus: string) => Promise<void>;
+  login: (accessToken: string, refreshToken: string | null, userId: string, role: string, verificationStatus: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setVerificationStatus: (status: string) => void;
@@ -45,29 +47,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchProfile = async (authToken: string) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/profile`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.data);
-        if (data.data.verificationStatus) {
-          setVerificationStatusState(data.data.verificationStatus);
-          await AsyncStorage.setItem('verificationStatus', data.data.verificationStatus);
-        }
+      const profile = await partnerService.profile(authToken);
+      let isAvailable: boolean | undefined;
+      try { isAvailable = (await partnerService.account(authToken)).isAvailable; } catch { /* Central OTP sessions do not use legacy account sessions. */ }
+      setUser({ ...profile, isAvailable });
+      if (profile.verificationStatus) {
+        setVerificationStatusState(profile.verificationStatus);
+        await AsyncStorage.setItem('verificationStatus', profile.verificationStatus);
       }
-    } catch (err) {
-      console.log('Error fetching partner profile:', err);
-    }
+    } catch { /* Retain the cached session state when offline. */ }
   };
 
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedToken = await AsyncStorage.getItem('authToken');
-        const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+        let storedToken = await SecureStore.getItemAsync('authToken');
+        let storedRefreshToken = await SecureStore.getItemAsync('refreshToken');
+        // One-time migration for sessions created by older app versions.
+        if (!storedToken) {
+          storedToken = await AsyncStorage.getItem('authToken');
+          storedRefreshToken = await AsyncStorage.getItem('refreshToken');
+          if (storedToken) {
+            await SecureStore.setItemAsync('authToken', storedToken);
+            if (storedRefreshToken) await SecureStore.setItemAsync('refreshToken', storedRefreshToken);
+            await AsyncStorage.multiRemove(['authToken', 'refreshToken']);
+          }
+        }
         const storedUserId = await AsyncStorage.getItem('userId');
         const storedRole = await AsyncStorage.getItem('userRole');
         const storedStatus = await AsyncStorage.getItem('verificationStatus');
@@ -91,9 +96,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initializeAuth();
   }, []);
 
-  const login = async (accessToken: string, newRefreshToken: string, newUserId: string, role: string, status: string) => {
-    await AsyncStorage.setItem('authToken', accessToken);
-    await AsyncStorage.setItem('refreshToken', newRefreshToken);
+  const login = async (accessToken: string, newRefreshToken: string | null, newUserId: string, role: string, status: string) => {
+    if (role !== 'DELIVERY_PARTNER') {
+      throw new Error('This mobile number is registered as a customer account. Sign in with a delivery-partner mobile number or ask Ruvo support to convert your account.');
+    }
+    await SecureStore.setItemAsync('authToken', accessToken);
+    if (newRefreshToken) await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+    else await SecureStore.deleteItemAsync('refreshToken');
     await AsyncStorage.setItem('userId', newUserId);
     await AsyncStorage.setItem('userRole', role);
     await AsyncStorage.setItem('verificationStatus', status);
@@ -116,12 +125,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           },
         });
       }
-    } catch (err) {
-      console.log('Error calling logout API:', err);
-    }
+    } catch { /* Local session cleanup must still complete. */ }
 
-    await AsyncStorage.removeItem('authToken');
-    await AsyncStorage.removeItem('refreshToken');
+    await SecureStore.deleteItemAsync('authToken');
+    await SecureStore.deleteItemAsync('refreshToken');
     await AsyncStorage.removeItem('userId');
     await AsyncStorage.removeItem('userRole');
     await AsyncStorage.removeItem('verificationStatus');
@@ -153,7 +160,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // If 401 Unauthorized, token might have expired, try refreshing
     if (res.status === 401 && refreshTokenStr) {
       try {
-        console.log('Access token expired, attempting silent refresh...');
         const refreshRes = await fetch(`${API_BASE_URL}/api/partner/auth/refresh`, {
           method: 'POST',
           headers: {
@@ -168,8 +174,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const newRefreshToken = refreshData.data.refreshToken;
 
           // Save new tokens
-          await AsyncStorage.setItem('authToken', newAccessToken);
-          await AsyncStorage.setItem('refreshToken', newRefreshToken);
+          await SecureStore.setItemAsync('authToken', newAccessToken);
+          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
           setToken(newAccessToken);
           setRefreshTokenStr(newRefreshToken);
 
@@ -179,11 +185,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           res = await fetch(url, options);
         } else {
           // Refresh token expired or invalid, force logout
-          console.log('Refresh token expired, logging out user...');
           await logout();
         }
       } catch (err) {
-        console.log('Error during silent token refresh:', err);
         await logout();
       }
     }

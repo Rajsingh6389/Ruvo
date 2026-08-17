@@ -26,7 +26,15 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow RuvoPartner to use your location to fill your registration address."
+        }
+      ]
     ]
   }
 }

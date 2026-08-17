@@ -15,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   userId: string | null;
   user: User | null;
+  requiredRole: string;
 
   login: (
     token: string,
@@ -23,6 +24,7 @@ interface AuthContextType {
   ) => Promise<void>;
 
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(
@@ -31,8 +33,10 @@ const AuthContext = createContext<AuthContextType | undefined>(
 
 export const AuthProvider = ({
   children,
+  requiredRole = 'USER',
 }: {
   children: ReactNode;
+  requiredRole?: string;
 }) => {
   const [isAuthenticated, setIsAuthenticated] =
     useState(false);
@@ -110,7 +114,7 @@ export const AuthProvider = ({
 
         if (!mounted) return;
 
-        if (storedToken) {
+        if (storedToken && storedRole === requiredRole) {
           // Restore authentication immediately
           setToken(storedToken);
           setUserId(storedUserId);
@@ -122,7 +126,7 @@ export const AuthProvider = ({
           setIsLoading(false);
 
           // Fetch profile in background
-          fetchUser(storedToken);
+          if (requiredRole === 'USER') fetchUser(storedToken);
         } else {
           // No saved login
           setToken(null);
@@ -164,6 +168,7 @@ export const AuthProvider = ({
     role: string
   ): Promise<void> => {
     try {
+      if (role !== requiredRole) throw new Error(`This app requires a ${requiredRole} session.`);
       await AsyncStorage.multiSet([
         ['authToken', newToken],
         ['userId', newUserId],
@@ -179,7 +184,7 @@ export const AuthProvider = ({
       setIsLoading(false);
 
       // Load profile in background — don't block login completion
-      fetchUser(newToken);
+      if (requiredRole === 'USER') fetchUser(newToken);
     } catch (error) {
       console.log(
         'RuVo: Login state error:',
@@ -215,6 +220,10 @@ export const AuthProvider = ({
     }
   };
 
+  const refreshUser = async (): Promise<void> => {
+    if (token && requiredRole === 'USER') await fetchUser(token);
+  };
+
   // =========================================================
   // CONTEXT
   // =========================================================
@@ -227,8 +236,10 @@ export const AuthProvider = ({
         token,
         userId,
         user,
+        requiredRole,
         login,
         logout,
+        refreshUser,
       }}
     >
       {children}

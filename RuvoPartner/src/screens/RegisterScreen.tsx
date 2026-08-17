@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -18,16 +21,50 @@ import { API_BASE_URL } from '../config/api';
 
 export const RegisterScreen = () => {
   const navigation = useNavigation<any>();
-  const { token, setVerificationStatus } = useAuth();
+  const { token, setVerificationStatus, authenticatedFetch } = useAuth();
   const { colors } = useTheme();
 
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+
+  const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+
+  const useCurrentLocation = async () => {
+    setLocating(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Location permission needed', 'Allow location access to fill your address automatically. You can also enter it manually.');
+        return;
+      }
+      if (!(await Location.hasServicesEnabledAsync())) {
+        Alert.alert('Turn on location', 'Enable GPS or location services, then try again.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const places = await Location.reverseGeocodeAsync({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+      const place = places[0];
+      if (!place) {
+        Alert.alert('Address not found', 'We found your coordinates, but could not resolve an address. Please enter it manually.');
+        return;
+      }
+      setAddress([place.name, place.street, place.district].filter(Boolean).join(', ') || [place.city, place.region].filter(Boolean).join(', '));
+      setCity(place.city || place.subregion || '');
+      setState(place.region || '');
+      setPincode(place.postalCode || '');
+    } catch (err: any) {
+      Alert.alert('Could not get location', err?.message || 'Check GPS and your connection, then try again.');
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const handleSubmitProfile = async () => {
     if (!fullName || !address || !city || !state || !pincode) {
@@ -40,13 +77,17 @@ export const RegisterScreen = () => {
       return;
     }
 
+    if (!token) {
+      Alert.alert('Session expired', 'Please sign in again before submitting your profile.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/verification`, {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/partner/verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           fullName: fullName.trim(),
@@ -59,18 +100,18 @@ export const RegisterScreen = () => {
       });
 
       const responseText = await res.text();
-      let data: any = {};
+      let data: any = null;
       try {
-        data = responseText ? JSON.parse(responseText) : {};
-      } catch (e) {
-        throw new Error(`Server response error (${res.status}). Please ensure backend is running.`);
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        throw new Error(responseText || `Server response error (${res.status}). Please check that the Ruvo backend is reachable.`);
       }
 
       if (!res.ok) {
-        throw new Error(data.message || 'Profile submission failed.');
+        throw new Error(data?.message || `Profile submission failed (HTTP ${res.status}).`);
       }
 
-      await setVerificationStatus(data.data?.verificationStatus || 'UNDER_REVIEW');
+      await setVerificationStatus(data?.data?.verificationStatus || 'UNDER_REVIEW');
       Alert.alert('Success', 'Basic profile verification details saved successfully!');
       navigation.navigate('VehicleDetails');
     } catch (err: any) {
@@ -101,14 +142,23 @@ export const RegisterScreen = () => {
             onChangeText={setFullName}
           />
 
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Date of Birth (YYYY-MM-DD)</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="1995-12-31"
-            placeholderTextColor={colors.textSecondary}
-            value={dob}
-            onChangeText={setDob}
-          />
+          <Text style={[styles.label, { color: colors.textPrimary }]}>Date of Birth</Text>
+          <TouchableOpacity style={[styles.dateInput, { borderColor: colors.border }]} onPress={() => setShowDatePicker(true)}>
+            <Text style={{ color: dob ? colors.textPrimary : colors.textSecondary }}>{dob || 'Select date of birth'}</Text>
+            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          {showDatePicker && <DateTimePicker
+            value={dob ? new Date(`${dob}T12:00:00`) : new Date(2000, 0, 1)}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            maximumDate={new Date()}
+            onChange={(_, selectedDate) => { setShowDatePicker(Platform.OS === 'ios'); if (selectedDate) setDob(formatDate(selectedDate)); }}
+          />}
+
+          <TouchableOpacity style={[styles.locationButton, { borderColor: colors.primary }]} onPress={useCurrentLocation} disabled={locating}>
+            {locating ? <ActivityIndicator color={colors.primary} /> : <><Ionicons name="locate-outline" size={20} color={colors.primary} /><Text style={[styles.locationButtonText, { color: colors.primary }]}>Use current location</Text></>}
+          </TouchableOpacity>
+          <Text style={[styles.locationHint, { color: colors.textSecondary }]}>Uses your GPS location to fill address, city, state and pincode. You can edit all fields.</Text>
 
           <Text style={[styles.label, { color: colors.textPrimary }]}>Street Address</Text>
           <TextInput
@@ -208,6 +258,29 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#FFFFFF',
   },
+  dateInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  locationButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  locationButtonText: { fontWeight: '700', fontSize: 14 },
+  locationHint: { fontSize: 12, lineHeight: 17, marginBottom: 16 },
   row: {
     flexDirection: 'row',
   },

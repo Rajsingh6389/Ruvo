@@ -19,13 +19,15 @@ public class PartnerAdminController {
     private final PartnerVehicleRepository vehicles;
     private final PartnerVerificationRepository verifications;
     private final UserRepository users;
+    private final PartnerAccountRepository partnerAccounts;
 
     public PartnerAdminController(PartnerProfileRepository p, PartnerVehicleRepository v,
-                                  PartnerVerificationRepository vr, UserRepository u) {
+                                  PartnerVerificationRepository vr, UserRepository u, PartnerAccountRepository pa) {
         this.profiles = p;
         this.vehicles = v;
         this.verifications = vr;
         this.users = u;
+        this.partnerAccounts = pa;
     }
 
     @GetMapping("/pending")
@@ -42,7 +44,8 @@ public class PartnerAdminController {
             item.put("partnerId", p.getId());
             item.put("userId", user.getId());
             item.put("name", user.getName());
-            item.put("mobileNumber", user.getMobileNumber());
+            item.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
+                    .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
             item.put("email", user.getEmail());
             item.put("status", p.getVerificationStatus().name());
 

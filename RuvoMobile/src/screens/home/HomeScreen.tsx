@@ -21,9 +21,9 @@ import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
 import { getMyOrders } from '../../services/orderService';
 import { Order } from '../../types/order';
-import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
-import { getShops } from '../../services/shopService';
+import { getNearbyShops, getShops } from '../../services/shopService';
 import type { Shop } from '../../types';
 import { sw, sh, sf } from '../../utils/responsive';
 
@@ -80,7 +80,7 @@ export const HomeScreen = () => {
 
   const locationText = locationLoading
     ? FETCHING_LABEL
-    : location?.shortLabel ?? 'Set delivery location';
+    : getDeliveryLocationLabel(location);
   const isFetchingLocation = locationText === FETCHING_LABEL;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
@@ -102,7 +102,9 @@ export const HomeScreen = () => {
       }
       // Load nearby shops and their products for the Popular Stores & Nearby Products sections
       setShopsLoading(true);
-      getShops()
+      (location
+        ? getNearbyShops(location.latitude, location.longitude, 5)
+        : getShops())
         .then(async shops => {
           setNearbyShops(shops.slice(0, 4));
           // Fetch products from the top shops
@@ -120,7 +122,7 @@ export const HomeScreen = () => {
         })
         .catch(() => {})
         .finally(() => setShopsLoading(false));
-    }, [userId, token])
+    }, [userId, token, location?.latitude, location?.longitude])
   );
 
   return (

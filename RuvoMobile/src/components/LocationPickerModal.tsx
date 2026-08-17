@@ -74,8 +74,6 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
       const saved = await saveAddress(form);
       if (saved) {
         onClose();
-      } else {
-        setFormError('Please fill house, area, city, pincode and phone.');
       }
     } finally {
       setSaving(false);
@@ -88,10 +86,10 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+          <View style={[styles.sheet, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
-              Complete delivery address
+              Delivery address
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textSecondary} />
@@ -136,6 +134,10 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                 Fill from current location
               </Text>
             </TouchableOpacity>
+
+            <Text style={[styles.recipientHint, { color: colors.textSecondary }]}>
+              Ordering for someone else? Enter their address, name and phone below. We’ll use this address to find nearby shops.
+            </Text>
 
             {(formError || error) ? (
               <Text style={styles.errorText}>{formError || error}</Text>
@@ -294,6 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  recipientHint: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
   errorText: {
     color: '#C62828',
     fontSize: 12,

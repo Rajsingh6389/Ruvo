@@ -78,7 +78,7 @@ public class ProductController {
     // Helper: Get current authenticated user's email
     // =========================================================
 
-    private String getCurrentUserEmail() {
+    private String getCurrentPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
         Object principal = auth.getPrincipal();
@@ -105,14 +105,24 @@ public class ProductController {
     // =========================================================
 
     private boolean ownsShop(Long shopId) {
-        String email = getCurrentUserEmail();
-        if (email == null) return false;
+        String principal = getCurrentPrincipal();
+        if (principal == null) return false;
         Optional<Shop> shopOpt = shopRepository.findById(shopId);
         if (shopOpt.isEmpty()) return false;
-        // ownerId on Shop is stored as the user's id string (from AuthContext)
-        // We also allow match by email for flexibility
         Shop shop = shopOpt.get();
-        return email.equals(shop.getOwnerId()) || String.valueOf(shop.getOwnerId()).equals(email);
+        // Legacy sessions use email/mobile as the JWT subject. Central Shop Owner
+        // OTP sessions use identity:<id>; registrations stored that same ID in
+        // ownerId and, for new records, authIdentityId.
+        if (principal.startsWith("identity:")) {
+            try {
+                Long identityId = Long.parseLong(principal.substring("identity:".length()));
+                return identityId.equals(shop.getAuthIdentityId()) ||
+                        String.valueOf(identityId).equals(shop.getOwnerId());
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        return principal.equals(shop.getOwnerId());
     }
 
 

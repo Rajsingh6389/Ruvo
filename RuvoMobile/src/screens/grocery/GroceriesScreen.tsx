@@ -15,9 +15,9 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { ROUTES } from '../../constants/routes';
-import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
-import { getShops } from '../../services/shopService';
+import { getNearbyShops, getShops } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
 import type { Product } from '../../services/productService';
 import { formatDistance, getDistanceInKm } from '../../utils/distanceUtils';
@@ -195,7 +195,9 @@ export const GroceriesScreen = () => {
     if (isRefresh) setIsRefreshing(true);
     else setIsLoading(true);
     try {
-      setShops(await getShops());
+      setShops(location
+        ? await getNearbyShops(location.latitude, location.longitude, 5)
+        : await getShops());
       setLoadError(null);
     } catch {
       setLoadError('Could not load shops. Please try again.');
@@ -203,7 +205,7 @@ export const GroceriesScreen = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [location]);
 
   useFocusEffect(useCallback(() => { loadShops(); }, [loadShops]));
 
@@ -258,7 +260,7 @@ export const GroceriesScreen = () => {
         <View style={styles.locationTextWrap}>
           <Text style={styles.deliverLabel}>Deliver to</Text>
           <Text style={styles.locationValue} numberOfLines={1}>
-            {locationLoading ? 'Fetching location...' : location?.shortLabel ?? 'Set delivery location'}
+            {locationLoading ? 'Fetching location...' : getDeliveryLocationLabel(location)}
           </Text>
         </View>
         <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />

@@ -85,7 +85,7 @@ export const VerificationStatusScreen = () => {
               <Text style={styles.resubmitText}>Resubmit Verification</Text>
             </TouchableOpacity>
           </View>
-        ) : (
+        ) : verificationStatus === 'SUSPENDED' || verificationStatus === 'INACTIVE' ? (
           <View style={styles.statusBox}>
             <Text style={styles.icon}>🚫</Text>
             <Text style={[styles.statusTitle, { color: '#E53935' }]}>Account Suspended</Text>
@@ -95,6 +95,15 @@ export const VerificationStatusScreen = () => {
             <Text style={[styles.info, { color: colors.textSecondary }]}>
               Please contact RuVo administrator support for assistance.
             </Text>
+          </View>
+        ) : (
+          <View style={styles.statusBox}>
+            <Text style={styles.icon}>⏳</Text>
+            <Text style={[styles.statusTitle, { color: colors.textPrimary }]}>Verification Pending</Text>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>Complete your profile and vehicle details. Ruvo will review them before enabling delivery requests.</Text>
+            <TouchableOpacity style={[styles.resubmitBtn, { backgroundColor: colors.primary }]} onPress={handleResubmit}>
+              <Text style={styles.resubmitText}>Complete Verification</Text>
+            </TouchableOpacity>
           </View>
         )}
 

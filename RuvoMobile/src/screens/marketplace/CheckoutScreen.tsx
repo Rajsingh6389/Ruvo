@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { useToast } from '../../context/ToastContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import {
@@ -164,7 +164,7 @@ export default function CheckoutScreen() {
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
             deliveryAddress,
-            customerPhone: user?.mobileNumber || undefined,
+            customerPhone: location.details.phone || user?.mobileNumber || undefined,
             customerEmail: user?.email || undefined,
             userLatitude: location.latitude,
             userLongitude: location.longitude,
@@ -191,8 +191,8 @@ export default function CheckoutScreen() {
             deliveryAddress,
             userLatitude: location.latitude,
             userLongitude: location.longitude,
-            customerName: user?.name,
-            customerPhone: user?.mobileNumber,
+            customerName: location.details.receiverName || user?.name,
+            customerPhone: location.details.phone || user?.mobileNumber,
           },
           token,
         );
@@ -289,14 +289,14 @@ export default function CheckoutScreen() {
             <Ionicons name="location" size={20} color={colors.primary} style={{ marginRight: 10 }} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.addressLabel, { color: colors.textPrimary }]}>
-                {location?.shortLabel ?? 'Set delivery location'}
+                {getDeliveryLocationLabel(location)}
               </Text>
               <Text style={[styles.addressText, { color: colors.textSecondary }]}>
                 {deliveryAddress}
               </Text>
-              {user?.mobileNumber ? (
+              {location?.details.phone ? (
                 <Text style={[styles.phoneText, { color: colors.textSecondary }]}>
-                  Contact: {user.mobileNumber}
+                  Contact: {location.details.receiverName ? `${location.details.receiverName} · ` : ''}{location.details.phone}
                 </Text>
               ) : null}
             </View>

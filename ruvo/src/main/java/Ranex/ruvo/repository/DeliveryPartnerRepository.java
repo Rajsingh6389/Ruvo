@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner, Long> {
     
     Optional<DeliveryPartner> findByUserId(String userId);
+    Optional<DeliveryPartner> findByAuthIdentityId(Long authIdentityId);
+    Optional<DeliveryPartner> findByPhone(String phone);
 
     List<DeliveryPartner> findByApprovedFalse();
 

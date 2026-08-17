@@ -13,6 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '../../context/CartContext';
+import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { sw, sh, sf } from '../../utils/responsive';
@@ -20,9 +22,16 @@ import { sw, sh, sf } from '../../utils/responsive';
 export default function CartScreen() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { location } = useDeliveryLocation();
+  const [locationPickerVisible, setLocationPickerVisible] = React.useState(false);
+  const hasDeliveryLocation = Boolean(location?.fullAddress && location.latitude && location.longitude);
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
+      if (!hasDeliveryLocation) {
+        setLocationPickerVisible(true);
+        return;
+      }
       navigation.navigate(ROUTES.CHECKOUT, { fromCart: true });
     }
   };
@@ -98,14 +107,23 @@ export default function CartScreen() {
       />
 
       <View style={styles.footer}>
+        <TouchableOpacity style={styles.locationRow} onPress={() => setLocationPickerVisible(true)}>
+          <Ionicons name="location-outline" size={18} color="#2E7D32" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.locationRowTitle}>{hasDeliveryLocation ? 'Delivering to' : 'Add delivery location to continue'}</Text>
+            <Text style={styles.locationRowValue} numberOfLines={1}>{hasDeliveryLocation ? getDeliveryLocationLabel(location) : 'Required before payment'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#6B7280" />
+        </TouchableOpacity>
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal</Text>
           <Text style={styles.totalValue}>₹{cartTotal}</Text>
         </View>
-        <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout}>
-          <Text style={styles.checkoutBtnText}>Proceed to Checkout</Text>
+        <TouchableOpacity style={[styles.checkoutBtn, !hasDeliveryLocation && styles.checkoutBtnDisabled]} onPress={handleCheckout}>
+          <Text style={styles.checkoutBtnText}>{hasDeliveryLocation ? 'Proceed to Checkout' : 'Add Location to Continue'}</Text>
         </TouchableOpacity>
       </View>
+      <LocationPickerModal visible={locationPickerVisible} onClose={() => setLocationPickerVisible(false)} />
     </View>
   );
 }
@@ -172,6 +190,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#EEE',
   },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: sh(14) },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: sw(10), borderWidth: 1, borderColor: '#D1E7D2', backgroundColor: '#F3FAF3', borderRadius: sw(10), padding: sw(10), marginBottom: sh(14) },
+  locationRowTitle: { fontSize: sf(12), fontWeight: '700', color: '#245C28' },
+  locationRowValue: { fontSize: sf(12), color: '#4B5563', marginTop: 2 },
   totalLabel: { fontSize: sf(15), color: '#666' },
   totalValue: { fontSize: sf(19), fontWeight: '700', color: '#111' },
   checkoutBtn: {
@@ -180,6 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: sw(12),
     alignItems: 'center',
   },
+  checkoutBtnDisabled: { backgroundColor: '#6B7280' },
   checkoutBtnText: { color: '#FFF', fontSize: sf(15), fontWeight: '700' },
   emptyContainer: {
     flex: 1,

@@ -29,6 +29,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { uploadShop } from '../../services/shopService';
 import { reverseGeocode } from '../../utils/locationUtils';
+import { ROUTES } from '../../constants/routes';
 import type { ShopInput } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
 
@@ -65,7 +66,7 @@ export const RegisterShopScreen = () => {
   const { colors } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { token, user } = useAuth();
+  const { token, userId } = useAuth();
 
   const { control, handleSubmit, reset, setValue, watch } =
     useForm<ShopForm>({
@@ -180,7 +181,7 @@ export const RegisterShopScreen = () => {
   };
 
   const onSubmit = async (data: ShopForm) => {
-    if (!token || !user?.id) {
+    if (!token || !userId) {
       Alert.alert(
         'Session Error',
         'You must be logged in to register a shop.',
@@ -219,7 +220,9 @@ export const RegisterShopScreen = () => {
       longitude,
       deliveryAvailable: data.deliveryAvailable,
       upiId: data.upiId.trim(),
-      ownerId: user.id.toString(),
+      // SHOP_OWNER sessions use the central identity ID; they do not load the
+      // customer profile object used by the former combined mobile app.
+      ownerId: userId,
     };
 
     setIsSubmitting(true);
@@ -232,15 +235,17 @@ export const RegisterShopScreen = () => {
         token,
       );
 
-      Alert.alert(
-        'Shop submitted for approval',
-        'Your shop registration has been submitted and is pending admin approval.',
-      );
-
       reset();
       setLogo(null);
       setBanner(null);
-      navigation.goBack();
+      Alert.alert(
+        'Shop submitted for approval',
+        'Your registration is pending admin approval. Tap Refresh My Shops after approval to see the updated status.',
+        [
+          { text: 'Stay here', style: 'cancel' },
+          { text: 'Refresh My Shops', onPress: () => navigation.navigate(ROUTES.MY_SHOPS) },
+        ],
+      );
     } catch (err: any) {
       Alert.alert(
         'Registration failed',

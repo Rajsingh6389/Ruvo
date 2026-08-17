@@ -19,14 +19,16 @@ public class PartnerVerificationController {
     private final PartnerProfileRepository profiles;
     private final PartnerVehicleRepository vehicles;
     private final PartnerVerificationRepository verifications;
+    private final PartnerAccountRepository partnerAccounts;
     private final JwtService jwt;
 
     public PartnerVerificationController(UserRepository u, PartnerProfileRepository p, PartnerVehicleRepository v,
-                                         PartnerVerificationRepository vr, JwtService j) {
+                                         PartnerVerificationRepository vr, PartnerAccountRepository pa, JwtService j) {
         this.users = u;
         this.profiles = p;
         this.vehicles = v;
         this.verifications = vr;
+        this.partnerAccounts = pa;
         this.jwt = j;
     }
 
@@ -46,7 +48,8 @@ public class PartnerVerificationController {
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("userId", user.getId());
         responseData.put("name", user.getName());
-        responseData.put("mobileNumber", user.getMobileNumber());
+        responseData.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
+                .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
         responseData.put("email", user.getEmail());
         responseData.put("verificationStatus", profile.getVerificationStatus().name());
         responseData.put("adminReason", profile.getAdminReason());
@@ -135,7 +138,8 @@ public class PartnerVerificationController {
             verification = PartnerVerification.builder()
                     .partnerProfile(profile)
                     .fullName(fullName)
-                    .mobileNumber(user.getMobileNumber())
+                    .mobileNumber(partnerAccounts.findBySecurityUser(user)
+                            .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()))
                     .dateOfBirth(dob)
                     .address(address)
                     .city(city)
@@ -252,6 +256,12 @@ public class PartnerVerificationController {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
+                Long identityId = jwt.getIdentityId(token);
+                if (identityId != null) {
+                    return partnerAccounts.findByAuthIdentityId(identityId)
+                            .map(PartnerAccount::getSecurityUser)
+                            .orElse(null);
+                }
                 String subject = jwt.subject(token);
                 return users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).orElse(null);
             }

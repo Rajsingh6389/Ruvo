@@ -1,0 +1,11 @@
+package Ranex.ruvo.repository;
+
+import Ranex.ruvo.model.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+import java.util.Optional;
+
+public interface AuthIdentityRoleRepository extends JpaRepository<AuthIdentityRole, Long> {
+    Optional<AuthIdentityRole> findByIdentityAndRole(AuthIdentity identity, Role role);
+    List<AuthIdentityRole> findByIdentity(AuthIdentity identity);
+}

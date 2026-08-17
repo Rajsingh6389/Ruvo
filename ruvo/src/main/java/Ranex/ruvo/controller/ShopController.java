@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -142,6 +143,7 @@ public class ShopController {
     // =========================================================
 
     @GetMapping("/pending")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Shop>> getPendingShops(
             HttpServletRequest request
     ) {
@@ -462,6 +464,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> approveShop(
             @PathVariable Long id
     ) {
@@ -491,6 +494,7 @@ public class ShopController {
     // =========================================================
 
     @DeleteMapping("/{id}/reject")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> rejectShop(
             @PathVariable Long id
     ) {

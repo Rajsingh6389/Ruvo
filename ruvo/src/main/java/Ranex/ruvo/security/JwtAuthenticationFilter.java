@@ -10,6 +10,8 @@ import java.io.IOException;
 import Ranex.ruvo.repository.PartnerDeviceSessionRepository;
 import Ranex.ruvo.model.PartnerDeviceSession;
 import java.util.Optional;
+import java.util.List;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Component public class JwtAuthenticationFilter extends OncePerRequestFilter {
  private final JwtService jwt; private final UserDetailsService details;
@@ -20,6 +22,17 @@ import java.util.Optional;
      if(h!=null&&h.startsWith("Bearer ")){
          String t=h.substring(7);
          if(jwt.valid(t)&&SecurityContextHolder.getContext().getAuthentication()==null){
+             Long identityId = jwt.getIdentityId(t);
+             if (identityId != null) {
+                 String role = jwt.getRole(t);
+                 var d = org.springframework.security.core.userdetails.User.withUsername("identity:" + identityId).password("")
+                         .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + role))).build();
+                 var a = new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());
+                 a.setDetails(new WebAuthenticationDetailsSource().buildDetails(r));
+                 SecurityContextHolder.getContext().setAuthentication(a);
+                 c.doFilter(r, s);
+                 return;
+             }
              String sessionId = jwt.getSessionId(t);
              boolean sessionValid = true;
              if (sessionId != null) {

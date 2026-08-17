@@ -22,13 +22,17 @@ public class DeliveryPartner {
     @Column(name = "user_id", nullable = false, unique = true)
     private String userId;
 
+    /** Central identity for this rider; the legacy userId is retained for existing assignments. */
+    @Column(name = "auth_identity_id", unique = true)
+    private Long authIdentityId;
+
     @Column(name = "shop_id")
     private Long shopId; // Null means they are a general RuVo partner
 
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String phone;
 
     private Double latitude;

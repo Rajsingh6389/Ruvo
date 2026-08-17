@@ -15,6 +15,9 @@ public class PartnerProfile {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @Column(name = "auth_identity_id", unique = true)
+    private Long authIdentityId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private VerificationStatus verificationStatus; // PENDING, UNDER_REVIEW, APPROVED, REJECTED, SUSPENDED

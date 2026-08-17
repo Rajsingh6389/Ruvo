@@ -1,5 +1,7 @@
 package Ranex.ruvo.security;
 import Ranex.ruvo.model.User;
+import Ranex.ruvo.model.AuthIdentity;
+import Ranex.ruvo.model.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,5 +19,8 @@ public class JwtService {
  public String create(User user, String sessionId) { Instant now=Instant.now(); String subject = user.getMobileNumber() != null ? user.getMobileNumber() : user.getEmail(); var builder = Jwts.builder().subject(subject).claim("role", user.getRole().name()).issuedAt(Date.from(now)).expiration(Date.from(now.plusMillis(expiration))); if (sessionId != null) { builder.claim("sessionId", sessionId); } return builder.signWith(key).compact(); }
  public String subject(String token) { return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().getSubject(); }
  public String getSessionId(String token) { try { return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().get("sessionId", String.class); } catch (Exception e) { return null; } }
+ public Long getIdentityId(String token) { try { return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().get("identityId", Long.class); } catch (Exception e) { return null; } }
+ public String getRole(String token) { try { return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload().get("role", String.class); } catch (Exception e) { return null; } }
+ public String create(AuthIdentity identity, Role activeRole) { Instant now=Instant.now(); return Jwts.builder().subject("identity:" + identity.getId()).claim("identityId", identity.getId()).claim("role", activeRole.name()).issuedAt(Date.from(now)).expiration(Date.from(now.plusMillis(expiration))).signWith(key).compact(); }
  public boolean valid(String token) { try { subject(token); return true; } catch (JwtException | IllegalArgumentException e) { return false; } }
 }

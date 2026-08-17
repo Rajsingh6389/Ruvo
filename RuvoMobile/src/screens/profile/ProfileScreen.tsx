@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
-import { API_BASE_URL } from '../../config/api';
 import { sw, sh, sf } from '../../utils/responsive';
 
 type MenuItem = {
@@ -28,25 +27,8 @@ type MenuItem = {
 };
 
 export const ProfileScreen = () => {
-  const { user, logout, token } = useAuth();
+  const { user, logout } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [userShop, setUserShop] = useState<any | null>(null);
-
-  useEffect(() => {
-    const ownerId = user?.id || user?.email;
-    if (ownerId) {
-      fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
-            setUserShop(data[0]);
-          }
-        })
-        .catch(() => {});
-    }
-  }, [user, token]);
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -56,36 +38,10 @@ export const ProfileScreen = () => {
   };
 
   const sellerMenuItems: MenuItem[] = [
-    ...(userShop
-      ? [
-          {
-            id: 'dashboard',
-            title: 'Shopkeeper Dashboard',
-            subtitle: `Manage ${userShop.name} orders & sales`,
-            icon: 'grid' as const,
-            color: '#2E7D32',
-            onPress: () =>
-              (navigation.navigate as any)(ROUTES.SHOPKEEPER_DASHBOARD, {
-                shopId: userShop.id,
-                shopName: userShop.name,
-              }),
-            showArrow: true,
-          },
-        ]
-      : []),
-    {
-      id: 'my_shops',
-      title: 'My Shops & Products',
-      subtitle: 'Manage all your stores and catalog',
-      icon: 'storefront' as const,
-      color: '#10B981',
-      onPress: () => navigation.navigate(ROUTES.MY_SHOPS as never),
-      showArrow: true,
-    },
     {
       id: 'register_shop',
-      title: 'Register New Shop',
-      subtitle: 'List your local store on RuVo marketplace',
+      title: 'Register a Shop',
+      subtitle: 'Continue in the dedicated Ruvo Shop app',
       icon: 'add-circle' as const,
       color: '#3B82F6',
       onPress: () => navigation.navigate(ROUTES.REGISTER_SHOP as never),
@@ -94,6 +50,15 @@ export const ProfileScreen = () => {
   ];
 
   const activityMenuItems: MenuItem[] = [
+    {
+      id: 'edit_profile',
+      title: 'Edit Profile',
+      subtitle: 'Update your name and account details',
+      icon: 'create-outline',
+      color: '#2563EB',
+      onPress: () => navigation.navigate(ROUTES.EDIT_PROFILE as never),
+      showArrow: true,
+    },
     {
       id: 'orders',
       title: 'My Orders',
@@ -162,7 +127,7 @@ export const ProfileScreen = () => {
 
         {/* Menu Sections */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seller Zone</Text>
+          <Text style={styles.sectionTitle}>Sell with Ruvo</Text>
           {sellerMenuItems.map((item, index) => (
             <MenuRow key={item.id} item={item} isLast={index === sellerMenuItems.length - 1} />
           ))}
@@ -408,4 +373,4 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     marginBottom: sh(8),
   },
-});
+});

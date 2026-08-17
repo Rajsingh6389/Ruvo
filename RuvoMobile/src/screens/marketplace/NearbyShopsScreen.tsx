@@ -10,6 +10,8 @@ import {
   View,
   Platform,
   StatusBar,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,8 +21,8 @@ import { ROUTES } from '../../constants/routes';
 import { useTheme } from '../../context/ThemeContext';
 import { Card } from '../../components/Card';
 import { Layout } from '../../components/Layout';
-import { getShops } from '../../services/shopService';
-import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { getNearbyShops, getShops } from '../../services/shopService';
+import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { formatDistance, getDistanceInKm } from '../../utils/distanceUtils';
 import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
@@ -52,6 +54,10 @@ const getShopExtra = (shop: Shop) => {
 
 const FREE_DELIVERY_THRESHOLD = 299;
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const NearbyShopsScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -72,7 +78,12 @@ const NearbyShopsScreen = () => {
   const loadShops = useCallback(async (isRefresh = false) => {
     isRefresh ? setIsRefreshing(true) : setIsLoading(true);
     try {
-      const data = await getShops();
+      // The backend is the source of truth for the 5 km service radius.
+      // Without a delivery location we can only show the general marketplace.
+      const data = userLocation
+        ? await getNearbyShops(userLocation.latitude, userLocation.longitude, 5)
+        : await getShops();
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setShops(data || []);
       setLoadError(null);
     } catch (error) {
@@ -82,7 +93,7 @@ const NearbyShopsScreen = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, []);
+  }, [userLocation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -283,7 +294,7 @@ const NearbyShopsScreen = () => {
             style={[styles.deliverAddress, { color: colors.textSecondary }]}
             numberOfLines={1}
           >
-            {userLocation?.shortLabel ?? 'Set your delivery location'}
+            {getDeliveryLocationLabel(userLocation)}
           </Text>
         </View>
         <TouchableOpacity
@@ -367,6 +378,20 @@ const NearbyShopsScreen = () => {
               <Text style={styles.retryBtnText}>Retry</Text>
             </TouchableOpacity>
           </View>
+        ) : visibleShops.length === 0 && userLocation && shops.length === 0 ? (
+          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.outOfServiceIcon, { backgroundColor: colors.primary + '18' }]}>
+              <Ionicons name="location-outline" size={34} color={colors.primary} />
+            </View>
+            <Text style={[styles.outOfServiceTitle, { color: colors.textPrimary }]}>Currently, we’re out of service in your area</Text>
+            <Text style={[styles.statusText, { color: colors.textSecondary }]}>We’ll be in your area soon.</Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
+              onPress={() => refreshFromGps()}
+            >
+              <Text style={styles.retryBtnText}>Update Location</Text>
+            </TouchableOpacity>
+          </View>
         ) : visibleShops.length === 0 ? (
           <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Ionicons name="storefront-outline" size={44} color={colors.textSecondary} />
@@ -375,7 +400,15 @@ const NearbyShopsScreen = () => {
             </Text>
           </View>
         ) : (
-          visibleShops.map(renderShop)
+          <>
+            <View style={[styles.serviceSummary, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '28' }]}>
+              <Ionicons name="flash-outline" size={17} color={colors.primary} />
+              <Text style={[styles.serviceSummaryText, { color: colors.textPrimary }]}>
+                {visibleShops.length} shop{visibleShops.length === 1 ? '' : 's'} delivering near you
+              </Text>
+            </View>
+            {visibleShops.map(renderShop)}
+          </>
         )}
       </ScrollView>
 
@@ -476,8 +509,12 @@ const styles = StyleSheet.create({
     gap: sh(10),
   },
   statusText: { textAlign: 'center', fontSize: sf(14), lineHeight: sf(20) },
+  outOfServiceIcon: { width: sw(68), height: sw(68), borderRadius: sw(34), alignItems: 'center', justifyContent: 'center' },
+  outOfServiceTitle: { textAlign: 'center', fontSize: sf(17), fontWeight: '700', lineHeight: sf(23) },
   retryBtn: { paddingHorizontal: sw(22), paddingVertical: sh(9), borderRadius: sw(20) },
   retryBtnText: { color: '#fff', fontWeight: '600', fontSize: sf(13) },
+  serviceSummary: { flexDirection: 'row', alignItems: 'center', gap: sw(8), borderWidth: 1, borderRadius: sw(10), paddingHorizontal: sw(12), paddingVertical: sh(10), marginBottom: sh(14) },
+  serviceSummaryText: { fontSize: sf(13), fontWeight: '700' },
 
   shopCard: {
     marginBottom: sh(16),

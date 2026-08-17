@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Ruvo Shop",
+    "slug": "ruvo-shop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ruvo-shop",
+    "userInterfaceStyle": "automatic",
+    "android": { "package": "com.ruvo.shop" },
+    "plugins": ["expo-font"]
+  }
+}

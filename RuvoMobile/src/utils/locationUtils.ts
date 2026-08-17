@@ -14,6 +14,11 @@ export type GeocodedAddress = {
   landmark: string;
 };
 
+export type GeocodedCoordinates = {
+  latitude: number;
+  longitude: number;
+};
+
 function emptyAddress(): GeocodedAddress {
   return {
     fullAddress: '',
@@ -114,6 +119,39 @@ export async function geocodeDetails(lat: number, lon: number): Promise<Geocoded
     fullAddress: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
     shortAddress: 'Current location',
   };
+}
+
+/** Converts a recipient-entered delivery address to coordinates for serviceability checks. */
+export async function geocodeAddress(address: string): Promise<GeocodedCoordinates | null> {
+  const query = address.trim();
+  if (!query) return null;
+
+  try {
+    const response = await axios.get(
+      'https://maps.googleapis.com/maps/api/geocode/json',
+      { params: { address: query, key: GOOGLE_MAPS_API_KEY }, timeout: 8000 },
+    );
+    const point = response.data?.results?.[0]?.geometry?.location;
+    if (Number.isFinite(point?.lat) && Number.isFinite(point?.lng)) {
+      return { latitude: point.lat, longitude: point.lng };
+    }
+  } catch { /* Fall through to the public geocoder. */ }
+
+  try {
+    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+      params: { q: query, format: 'json', limit: 1, countrycodes: 'in' },
+      headers: { 'User-Agent': 'RuVoMobileApp' },
+      timeout: 8000,
+    });
+    const place = response.data?.[0];
+    const latitude = Number(place?.lat);
+    const longitude = Number(place?.lon);
+    return Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? { latitude, longitude }
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {

@@ -11,6 +11,7 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   composeFullAddress,
+  geocodeAddress,
   geocodeDetails,
 } from '../utils/locationUtils';
 
@@ -35,6 +36,15 @@ export type DeliveryLocation = {
   fullAddress: string;
   isCustomAddress: boolean;
   details: AddressDetails;
+};
+
+/** A precise, concise address for headers; never fall back to only the city. */
+export const getDeliveryLocationLabel = (location: DeliveryLocation | null): string => {
+  if (!location) return 'Set delivery location';
+  const details = location.details;
+  const preciseParts = [details.house, details.street, details.landmark && `Near ${details.landmark}`, details.area]
+    .filter(Boolean);
+  return preciseParts.join(', ') || location.fullAddress || location.shortLabel;
 };
 
 type DeliveryLocationContextData = {
@@ -128,7 +138,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         longitude,
         shortLabel: geo.shortAddress || details.area || details.city || 'Current location',
         fullAddress,
-        isCustomAddress: Boolean(details.house || details.landmark),
+        isCustomAddress: keepManualFields ? previous?.isCustomAddress ?? false : false,
         details,
       });
     },
@@ -185,6 +195,9 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
           timeInterval: 4000,
         },
         (position: Location.LocationObject) => {
+          // The recipient's saved address is the delivery destination, not the
+          // shopper's moving device location.
+          if (locationRef.current?.isCustomAddress) return;
           const { latitude, longitude } = position.coords;
           setLocation(prev =>
             prev
@@ -212,20 +225,25 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         return false;
       }
 
-      const previous = locationRef.current;
       const fullAddress = composeFullAddress(details);
+      const coordinates = await geocodeAddress(fullAddress);
+      if (!coordinates) {
+        setError('We could not locate this address. Check the house, area, city and pincode, then try again.');
+        return false;
+      }
       await persistLocation({
-        latitude: previous?.latitude ?? 0,
-        longitude: previous?.longitude ?? 0,
-        shortLabel: details.area || details.city || details.house,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        shortLabel: [details.house, details.street, details.area].filter(Boolean).join(', ') || details.city,
         fullAddress,
         isCustomAddress: true,
         details,
       });
+      stopTracking();
       setError(null);
       return true;
     },
-    [persistLocation],
+    [persistLocation, stopTracking],
   );
 
   useEffect(() => {
