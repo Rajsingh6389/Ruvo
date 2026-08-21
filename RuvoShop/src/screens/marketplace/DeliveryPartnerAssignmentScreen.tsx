@@ -25,6 +25,7 @@ interface CurrentRequest {
   partnerName: string | null;
   partnerPhone: string | null;
   distanceKm: number | null;
+  locationName?: string | null;
   expiresAt: string | null;
   status: AssignmentStatus;
 }
@@ -100,6 +101,9 @@ export default function DeliveryPartnerAssignmentScreen() {
       );
       if (!res.ok) return;
       const data: CurrentRequest = await res.json();
+      console.log('====================================');
+      console.log('📍 [Shopkeeper] Current Delivery Partner Request:', JSON.stringify(data, null, 2));
+      console.log('====================================');
       setRequest(data);
       setLoading(false);
 
@@ -249,9 +253,10 @@ export default function DeliveryPartnerAssignmentScreen() {
                     📞 {request.partnerPhone}
                   </Text>
                 ) : null}
-                {request.distanceKm != null ? (
+                {request.distanceKm != null || request.locationName ? (
                   <Text style={[styles.partnerDistance, { color: '#EA580C' }]}>
-                    📍 {(Math.round(request.distanceKm * 10) / 10).toFixed(1)} km away
+                    📍 {request.locationName ? `${request.locationName} ` : ''}
+                    {request.distanceKm != null ? `(${(Math.round(request.distanceKm * 10) / 10).toFixed(1)} km away)` : ''}
                   </Text>
                 ) : null}
               </View>

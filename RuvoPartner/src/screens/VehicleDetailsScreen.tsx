@@ -10,7 +10,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -74,12 +76,21 @@ export const VehicleDetailsScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Back Button Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Vehicle Details</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.title, { color: colors.primary }]}>Vehicle Details</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Register the vehicle you will use for deliveries
         </Text>
@@ -165,11 +176,23 @@ export const VehicleDetailsScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  headerTitle: { fontSize: 17, fontWeight: '700' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   container: {
     flex: 1,
   },

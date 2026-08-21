@@ -93,8 +93,18 @@ export const HomeScreen = () => {
       if (userId && token) {
         getMyOrders(userId, token)
           .then((orders) => {
+            const inactiveStatuses = [
+              'DELIVERED',
+              'SHOP_REJECTED',
+              'CANCELLED',
+              'SHOP_TIMEOUT',
+              'CANCELLED_SHOP_TIMEOUT',
+              'CANCELLED_BY_SHOP',
+              'CANCELLED_NO_PARTNER_FOUND',
+              'REJECTED',
+            ];
             const pending = orders.find(o =>
-              !['DELIVERED', 'SHOP_REJECTED', 'CANCELLED'].includes(o.orderStatus || '')
+              !inactiveStatuses.includes((o.orderStatus || '').toUpperCase())
             );
             setActiveOrder(pending || null);
           })
@@ -114,7 +124,7 @@ export const HomeScreen = () => {
             for (const s of shops.slice(0, 3)) {
               const prods = await getProductsByShop(s.id);
               if (Array.isArray(prods)) {
-                allProducts.push(...prods.filter(p => p.isAvailable !== false));
+                allProducts.push(...prods.filter(p => p.isAvailable !== false && p.imageUrl && p.imageUrl.trim() !== ''));
               }
             }
             setNearbyProducts(allProducts.slice(0, 8));
@@ -270,7 +280,7 @@ export const HomeScreen = () => {
               key={item.id}
               style={styles.quickLinkItem}
               onPress={() => {
-                if (item.id === 'groceries' || item.id === 'stores') {
+                if (item.id === 'groceries' || item.id === 'stores' || item.id === 'delivery' || item.id === 'pass') {
                   navigation.navigate(ROUTES.GROCERIES as never);
                 }
               }}

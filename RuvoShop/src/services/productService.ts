@@ -65,6 +65,21 @@ export async function getProductsByShop(
   return Array.isArray(data) ? data : [];
 }
 
+export async function getProductById(
+  productId: number | string,
+  token?: string,
+): Promise<Product> {
+  const url = `${API_BASE_URL}/api/products/${productId}`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(url, { method: 'GET', headers });
+  return parseOrThrow(res);
+}
+
 // ──────────────────────────────────────────────────────────
 // GET — all products for a shop (includes unavailable ones)
 // ──────────────────────────────────────────────────────────

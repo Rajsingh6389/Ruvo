@@ -1,7 +1,9 @@
 package Ranex.ruvo.controller;
 
+import Ranex.ruvo.model.DeliveryPartner;
 import Ranex.ruvo.model.Notification;
 import Ranex.ruvo.model.User;
+import Ranex.ruvo.repository.DeliveryPartnerRepository;
 import Ranex.ruvo.repository.NotificationRepository;
 import Ranex.ruvo.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +20,17 @@ public class NotificationController {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final DeliveryPartnerRepository deliveryPartnerRepository;
 
     public NotificationController(NotificationRepository notificationRepository,
-                                  UserRepository userRepository) {
+                                  UserRepository userRepository,
+                                  DeliveryPartnerRepository deliveryPartnerRepository) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.deliveryPartnerRepository = deliveryPartnerRepository;
     }
 
-    private String getCurrentUserEmail() {
+    private String getCurrentUserPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
         Object principal = auth.getPrincipal();
@@ -37,29 +42,44 @@ public class NotificationController {
 
     /**
      * Returns notifications for the current user.
-     * Notifications are stored with userId = user's numeric ID (Long as String).
-     * We resolve the numeric ID from the JWT email, then query by that ID.
+     *
+     * Handles three principal formats:
+     * 1. "identity:<id>" — identity-system delivery partners (new registration flow)
+     * 2. Numeric user ID email — legacy email-based users
+     * 3. Mobile number — delivery partners registered by phone
      */
     @GetMapping("/mine")
     public ResponseEntity<List<Notification>> getMyNotifications() {
-        String email = getCurrentUserEmail();
-        if (email == null) {
+        String principal = getCurrentUserPrincipal();
+        if (principal == null) {
             return ResponseEntity.status(403).build();
         }
 
-        // Try to resolve the numeric user ID from email
-        User user = userRepository.findByEmail(email).orElse(null);
+        // Format 1: identity:<id> — delivery partner via central auth
+        if (principal.startsWith("identity:")) {
+            try {
+                long identityId = Long.parseLong(principal.substring("identity:".length()));
+                DeliveryPartner partner = deliveryPartnerRepository.findByAuthIdentityId(identityId).orElse(null);
+                if (partner != null) {
+                    List<Notification> notifs = notificationRepository.findByUserIdOrderByCreatedAtDesc(partner.getUserId());
+                    return ResponseEntity.ok(notifs);
+                }
+            } catch (NumberFormatException ignored) { }
+            return ResponseEntity.ok(List.of());
+        }
+
+        // Format 2/3: try to resolve as a regular User (email) and get numeric ID
+        User user = userRepository.findByEmail(principal).orElse(null);
         if (user != null) {
             String numericUserId = String.valueOf(user.getId());
-            // Return notifications keyed by numeric userId (as stored by NotificationService)
             List<Notification> notifs = notificationRepository.findByUserIdOrderByCreatedAtDesc(numericUserId);
             if (!notifs.isEmpty()) {
                 return ResponseEntity.ok(notifs);
             }
         }
 
-        // Fallback: query by email string (for backwards compatibility)
-        return ResponseEntity.ok(notificationRepository.findByUserIdOrderByCreatedAtDesc(email));
+        // Fallback: query directly by principal (mobile number stored as userId for partners)
+        return ResponseEntity.ok(notificationRepository.findByUserIdOrderByCreatedAtDesc(principal));
     }
 
     @PatchMapping("/{id}/read")
@@ -67,14 +87,27 @@ public class NotificationController {
         Notification notification = notificationRepository.findById(id).orElse(null);
         if (notification == null) return ResponseEntity.notFound().build();
 
-        String email = getCurrentUserEmail();
-        if (email == null) return ResponseEntity.status(403).build();
+        String principal = getCurrentUserPrincipal();
+        if (principal == null) return ResponseEntity.status(403).build();
 
-        // Allow mark-read if either the email or numeric ID matches
-        User user = userRepository.findByEmail(email).orElse(null);
-        String numericUserId = (user != null) ? String.valueOf(user.getId()) : null;
-        boolean authorized = notification.getUserId().equals(email)
-                || (numericUserId != null && notification.getUserId().equals(numericUserId));
+        boolean authorized = false;
+
+        // Check identity-based partner
+        if (principal.startsWith("identity:")) {
+            try {
+                long identityId = Long.parseLong(principal.substring("identity:".length()));
+                DeliveryPartner partner = deliveryPartnerRepository.findByAuthIdentityId(identityId).orElse(null);
+                if (partner != null && notification.getUserId().equals(partner.getUserId())) {
+                    authorized = true;
+                }
+            } catch (NumberFormatException ignored) { }
+        } else {
+            // Check by email → numeric ID
+            User user = userRepository.findByEmail(principal).orElse(null);
+            String numericUserId = (user != null) ? String.valueOf(user.getId()) : null;
+            authorized = notification.getUserId().equals(principal)
+                    || (numericUserId != null && notification.getUserId().equals(numericUserId));
+        }
 
         if (!authorized) {
             return ResponseEntity.status(403).body("Not authorized to read this notification");

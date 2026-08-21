@@ -10,6 +10,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
@@ -21,7 +22,7 @@ import { API_BASE_URL } from '../config/api';
 
 export const RegisterScreen = () => {
   const navigation = useNavigation<any>();
-  const { token, setVerificationStatus, authenticatedFetch } = useAuth();
+  const { token, setVerificationStatus, authenticatedFetch, logout } = useAuth();
   const { colors } = useTheme();
 
   const [fullName, setFullName] = useState('');
@@ -122,12 +123,30 @@ export const RegisterScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Back Button Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => {
+          Alert.alert(
+            'Go back?',
+            'This will return you to the mobile number input.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Yes', onPress: () => logout?.() }
+            ]
+          );
+        }}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Partner Registration</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.title, { color: colors.primary }]}>Partner Registration</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Complete your profile to join RuVo delivery network
         </Text>
@@ -216,11 +235,23 @@ export const RegisterScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 56,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  headerTitle: { fontSize: 17, fontWeight: '700' },
+  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   container: {
     flex: 1,
   },

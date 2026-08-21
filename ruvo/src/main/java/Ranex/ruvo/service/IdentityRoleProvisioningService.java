@@ -38,7 +38,8 @@ public class IdentityRoleProvisioningService {
         DeliveryPartner partner = partners.findByAuthIdentityId(identity.getId()).orElseGet(() ->
                 partners.findByPhone(identity.getMobileNumber()).orElseGet(() -> partners.save(DeliveryPartner.builder()
                         .userId(securityUser.getEmail()).authIdentityId(identity.getId()).name(securityUser.getName())
-                        .phone(identity.getMobileNumber()).active(true).available(false).approved(false).build())));
+                        .phone(identity.getMobileNumber()).active(true).available(false).approved(true).build())));
         if (partner.getAuthIdentityId() == null) { partner.setAuthIdentityId(identity.getId()); partners.save(partner); }
+        if (!Boolean.TRUE.equals(partner.getApproved())) { partner.setApproved(true); partners.save(partner); }
     }
 }

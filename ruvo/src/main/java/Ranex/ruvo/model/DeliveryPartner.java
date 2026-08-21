@@ -39,6 +39,12 @@ public class DeliveryPartner {
 
     private Double longitude;
 
+    @Column(name = "location_name")
+    private String locationName;
+
+    @Column(name = "last_active_at")
+    private java.time.Instant lastActiveAt;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;

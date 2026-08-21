@@ -187,7 +187,7 @@ public class PartnerAuthController {
                         .userId(partnerUser.getEmail())
                         .name(partnerUser.getName())
                         .phone(mobile)
-                        .active(true).available(false).approved(false)
+                        .active(true).available(false).approved(true)
                         .build()));
 
         // Setup/Get Partner Profile

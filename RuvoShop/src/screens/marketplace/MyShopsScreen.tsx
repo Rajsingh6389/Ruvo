@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   ActivityIndicator,
   Image,
   RefreshControl,
+  TextInput,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,17 +21,62 @@ import { useAuth } from '../../context/AuthContext';
 import { getMyShops, Shop } from '../../services/shopService';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
-import { sw, sh, sf } from '../../utils/responsive';
+
+// Sample fallback store image per category
+const CATEGORY_THUMBNAILS: Record<string, string> = {
+  grocery: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80',
+  fashion: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=400&q=80',
+  food: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
+  electronics: 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=400&q=80',
+  default: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80',
+};
+
+const CATEGORY_ICONS: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string; bg: string }> = {
+  grocery: { name: 'bag-handle', color: '#059669', bg: '#DCFCE7' },
+  fashion: { name: 'diamond', color: '#D97706', bg: '#FEF3C7' },
+  food: { name: 'restaurant', color: '#16A34A', bg: '#DCFCE7' },
+  electronics: { name: 'hardware-chip', color: '#EA580C', bg: '#FFEDD5' },
+  default: { name: 'storefront', color: '#059669', bg: '#DCFCE7' },
+};
+
+function getCategoryMeta(cat?: string) {
+  if (!cat) return CATEGORY_ICONS.default;
+  const lower = cat.toLowerCase();
+  if (lower.includes('groc') || lower.includes('essential')) return CATEGORY_ICONS.grocery;
+  if (lower.includes('fash') || lower.includes('cloth')) return CATEGORY_ICONS.fashion;
+  if (lower.includes('food') || lower.includes('bata') || lower.includes('bite') || lower.includes('rest')) return CATEGORY_ICONS.food;
+  if (lower.includes('electr') || lower.includes('tech') || lower.includes('gadg')) return CATEGORY_ICONS.electronics;
+  return CATEGORY_ICONS.default;
+}
+
+function getCategoryThumbnail(cat?: string, shopImg?: string, bannerImg?: string): string {
+  if (shopImg) {
+    return shopImg.startsWith('http') ? shopImg : `${API_BASE_URL}${shopImg.startsWith('/') ? '' : '/'}${shopImg}`;
+  }
+  if (bannerImg) {
+    return bannerImg.startsWith('http') ? bannerImg : `${API_BASE_URL}${bannerImg.startsWith('/') ? '' : '/'}${bannerImg}`;
+  }
+  if (!cat) return CATEGORY_THUMBNAILS.default;
+  const lower = cat.toLowerCase();
+  if (lower.includes('groc')) return CATEGORY_THUMBNAILS.grocery;
+  if (lower.includes('fash') || lower.includes('cloth')) return CATEGORY_THUMBNAILS.fashion;
+  if (lower.includes('food') || lower.includes('bite')) return CATEGORY_THUMBNAILS.food;
+  if (lower.includes('electr')) return CATEGORY_THUMBNAILS.electronics;
+  return CATEGORY_THUMBNAILS.default;
+}
 
 export const MyShopsScreen = () => {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
-  const { user, userId, token } = useAuth();
+  const { user, userId, token, logout } = useAuth();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
 
   const loadShops = async (isRefresh = false) => {
     const ownerId = userId || user?.id;
@@ -43,7 +92,7 @@ export const MyShopsScreen = () => {
         setRefreshing(false);
       }
     } else {
-      setError('User not authenticated properly (id or token missing)');
+      setError('User not authenticated properly');
       setLoading(false);
       setRefreshing(false);
     }
@@ -53,1179 +102,669 @@ export const MyShopsScreen = () => {
     loadShops();
   }, [userId, user, token]);
 
-  /* -------------------------------------------------------
-     LOADING
-  ------------------------------------------------------- */
+  // Calculations for stats
+  const approvedCount = useMemo(() => shops.filter(s => Boolean(s.approved)).length, [shops]);
+  const pendingCount = useMemo(() => shops.filter(s => !s.approved).length, [shops]);
+
+  // Filtered shops
+  const filteredShops = useMemo(() => {
+    return shops.filter(s => {
+      const matchSearch =
+        !searchQuery ||
+        s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s as any).category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s as any).address?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchFilter =
+        activeFilter === 'ALL'
+          ? true
+          : activeFilter === 'APPROVED'
+          ? Boolean(s.approved)
+          : !s.approved;
+
+      return matchSearch && matchFilter;
+    });
+  }, [shops, searchQuery, activeFilter]);
 
   if (loading) {
     return (
-      <View
-        style={[
-          styles.loadingContainer,
-          { backgroundColor: colors.background },
-        ]}
-      >
-        <View
-          style={[
-            styles.loadingIcon,
-            { backgroundColor: colors.primary },
-          ]}
-        >
-          <Ionicons
-            name="storefront"
-            size={30}
-            color="#FFFFFF"
-          />
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <View style={[styles.loadingIcon, { backgroundColor: colors.primary }]}>
+          <Ionicons name="storefront" size={32} color="#FFFFFF" />
         </View>
-
-        <Text
-          style={[
-            styles.loadingTitle,
-            { color: colors.textPrimary },
-          ]}
-        >
-          Loading your shops
-        </Text>
-
-        <Text
-          style={[
-            styles.loadingSubtitle,
-            { color: colors.textSecondary },
-          ]}
-        >
-          Please wait...
-        </Text>
-
-        <ActivityIndicator
-          size="small"
-          color={colors.primary}
-          style={{ marginTop: 16 }}
-        />
-      </View>
+        <Text style={[styles.loadingTitle, { color: colors.textPrimary }]}>Loading your shops</Text>
+        <Text style={[styles.loadingSubtitle, { color: colors.textSecondary }]}>Please wait...</Text>
+        <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 16 }} />
+      </SafeAreaView>
     );
   }
 
   /* -------------------------------------------------------
-     SHOP CARD
+     SHOP CARD ITEM (Matches visual mock accurately)
   ------------------------------------------------------- */
-
   const renderShop = ({ item }: { item: Shop }) => {
-    /*
-      Safely read optional fields.
-      This keeps the screen compatible even if your current
-      Shop interface doesn't contain every detail yet.
-    */
     const shopData = item as Shop & {
       category?: string;
       address?: string;
       phone?: string;
       mobile?: string;
       contactNumber?: string;
-      description?: string;
     };
 
-    const category = shopData.category;
-    const address = shopData.address;
-
-    const phone =
-      shopData.phone ||
-      shopData.mobile ||
-      shopData.contactNumber;
-
+    const category = shopData.category || 'General Store';
+    const address = shopData.address || 'Location on file';
+    const phone = shopData.phone || shopData.mobile || shopData.contactNumber || '+91 98765 43210';
     const approved = Boolean(item.approved);
 
-    return (
-      <View
-        style={[
-          styles.shopCard,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        {/* LEFT GREEN ACCENT */}
+    const meta = getCategoryMeta(category);
+    const thumbUri = getCategoryThumbnail(category, item.imageUrl || item.logoUrl, item.bannerUrl);
 
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() =>
+          navigation.navigate(ROUTES.SHOPKEEPER_DASHBOARD, {
+            shopId: item.id,
+            shopName: item.name,
+          })
+        }
+        style={[styles.shopCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+      >
+        {/* Left vertical status indicator strip */}
         <View
           style={[
-            styles.shopAccent,
-            {
-              backgroundColor: approved
-                ? colors.primary
-                : '#F59E0B',
-            },
+            styles.accentStrip,
+            { backgroundColor: approved ? '#059669' : '#F97316' },
           ]}
         />
 
-        {/* ------------------------------------------------
-            SHOP HEADER
-        ------------------------------------------------ */}
+        <View style={styles.cardContentRow}>
+          {/* Left Shop Icon Box */}
+          <View style={[styles.shopIconSquare, { backgroundColor: meta.bg }]}>
+            <Ionicons name={meta.name} size={28} color={meta.color} />
+          </View>
 
-        <TouchableOpacity
-          activeOpacity={0.75}
-          onPress={() =>
-            navigation.navigate(
-              ROUTES.SHOP_DETAILS,
-              { shopId: item.id },
-            )
-          }
-        >
-          <View style={styles.shopHeader}>
-            {/* Shop Icon */}
-
-            {(() => {
-              const logoUri = item.logoUrl || item.imageUrl || item.bannerUrl;
-              const formattedUri = logoUri ? (logoUri.startsWith('http') ? logoUri : `${API_BASE_URL}${logoUri.startsWith('/') ? '' : '/'}${logoUri}`) : null;
-
-              return formattedUri ? (
-                <Image source={{ uri: formattedUri }} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
-              ) : (
-                <View
-                  style={[
-                    styles.shopIcon,
-                    {
-                      backgroundColor: approved
-                        ? '#E8F5E9'
-                        : '#FFF7E6',
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="storefront"
-                    size={28}
-                    color={
-                      approved
-                        ? colors.primary
-                        : '#F59E0B'
-                    }
-                  />
-                </View>
-              );
-            })()}
-
-            {/* Main Shop Information */}
-
-            <View style={styles.shopMainInfo}>
-              <Text
-                style={[
-                  styles.shopName,
-                  { color: colors.textPrimary },
-                ]}
-                numberOfLines={1}
-              >
+          {/* Middle Info */}
+          <View style={styles.shopInfoCol}>
+            {/* Title & Status Pill */}
+            <View style={styles.titleStatusRow}>
+              <Text style={[styles.shopName, { color: colors.textPrimary }]} numberOfLines={1}>
                 {item.name}
               </Text>
-
-              {category ? (
-                <Text
-                  style={[
-                    styles.shopCategory,
-                    { color: colors.primary },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {category}
-                </Text>
-              ) : null}
-
-              {/* Status */}
-
-              <View style={styles.statusRow}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    {
-                      backgroundColor: approved
-                        ? '#E8F5E9'
-                        : '#FFF7E6',
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.statusDot,
-                      {
-                        backgroundColor: approved
-                          ? colors.primary
-                          : '#F59E0B',
-                      },
-                    ]}
-                  />
-
-                  <Text
-                    style={[
-                      styles.statusText,
-                      {
-                        color: approved
-                          ? colors.primary
-                          : '#D97706',
-                      },
-                    ]}
-                  >
-                    {approved
-                      ? 'Approved'
-                      : 'Pending Approval'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Open Shop */}
-
-            <View
-              style={[
-                styles.shopArrow,
-                {
-                  backgroundColor: '#F1F8F2',
-                },
-              ]}
-            >
-              <Ionicons
-                name="chevron-forward"
-                size={19}
-                color={colors.primary}
-              />
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* ------------------------------------------------
-            SHOP DETAILS
-        ------------------------------------------------ */}
-
-        <View
-          style={[
-            styles.detailsContainer,
-            { borderTopColor: colors.border },
-          ]}
-        >
-          {/* Address */}
-
-          {address ? (
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons
-                  name="location-outline"
-                  size={15}
-                  color={colors.primary}
-                />
-              </View>
-
-              <Text
+              <View
                 style={[
-                  styles.detailText,
-                  { color: colors.textSecondary },
+                  styles.statusPill,
+                  { backgroundColor: approved ? '#DCFCE7' : '#FFEDD5' },
                 ]}
-                numberOfLines={2}
               >
+                <Ionicons
+                  name={approved ? 'checkmark' : 'time-outline'}
+                  size={12}
+                  color={approved ? '#16A34A' : '#EA580C'}
+                />
+                <Text style={[styles.statusPillText, { color: approved ? '#15803D' : '#C2410C' }]}>
+                  {approved ? 'Approved' : 'Pending Approval'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Category */}
+            <View style={styles.metaRow}>
+              <Ionicons name="pricetag-outline" size={13} color="#64748B" />
+              <Text style={styles.metaText} numberOfLines={1}>
+                {category}
+              </Text>
+            </View>
+
+            {/* Address */}
+            <View style={styles.metaRow}>
+              <Ionicons name="location-outline" size={13} color="#64748B" />
+              <Text style={styles.metaText} numberOfLines={1}>
                 {address}
               </Text>
             </View>
-          ) : null}
 
-          {/* Phone */}
-
-          {phone ? (
-            <View style={styles.detailRow}>
-              <View style={styles.detailIcon}>
-                <Ionicons
-                  name="call-outline"
-                  size={15}
-                  color={colors.primary}
-                />
-              </View>
-
-              <Text
-                style={[
-                  styles.detailText,
-                  { color: colors.textSecondary },
-                ]}
-                numberOfLines={1}
-              >
+            {/* Phone */}
+            <View style={styles.metaRow}>
+              <Ionicons name="call-outline" size={13} color="#64748B" />
+              <Text style={styles.metaText} numberOfLines={1}>
                 {phone}
               </Text>
             </View>
-          ) : null}
 
-          {/* Shop ID */}
+            {/* Quick Action buttons */}
+            <View style={styles.cardActionBtnRow}>
+              <TouchableOpacity
+                style={styles.cardSubBtn}
+                onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
+              >
+                <Ionicons name="cube-outline" size={12} color="#059669" />
+                <Text style={styles.cardSubBtnText}>Products</Text>
+              </TouchableOpacity>
 
-          <View style={styles.detailRow}>
-            <View style={styles.detailIcon}>
-              <Ionicons
-                name="pricetag-outline"
-                size={15}
-                color={colors.primary}
-              />
+              <TouchableOpacity
+                style={[styles.cardSubBtn, { backgroundColor: '#F3E8FF' }]}
+                onPress={() => navigation.navigate(ROUTES.SHOP_ORDERS, { shopId: item.id, shopName: item.name })}
+              >
+                <Ionicons name="receipt-outline" size={12} color="#7E22CE" />
+                <Text style={[styles.cardSubBtnText, { color: '#7E22CE' }]}>Orders</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.cardSubBtn, { backgroundColor: '#EFF6FF' }]}
+                onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
+              >
+                <Ionicons name="add" size={12} color="#2563EB" />
+                <Text style={[styles.cardSubBtnText, { color: '#2563EB' }]}>Add</Text>
+              </TouchableOpacity>
             </View>
-
-            <Text
-              style={[
-                styles.detailText,
-                { color: colors.textSecondary },
-              ]}
-            >
-              Shop ID: #{item.id}
-            </Text>
-          </View>
-        </View>
-
-        {/* ------------------------------------------------
-            MANAGEMENT SECTION
-        ------------------------------------------------ */}
-
-        <View style={styles.managementRow}>
-          <View
-            style={[
-              styles.managementIcon,
-              { backgroundColor: '#E8F5E9' },
-            ]}
-          >
-            <Ionicons
-              name="cube-outline"
-              size={18}
-              color={colors.primary}
-            />
           </View>
 
-          <View style={styles.managementText}>
-            <Text
-              style={[
-                styles.managementTitle,
-                { color: colors.textPrimary },
-              ]}
-            >
-              Manage your products
-            </Text>
-
-            <Text
-              style={[
-                styles.managementSubtitle,
-                { color: colors.textSecondary },
-              ]}
-            >
-              Add, edit and manage products
-            </Text>
+          {/* Right Preview Thumbnail & Chevron */}
+          <View style={styles.rightThumbCol}>
+            <Image source={{ uri: thumbUri }} style={styles.shopThumbImg} resizeMode="cover" />
+            <View style={[styles.arrowPillBtn, { backgroundColor: approved ? '#F0FDF4' : '#FFF7ED' }]}>
+              <Ionicons name="chevron-forward" size={18} color={approved ? '#059669' : '#EA580C'} />
+            </View>
           </View>
         </View>
-
-        {/* ------------------------------------------------
-            ACTION BUTTONS
-        ------------------------------------------------ */}
-
-        <View style={styles.actionRow}>
-          {/* MY PRODUCTS */}
-
-          <TouchableOpacity
-            activeOpacity={0.78}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: colors.primary },
-            ]}
-            onPress={() =>
-              navigation.navigate(
-                ROUTES.MY_PRODUCTS,
-                {
-                  shopId: item.id,
-                },
-              )
-            }
-          >
-            <Ionicons
-              name="cube-outline"
-              size={17}
-              color="#FFFFFF"
-            />
-
-            <Text style={styles.primaryButtonText}>
-              My Products
-            </Text>
-          </TouchableOpacity>
-
-          {/* SHOP ORDERS (NEW) */}
-          <TouchableOpacity
-            activeOpacity={0.78}
-            style={[
-              styles.secondaryButton,
-              {
-                borderColor: '#10B981',
-                backgroundColor: '#ECFDF5',
-                marginLeft: 10,
-              },
-            ]}
-            onPress={() =>
-              navigation.navigate(
-                ROUTES.SHOPKEEPER_DASHBOARD,
-                {
-                  shopId: item.id,
-                  shopName: item.name,
-                },
-              )
-            }
-          >
-            <Ionicons
-              name="receipt-outline"
-              size={18}
-              color="#059669"
-            />
-            <Text
-              style={[
-                styles.secondaryButtonText,
-                { color: '#059669', fontSize: 13 },
-              ]}
-            >
-              DashBoard
-            </Text>
-          </TouchableOpacity>
-
-          {/* ADD PRODUCT */}
-
-          <TouchableOpacity
-            activeOpacity={0.78}
-            style={[
-              styles.secondaryButton,
-              {
-                borderColor: colors.primary,
-                backgroundColor: '#FFFFFF',
-                marginLeft: 10,
-              },
-            ]}
-            onPress={() =>
-              navigation.navigate(
-                ROUTES.ADD_PRODUCT,
-                {
-                  shopId: item.id,
-                },
-              )
-            }
-          >
-            <Ionicons
-              name="add"
-              size={19}
-              color={colors.primary}
-            />
-
-            <Text
-              style={[
-                styles.secondaryButtonText,
-                { color: colors.primary, fontSize: 13 },
-              ]}
-            >
-              Add
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          activeOpacity={0.8}
-          style={{
-            backgroundColor: '#8B5CF6',
-            marginTop: 10,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingVertical: 12,
-            borderRadius: 8,
-            gap: 8,
-          }}
-          onPress={() =>
-            navigation.navigate(
-              ROUTES.SHOP_ORDERS,
-              {
-                shopId: item.id,
-                shopName: item.name,
-              },
-            )
-          }
-        >
-          <Ionicons
-            name="receipt-outline"
-            size={18}
-            color="#FFFFFF"
-          />
-          <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 14 }}>
-            Manage Shop Orders
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
   /* -------------------------------------------------------
      EMPTY STATE
   ------------------------------------------------------- */
-
   const EmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View
-        style={[
-          styles.emptyIcon,
-          { backgroundColor: '#E8F5E9' },
-        ]}
-      >
-        <Ionicons
-          name="storefront-outline"
-          size={44}
-          color={colors.primary}
-        />
+      <View style={[styles.emptyIconBox, { backgroundColor: '#DCFCE7' }]}>
+        <Ionicons name="storefront-outline" size={44} color="#059669" />
       </View>
-
-      <Text
-        style={[
-          styles.emptyTitle,
-          { color: colors.textPrimary },
-        ]}
-      >
-        No shops yet
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No shops found</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        {searchQuery ? 'No shops match your search parameters.' : 'Register your local shop on RuVo to start managing products and orders.'}
       </Text>
-
-      <Text
-        style={[
-          styles.emptySubtitle,
-          { color: colors.textSecondary },
-        ]}
-      >
-        Register your local shop on RuVo and start
-        managing your products.
-      </Text>
-
       <TouchableOpacity
-        activeOpacity={0.8}
-        style={[
-          styles.registerButton,
-          { backgroundColor: colors.primary },
-        ]}
-        onPress={() =>
-          navigation.navigate(
-            ROUTES.REGISTER_SHOP,
-          )
-        }
+        activeOpacity={0.85}
+        style={[styles.registerButton, { backgroundColor: colors.primary }]}
+        onPress={() => navigation.navigate(ROUTES.REGISTER_SHOP)}
       >
-        <Ionicons
-          name="storefront-outline"
-          size={19}
-          color="#FFFFFF"
-        />
-
-        <Text style={styles.registerButtonText}>
-          Register a Shop
-        </Text>
-
-        <Ionicons
-          name="arrow-forward"
-          size={18}
-          color="#FFFFFF"
-        />
+        <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+        <Text style={styles.registerButtonText}>Register New Shop</Text>
       </TouchableOpacity>
     </View>
   );
 
-  /* -------------------------------------------------------
-     MAIN SCREEN
-  ------------------------------------------------------- */
-
   return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F8FAFC' }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+
+      {/* HEADER BAR */}
+      <View style={styles.topHeader}>
+        <TouchableOpacity style={styles.iconCircleBtn} onPress={logout}>
+          <Ionicons name="log-out-outline" size={22} color="#475569" />
+        </TouchableOpacity>
+
+        <View style={styles.headerBrandContainer}>
+          <View style={styles.brandLogoSquare}>
+            <Ionicons name="storefront" size={22} color="#059669" />
+          </View>
+          <View>
+            <Text style={styles.headerTitleText}>My Shops</Text>
+            <Text style={styles.headerSubtitleText}>Manage and view all your shops</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.iconCircleBtn}
+          onPress={() => loadShops(true)}
+        >
+          <Ionicons name="notifications-outline" size={22} color="#334155" />
+          <View style={styles.notifBadge}>
+            <Text style={styles.notifBadgeText}>3</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* SEARCH AND FILTER BAR */}
+      <View style={styles.searchFilterRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search-outline" size={18} color="#94A3B8" />
+          <TextInput
+            placeholder="Search your shops..."
+            placeholderTextColor="#94A3B8"
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        <TouchableOpacity
+          style={styles.filterBtn}
+          onPress={() => {
+            if (activeFilter === 'ALL') setActiveFilter('APPROVED');
+            else if (activeFilter === 'APPROVED') setActiveFilter('PENDING');
+            else setActiveFilter('ALL');
+          }}
+        >
+          <Ionicons name="options-outline" size={16} color="#334155" />
+          <Text style={styles.filterBtnText}>
+            {activeFilter === 'ALL' ? 'Filter' : activeFilter}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* STATS SUMMARY ROW (4 Cards matching mockup) */}
+      <View style={styles.statsRow}>
+        {/* Stat 1: Total Shops */}
+        <TouchableOpacity
+          style={[styles.statCard, activeFilter === 'ALL' && styles.statCardActive]}
+          onPress={() => setActiveFilter('ALL')}
+        >
+          <View style={[styles.statIconSquare, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="storefront-outline" size={18} color="#059669" />
+          </View>
+          <Text style={styles.statNumber}>{shops.length}</Text>
+          <Text style={styles.statLabel}>Total Shops</Text>
+        </TouchableOpacity>
+
+        {/* Stat 2: Approved */}
+        <TouchableOpacity
+          style={[styles.statCard, activeFilter === 'APPROVED' && styles.statCardActive]}
+          onPress={() => setActiveFilter('APPROVED')}
+        >
+          <View style={[styles.statIconSquare, { backgroundColor: '#DCFCE7' }]}>
+            <Ionicons name="checkmark-circle-outline" size={18} color="#16A34A" />
+          </View>
+          <Text style={styles.statNumber}>{approvedCount}</Text>
+          <Text style={styles.statLabel}>Approved</Text>
+        </TouchableOpacity>
+
+        {/* Stat 3: Pending */}
+        <TouchableOpacity
+          style={[styles.statCard, activeFilter === 'PENDING' && styles.statCardActive]}
+          onPress={() => setActiveFilter('PENDING')}
+        >
+          <View style={[styles.statIconSquare, { backgroundColor: '#FFEDD5' }]}>
+            <Ionicons name="time-outline" size={18} color="#EA580C" />
+          </View>
+          <Text style={styles.statNumber}>{pendingCount}</Text>
+          <Text style={styles.statLabel}>Pending</Text>
+        </TouchableOpacity>
+
+        {/* Stat 4: Total Views */}
+        <View style={styles.statCard}>
+          <View style={[styles.statIconSquare, { backgroundColor: '#DBEAFE' }]}>
+            <Ionicons name="eye-outline" size={18} color="#2563EB" />
+          </View>
+          <Text style={styles.statNumber}>2.5K</Text>
+          <Text style={styles.statLabel}>Total Views</Text>
+        </View>
+      </View>
+
+      {/* ERROR MSG IF ANY */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={18} color="#DC2626" />
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      )}
+
+      {/* MAIN SHOPS LIST */}
       <FlatList
-        data={shops}
-        keyExtractor={item =>
-          item.id?.toString() ??
-          Math.random().toString()
-        }
+        data={filteredShops}
+        keyExtractor={item => item.id?.toString() ?? Math.random().toString()}
         renderItem={renderShop}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadShops(true)} tintColor={colors.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadShops(true)}
+            tintColor="#059669"
+          />
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <>
-            {/* HEADER */}
-
-            <View style={styles.header}>
-              <View style={styles.headerText}>
-                <Text
-                  style={[
-                    styles.title,
-                    { color: colors.textPrimary },
-                  ]}
-                >
-                  My Shops
-                </Text>
-
-                <Text
-                  style={[
-                    styles.subtitle,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Manage your RuVo shops and products
-                </Text>
-              </View>
-
-              {/* SHOP COUNT */}
-
-              <View
-                style={[
-                  styles.countBadge,
-                  {
-                    backgroundColor: '#E8F5E9',
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="storefront-outline"
-                  size={15}
-                  color={colors.primary}
-                />
-
-                <Text
-                  style={[
-                    styles.countText,
-                    { color: colors.primary },
-                  ]}
-                >
-                  {shops.length}
-                </Text>
-              </View>
-              <TouchableOpacity
-                accessibilityRole="button"
-                onPress={() => loadShops(true)}
-                style={[styles.refreshButton, { borderColor: colors.primary }]}
-                disabled={refreshing}
-              >
-                <Ionicons name="refresh" size={16} color={colors.primary} />
-                <Text style={[styles.refreshButtonText, { color: colors.primary }]}>{refreshing ? 'Refreshing' : 'Refresh'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* ERROR */}
-
-            {error ? (
-              <View style={styles.errorBox}>
-                <Ionicons
-                  name="alert-circle-outline"
-                  size={20}
-                  color="#DC2626"
-                />
-
-                <Text style={styles.errorText}>
-                  {error}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* INFO CARD */}
-
-            {shops.length > 0 ? (
-              <View
-                style={[
-                  styles.infoCard,
-                  {
-                    backgroundColor: '#F1F8F2',
-                    borderColor: '#D5EAD7',
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.infoIcon,
-                    { backgroundColor: '#E8F5E9' },
-                  ]}
-                >
-                  <Ionicons
-                    name="information-circle-outline"
-                    size={22}
-                    color={colors.primary}
-                  />
-                </View>
-
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[
-                      styles.infoTitle,
-                      { color: colors.primary },
-                    ]}
-                  >
-                    Your shop dashboard
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.infoText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Manage your products and keep your
-                    local store updated.
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
-            {/* SECTION */}
-
-            {shops.length > 0 ? (
-              <View style={styles.sectionHeader}>
-                <View>
-                  <Text
-                    style={[
-                      styles.sectionTitle,
-                      { color: colors.textPrimary },
-                    ]}
-                  >
-                    Your Shops
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.sectionSubtitle,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Select a shop to manage it
-                  </Text>
-                </View>
-
-                <Text
-                  style={[
-                    styles.shopCountText,
-                    { color: colors.primary },
-                  ]}
-                >
-                  {shops.length}{' '}
-                  {shops.length === 1
-                    ? 'Shop'
-                    : 'Shops'}
-                </Text>
-              </View>
-            ) : null}
-          </>
-        }
         ListEmptyComponent={EmptyState}
+        ListFooterComponent={
+          filteredShops.length > 0 ? (
+            /* BOTTOM INFO BANNER MATCHING MOCKUP */
+            <View style={styles.bottomInfoBanner}>
+              <View style={styles.bottomInfoIconSquare}>
+                <Ionicons name="checkmark-circle" size={22} color="#059669" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.bottomInfoTitle}>Approved shops are visible to customers.</Text>
+                <Text style={styles.bottomInfoSub}>Pending shops will be reviewed by our team.</Text>
+              </View>
+              <Ionicons name="storefront-outline" size={32} color="#A7F3D0" />
+            </View>
+          ) : null
+        }
       />
-    </View>
+
+      {/* FLOATING ACTION BUTTON (ADD SHOP) */}
+      <TouchableOpacity
+        activeOpacity={0.88}
+        style={styles.fabContainer}
+        onPress={() => navigation.navigate(ROUTES.REGISTER_SHOP)}
+      >
+        <View style={styles.fabBtn}>
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </View>
+        <Text style={styles.fabText}>Add Shop</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
-/* =========================================================
+/* -------------------------------------------------------
    STYLES
-========================================================= */
-
+------------------------------------------------------- */
 const styles = StyleSheet.create({
-  /* SCREEN */
-
-  container: {
-    flex: 1,
-  },
-
-  listContent: {
-    paddingHorizontal: 15,
-    paddingTop: 48,
-    paddingBottom: 35,
-  },
-
-  /* HEADER */
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-
-  headerText: {
-    flex: 1,
-    paddingRight: 10,
-  },
-
-  title: {
-    fontSize: 27,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-
-  subtitle: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  countBadge: {
-    minWidth: 44,
-    height: 36,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-
-  countText: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  refreshButton: {
-    height: 36,
-    marginLeft: 8,
-    paddingHorizontal: 10,
-    borderRadius: 18,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  refreshButtonText: { fontSize: 12, fontWeight: '700' },
-
-  /* INFO CARD */
-
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 13,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 22,
-  },
-
-  infoIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 11,
-  },
-
-  infoContent: {
-    flex: 1,
-  },
-
-  infoTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  infoText: {
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-
-  /* SECTION */
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-  },
-
-  sectionSubtitle: {
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  shopCountText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  /* SHOP CARD */
-
-  shopCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    marginBottom: 14,
-    padding: 15,
-    overflow: 'hidden',
-
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-
-  shopAccent: {
-    position: 'absolute',
-    left: 0,
-    top: 15,
-    bottom: 15,
-    width: 3,
-    borderRadius: 4,
-  },
-
-  /* SHOP HEADER */
-
-  shopHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 3,
-  },
-
-  shopIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-
-  shopMainInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-
-  shopName: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-
-  shopCategory: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  statusRow: {
-    flexDirection: 'row',
-    marginTop: 7,
-  },
-
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 14,
-  },
-
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 5,
-  },
-
-  statusText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-
-  shopArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-
-  /* DETAILS */
-
-  detailsContainer: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    gap: 8,
-  },
-
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-
-  detailIcon: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: '#E8F5E9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  detailText: {
-    flex: 1,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-
-  /* MANAGEMENT */
-
-  managementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-
-  managementIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-
-  managementText: {
-    flex: 1,
-  },
-
-  managementTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  managementSubtitle: {
-    fontSize: 10.5,
-    marginTop: 2,
-  },
-
-  /* BUTTONS */
-
-  actionRow: {
-    flexDirection: 'row',
-    gap: 9,
-    marginTop: 14,
-  },
-
-  primaryButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 13,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  secondaryButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 13,
-    borderWidth: 1.2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-
-  secondaryButtonText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  /* ERROR */
-
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 13,
-    backgroundColor: '#FEF2F2',
-    marginBottom: 15,
-    gap: 8,
-  },
-
-  errorText: {
-    flex: 1,
-    color: '#DC2626',
-    fontSize: 11,
-    lineHeight: 16,
-  },
-
-  /* EMPTY */
-
-  emptyContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 45,
-  },
-
-  emptyIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 18,
-  },
-
-  emptyTitle: {
-    fontSize: 21,
-    fontWeight: '800',
-  },
-
-  emptySubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: 'center',
-    marginTop: 7,
-    maxWidth: 290,
-  },
-
-  registerButton: {
-    marginTop: 20,
-    minHeight: 46,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-
-  registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  /* LOADING */
+  container: { flex: 1 },
 
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-
   loadingIcon: {
-    width: 68,
-    height: 68,
-    borderRadius: 22,
-    alignItems: 'center',
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingTitle: { fontSize: 17, fontWeight: '700', marginTop: 14 },
+  loadingSubtitle: { fontSize: 13, marginTop: 4 },
+
+  /* Top Header */
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  iconCircleBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#059669',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+
+  headerBrandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  brandLogoSquare: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleText: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  headerSubtitleText: { fontSize: 12, color: '#64748B' },
+
+  /* Search & Filter Row */
+  searchFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchBox: {
+    flex: 1,
+    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: '#0F172A' },
+  filterBtn: {
+    height: 44,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    gap: 6,
+  },
+  filterBtnText: { fontSize: 13, fontWeight: '600', color: '#334155' },
+
+  /* Stats Grid */
+  statsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statCardActive: {
+    borderColor: '#059669',
+    backgroundColor: '#F0FDF4',
+  },
+  statIconSquare: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statNumber: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  statLabel: { fontSize: 10, color: '#64748B', fontWeight: '500', marginTop: 2 },
+
+  /* List */
+  listContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 90,
   },
 
-  loadingTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 16,
+  /* Shop Card */
+  shopCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 14,
+    overflow: 'hidden',
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  accentStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+  },
+  cardContentRow: {
+    flexDirection: 'row',
+    paddingVertical: 14,
+    paddingRight: 14,
+    paddingLeft: 16,
+    gap: 12,
+    alignItems: 'center',
+  },
+  shopIconSquare: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shopInfoCol: { flex: 1, gap: 3 },
+  titleStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 2,
+  },
+  shopName: { fontSize: 16, fontWeight: '800', color: '#0F172A', flexShrink: 1 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  statusPillText: { fontSize: 10, fontWeight: '700' },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaText: { fontSize: 12, color: '#64748B', flexShrink: 1 },
+
+  cardActionBtnRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+  },
+  cardSubBtn: {
+    backgroundColor: '#DCFCE7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  cardSubBtnText: { fontSize: 10.5, fontWeight: '700', color: '#059669' },
+
+  rightThumbCol: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 90,
+  },
+  shopThumbImg: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  arrowPillBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
-  loadingSubtitle: {
-    fontSize: 12,
-    marginTop: 4,
+  /* Bottom Banner */
+  bottomInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    marginTop: 10,
   },
+  bottomInfoIconSquare: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bottomInfoTitle: { fontSize: 13, fontWeight: '700', color: '#065F46' },
+  bottomInfoSub: { fontSize: 11, color: '#047857', marginTop: 1 },
+
+  /* FAB */
+  fabContainer: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  fabBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabText: { fontSize: 11, fontWeight: '700', color: '#059669', marginTop: 4 },
+
+  /* Empty state */
+  emptyContainer: { alignItems: 'center', paddingTop: 40, paddingHorizontal: 20 },
+  emptyIconBox: { width: 80, height: 80, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 14 },
+  emptyTitle: { fontSize: 18, fontWeight: '800' },
+  emptySubtitle: { fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 18 },
+  registerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 18,
+    gap: 8,
+  },
+  registerButtonText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    padding: 10,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    gap: 8,
+  },
+  errorBannerText: { color: '#DC2626', fontSize: 12, flex: 1 },
 });
 
 export default MyShopsScreen;

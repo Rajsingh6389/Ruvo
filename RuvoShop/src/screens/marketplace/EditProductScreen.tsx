@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
-import { updateProduct, updateProductWithImage } from '../../services/productService';
+import { updateProduct, updateProductWithImage, getProductById } from '../../services/productService';
 import type { Product } from '../../services/productService';
 
 const PRIMARY = '#2E7D32';
@@ -44,27 +44,55 @@ export const EditProductScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { token } = useAuth();
-  const product: Product = route.params?.product;
+  const initialProduct: Product | undefined = route.params?.product;
+  const targetProductId: number | undefined = initialProduct?.id ?? route.params?.productId;
 
   // ── Form State (pre-filled) ──
-  const [name, setName] = useState(product?.name ?? '');
-  const [category, setCategory] = useState(product?.category ?? '');
-  const [brandName, setBrandName] = useState(product?.brandName ?? '');
-  const [description, setDescription] = useState(product?.description ?? '');
-  const [actualPrice, setActualPrice] = useState(product?.actualPrice?.toString() ?? '');
-  const [sellingPrice, setSellingPrice] = useState(product?.sellingPrice?.toString() ?? '');
-  const [stockQuantity, setStockQuantity] = useState(product?.stockQuantity?.toString() ?? '');
-  const [unit, setUnit] = useState(product?.unit ?? '');
-  const [isAvailable, setIsAvailable] = useState(product?.isAvailable ?? true);
+  const [name, setName] = useState(initialProduct?.name ?? '');
+  const [category, setCategory] = useState(initialProduct?.category ?? '');
+  const [brandName, setBrandName] = useState(initialProduct?.brandName ?? '');
+  const [description, setDescription] = useState(initialProduct?.description ?? '');
+  const [actualPrice, setActualPrice] = useState(initialProduct?.actualPrice?.toString() ?? '');
+  const [sellingPrice, setSellingPrice] = useState(initialProduct?.sellingPrice?.toString() ?? '');
+  const [stockQuantity, setStockQuantity] = useState(initialProduct?.stockQuantity?.toString() ?? '');
+  const [unit, setUnit] = useState(initialProduct?.unit ?? '');
+  const [isAvailable, setIsAvailable] = useState(initialProduct?.isAvailable ?? true);
 
   // Image state
   const [imageUri, setImageUri] = useState<string | null>(null); // null = no new image
-  const [existingImageUrl] = useState<string | null>(product?.imageUrl ?? null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(initialProduct?.imageUrl ?? null);
   const [imageType, setImageType] = useState('image/jpeg');
   const [imageName, setImageName] = useState('product.jpg');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const [fetchingProduct, setFetchingProduct] = useState(!initialProduct && !!targetProductId);
+
+  // Load product if missing from route params
+  React.useEffect(() => {
+    if (!initialProduct && targetProductId && token) {
+      setFetchingProduct(true);
+      getProductById(targetProductId, token)
+        .then(p => {
+          if (p) {
+            setName(p.name ?? '');
+            setCategory(p.category ?? '');
+            setBrandName(p.brandName ?? '');
+            setDescription(p.description ?? '');
+            setActualPrice(p.actualPrice?.toString() ?? '');
+            setSellingPrice(p.sellingPrice?.toString() ?? '');
+            setStockQuantity(p.stockQuantity?.toString() ?? '');
+            setUnit(p.unit ?? '');
+            setIsAvailable(p.isAvailable ?? true);
+            setExistingImageUrl(p.imageUrl ?? null);
+          }
+        })
+        .catch(err => {
+          Alert.alert('Error', err.message || 'Failed to load product details');
+        })
+        .finally(() => setFetchingProduct(false));
+    }
+  }, [initialProduct, targetProductId, token]);
 
   // ── Auto-calculated discount ──
   const computedDiscount = useCallback((): string | null => {
@@ -122,8 +150,8 @@ export const EditProductScreen = () => {
   // ── Submit ──
   const handleSubmit = async () => {
     if (!validate()) return;
-    if (!token || product?.id == null) {
-      Alert.alert('Error', 'Something went wrong');
+    if (!token || !targetProductId) {
+      Alert.alert('Error', 'Product ID missing or authentication error');
       return;
     }
 
@@ -155,11 +183,11 @@ export const EditProductScreen = () => {
           type: imageType,
           name: imageName,
         });
-        await updateProductWithImage(product.id!, formData, token);
+        await updateProductWithImage(targetProductId, formData, token);
       } else {
         // No new image — JSON update
         await updateProduct(
-          product.id!,
+          targetProductId,
           {
             name: name.trim(),
             category,

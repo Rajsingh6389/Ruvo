@@ -91,7 +91,7 @@ public class SecurityConfig {
 
                     .requestMatchers(
                             "/api/partner/**"
-                    ).hasRole("DELIVERY_PARTNER")
+                    ).hasAnyRole("DELIVERY_PARTNER", "PARTNER", "ADMIN")
 
                     .requestMatchers(
                             "/api/shop/**"

@@ -1,11 +1,13 @@
 package Ranex.ruvo.controller;
 
+import Ranex.ruvo.model.Delivery;
 import Ranex.ruvo.model.DeliveryPartner;
 import Ranex.ruvo.model.DeliveryRequest;
 import Ranex.ruvo.model.Order;
 import Ranex.ruvo.model.OrderStatus;
 import Ranex.ruvo.model.Settlement;
 import Ranex.ruvo.repository.DeliveryPartnerRepository;
+import Ranex.ruvo.repository.DeliveryRepository;
 import Ranex.ruvo.repository.DeliveryRequestRepository;
 import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.service.DeliveryService;
@@ -30,6 +32,7 @@ record CurrentDeliveryRequestPayload(
     String partnerName,
     String partnerPhone,
     Double distanceKm,
+    String locationName,
     String expiresAt,   // ISO-8601
     String status       // PENDING | NONE | ASSIGNED
 ) {}
@@ -42,25 +45,31 @@ public class DeliveryController {
     private final DeliveryService deliveryService;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final DeliveryRequestRepository deliveryRequestRepository;
+    private final DeliveryRepository deliveryRepository;
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
     private final Ranex.ruvo.repository.SettlementRepository settlementRepository;
+    private final Ranex.ruvo.repository.UserRepository userRepository;
 
     public DeliveryController(DeliveryService deliveryService, 
                               DeliveryPartnerRepository deliveryPartnerRepository, 
                               DeliveryRequestRepository deliveryRequestRepository,
+                              DeliveryRepository deliveryRepository,
                               OrderRepository orderRepository,
                               NotificationService notificationService,
                               SimpMessagingTemplate messagingTemplate,
-                              Ranex.ruvo.repository.SettlementRepository settlementRepository) {
+                              Ranex.ruvo.repository.SettlementRepository settlementRepository,
+                              Ranex.ruvo.repository.UserRepository userRepository) {
         this.deliveryService = deliveryService;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.deliveryRequestRepository = deliveryRequestRepository;
+        this.deliveryRepository = deliveryRepository;
         this.orderRepository = orderRepository;
         this.notificationService = notificationService;
         this.messagingTemplate = messagingTemplate;
         this.settlementRepository = settlementRepository;
+        this.userRepository = userRepository;
     }
 
     private String getCurrentUserEmail() {
@@ -78,10 +87,25 @@ public class DeliveryController {
         if (principal == null) return null;
         if (principal.startsWith("identity:")) {
             try {
-                return deliveryPartnerRepository.findByAuthIdentityId(Long.parseLong(principal.substring("identity:".length()))).orElse(null);
-            } catch (NumberFormatException ignored) { return null; }
+                Optional<DeliveryPartner> dpByIdentity = deliveryPartnerRepository.findByAuthIdentityId(Long.parseLong(principal.substring("identity:".length())));
+                if (dpByIdentity.isPresent()) return dpByIdentity.get();
+            } catch (NumberFormatException ignored) {}
         }
-        return deliveryPartnerRepository.findByUserId(principal).orElse(null);
+        Optional<DeliveryPartner> dpByUserId = deliveryPartnerRepository.findByUserId(principal);
+        if (dpByUserId.isPresent()) return dpByUserId.get();
+
+        Optional<DeliveryPartner> dpByPhone = deliveryPartnerRepository.findByPhone(principal);
+        if (dpByPhone.isPresent()) return dpByPhone.get();
+
+        Optional<Ranex.ruvo.model.User> uOpt = userRepository.findByEmail(principal);
+        if (uOpt.isPresent()) {
+            Ranex.ruvo.model.User u = uOpt.get();
+            if (u.getMobileNumber() != null) {
+                Optional<DeliveryPartner> dpByMobile = deliveryPartnerRepository.findByPhone(u.getMobileNumber());
+                if (dpByMobile.isPresent()) return dpByMobile.get();
+            }
+        }
+        return null;
     }
 
     @PatchMapping("/location")
@@ -188,6 +212,14 @@ public class DeliveryController {
         order.setDeliveryOtpVerified(false);
         orderRepository.save(order);
 
+        // Sync Delivery entity status
+        Delivery delivery = deliveryRepository.findByOrderId(order.getId()).orElse(null);
+        if (delivery != null) {
+            delivery.setStatus("OUT_FOR_DELIVERY");
+            delivery.setPickedUpAt(java.time.Instant.now());
+            deliveryRepository.save(delivery);
+        }
+
         // Send OTP to customer via Notification
         notificationService.notifyCustomer(
             order, 
@@ -218,6 +250,14 @@ public class DeliveryController {
             order.setDeliveredAt(java.time.Instant.now());
             order.setDeliveryOtpVerified(true);
             orderRepository.save(order);
+
+            // Sync Delivery entity status
+            Delivery delivery = deliveryRepository.findByOrderId(order.getId()).orElse(null);
+            if (delivery != null) {
+                delivery.setStatus("DELIVERED");
+                delivery.setDeliveredAt(java.time.Instant.now());
+                deliveryRepository.save(delivery);
+            }
 
             // Phase 12 - Record Ledger correctly
             if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
@@ -277,7 +317,7 @@ public class DeliveryController {
                 || OrderStatus.OUT_FOR_DELIVERY.equals(order.getOrderStatus())
                 || OrderStatus.DELIVERED.equals(order.getOrderStatus())) {
             return ResponseEntity.ok(new CurrentDeliveryRequestPayload(
-                null, order.getDeliveryPartnerId(), null, null, null, null, "ASSIGNED"
+                null, order.getDeliveryPartnerId(), null, null, null, null, null, "ASSIGNED"
             ));
         }
 
@@ -287,7 +327,7 @@ public class DeliveryController {
 
         if (reqOpt.isEmpty()) {
             return ResponseEntity.ok(new CurrentDeliveryRequestPayload(
-                null, null, null, null, null, null, "NONE"
+                null, null, null, null, null, null, null, "NONE"
             ));
         }
 
@@ -300,6 +340,7 @@ public class DeliveryController {
             partner != null ? partner.getName() : "Partner",
             partner != null ? partner.getPhone() : "",
             req.getDistanceKm(),
+            partner != null && partner.getLocationName() != null ? partner.getLocationName() : "Live Location",
             req.getExpiresAt().toString(),
             "PENDING"
         ));

@@ -319,6 +319,7 @@ export const MyProductsScreen = () => {
                 navigation.navigate(
                   ROUTES.EDIT_PRODUCT,
                   {
+                    product: item,
                     productId: item.id,
                     shopId,
                   },

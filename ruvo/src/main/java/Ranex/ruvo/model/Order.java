@@ -100,6 +100,16 @@ public class Order {
     @Column(name = "delivered_at")
     private Instant deliveredAt;
 
+    @Column(name = "handover_otp")
+    private String handoverOtp;
+
+    @Column(name = "handover_otp_generated_at")
+    private Instant handoverOtpGeneratedAt;
+
+    @Column(name = "handover_verified")
+    @Builder.Default
+    private Boolean handoverVerified = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

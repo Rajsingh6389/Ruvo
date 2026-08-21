@@ -9,7 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
@@ -60,49 +62,70 @@ export const LoginScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.primary }]}>RuVo Partner</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Enter your mobile number to sign in or register
-        </Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Back Button */}
+      {navigation.canGoBack() && (
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+      )}
 
-        <View style={styles.form}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
-          <View style={styles.inputContainer}>
-            <Text style={[styles.prefix, { color: colors.textPrimary }]}>+91</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-              placeholder="XXXXX XXXXX"
-              placeholderTextColor={colors.textSecondary}
-              value={mobileNumber}
-              onChangeText={setMobileNumber}
-              keyboardType="number-pad"
-              maxLength={10}
-            />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.primary }]}>RuVo Partner</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            Enter your mobile number to sign in or register
+          </Text>
+
+          <View style={styles.form}>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.prefix, { color: colors.textPrimary }]}>+91</Text>
+              <TextInput
+                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
+                placeholder="XXXXX XXXXX"
+                placeholderTextColor={colors.textSecondary}
+                value={mobileNumber}
+                onChangeText={setMobileNumber}
+                keyboardType="number-pad"
+                maxLength={10}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: colors.primary }]}
+              onPress={handleSendOtp}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.btnText}>Send OTP</Text>
+              )}
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[styles.btn, { backgroundColor: colors.primary }]}
-            onPress={handleSendOtp}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.btnText}>Send OTP</Text>
-            )}
-          </TouchableOpacity>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  backBtn: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
   container: {
     flex: 1,
   },

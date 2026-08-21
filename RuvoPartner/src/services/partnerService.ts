@@ -14,7 +14,23 @@ export const partnerService = {
   profile: async (token: string) => unwrap<PartnerProfile>(await api('/api/partner/profile', token)),
   account: async (token: string) => unwrap<{ isAvailable?: boolean; status?: string }>(await api('/api/partner/auth/me', token)),
   verification: async (token: string) => unwrap<{ profileStatus: string; adminReason?: string }>(await api('/api/partner/verification/status', token)),
-  availability: (token: string, available: boolean) => api(`/api/partner/availability?available=${available}`, token, { method: 'PUT' }),
+  availability: (token: string, available: boolean, lat?: number, lng?: number, locationName?: string) => {
+    let url = `/api/partner/availability?available=${available}`;
+    if (lat !== undefined && lng !== undefined) {
+      url += `&latitude=${lat}&longitude=${lng}`;
+    }
+    if (locationName) {
+      url += `&locationName=${encodeURIComponent(locationName)}`;
+    }
+    return api(url, token, { method: 'PUT' });
+  },
+  updateLocation: (token: string, lat: number, lng: number, locationName?: string) => {
+    let url = `/api/partner/location?latitude=${lat}&longitude=${lng}`;
+    if (locationName) {
+      url += `&locationName=${encodeURIComponent(locationName)}`;
+    }
+    return api(url, token, { method: 'PUT' });
+  },
   activeDeliveries: (token: string) => api<Delivery[]>('/api/partner/deliveries', token),
   delivery: (token: string, id: number) => api<Delivery>(`/api/partner/deliveries/${id}`, token),
   earnings: (token: string) => api<Earnings>('/api/partner/earnings', token),

@@ -23,16 +23,23 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
          String t=h.substring(7);
          if(jwt.valid(t)&&SecurityContextHolder.getContext().getAuthentication()==null){
              Long identityId = jwt.getIdentityId(t);
-             if (identityId != null) {
-                 String role = jwt.getRole(t);
-                 var d = org.springframework.security.core.userdetails.User.withUsername("identity:" + identityId).password("")
-                         .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + role))).build();
-                 var a = new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());
-                 a.setDetails(new WebAuthenticationDetailsSource().buildDetails(r));
-                 SecurityContextHolder.getContext().setAuthentication(a);
-                 c.doFilter(r, s);
-                 return;
-             }
+            if (identityId != null) {
+                String role = jwt.getRole(t);
+                String cleanRole = (role != null ? role : "DELIVERY_PARTNER").replace("ROLE_", "");
+                List<SimpleGrantedAuthority> authorities = java.util.Arrays.asList(
+                    new SimpleGrantedAuthority("ROLE_" + cleanRole),
+                    new SimpleGrantedAuthority(cleanRole),
+                    new SimpleGrantedAuthority("ROLE_DELIVERY_PARTNER"),
+                    new SimpleGrantedAuthority("ROLE_PARTNER")
+                );
+                var d = org.springframework.security.core.userdetails.User.withUsername("identity:" + identityId).password("")
+                        .authorities(authorities).build();
+                var a = new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());
+                a.setDetails(new WebAuthenticationDetailsSource().buildDetails(r));
+                SecurityContextHolder.getContext().setAuthentication(a);
+                c.doFilter(r, s);
+                return;
+            }
              String sessionId = jwt.getSessionId(t);
              boolean sessionValid = true;
              if (sessionId != null) {

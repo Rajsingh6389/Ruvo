@@ -40,6 +40,7 @@ public class OrderController {
     private final Ranex.ruvo.repository.DeliveryPartnerRepository deliveryPartnerRepository;
     private final DeliveryRepository deliveryRepository;
     private final UserRepository userRepository;
+    private final Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository;
 
     public OrderController(OrderRepository orderRepository,
                            ProductRepository productRepository,
@@ -50,7 +51,8 @@ public class OrderController {
                            Ranex.ruvo.service.NotificationService notificationService,
                            Ranex.ruvo.repository.DeliveryPartnerRepository deliveryPartnerRepository,
                            DeliveryRepository deliveryRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
@@ -61,6 +63,7 @@ public class OrderController {
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.deliveryRepository = deliveryRepository;
         this.userRepository = userRepository;
+        this.deliveryRequestRepository = deliveryRequestRepository;
     }
 
     @PostMapping
@@ -139,6 +142,11 @@ public class OrderController {
 
         // Save order
         Order saved = orderRepository.save(order);
+        if (saved.getDeliveryOtpHash() == null) {
+            String otp = String.format("%04d", Math.abs(saved.getId().hashCode()) % 9000 + 1000);
+            saved.setDeliveryOtpHash(otp);
+            saved = orderRepository.save(saved);
+        }
 
         // Create OrderItem snapshot
         OrderItem item = OrderItem.builder()
@@ -189,13 +197,15 @@ public class OrderController {
         Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null) return ResponseEntity.notFound().build();
         checkAndTimeoutOrder(order);
-        if ((order.getProductImageUrl() == null || order.getProductImageUrl().isEmpty()) && order.getProductId() != null) {
-            productRepository.findById(order.getProductId()).ifPresent(p -> {
-                order.setProductImageUrl(p.getImageUrl());
-                orderRepository.save(order);
+
+        final Order finalOrder = order;
+        if ((finalOrder.getProductImageUrl() == null || finalOrder.getProductImageUrl().isEmpty()) && finalOrder.getProductId() != null) {
+            productRepository.findById(finalOrder.getProductId()).ifPresent(p -> {
+                finalOrder.setProductImageUrl(p.getImageUrl());
+                orderRepository.save(finalOrder);
             });
         }
-        return ResponseEntity.ok(order);
+        return ResponseEntity.ok(finalOrder);
     }
 
     @GetMapping("/shop/{shopId}")
@@ -214,6 +224,31 @@ public class OrderController {
     }
 
     private void checkAndTimeoutOrder(Order order) {
+        if (order == null || order.getOrderStatus() == null) return;
+
+        // 1. Shopkeeper response timeout (10 minutes)
+        if (OrderStatus.SHOP_PENDING.equalsIgnoreCase(order.getOrderStatus())) {
+            Instant deadline = order.getShopResponseDeadline();
+            Instant refTime = order.getCreatedAt() != null ? order.getCreatedAt() : Instant.now();
+            boolean timedOut = (deadline != null && Instant.now().isAfter(deadline)) ||
+                               Instant.now().isAfter(refTime.plus(10, ChronoUnit.MINUTES));
+            if (timedOut) {
+                order.setOrderStatus(OrderStatus.SHOP_TIMEOUT);
+                // Restore product stock
+                if (order.getProductId() != null && order.getQuantity() != null) {
+                    productRepository.findById(order.getProductId()).ifPresent(p -> {
+                        p.setStockQuantity(p.getStockQuantity() + order.getQuantity());
+                        productRepository.save(p);
+                    });
+                }
+                orderRepository.save(order);
+                notificationService.notifyCustomer(order, "Order Cancelled",
+                    "The shop did not accept your order in time. Your order has been cancelled.", OrderStatus.SHOP_TIMEOUT);
+                return;
+            }
+        }
+
+        // 2. Delivery Partner Assignment Timeout
         if (order.getDeliveryPartnerId() == null &&
             (OrderStatus.DELIVERY_ASSIGNMENT.equalsIgnoreCase(order.getOrderStatus()) ||
              OrderStatus.SHOP_ACCEPTED.equalsIgnoreCase(order.getOrderStatus()))) {
@@ -262,6 +297,39 @@ public class OrderController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Order cancelled successfully"));
     }
 
+    @PostMapping("/{orderId}/cancel")
+    public ResponseEntity<?> cancelOrderByUser(@PathVariable Long orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        String status = order.getOrderStatus() != null ? order.getOrderStatus().toUpperCase() : "";
+
+        // Check if order has already been picked up or delivered
+        if ("PICKED_UP".equals(status) || "OUT_FOR_DELIVERY".equals(status) || "DELIVERED".equals(status)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Cannot cancel order after delivery partner has picked it up."));
+        }
+
+        if (status.startsWith("CANCELLED")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Order is already cancelled."));
+        }
+
+        order.setOrderStatus("CANCELLED_BY_USER");
+
+        // Restore product stock
+        if (order.getProductId() != null && order.getQuantity() != null) {
+            productRepository.findById(order.getProductId()).ifPresent(p -> {
+                p.setStockQuantity(p.getStockQuantity() + order.getQuantity());
+                productRepository.save(p);
+            });
+        }
+        orderRepository.save(order);
+
+        notificationService.notifyCustomer(order, "Order Cancelled",
+            "Your order #" + order.getId() + " has been cancelled successfully.", "CANCELLED_BY_USER");
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Order cancelled successfully"));
+    }
+
     @PostMapping("/{orderId}/accept")
     public ResponseEntity<?> acceptOrder(@PathVariable Long orderId) {
         Order order = orderRepository.findById(orderId).orElse(null);
@@ -305,10 +373,66 @@ public class OrderController {
     }
 
     @GetMapping("/shop/{shopId}/delivery-partners")
-    public ResponseEntity<?> getShopDeliveryPartners(@PathVariable Long shopId) {
-        java.util.List<Ranex.ruvo.model.DeliveryPartner> partners =
-            deliveryPartnerRepository.findByShopIdAndApprovedTrueAndActiveTrueAndAvailableTrue(shopId);
-        return ResponseEntity.ok(partners);
+    public ResponseEntity<?> getShopDeliveryPartners(@PathVariable Long shopId, @RequestParam(required = false) Long orderId) {
+        Shop shop = shopRepository.findById(shopId).orElse(null);
+        Double shopLat = shop != null ? shop.getLatitude() : null;
+        Double shopLng = shop != null ? shop.getLongitude() : null;
+
+        Map<Long, String> requestStatusMap = new HashMap<>();
+        if (orderId != null) {
+            List<Ranex.ruvo.model.DeliveryRequest> requests = deliveryRequestRepository.findByOrderId(orderId);
+            for (Ranex.ruvo.model.DeliveryRequest req : requests) {
+                if (req.getPartnerId() != null) {
+                    requestStatusMap.put(req.getPartnerId(), req.getStatus());
+                }
+            }
+        }
+
+        List<Ranex.ruvo.model.DeliveryPartner> allPartners = deliveryPartnerRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Ranex.ruvo.model.DeliveryPartner p : allPartners) {
+            if (!Boolean.TRUE.equals(p.getActive()) ||
+                !Boolean.TRUE.equals(p.getApproved()) ||
+                !Boolean.TRUE.equals(p.getAvailable())) {
+                continue;
+            }
+            if (p.getShopId() != null && !p.getShopId().equals(shopId)) {
+                continue;
+            }
+
+            // If orderId was specified and requests exist, show ONLY partners who received a delivery request for this order!
+            if (orderId != null && !requestStatusMap.isEmpty() && !requestStatusMap.containsKey(p.getId())) {
+                continue;
+            }
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", p.getId());
+            map.put("name", p.getName());
+            map.put("phone", p.getPhone());
+            map.put("latitude", p.getLatitude());
+            map.put("longitude", p.getLongitude());
+            map.put("locationName", p.getLocationName() != null ? p.getLocationName() : "Live Location");
+            map.put("available", p.getAvailable());
+            map.put("approved", p.getApproved());
+            map.put("active", p.getActive());
+            if (requestStatusMap.containsKey(p.getId())) {
+                map.put("requestStatus", requestStatusMap.get(p.getId()));
+            }
+
+            double distanceKm = 999.0;
+            if (shopLat != null && shopLng != null && p.getLatitude() != null && p.getLongitude() != null) {
+                distanceKm = DistanceUtils.calculateDistance(shopLat, shopLng, p.getLatitude(), p.getLongitude());
+                distanceKm = Math.round(distanceKm * 10.0) / 10.0;
+            }
+            map.put("distanceKm", distanceKm);
+            result.add(map);
+        }
+
+        // Sort by nearest driver first
+        result.sort((a, b) -> Double.compare((Double) a.get("distanceKm"), (Double) b.get("distanceKm")));
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{orderId}/assign-partner")
@@ -341,7 +465,18 @@ public class OrderController {
         if (order.getDeliveryPartnerId() == null) return ResponseEntity.ok(Map.of("assigned", false));
         Ranex.ruvo.model.DeliveryPartner partner = deliveryPartnerRepository.findById(order.getDeliveryPartnerId()).orElse(null);
         if (partner == null) return ResponseEntity.ok(Map.of("assigned", false));
-        return ResponseEntity.ok(Map.of("assigned", true, "name", partner.getName(), "phone", partner.getPhone()));
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("assigned", true);
+        map.put("id", partner.getId());
+        map.put("name", partner.getName());
+        map.put("phone", partner.getPhone());
+        map.put("latitude", partner.getLatitude());
+        map.put("longitude", partner.getLongitude());
+        map.put("locationName", partner.getLocationName() != null ? partner.getLocationName() : "En route");
+        map.put("active", partner.getActive() != null ? partner.getActive() : true);
+        map.put("available", partner.getAvailable() != null ? partner.getAvailable() : true);
+        return ResponseEntity.ok(map);
     }
 
     @PostMapping("/{orderId}/mark-cash-received")

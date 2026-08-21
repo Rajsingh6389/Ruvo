@@ -19,6 +19,8 @@ public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner
 
     List<DeliveryPartner> findByShopIdAndApprovedTrueAndActiveTrueAndAvailableTrue(Long shopId);
 
+    List<DeliveryPartner> findByApprovedTrueAndActiveTrueAndAvailableTrue();
+
     // Find all RuVo (shopId IS NULL), approved, active, available partners within a radius
     @Query(value = "SELECT * FROM delivery_partners dp WHERE " +
            "dp.shop_id IS NULL AND dp.approved = true AND dp.active = true AND dp.available = true AND " +

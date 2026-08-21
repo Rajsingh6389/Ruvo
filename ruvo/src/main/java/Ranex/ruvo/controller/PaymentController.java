@@ -146,6 +146,11 @@ public class PaymentController {
             order.setOrderStatus(OrderStatus.SHOP_PENDING);
             order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
             Order savedOrder = orderRepository.save(order);
+            if (savedOrder.getDeliveryOtpHash() == null) {
+                String otp = String.format("%04d", Math.abs(savedOrder.getId().hashCode()) % 9000 + 1000);
+                savedOrder.setDeliveryOtpHash(otp);
+                savedOrder = orderRepository.save(savedOrder);
+            }
 
             // Log payment
             Payment payment = Payment.builder()

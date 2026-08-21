@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ROUTES } from '../../constants/routes';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import { getNearbyShops, getShops } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
 import type { Product } from '../../services/productService';
@@ -49,7 +51,7 @@ const buildCategoryList = (shops: Shop[]): string[] => {
 };
 
 // ─── Sub-component: Product card ────────────────────────────
-const ProductCard = React.memo(({ product }: { product: Product }) => (
+const ProductCard = React.memo(({ product, onAddToCart }: { product: Product; onAddToCart?: (product: Product) => void }) => (
   <View style={prodStyles.card}>
     <View style={prodStyles.imageWrap}>
       {product.imageUrl ? (
@@ -66,7 +68,11 @@ const ProductCard = React.memo(({ product }: { product: Product }) => (
         <Text style={prodStyles.strikePrice}>₹{product.actualPrice}</Text>
       )}
     </View>
-    <TouchableOpacity style={prodStyles.addBtn} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={prodStyles.addBtn}
+      activeOpacity={0.8}
+      onPress={() => onAddToCart && onAddToCart(product)}
+    >
       <Text style={prodStyles.addBtnText}>Add</Text>
       <Ionicons name="add" size={14} color={PRIMARY} />
     </TouchableOpacity>
@@ -78,10 +84,12 @@ const ShopSection = React.memo(({
   shop,
   distance,
   onViewStore,
+  onAddToCart,
 }: {
   shop: Shop;
   distance: string | null;
   onViewStore: () => void;
+  onAddToCart?: (product: Product) => void;
 }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +99,7 @@ const ShopSection = React.memo(({
     mounted.current = true;
     setLoading(true);
     getProductsByShop(shop.id)
-      .then(data => { if (mounted.current) setProducts(data.filter(p => p.isAvailable !== false).slice(0, 8)); })
+      .then(data => { if (mounted.current) setProducts(data.filter(p => p.isAvailable !== false && p.imageUrl && p.imageUrl.trim() !== '').slice(0, 8)); })
       .catch(() => {})
       .finally(() => { if (mounted.current) setLoading(false); });
     return () => { mounted.current = false; };
@@ -172,7 +180,7 @@ const ShopSection = React.memo(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={secStyles.productsRow}
         >
-          {products.map(p => <ProductCard key={p.id} product={p} />)}
+          {products.map(p => <ProductCard key={p.id} product={p} onAddToCart={onAddToCart} />)}
         </ScrollView>
       )}
     </View>
@@ -183,6 +191,7 @@ const ShopSection = React.memo(({
 export const GroceriesScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { location, isLoading: locationLoading, refreshFromGps } = useDeliveryLocation();
+  const { cartCount, addToCart } = useCart();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -190,6 +199,10 @@ export const GroceriesScreen = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All Shops');
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
+
+  const handleAddToCart = useCallback((product: Product) => {
+    addToCart(product, 1);
+  }, [addToCart]);
 
   const loadShops = useCallback(async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
@@ -235,7 +248,7 @@ export const GroceriesScreen = () => {
         </TouchableOpacity>
         <Text style={styles.screenTitle}>Grocery</Text>
         <View style={styles.topBarActions}>
-          <TouchableOpacity style={styles.topIconBtn}>
+          <TouchableOpacity style={styles.topIconBtn} onPress={() => navigation.navigate(ROUTES.MARKET as never)}>
             <Ionicons name="search-outline" size={22} color={TEXT_DARK} />
           </TouchableOpacity>
           <TouchableOpacity
@@ -243,9 +256,11 @@ export const GroceriesScreen = () => {
             onPress={() => navigation.navigate(ROUTES.CART as never)}
           >
             <Ionicons name="bag-outline" size={22} color={TEXT_DARK} />
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>3</Text>
-            </View>
+            {cartCount > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>

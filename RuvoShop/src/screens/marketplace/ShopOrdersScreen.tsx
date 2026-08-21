@@ -272,9 +272,10 @@ export default function ShopOrdersScreen() {
   const route = useRoute<any>();
 
   const { colors } = useTheme();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  const shopId = route.params?.shopId;
+  const routeShopId = route.params?.shopId;
+  const [shopId, setShopId] = useState<number | null>(routeShopId || null);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,8 +290,40 @@ export default function ShopOrdersScreen() {
 
   const fetchOrders = useCallback(
     async (showLoader = true) => {
-      if (!token || !shopId) {
+      if (!token) {
         setLoading(false);
+        return;
+      }
+
+      let currentShopId = shopId || routeShopId;
+
+      if (!currentShopId && user) {
+        const ownerId = user?.id || user?.email;
+        try {
+          const shopRes = await fetch(
+            `${API_BASE_URL}/api/shops/mine${ownerId ? `?ownerId=${encodeURIComponent(ownerId)}` : ''}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
+              },
+            }
+          );
+          if (shopRes.ok) {
+            const mineData = await shopRes.json();
+            if (Array.isArray(mineData) && mineData.length > 0) {
+              currentShopId = mineData[0].id;
+              setShopId(currentShopId);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to auto-discover shop for orders:', err);
+        }
+      }
+
+      if (!currentShopId) {
+        setLoading(false);
+        setError('No active shop found.');
         return;
       }
 
@@ -302,7 +335,7 @@ export default function ShopOrdersScreen() {
         setError(null);
 
         const response = await fetch(
-          `${API_BASE_URL}/api/orders/shop/${shopId}`,
+          `${API_BASE_URL}/api/orders/shop/${currentShopId}`,
           {
             method: 'GET',
             headers: {
@@ -329,7 +362,7 @@ export default function ShopOrdersScreen() {
         });
 
         setOrders(sortedOrders);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Fetch shop orders error:', err);
         setError('Failed to fetch shop orders.');
       } finally {
@@ -337,7 +370,7 @@ export default function ShopOrdersScreen() {
         setRefreshing(false);
       }
     },
-    [token, shopId]
+    [token, shopId, routeShopId, user]
   );
 
   // --------------------------------------------------
