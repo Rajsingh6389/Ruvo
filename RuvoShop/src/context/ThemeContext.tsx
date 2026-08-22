@@ -13,7 +13,7 @@ type ThemeContextProps = {
   // React Nav colors
   navColors: typeof LightTheme.colors;
   // Full Design System Tokens
-  colors: typeof Colors.light & { primary: string; secondary: string; accent: string; error: string; warning: string; success: string; info: string };
+  colors: typeof Colors.light & { primary: string; primaryLight: string; primarySoft: string; secondary: string; accent: string; ai: string; error: string; warning: string; success: string; info: string };
   spacing: typeof SPACING;
   typography: typeof TYPOGRAPHY;
   shadows: typeof SHADOWS;
@@ -31,8 +31,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const colors = {
     ...sysColors,
     primary: Colors.primary,
+    primaryLight: Colors.primaryLight,
+    primarySoft: Colors.primarySoft,
     secondary: Colors.secondary,
     accent: Colors.accent,
+    ai: Colors.ai,
     error: Colors.error,
     warning: Colors.warning,
     success: Colors.success,

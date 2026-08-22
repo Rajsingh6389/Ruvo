@@ -2,14 +2,18 @@ import React, { createContext, useContext } from 'react';
 
 export const theme = {
   colors: {
-    primary: '#8B5CF6', // Purple for delivery partner
-    background: '#F9FAFB',
+    primary: '#173F35', // Shared RuVo forest; lavender is reserved for AI assistance.
+    primaryLight: '#6FA58C',
+    accent: '#C7F36B',
+    ai: '#B8A4FF',
+    background: '#F7F8F3',
     card: '#FFFFFF',
-    textPrimary: '#111827',
-    textSecondary: '#6B7280',
-    border: '#E5E7EB',
-    error: '#EF4444',
-    success: '#10B981',
+    textPrimary: '#17201D',
+    textSecondary: '#58645E',
+    border: '#E6EBE6',
+    error: '#E76F51',
+    warning: '#F4B942',
+    success: '#5BAE7A',
   }
 };
 

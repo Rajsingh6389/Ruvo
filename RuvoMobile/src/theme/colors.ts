@@ -1,53 +1,54 @@
 export const Colors = {
+  ai: '#B8A4FF',
   // Brand – Fresh Green Delivery App
-  primary: '#2E7D32',       // Deep Forest Green
-  primaryLight: '#4CAF50',  // Medium Green
-  primarySoft: '#E8F5E9',   // Very Light Green tint
-  secondary: '#FF6B00',     // Orange accent (location pin, free delivery)
+  primary: '#173F35',       // RuVo forest
+  primaryLight: '#6FA58C',  // RuVo sage
+  primarySoft: '#E7F0E9',   // Soft organic tint
+  secondary: '#6FA58C',     // Supportive sage
   accent: '#FFC107',        // Warm Amber (ratings ★)
 
   // Feedback
-  error: '#EF5350',
-  warning: '#FF9800',
-  success: '#4CAF50',
-  info: '#2196F3',
+  error: '#E76F51',
+  warning: '#F4B942',
+  success: '#5BAE7A',
+  info: '#4B83C3',
 
   // Light Theme (default – clean white app)
   light: {
-    background: '#F5F5F5',
+    background: '#F7F8F3',
     surface: '#FFFFFF',
     card: '#FFFFFF',
 
-    border: '#E0E0E0',
-    divider: '#EEEEEE',
+    border: '#E6EBE6',
+    divider: '#EDF0EC',
 
     placeholder: '#9E9E9E',
     disabled: '#E0E0E0',
     disabledText: '#BDBDBD',
 
-    textPrimary: '#212121',
-    textSecondary: '#757575',
-    textHint: '#9E9E9E',
+    textPrimary: '#17201D',
+    textSecondary: '#58645E',
+    textHint: '#7B8580',
 
     overlay: 'rgba(0,0,0,0.5)',
   },
 
   // Dark Theme
   dark: {
-    background: '#1A1A1A',
-    surface: '#2A2A2A',
-    card: '#2A2A2A',
+    background: '#0D1512',
+    surface: '#14211C',
+    card: '#14211C',
 
-    border: '#3A3A3A',
-    divider: '#333333',
+    border: '#26372F',
+    divider: '#1D2B25',
 
     placeholder: '#6B6B6B',
     disabled: '#3A3A3A',
     disabledText: '#5A5A5A',
 
-    textPrimary: '#FFFFFF',
-    textSecondary: '#BDBDBD',
-    textHint: '#757575',
+    textPrimary: '#F5F7F5',
+    textSecondary: '#B6C1BA',
+    textHint: '#91A099',
 
     overlay: 'rgba(0,0,0,0.85)',
   }

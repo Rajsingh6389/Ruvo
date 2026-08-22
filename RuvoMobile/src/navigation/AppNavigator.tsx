@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList, MainTabParamList } from '../types/navigation';
 import { ROUTES } from '../constants/routes';
 
@@ -51,26 +52,27 @@ const TAB_ICONS: Record<string, { focused: IoniconName; outline: IoniconName }> 
 
 const MainTabs = () => {
   const { cartCount } = useCart();
+  const { colors, theme } = useTheme();
   return (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
       tabBarStyle: {
-        backgroundColor: '#FFFFFF',
-        borderTopColor: '#E0E0E0',
+        backgroundColor: colors.card,
+        borderTopColor: colors.border,
         borderTopWidth: 1,
-        height: 62,
+        height: 68,
         paddingBottom: 8,
         paddingTop: 6,
         elevation: 8,
-        shadowColor: '#000',
+        shadowColor: '#173F35',
         shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
       },
-      tabBarActiveTintColor: '#2E7D32',
-      tabBarInactiveTintColor: '#9E9E9E',
-      tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.textHint,
+      tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
       tabBarIcon: ({ focused, color, size }) => {
         const icons = TAB_ICONS[route.name];
         const iconName = icons ? (focused ? icons.focused : icons.outline) : 'help-outline';
@@ -100,12 +102,12 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme === 'dark' ? '#0D1512' : '#F7F8F3',
       }}
     >
       <ActivityIndicator
         size="large"
-        color="#16A34A"
+        color="#173F35"
       />
 
       <Text
@@ -113,7 +115,7 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
           marginTop: 14,
           fontSize: 16,
           fontWeight: '600',
-          color: '#222222',
+          color: '#17201D',
         }}
       >
         Loading RuVo...
