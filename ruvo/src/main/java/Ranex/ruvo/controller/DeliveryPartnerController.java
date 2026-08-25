@@ -18,12 +18,14 @@ import java.util.Optional;
 public class DeliveryPartnerController {
 
     private final DeliveryPartnerRepository deliveryPartnerRepository;
+    private final Ranex.ruvo.repository.UserRepository userRepository;
 
-    public DeliveryPartnerController(DeliveryPartnerRepository deliveryPartnerRepository) {
+    public DeliveryPartnerController(DeliveryPartnerRepository deliveryPartnerRepository, Ranex.ruvo.repository.UserRepository userRepository) {
         this.deliveryPartnerRepository = deliveryPartnerRepository;
+        this.userRepository = userRepository;
     }
 
-    private String getCurrentUserEmail() {
+    private String getCurrentUserMobile() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
         Object principal = auth.getPrincipal();
@@ -41,16 +43,16 @@ public class DeliveryPartnerController {
 
     @PostMapping("/register")
     public ResponseEntity<?> registerDeliveryPartner(@RequestBody DeliveryPartner partner) {
-        String email = getCurrentUserEmail();
-        if (email == null) return ResponseEntity.status(403).build();
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(403).build();
 
-        Optional<DeliveryPartner> existing = deliveryPartnerRepository.findByUserId(email);
+        Optional<DeliveryPartner> existing = deliveryPartnerRepository.findByUserId(mobile);
         if (existing.isPresent()) {
             return ResponseEntity.badRequest().body("User is already registered as a delivery partner.");
         }
 
         partner.setId(null);
-        partner.setUserId(email);
+        partner.setUserId(mobile);
         partner.setApproved(false);
         partner.setAvailable(false);
         partner.setActive(true);
@@ -60,29 +62,43 @@ public class DeliveryPartnerController {
 
     @PatchMapping("/me/availability")
     public ResponseEntity<?> toggleAvailability(@RequestParam boolean available) {
-        String email = getCurrentUserEmail();
-        if (email == null) return ResponseEntity.status(403).build();
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(403).build();
 
-        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserId(email);
+        if (userRepository != null) {
+            Optional<Ranex.ruvo.model.User> uOpt = userRepository.findByMobileNumberFlexible(mobile);
+            if (uOpt.isPresent()) {
+                Ranex.ruvo.model.User u = uOpt.get();
+                u.setIsAvailable(available);
+                userRepository.save(u);
+            }
+        }
+
+        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserId(mobile)
+                .or(() -> deliveryPartnerRepository.findByPhone(mobile));
+
         if (partnerOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Delivery partner profile not found.");
         }
 
         DeliveryPartner partner = partnerOpt.get();
-        if (!partner.getApproved()) {
+        if (!Boolean.TRUE.equals(partner.getApproved())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Partner is not yet approved.");
         }
 
         partner.setAvailable(available);
-        return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
+        if (available) partner.setLastActiveAt(java.time.Instant.now());
+        deliveryPartnerRepository.save(partner);
+        System.out.println("🟢 [DeliveryPartnerController] Partner #" + partner.getId() + " (" + partner.getName() + ") toggled availability=" + available);
+        return ResponseEntity.ok(partner);
     }
 
     @PatchMapping("/me/location")
     public ResponseEntity<?> updateLocation(@RequestParam Double latitude, @RequestParam Double longitude) {
-        String email = getCurrentUserEmail();
-        if (email == null) return ResponseEntity.status(403).build();
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(403).build();
 
-        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserId(email);
+        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserId(mobile);
         if (partnerOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }

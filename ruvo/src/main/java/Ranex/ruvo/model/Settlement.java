@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Data
@@ -13,7 +14,14 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "settlements")
+@Table(
+    name = "settlements",
+    indexes = {
+        @Index(name = "idx_sett_shop", columnList = "shop_id"),
+        @Index(name = "idx_sett_partner", columnList = "delivery_partner_id"),
+        @Index(name = "idx_sett_status", columnList = "status")
+    }
+)
 public class Settlement {
 
     @Id
@@ -22,9 +30,6 @@ public class Settlement {
 
     @Column(name = "settlement_id", unique = true)
     private String settlementId;
-
-    @Column(name = "order_id")
-    private Long orderId;
 
     @Column(name = "shop_id", nullable = false)
     private Long shopId;
@@ -40,43 +45,43 @@ public class Settlement {
 
     @Column(name = "order_count")
     @Builder.Default
-    private Integer orderCount = 1;
+    private Integer orderCount = 0;
 
-    // Financial ledger breakdown
-    @Column(name = "cod_collected")
+    // Financial ledger breakdown — all BigDecimal
+    @Column(name = "cod_collected", precision = 12, scale = 2)
     @Builder.Default
-    private Double codCollected = 0.0;
+    private BigDecimal codCollected = BigDecimal.ZERO;
 
-    @Column(name = "delivery_charge")
+    @Column(name = "delivery_charge", precision = 12, scale = 2)
     @Builder.Default
-    private Double deliveryCharge = 0.0;
+    private BigDecimal deliveryCharge = BigDecimal.ZERO;
 
-    @Column(name = "ruvo_commission")
+    @Column(name = "ruvo_commission", precision = 12, scale = 2)
     @Builder.Default
-    private Double ruvoCommission = 0.0;
+    private BigDecimal ruvoCommission = BigDecimal.ZERO;
 
-    @Column(name = "net_cash_to_shop")
+    @Column(name = "net_cash_to_shop", precision = 12, scale = 2)
     @Builder.Default
-    private Double netCashToShop = 0.0;
+    private BigDecimal netCashToShop = BigDecimal.ZERO;
 
-    @Column(name = "partner_gross_earning")
+    @Column(name = "partner_gross_earning", precision = 12, scale = 2)
     @Builder.Default
-    private Double partnerGrossEarning = 0.0;
+    private BigDecimal partnerGrossEarning = BigDecimal.ZERO;
 
-    @Column(name = "partner_net_earning")
+    @Column(name = "partner_net_earning", precision = 12, scale = 2)
     @Builder.Default
-    private Double partnerNetEarning = 0.0;
+    private BigDecimal partnerNetEarning = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 12, scale = 2)
     @Builder.Default
-    private Double amount = 0.0;
+    private BigDecimal amount = BigDecimal.ZERO;
 
     // COD_COLLECTION, PARTNER_EARNING, RUVO_PLATFORM_FEE, MASTER_SETTLEMENT
     @Column(name = "settlement_type", nullable = false)
     @Builder.Default
     private String settlementType = "MASTER_SETTLEMENT";
 
-    // CASH, UPI (Temporarily coming soon for UPI)
+    // CASH, UPI
     @Column(name = "payment_method")
     @Builder.Default
     private String paymentMethod = "CASH";
@@ -108,11 +113,22 @@ public class Settlement {
     @Builder.Default
     private Boolean otpVerified = false;
 
+    @Column(name = "otp_failed_attempts")
+    @Builder.Default
+    private Integer otpFailedAttempts = 0;
+
+    @Column(name = "otp_locked")
+    @Builder.Default
+    private Boolean otpLocked = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Version
+    private Long version;
 
     @PrePersist
     protected void onCreate() {

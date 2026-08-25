@@ -23,11 +23,13 @@ public class IdentityAuthController {
     private final JwtService jwt;
     private final SmsService sms;
     private final IdentityRoleProvisioningService provisioning;
+    private final PartnerProfileRepository partnerProfiles;
 
     public IdentityAuthController(AuthIdentityRepository identities, AuthIdentityRoleRepository roles,
                                   OtpVerificationRepository otps, JwtService jwt, SmsService sms,
-                                  IdentityRoleProvisioningService provisioning) {
+                                  IdentityRoleProvisioningService provisioning, PartnerProfileRepository partnerProfiles) {
         this.identities = identities; this.roles = roles; this.otps = otps; this.jwt = jwt; this.sms = sms; this.provisioning = provisioning;
+        this.partnerProfiles = partnerProfiles;
     }
 
     @PostMapping("/otp/send")
@@ -59,8 +61,15 @@ public class IdentityAuthController {
         if (identity.getStatus() == AccountStatus.BLOCKED) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Account is suspended", null));
         if (roles.findByIdentityAndRole(identity, role).isEmpty()) roles.save(AuthIdentityRole.builder().identity(identity).role(role).build());
         identity.setLastLogin(Instant.now()); identities.save(identity);
-        if (role == Role.DELIVERY_PARTNER) provisioning.provisionDeliveryPartner(identity);
-        return ResponseEntity.ok(ApiResponse.ok("Authenticated", new AuthToken(jwt.create(identity, role), "Bearer", identity.getId(), role.name())));
+        if (role == Role.DELIVERY_PARTNER) {
+            provisioning.provisionDeliveryPartner(identity);
+            // Look up the actual verification status after provisioning
+            String status = partnerProfiles.findByAuthIdentityId(identity.getId())
+                    .map(p -> p.getVerificationStatus().name())
+                    .orElse("NEW");
+            return ResponseEntity.ok(ApiResponse.ok("Authenticated", new AuthToken(jwt.create(identity, role), "Bearer", identity.getId(), role.name(), status)));
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Authenticated", new AuthToken(jwt.create(identity, role), "Bearer", identity.getId(), role.name(), null)));
     }
 
     private String mobile(String value) { if (value == null) return null; String digits = value.replaceAll("[^0-9]", ""); return digits.length() == 10 ? "+91" + digits : digits.matches("91[0-9]{10}") ? "+" + digits : null; }

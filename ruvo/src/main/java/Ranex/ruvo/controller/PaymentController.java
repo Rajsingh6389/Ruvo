@@ -11,15 +11,22 @@ import Ranex.ruvo.repository.PaymentRepository;
 import Ranex.ruvo.repository.ProductRepository;
 import Ranex.ruvo.repository.ShopRepository;
 import Ranex.ruvo.repository.UserRepository;
+import Ranex.ruvo.model.OrderItem;
+import Ranex.ruvo.service.CashfreeService;
+import Ranex.ruvo.service.CouponService;
 import Ranex.ruvo.service.NotificationService;
 import Ranex.ruvo.service.PricingService;
-import Ranex.ruvo.service.RazorpayService;
+import Ranex.ruvo.service.WalletService;
 import Ranex.ruvo.util.DistanceUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,7 +42,10 @@ public class PaymentController {
     private final UserRepository userRepository;
     private final PricingService pricingService;
     private final NotificationService notificationService;
-    private final RazorpayService razorpayService;
+    private final Ranex.ruvo.repository.OrderItemRepository orderItemRepository;
+    private final CouponService couponService;
+    private final WalletService walletService;
+    private final CashfreeService cashfreeService;
 
     public PaymentController(
             OrderRepository orderRepository,
@@ -45,7 +55,10 @@ public class PaymentController {
             UserRepository userRepository,
             PricingService pricingService,
             NotificationService notificationService,
-            RazorpayService razorpayService) {
+            Ranex.ruvo.repository.OrderItemRepository orderItemRepository,
+            CouponService couponService,
+            WalletService walletService,
+            CashfreeService cashfreeService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
@@ -53,45 +66,81 @@ public class PaymentController {
         this.userRepository = userRepository;
         this.pricingService = pricingService;
         this.notificationService = notificationService;
-        this.razorpayService = razorpayService;
+        this.orderItemRepository = orderItemRepository;
+        this.couponService = couponService;
+        this.walletService = walletService;
+        this.cashfreeService = cashfreeService;
     }
 
-    // Request DTO for Checkout
+    public static class CartItemRequest {
+        public Long productId;
+        public String productName;
+        public Integer quantity;
+        public Double price;
+    }
+
     public static class CheckoutRequest {
         public String userId;
         public Long shopId;
         public Long productId;
         public String productName;
         public Integer quantity;
-        public String paymentMethod; // COD or ONLINE / UPI
+        public List<CartItemRequest> items;
+        public String couponCode;
+        public Boolean useWallet;
+        public String paymentMethod; // COD or ONLINE
         public String deliveryAddress;
         public Double userLatitude;
         public Double userLongitude;
-        // Customer details (passed from mobile profile context)
         public String customerName;
         public String customerPhone;
     }
 
-    // Request DTO for Verification
-    public static class VerifyRequest {
-        public Long orderId;
-        public String razorpayPaymentId;
-        public String razorpayOrderId;
-        public String razorpaySignature;
-    }
-
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
-        Product product = productRepository.findById(request.productId).orElse(null);
-        if (product == null) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Product not found."));
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<CartItemRequest> cartItems = new ArrayList<>();
+        List<Product> productsToUpdate = new ArrayList<>();
+
+        if (request.items != null && !request.items.isEmpty()) {
+            for (CartItemRequest itemReq : request.items) {
+                Product p = productRepository.findById(itemReq.productId).orElse(null);
+                if (p == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Product not found: " + itemReq.productName));
+                }
+                if (p.getStockQuantity() < itemReq.quantity) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock for " + p.getName() + ". Only " + p.getStockQuantity() + " left."));
+                }
+                BigDecimal price = itemReq.price != null ? BigDecimal.valueOf(itemReq.price) : BigDecimal.valueOf(p.getSellingPrice());
+                BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(itemReq.quantity));
+                subtotal = subtotal.add(itemTotal);
+                cartItems.add(itemReq);
+                p.setStockQuantity(p.getStockQuantity() - itemReq.quantity);
+                productsToUpdate.add(p);
+            }
+        } else if (request.productId != null) {
+            Product product = productRepository.findById(request.productId).orElse(null);
+            if (product == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Product not found."));
+            }
+            if (product.getStockQuantity() < request.quantity) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock available. Only " + product.getStockQuantity() + " left."));
+            }
+            subtotal = BigDecimal.valueOf(product.getSellingPrice()).multiply(BigDecimal.valueOf(request.quantity));
+            CartItemRequest itemReq = new CartItemRequest();
+            itemReq.productId = product.getId();
+            itemReq.productName = product.getName();
+            itemReq.quantity = request.quantity;
+            itemReq.price = product.getSellingPrice();
+            cartItems.add(itemReq);
+            product.setStockQuantity(product.getStockQuantity() - request.quantity);
+            productsToUpdate.add(product);
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("message", "No items or product specified for order."));
         }
 
-        if (product.getStockQuantity() < request.quantity) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock available. Only " + product.getStockQuantity() + " left."));
-        }
+        subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
 
-        // Recalculate price securely on server
         Shop shop = shopRepository.findById(request.shopId).orElse(null);
         double distanceKm = 0.0;
         if (shop != null && shop.getLatitude() != null && shop.getLongitude() != null
@@ -102,28 +151,59 @@ public class PaymentController {
             );
         }
 
-        double deliveryFee = pricingService.calculateDeliveryFee(distanceKm);
-        double platformFee = pricingService.calculatePlatformFee(distanceKm);
-        double subtotal = product.getSellingPrice() * request.quantity;
-        double totalAmount = subtotal + deliveryFee + platformFee;
+        BigDecimal deliveryFee = BigDecimal.valueOf(pricingService.calculateDeliveryFee(distanceKm)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = BigDecimal.valueOf(pricingService.calculatePlatformFee(distanceKm)).setScale(2, RoundingMode.HALF_UP);
 
-        // Build base order entity
+        // Coupon calculation from DB
+        BigDecimal couponDiscount = couponService.validateAndCalculateDiscount(request.couponCode, subtotal);
+
+        // Gross total before wallet
+        BigDecimal grossTotal = subtotal.add(deliveryFee).add(platformFee).subtract(couponDiscount);
+        if (grossTotal.compareTo(BigDecimal.ZERO) < 0) {
+            grossTotal = BigDecimal.ZERO;
+        }
+
+        // Wallet deduction
+        BigDecimal walletAmountUsed = BigDecimal.ZERO;
+        if (Boolean.TRUE.equals(request.useWallet) && request.userId != null) {
+            BigDecimal walletBalance = walletService.getBalance(request.userId);
+            walletAmountUsed = walletBalance.min(grossTotal).setScale(2, RoundingMode.HALF_UP);
+            if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
+                walletService.debit(request.userId, walletAmountUsed, "ORDER-PENDING", "Applied to order checkout");
+            }
+        }
+
+        BigDecimal finalTotalAmount = grossTotal.subtract(walletAmountUsed);
+        if (finalTotalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            finalTotalAmount = BigDecimal.ZERO;
+        }
+
+        CartItemRequest primaryItem = cartItems.get(0);
+        Product firstProduct = productRepository.findById(primaryItem.productId).orElse(null);
+
         Order order = new Order();
         order.setUserId(request.userId);
         order.setShopId(request.shopId);
-        order.setProductId(request.productId);
-        order.setProductName(request.productName);
-        order.setProductImageUrl(product.getImageUrl());
-        order.setQuantity(request.quantity);
-        order.setSubtotal(Math.round(subtotal * 100.0) / 100.0);
+        order.setProductId(primaryItem.productId);
+        order.setProductName(primaryItem.productName);
+        order.setProductImageUrl(firstProduct != null ? firstProduct.getImageUrl() : null);
+        order.setQuantity(primaryItem.quantity);
+        order.setSubtotal(subtotal);
         order.setDeliveryFee(deliveryFee);
         order.setPlatformFee(platformFee);
+        order.setCouponCode(request.couponCode != null && couponDiscount.compareTo(BigDecimal.ZERO) > 0 ? request.couponCode : null);
+        order.setCouponDiscount(couponDiscount);
+        order.setWalletAmountUsed(walletAmountUsed);
         order.setDistanceKm(Math.round(distanceKm * 10.0) / 10.0);
-        order.setTotalAmount(Math.round(totalAmount * 100.0) / 100.0);
+        order.setTotalAmount(finalTotalAmount);
         order.setDeliveryAddress(request.deliveryAddress);
         order.setPaymentMethod(request.paymentMethod != null ? request.paymentMethod : "COD");
 
-        // Snapshot customer details for shopkeeper visibility
+        // Deduct stock for all items
+        for (Product p : productsToUpdate) {
+            productRepository.save(p);
+        }
+
         String customerName = request.customerName;
         String customerPhone = request.customerPhone;
         try {
@@ -138,10 +218,6 @@ public class PaymentController {
         order.setCustomerPhone(customerPhone);
 
         if ("COD".equalsIgnoreCase(request.paymentMethod)) {
-            // Deduct stock immediately for COD
-            product.setStockQuantity(product.getStockQuantity() - request.quantity);
-            productRepository.save(product);
-
             order.setPaymentStatus("COD_PENDING");
             order.setOrderStatus(OrderStatus.SHOP_PENDING);
             order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
@@ -152,7 +228,18 @@ public class PaymentController {
                 savedOrder = orderRepository.save(savedOrder);
             }
 
-            // Log payment
+            // Save OrderItem records for multi-item cart
+            for (CartItemRequest itemReq : cartItems) {
+                OrderItem item = OrderItem.builder()
+                        .orderId(savedOrder.getId())
+                        .productId(itemReq.productId)
+                        .productName(itemReq.productName)
+                        .priceAtOrder(itemReq.price)
+                        .quantity(itemReq.quantity)
+                        .build();
+                orderItemRepository.save(item);
+            }
+
             Payment payment = Payment.builder()
                     .orderId(savedOrder.getId())
                     .userId(request.userId)
@@ -163,7 +250,6 @@ public class PaymentController {
                     .build();
             paymentRepository.save(payment);
 
-            // Send notification directly to shopkeeper's dashboard
             notificationService.notifyShop(savedOrder);
 
             return ResponseEntity.ok(Map.of(
@@ -173,17 +259,29 @@ public class PaymentController {
                     "message", "Order placed successfully via Cash on Delivery!"
             ));
         } else {
-            // Online Payment Flow (Razorpay / UPI)
             order.setPaymentStatus("PENDING");
             order.setOrderStatus(OrderStatus.PAYMENT_PENDING);
             Order savedOrder = orderRepository.save(order);
 
-            try {
-                // Initialize Razorpay Order
-                com.razorpay.Order rzpOrder = razorpayService.createOrder(savedOrder.getTotalAmount(), "receipt_order_" + savedOrder.getId());
-                String rzpOrderId = rzpOrder.get("id");
+            // Save OrderItem records for multi-item cart
+            for (CartItemRequest itemReq : cartItems) {
+                OrderItem item = OrderItem.builder()
+                        .orderId(savedOrder.getId())
+                        .productId(itemReq.productId)
+                        .productName(itemReq.productName)
+                        .priceAtOrder(itemReq.price)
+                        .quantity(itemReq.quantity)
+                        .build();
+                orderItemRepository.save(item);
+            }
 
-                // Log pending payment
+            try {
+                String cfOrderId = "CF-ORD-" + savedOrder.getId() + "-" + System.currentTimeMillis();
+                String returnUrl = cashfreeService.buildReturnUrl(savedOrder.getId());
+                Map<String, Object> cfRes = cashfreeService.createOrder(
+                        cfOrderId, savedOrder.getTotalAmount(), savedOrder.getSubtotal(), null, request.userId, customerPhone, "customer@ruvo.in", returnUrl
+                );
+
                 Payment payment = Payment.builder()
                         .orderId(savedOrder.getId())
                         .userId(request.userId)
@@ -191,8 +289,7 @@ public class PaymentController {
                         .paymentStatus("PENDING")
                         .amount(savedOrder.getTotalAmount())
                         .currency("INR")
-                        .gateway("RAZORPAY")
-                        .gatewayOrderId(rzpOrderId)
+                        .cashfreeOrderId(cfOrderId)
                         .build();
                 paymentRepository.save(payment);
 
@@ -200,88 +297,17 @@ public class PaymentController {
                         "success", true,
                         "orderId", savedOrder.getId(),
                         "paymentMethod", "ONLINE",
-                        "razorpayOrderId", rzpOrderId,
-                        "amount", savedOrder.getTotalAmount(),
-                        "keyId", razorpayService.getKeyId()
+                        "cashfreeOrderId", cfOrderId,
+                        "paymentSessionId", cfRes.get("payment_session_id"),
+                        "amount", savedOrder.getTotalAmount()
                 ));
             } catch (Exception e) {
-                // Rollback order status to failed
                 savedOrder.setPaymentStatus("FAILED");
                 savedOrder.setOrderStatus("PAYMENT_FAILED");
                 orderRepository.save(savedOrder);
 
-                return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create payment gateway order: " + e.getMessage()));
+                return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create Cashfree payment order: " + e.getMessage()));
             }
-        }
-    }
-
-    @PostMapping("/verify")
-    public ResponseEntity<?> verifyPayment(@RequestBody VerifyRequest request) {
-        boolean isValid = razorpayService.verifySignature(
-                request.razorpayOrderId,
-                request.razorpayPaymentId,
-                request.razorpaySignature
-        );
-
-        Optional<Order> orderOpt = orderRepository.findById(request.orderId);
-        if (orderOpt.isEmpty()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "Order not found."));
-        }
-        Order order = orderOpt.get();
-
-        if (isValid) {
-            // Prevent double-processing
-            if ("PAID".equalsIgnoreCase(order.getPaymentStatus()) || "SUCCESS".equalsIgnoreCase(order.getPaymentStatus())) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "Payment already verified."));
-            }
-
-            // Deduct stock now upon successful payment confirmation
-            Product product = productRepository.findById(order.getProductId()).orElse(null);
-            if (product == null) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Product no longer exists."));
-            }
-
-            if (product.getStockQuantity() < order.getQuantity()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Product went out of stock during checkout."));
-            }
-
-            product.setStockQuantity(product.getStockQuantity() - order.getQuantity());
-            productRepository.save(product);
-
-            // Update order status -> directly to SHOP_PENDING with 10 minute deadline
-            order.setPaymentStatus("SUCCESS");
-            order.setOrderStatus(OrderStatus.SHOP_PENDING);
-            order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
-            Order savedOrder = orderRepository.save(order);
-
-            // Update payment transaction logs
-            Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());
-            if (paymentOpt.isPresent()) {
-                Payment payment = paymentOpt.get();
-                payment.setPaymentStatus("SUCCESS");
-                payment.setGatewayPaymentId(request.razorpayPaymentId);
-                payment.setGatewayOrderId(request.razorpayOrderId);
-                paymentRepository.save(payment);
-            }
-
-            // Notify shopkeeper upon payment verification
-            notificationService.notifyShop(savedOrder);
-
-            return ResponseEntity.ok(Map.of("success", true, "orderId", savedOrder.getId(), "message", "Payment verified and order confirmed successfully!"));
-        } else {
-            // Mark as failed
-            order.setPaymentStatus("FAILED");
-            order.setOrderStatus("PAYMENT_FAILED");
-            orderRepository.save(order);
-
-            Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());
-            if (paymentOpt.isPresent()) {
-                Payment payment = paymentOpt.get();
-                payment.setPaymentStatus("FAILED");
-                paymentRepository.save(payment);
-            }
-
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Signature verification failed. Payment was tampered with or unsuccessful."));
         }
     }
 

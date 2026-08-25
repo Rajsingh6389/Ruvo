@@ -27,16 +27,19 @@ public class PartnerAuthController {
     private final PartnerDeviceSessionRepository sessions;
     private final RefreshTokenRepository refreshTokens;
     private final PasswordEncoder encoder;
+    private final PartnerVerificationRepository verifications;
     private final JwtService jwt;
     private final Ranex.ruvo.service.SmsService smsService;
 
     public PartnerAuthController(UserRepository u, OtpVerificationRepository o, PartnerProfileRepository pr,
+                                 PartnerVerificationRepository vr,
                                  PartnerAccountRepository pa, DeliveryPartnerRepository dp,
                                  PartnerDeviceSessionRepository s, RefreshTokenRepository r,
                                  PasswordEncoder e, JwtService j, Ranex.ruvo.service.SmsService sms) {
         this.users = u;
         this.otps = o;
         this.profiles = pr;
+        this.verifications = vr;
         this.partnerAccounts = pa;
         this.deliveryPartners = dp;
         this.sessions = s;
@@ -163,17 +166,20 @@ public class PartnerAuthController {
             }
         } else {
             isNew = true;
-            // Do not attach this partner session to an existing customer user.
-            String placeholderEmail = "partner-" + UUID.randomUUID() + "@ruvo.internal";
-            user = User.builder()
-                    .name("New Partner")
-                    .email(placeholderEmail)
-                    .password(encoder.encode(UUID.randomUUID().toString()))
-                    .role(Role.DELIVERY_PARTNER)
-                    .status(AccountStatus.PENDING)
-                    .isAvailable(false)
-                    .build();
-            user = users.save(user);
+            Optional<User> existingUserOpt = users.findByMobileNumberFlexible(mobile);
+            if (existingUserOpt.isPresent()) {
+                user = existingUserOpt.get();
+            } else {
+                user = User.builder()
+                        .name("New Partner")
+                        .mobileNumber(mobile)
+                        .password(encoder.encode(UUID.randomUUID().toString()))
+                        .role(Role.DELIVERY_PARTNER)
+                        .status(AccountStatus.PENDING)
+                        .isAvailable(false)
+                        .build();
+                user = users.save(user);
+            }
             partnerAccount = partnerAccounts.save(PartnerAccount.builder()
                     .mobileNumber(mobile)
                     .securityUser(user)
@@ -182,13 +188,29 @@ public class PartnerAuthController {
 
         // Keep the existing assignment engine in sync with partner authentication.
         final User partnerUser = user;
-        deliveryPartners.findByUserId(partnerUser.getEmail()).orElseGet(() ->
+        DeliveryPartner dpRecord = deliveryPartners.findByPhone(mobile).orElseGet(() ->
                 deliveryPartners.save(DeliveryPartner.builder()
-                        .userId(partnerUser.getEmail())
+                        .userId(partnerUser.getMobileNumber())
                         .name(partnerUser.getName())
                         .phone(mobile)
                         .active(true).available(false).approved(true)
                         .build()));
+
+        // If DeliveryPartner's name is still "New Partner", check if user has a real name or KYC fullName
+        if ("New Partner".equalsIgnoreCase(dpRecord.getName())) {
+            Optional<PartnerProfile> pOpt = profiles.findByUser(partnerUser);
+            String realName = partnerUser.getName();
+            if (pOpt.isPresent()) {
+                Optional<PartnerVerification> verOpt = verifications.findByPartnerProfile(pOpt.get());
+                if (verOpt.isPresent() && verOpt.get().getFullName() != null && !verOpt.get().getFullName().isBlank()) {
+                    realName = verOpt.get().getFullName();
+                }
+            }
+            if (realName != null && !"New Partner".equalsIgnoreCase(realName)) {
+                dpRecord.setName(realName);
+                deliveryPartners.save(dpRecord);
+            }
+        }
 
         // Setup/Get Partner Profile
         Optional<PartnerProfile> optProfile = profiles.findByUser(user);
@@ -317,7 +339,7 @@ public class PartnerAuthController {
                 }
                 // Revoke latest refresh token of this user
                 String subject = jwt.subject(token);
-                users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).ifPresent(user -> {
+                users.findByMobileNumber(subject).ifPresent(user -> {
                     List<RefreshToken> tokens = refreshTokens.findByUser(user);
                     for (RefreshToken rt : tokens) {
                         rt.setRevoked(true);
@@ -336,7 +358,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).ifPresent(user -> {
+                users.findByMobileNumber(subject).ifPresent(user -> {
                     // Revoke all sessions
                     List<PartnerDeviceSession> activeSess = sessions.findByUser(user);
                     for (PartnerDeviceSession s : activeSess) {
@@ -361,7 +383,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
+                Optional<User> optUser = users.findByMobileNumber(subject);
                 if (optUser.isPresent()) {
                     return ResponseEntity.ok(ApiResponse.ok("Profile retrieved", optUser.get()));
                 }
@@ -376,7 +398,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
+                Optional<User> optUser = users.findByMobileNumber(subject);
                 if (optUser.isPresent()) {
                     List<PartnerDeviceSession> activeSessions = sessions.findByUserAndRevokedFalse(optUser.get());
                     String currentSessionId = jwt.getSessionId(token);
@@ -406,7 +428,7 @@ public class PartnerAuthController {
             String token = authHeader.substring(7);
             if (jwt.valid(token)) {
                 String subject = jwt.subject(token);
-                Optional<User> optUser = users.findByEmail(subject).or(() -> users.findByMobileNumber(subject));
+                Optional<User> optUser = users.findByMobileNumber(subject);
                 Optional<PartnerDeviceSession> sessOpt = sessions.findBySessionId(sessionId);
                 if (optUser.isPresent() && sessOpt.isPresent() && sessOpt.get().getUser().getId().equals(optUser.get().getId())) {
                     PartnerDeviceSession s = sessOpt.get();

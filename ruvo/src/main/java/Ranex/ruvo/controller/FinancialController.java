@@ -5,12 +5,14 @@ import Ranex.ruvo.repository.SettlementRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Financial summary APIs for Shopkeeper, Delivery Partner, and Admin dashboards.
+ * Migrated to BigDecimal for production financial accuracy.
  */
 @RestController
 @RequestMapping("/api/financial")
@@ -31,14 +33,17 @@ public class FinancialController {
         List<Settlement> cols = settlementRepository
                 .findByDeliveryPartnerIdAndSettlementTypeAndStatusIn(
                         partnerId, "COD_COLLECTION", List.of("PENDING", "OVERDUE"));
-        
-        Map<Long, Double> byShop = cols.stream()
+
+        Map<Long, BigDecimal> byShop = cols.stream()
                 .collect(Collectors.groupingBy(Settlement::getShopId,
-                        Collectors.summingDouble(Settlement::getAmount)));
-        
+                        Collectors.reducing(BigDecimal.ZERO, Settlement::getAmount, BigDecimal::add)));
+
+        BigDecimal totalCodHeld = byShop.values().stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return ResponseEntity.ok(Map.of(
                 "shopWiseCodDue", byShop,
-                "totalCodHeld", byShop.values().stream().mapToDouble(Double::doubleValue).sum()
+                "totalCodHeld", totalCodHeld
         ));
     }
 
@@ -48,12 +53,17 @@ public class FinancialController {
         List<Settlement> earns = settlementRepository
                 .findByDeliveryPartnerIdAndSettlementTypeAndStatusIn(
                         partnerId, "PARTNER_EARNING", List.of("PENDING", "PAID"));
-        
-        double paid   = earns.stream().filter(s -> "PAID".equals(s.getStatus()))
-                             .mapToDouble(Settlement::getAmount).sum();
-        double pending = earns.stream().filter(s -> "PENDING".equals(s.getStatus()))
-                              .mapToDouble(Settlement::getAmount).sum();
-        
+
+        BigDecimal paid = earns.stream()
+                .filter(s -> "PAID".equals(s.getStatus()))
+                .map(Settlement::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal pending = earns.stream()
+                .filter(s -> "PENDING".equals(s.getStatus()))
+                .map(Settlement::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return ResponseEntity.ok(Map.of("paidEarnings", paid, "pendingEarnings", pending));
     }
 
@@ -65,26 +75,29 @@ public class FinancialController {
         List<Settlement> all = settlementRepository.findByShopIdAndStatusIn(
                 shopId, List.of("PENDING", "PAID", "OVERDUE"));
 
-        double codReceived = all.stream()
+        BigDecimal codReceived = all.stream()
                 .filter(s -> "COD_COLLECTION".equals(s.getSettlementType()) && "PAID".equals(s.getStatus()))
-                .mapToDouble(Settlement::getAmount).sum();
+                .map(Settlement::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Map<Long, Double> partnerDues = all.stream()
-                .filter(s -> "PARTNER_EARNING".equals(s.getSettlementType())
-                        && !("PAID".equals(s.getStatus())))
+        Map<Long, BigDecimal> partnerDues = all.stream()
+                .filter(s -> "PARTNER_EARNING".equals(s.getSettlementType()) && !"PAID".equals(s.getStatus()))
                 .collect(Collectors.groupingBy(Settlement::getDeliveryPartnerId,
-                        Collectors.summingDouble(Settlement::getAmount)));
+                        Collectors.reducing(BigDecimal.ZERO, Settlement::getAmount, BigDecimal::add)));
 
-        double ruvoDue = all.stream()
-                .filter(s -> "RUVO_PLATFORM_FEE".equals(s.getSettlementType())
-                        && !("PAID".equals(s.getStatus())))
-                .mapToDouble(Settlement::getAmount).sum();
+        BigDecimal ruvoDue = all.stream()
+                .filter(s -> "RUVO_PLATFORM_FEE".equals(s.getSettlementType()) && !"PAID".equals(s.getStatus()))
+                .map(Settlement::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal partnerDuesSum = partnerDues.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalOutstanding = partnerDuesSum.add(ruvoDue);
 
         return ResponseEntity.ok(Map.of(
                 "codReceived", codReceived,
                 "partnerDues", partnerDues,
                 "ruvoDue", ruvoDue,
-                "totalOutstanding", partnerDues.values().stream().mapToDouble(Double::doubleValue).sum() + ruvoDue
+                "totalOutstanding", totalOutstanding
         ));
     }
 
@@ -97,9 +110,9 @@ public class FinancialController {
                 .filter(s -> "PARTNER_EARNING".equals(s.getSettlementType()))
                 .toList();
 
-        Map<Long, Double> byPartner = dues.stream()
+        Map<Long, BigDecimal> byPartner = dues.stream()
                 .collect(Collectors.groupingBy(Settlement::getDeliveryPartnerId,
-                        Collectors.summingDouble(Settlement::getAmount)));
+                        Collectors.reducing(BigDecimal.ZERO, Settlement::getAmount, BigDecimal::add)));
 
         return ResponseEntity.ok(byPartner);
     }

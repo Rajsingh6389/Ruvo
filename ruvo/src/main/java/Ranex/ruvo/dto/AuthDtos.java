@@ -1,8 +1,15 @@
 package Ranex.ruvo.dto;
-import jakarta.validation.constraints.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 public final class AuthDtos {
- private AuthDtos() {}
- public record RegisterRequest(@NotBlank String name, @Email @NotBlank String email, @Size(min=8) String password, @Pattern(regexp="^[0-9+ -]{8,20}$") String mobileNumber) {}
- public record LoginRequest(@Email @NotBlank String email, @NotBlank String password) {}
- public record AuthToken(String accessToken, String tokenType, Long userId, String role) {}
+    private AuthDtos() {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RegisterRequest(String name, String password, String mobileNumber) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record LoginRequest(String mobileNumber, String password) {}
+
+    public record AuthToken(String accessToken, String tokenType, Long userId, String role, String verificationStatus) {}
 }

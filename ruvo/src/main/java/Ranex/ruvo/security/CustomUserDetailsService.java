@@ -17,12 +17,11 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String identifier) {
 
-        Ranex.ruvo.model.User u = users.findByEmail(identifier)
-                .or(() -> users.findByMobileNumber(identifier))
+        Ranex.ruvo.model.User u = users.findByMobileNumberFlexible(identifier)
                 .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
+                        new UsernameNotFoundException("User not found for mobile: " + identifier));
 
-        String username = u.getMobileNumber() != null ? u.getMobileNumber() : u.getEmail();
+        String username = u.getMobileNumber();
         String pwd = u.getPassword() != null ? u.getPassword() : "";
 
         return org.springframework.security.core.userdetails.User

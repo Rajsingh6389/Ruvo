@@ -19,6 +19,9 @@ public interface DeliveryRequestRepository extends JpaRepository<DeliveryRequest
 
     List<DeliveryRequest> findByStatusAndExpiresAtBefore(String status, Instant now);
 
+    /** Live offers only — a partner holding one of these must not be interrupted. */
+    List<DeliveryRequest> findByStatusAndExpiresAtAfter(String status, Instant now);
+
     Optional<DeliveryRequest> findByIdAndPartnerId(Long id, Long partnerId);
 
     boolean existsByOrderIdAndPartnerId(Long orderId, Long partnerId);

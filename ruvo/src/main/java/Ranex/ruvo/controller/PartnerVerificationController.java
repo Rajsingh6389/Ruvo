@@ -20,15 +20,18 @@ public class PartnerVerificationController {
     private final PartnerVehicleRepository vehicles;
     private final PartnerVerificationRepository verifications;
     private final PartnerAccountRepository partnerAccounts;
+    private final DeliveryPartnerRepository deliveryPartners;
     private final JwtService jwt;
 
     public PartnerVerificationController(UserRepository u, PartnerProfileRepository p, PartnerVehicleRepository v,
-                                         PartnerVerificationRepository vr, PartnerAccountRepository pa, JwtService j) {
+                                         PartnerVerificationRepository vr, PartnerAccountRepository pa,
+                                         DeliveryPartnerRepository dp, JwtService j) {
         this.users = u;
         this.profiles = p;
         this.vehicles = v;
         this.verifications = vr;
         this.partnerAccounts = pa;
+        this.deliveryPartners = dp;
         this.jwt = j;
     }
 
@@ -50,7 +53,6 @@ public class PartnerVerificationController {
         responseData.put("name", user.getName());
         responseData.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
                 .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
-        responseData.put("email", user.getEmail());
         responseData.put("verificationStatus", profile.getVerificationStatus().name());
         responseData.put("adminReason", profile.getAdminReason());
 
@@ -161,6 +163,17 @@ public class PartnerVerificationController {
         if (dob != null) user.setDateOfBirth(dob);
         users.save(user);
 
+        // Sync name to DeliveryPartner entity so dispatch requests show actual name instead of "New Partner"
+        final String syncedName = fullName;
+        final String userMobile = user.getMobileNumber();
+        deliveryPartners.findByUserId(userMobile)
+                .or(() -> userMobile != null ? deliveryPartners.findByPhone(userMobile) : Optional.empty())
+                .ifPresent(dp -> {
+                    dp.setName(syncedName);
+                    if (userMobile != null) dp.setPhone(userMobile);
+                    deliveryPartners.save(dp);
+                });
+
         // Check if both vehicle and KYC are submitted
         Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
         if (vehicle.isPresent()) {
@@ -263,7 +276,7 @@ public class PartnerVerificationController {
                             .orElse(null);
                 }
                 String subject = jwt.subject(token);
-                return users.findByEmail(subject).or(() -> users.findByMobileNumber(subject)).orElse(null);
+                return users.findByMobileNumber(subject).orElse(null);
             }
         }
         return null;

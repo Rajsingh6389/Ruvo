@@ -7,6 +7,7 @@ import Ranex.ruvo.model.Shop;
 import Ranex.ruvo.model.OrderStatus;
 import Ranex.ruvo.model.Delivery;
 import Ranex.ruvo.model.User;
+import Ranex.ruvo.model.RefundReason;
 import Ranex.ruvo.repository.OrderItemRepository;
 import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.repository.ProductRepository;
@@ -14,6 +15,7 @@ import Ranex.ruvo.repository.ShopRepository;
 import Ranex.ruvo.repository.DeliveryRepository;
 import Ranex.ruvo.repository.UserRepository;
 import Ranex.ruvo.service.PricingService;
+import Ranex.ruvo.service.RefundService;
 import Ranex.ruvo.util.DistanceUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +43,7 @@ public class OrderController {
     private final DeliveryRepository deliveryRepository;
     private final UserRepository userRepository;
     private final Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository;
+    private final RefundService refundService;
 
     public OrderController(OrderRepository orderRepository,
                            ProductRepository productRepository,
@@ -52,7 +55,8 @@ public class OrderController {
                            Ranex.ruvo.repository.DeliveryPartnerRepository deliveryPartnerRepository,
                            DeliveryRepository deliveryRepository,
                            UserRepository userRepository,
-                           Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository) {
+                           Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository,
+                           RefundService refundService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
@@ -64,6 +68,7 @@ public class OrderController {
         this.deliveryRepository = deliveryRepository;
         this.userRepository = userRepository;
         this.deliveryRequestRepository = deliveryRequestRepository;
+        this.refundService = refundService;
     }
 
     @PostMapping
@@ -83,6 +88,14 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                     "code", "SHOP_SETTLEMENT_BLOCKED",
                     "message", "This shop is temporarily unavailable in your area."
+            ));
+        }
+
+        // 1c. COD-blocked guard (commission overdue)
+        if ("COD".equalsIgnoreCase(order.getPaymentMethod()) && Boolean.TRUE.equals(shop.getCodBlocked())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "code", "SHOP_COD_BLOCKED",
+                    "message", "This shop is not accepting COD orders at the moment."
             ));
         }
 
@@ -131,10 +144,10 @@ public class OrderController {
 
         order.setProductImageUrl(product.getImageUrl());
         order.setDistanceKm(Math.round(distanceKm * 10.0) / 10.0);
-        order.setDeliveryFee(deliveryFee);
-        order.setPlatformFee(platformFee);
-        order.setSubtotal(Math.round(subtotal * 100.0) / 100.0);
-        order.setTotalAmount(Math.round(totalAmount * 100.0) / 100.0);
+        order.setDeliveryFee(java.math.BigDecimal.valueOf(deliveryFee).setScale(2, java.math.RoundingMode.HALF_UP));
+        order.setPlatformFee(java.math.BigDecimal.valueOf(platformFee).setScale(2, java.math.RoundingMode.HALF_UP));
+        order.setSubtotal(java.math.BigDecimal.valueOf(subtotal).setScale(2, java.math.RoundingMode.HALF_UP));
+        order.setTotalAmount(java.math.BigDecimal.valueOf(totalAmount).setScale(2, java.math.RoundingMode.HALF_UP));
 
         // Set status
         order.setOrderStatus(OrderStatus.SHOP_PENDING);
@@ -242,6 +255,14 @@ public class OrderController {
                     });
                 }
                 orderRepository.save(order);
+                
+                // Trigger refund for online payments
+                try {
+                    refundService.autoRefundIfEligible(order);
+                } catch (Exception e) {
+                    System.err.println("Failed to process refund for order " + order.getId() + ": " + e.getMessage());
+                }
+                
                 notificationService.notifyCustomer(order, "Order Cancelled",
                     "The shop did not accept your order in time. Your order has been cancelled.", OrderStatus.SHOP_TIMEOUT);
                 return;
@@ -263,6 +284,14 @@ public class OrderController {
                     });
                 }
                 orderRepository.save(order);
+                
+                // Trigger refund for online payments
+                try {
+                    refundService.autoRefundIfEligible(order);
+                } catch (Exception e) {
+                    System.err.println("Failed to process refund for order " + order.getId() + ": " + e.getMessage());
+                }
+                
                 notificationService.notifyCustomer(order, "Order Cancelled",
                     "No delivery partner could be assigned within 10 minutes.", "CANCELLED_NO_PARTNER_FOUND");
             }
@@ -290,6 +319,14 @@ public class OrderController {
             });
         }
         orderRepository.save(order);
+
+        // Trigger refund for online payments
+        try {
+            refundService.autoRefundIfEligible(order);
+        } catch (Exception e) {
+            // Log error but don't fail the cancellation
+            System.err.println("Failed to process refund for order " + orderId + ": " + e.getMessage());
+        }
 
         notificationService.notifyCustomer(order, "Order Cancelled by Shop",
             "The shopkeeper had to cancel this order. If paid, your refund will be processed.", "CANCELLED_BY_SHOP");
@@ -323,6 +360,14 @@ public class OrderController {
             });
         }
         orderRepository.save(order);
+
+        // Trigger refund for online payments
+        try {
+            refundService.autoRefundIfEligible(order);
+        } catch (Exception e) {
+            // Log error but don't fail the cancellation
+            System.err.println("Failed to process refund for order " + orderId + ": " + e.getMessage());
+        }
 
         notificationService.notifyCustomer(order, "Order Cancelled",
             "Your order #" + order.getId() + " has been cancelled successfully.", "CANCELLED_BY_USER");

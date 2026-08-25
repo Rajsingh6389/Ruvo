@@ -53,10 +53,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
                  }
              }
              if (sessionValid) {
-                 var d=details.loadUserByUsername(jwt.subject(t));
-                 var a=new UsernamePasswordAuthenticationToken(d,null,d.getAuthorities());
-                 a.setDetails(new WebAuthenticationDetailsSource().buildDetails(r));
-                 SecurityContextHolder.getContext().setAuthentication(a);
+                 try {
+                     var d=details.loadUserByUsername(jwt.subject(t));
+                     var a=new UsernamePasswordAuthenticationToken(d,null,d.getAuthorities());
+                     a.setDetails(new WebAuthenticationDetailsSource().buildDetails(r));
+                     SecurityContextHolder.getContext().setAuthentication(a);
+                 } catch (Exception e) {
+                     SecurityContextHolder.clearContext();
+                 }
              } else {
                  s.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Session has been revoked or is invalid");
                  return;

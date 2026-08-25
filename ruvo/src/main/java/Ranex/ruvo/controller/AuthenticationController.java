@@ -161,42 +161,51 @@ public class AuthenticationController {
 
         String token = jwt.create(u);
         return ResponseEntity.ok(ApiResponse.ok("Authentication successful",
-                new AuthToken(token, "Bearer", u.getId(), u.getRole().name())));
+                new AuthToken(token, "Bearer", u.getId(), u.getRole().name(), null)));
     }
 
     @PostMapping("/register")
     ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest r) {
-        String mobile = r.mobileNumber() != null ? formatMobile(r.mobileNumber()) : null;
-        if (mobile != null && users.existsByMobileNumber(mobile)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.ok("Mobile number already registered", null));
+        String mobile = formatMobile(r.mobileNumber());
+        Optional<User> uOpt = mobile != null ? users.findByMobileNumberFlexible(mobile) : Optional.empty();
+        User u;
+        if (uOpt.isPresent()) {
+            u = uOpt.get();
+            if (r.name() != null && !r.name().isBlank()) u.setName(r.name().trim());
+            if (r.password() != null && !r.password().isBlank()) u.setPassword(encoder.encode(r.password()));
+            u = users.save(u);
+        } else {
+            u = users.save(User.builder()
+                    .name(r.name())
+                    .password(r.password() != null ? encoder.encode(r.password()) : null)
+                    .mobileNumber(mobile)
+                    .role(Role.USER)
+                    .status(AccountStatus.APPROVED)
+                    .build());
         }
-        if (users.existsByEmail(r.email().toLowerCase()))
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.ok("Email already registered", null));
-        User u = users.save(User.builder()
-                .name(r.name()).email(r.email().toLowerCase())
-                .password(encoder.encode(r.password())).mobileNumber(mobile != null ? mobile : r.mobileNumber())
-                .role(Role.USER).status(AccountStatus.APPROVED).build());
+        String token = jwt.create(u);
         return ResponseEntity.status(HttpStatus.CREATED).body(
-                ApiResponse.ok("Registration successful", new AuthToken(jwt.create(u), "Bearer", u.getId(), u.getRole().name())));
+                ApiResponse.ok("Registration successful",
+                        new AuthToken(token, "Bearer", u.getId(), u.getRole().name(), null))
+        );
     }
 
     @PostMapping("/login")
     ResponseEntity<ApiResponse<AuthToken>> login(@Valid @RequestBody LoginRequest r) {
-        User u = users.findByEmail(r.email().toLowerCase())
-                .or(() -> users.findByMobileNumber(formatMobile(r.email())))
+        String mobile = formatMobile(r.mobileNumber());
+        User u = users.findByMobileNumber(mobile)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         if (u.getStatus() != AccountStatus.APPROVED) { u.setStatus(AccountStatus.APPROVED); users.save(u); }
-        auth.authenticate(new UsernamePasswordAuthenticationToken(u.getEmail(), r.password()));
+        auth.authenticate(new UsernamePasswordAuthenticationToken(u.getMobileNumber(), r.password()));
         u.setLastLogin(Instant.now());
         users.save(u);
         return ResponseEntity.ok(ApiResponse.ok("Login successful",
-                new AuthToken(jwt.create(u), "Bearer", u.getId(), u.getRole().name())));
+                new AuthToken(jwt.create(u), "Bearer", u.getId(), u.getRole().name(), null)));
     }
 
     @GetMapping("/me")
     ResponseEntity<ApiResponse<User>> me(@AuthenticationPrincipal org.springframework.security.core.userdetails.User p) {
-        User u = users.findByEmail(p.getUsername())
-                .or(() -> users.findByMobileNumber(p.getUsername()))
+        User u = users.findByMobileNumberFlexible(p.getUsername())
                 .orElseThrow();
         return ResponseEntity.ok(ApiResponse.ok("Current user", u));
     }
@@ -205,15 +214,13 @@ public class AuthenticationController {
     ResponseEntity<ApiResponse<User>> updateProfile(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User p,
             @RequestBody Map<String, String> updates) {
-        User u = users.findByEmail(p.getUsername())
-                .or(() -> users.findByMobileNumber(p.getUsername()))
+        User u = users.findByMobileNumberFlexible(p.getUsername())
                 .orElseThrow();
         if (updates.containsKey("name") && !updates.get("name").isBlank()) u.setName(updates.get("name"));
         if (updates.containsKey("mobileNumber")) u.setMobileNumber(formatMobile(updates.get("mobileNumber")));
         if (updates.containsKey("address"))      u.setAddress(updates.get("address"));
         if (updates.containsKey("city"))         u.setCity(updates.get("city"));
         if (updates.containsKey("state"))        u.setState(updates.get("state"));
-        if (updates.containsKey("bio"))          u.setBio(updates.get("bio"));
         if (updates.containsKey("gender"))       u.setGender(updates.get("gender"));
         users.save(u);
         return ResponseEntity.ok(ApiResponse.ok("Profile updated", u));

@@ -12,12 +12,11 @@ import java.time.*;
 public class User {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
   @Column(nullable = false) private String name;
-  @Column(nullable = true) private String email;
   @Column(nullable = true) private String password;
   @Enumerated(EnumType.STRING) @Column(nullable = false, columnDefinition = "ENUM('ADMIN','USER','SHOP_OWNER','DELIVERY_PARTNER')") private Role role;
   @Enumerated(EnumType.STRING) @Column(nullable = false) private AccountStatus status;
   @Column(unique = true) private String mobileNumber;
-  private String profilePicture, address, city, state, country, pincode, gender, bio, gstNumber, panNumber;
+  private String profilePicture, address, city, state, pincode, gender, gstNumber, panNumber;
   private LocalDate dateOfBirth;
   @Column(nullable = false, updatable = false) private Instant createdAt;
   private Instant lastLogin;

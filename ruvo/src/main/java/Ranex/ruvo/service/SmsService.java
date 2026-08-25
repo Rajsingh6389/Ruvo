@@ -15,10 +15,10 @@ import java.util.Map;
 @Service
 public class SmsService {
 
-    @Value("${SMS_API_KEY:${sms.api-key:}}")
+    @Value("${sms.api-key:}")
     private String apiKey;
 
-    @Value("${SMS_PROVIDER:${sms.provider:fast2sms}}")
+    @Value("${sms.provider:fast2sms}")
     private String provider;
 
     private final RestTemplate restTemplate;

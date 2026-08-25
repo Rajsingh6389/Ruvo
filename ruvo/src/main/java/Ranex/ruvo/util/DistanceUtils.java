@@ -51,8 +51,16 @@ public class DistanceUtils {
 
     /** Flat platform fee charged on every order. */
     public static double calculatePlatformFee(double distanceKm) {
+    if (distanceKm <= 2) {
         return 5.0;
+    } else if (distanceKm <= 5) {
+        return 10.0;
+    } else if (distanceKm <= 10) {
+        return 15.0;
+    } else {
+        return 20.0;
     }
+}
 
     /** Returns false when the distance exceeds the delivery radius. */
     public static boolean isServiceable(double distanceKm) {

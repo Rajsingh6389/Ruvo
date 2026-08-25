@@ -91,4 +91,8 @@ public class Shop {
     @Builder.Default
     @Column(name = "settlement_blocked", nullable = false)
     private Boolean settlementBlocked = false;
+
+    @Builder.Default
+    @Column(name = "cod_blocked", nullable = false)
+    private Boolean codBlocked = false;
 }

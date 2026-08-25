@@ -14,7 +14,9 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     // Only available products for a shop (customer view alternative)
     List<Product> findByShopIdAndIsAvailableTrue(Long shopId);
+    
 
+    List<Product> findByCategoryAndIsAvailableTrue(String category);
     // Get all available products from all approved and active shops (Explore mode)
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Product p WHERE p.isAvailable = true AND p.shopId IN " +

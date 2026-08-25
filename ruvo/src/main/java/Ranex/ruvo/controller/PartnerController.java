@@ -61,11 +61,12 @@ public class PartnerController {
         Optional<DeliveryPartner> dpByPhone = deliveryPartnerRepository.findByPhone(username);
         if (dpByPhone.isPresent()) return dpByPhone.get();
 
-        Optional<User> uOpt = userRepository.findByEmail(username);
+        Optional<User> uOpt = userRepository.findByMobileNumberFlexible(username);
         if (uOpt.isPresent()) {
             User u = uOpt.get();
             if (u.getMobileNumber() != null) {
-                Optional<DeliveryPartner> dpByMobile = deliveryPartnerRepository.findByPhone(u.getMobileNumber());
+                Optional<DeliveryPartner> dpByMobile = deliveryPartnerRepository.findByPhone(u.getMobileNumber())
+                        .or(() -> deliveryPartnerRepository.findByUserId(u.getMobileNumber()));
                 if (dpByMobile.isPresent()) return dpByMobile.get();
             }
         }
@@ -74,15 +75,9 @@ public class PartnerController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest r) {
-        if (userRepository.existsByEmail(r.email().toLowerCase())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(ApiResponse.ok("Email already registered", null));
-        }
-
         User u = userRepository.save(User.builder()
                 .name(r.name())
-                .email(r.email().toLowerCase())
-                .password(encoder.encode(r.password()))
+                .password(r.password() != null ? encoder.encode(r.password()) : null)
                 .mobileNumber(r.mobileNumber())
                 .role(Role.DELIVERY_PARTNER)
                 .status(AccountStatus.APPROVED)
@@ -91,7 +86,7 @@ public class PartnerController {
 
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.ok("Partner registration successful",
-                        new AuthToken(jwt.create(u), "Bearer", u.getId(), u.getRole().name()))
+                        new AuthToken(jwt.create(u), "Bearer", u.getId(), u.getRole().name(), null))
         );
     }
 
@@ -105,7 +100,7 @@ public class PartnerController {
 
         if (principal != null) {
             String username = principal.getUsername();
-            Optional<User> uOpt = userRepository.findByEmail(username);
+            Optional<User> uOpt = userRepository.findByMobileNumberFlexible(username);
             if (uOpt.isPresent()) {
                 User u = uOpt.get();
                 u.setIsAvailable(available);
@@ -119,8 +114,9 @@ public class PartnerController {
             if (latitude != null) dp.setLatitude(latitude);
             if (longitude != null) dp.setLongitude(longitude);
             if (locationName != null && !locationName.isBlank()) dp.setLocationName(locationName);
-            dp.setLastActiveAt(Instant.now());
+            if (available) dp.setLastActiveAt(Instant.now());
             deliveryPartnerRepository.save(dp);
+            System.out.println("🟢 [PartnerController] Partner #" + dp.getId() + " (" + dp.getName() + ") toggled availability=" + available + ", lastActiveAt=" + dp.getLastActiveAt());
         }
 
         return ResponseEntity.ok(Map.of("success", true, "isAvailable", available));
@@ -165,7 +161,7 @@ public class PartnerController {
         if (dp == null) {
             // Fallback: try via User ID (legacy delivery records if any)
             try {
-                User partner = userRepository.findByEmail(principal.getUsername())
+                User partner = userRepository.findByMobileNumber(principal.getUsername())
                         .orElseThrow(() -> new RuntimeException("Partner not found"));
                 List<Delivery> allDeliveries = deliveryRepository.findByPartnerId(partner.getId());
                 List<Delivery> active = allDeliveries.stream()
@@ -211,7 +207,7 @@ public class PartnerController {
         }
 
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
         Long pId = dp != null ? dp.getId() : (partner != null ? partner.getId() : null);
 
         delivery.setPartnerId(pId);
@@ -242,7 +238,7 @@ public class PartnerController {
             @PathVariable Long id,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
 
         Delivery delivery = deliveryRepository.findById(id).orElse(null);
         if (delivery == null) {
@@ -276,7 +272,7 @@ public class PartnerController {
             @PathVariable Long id,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
 
         Delivery delivery = deliveryRepository.findById(id).orElse(null);
         if (delivery == null) {
@@ -314,7 +310,7 @@ public class PartnerController {
             @PathVariable Long id,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
 
         Delivery delivery = deliveryRepository.findById(id).orElse(null);
         if (delivery == null) {
@@ -354,7 +350,7 @@ public class PartnerController {
     public ResponseEntity<?> getEarnings(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
 
         Long partnerId = dp != null ? dp.getId() : (partner != null ? partner.getId() : null);
         if (partnerId == null) {
@@ -389,7 +385,7 @@ public class PartnerController {
     public ResponseEntity<List<Map<String, Object>>> getHistory(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
 
         Long partnerId = dp != null ? dp.getId() : (partner != null ? partner.getId() : null);
         if (partnerId == null) {
@@ -449,7 +445,7 @@ public class PartnerController {
             @PathVariable Long orderId,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        User partner = userRepository.findByEmail(principal.getUsername()).orElse(null);
+        User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
         Long partnerId = dp != null ? dp.getId() : (partner != null ? partner.getId() : null);
 
         Optional<Order> orderOpt = orderRepository.findById(orderId);

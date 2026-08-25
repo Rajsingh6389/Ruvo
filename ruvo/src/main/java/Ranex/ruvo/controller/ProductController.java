@@ -75,7 +75,7 @@ public class ProductController {
 
 
     // =========================================================
-    // Helper: Get current authenticated user's email
+    // Helper: Get current authenticated user's principal (mobile/identity)
     // =========================================================
 
     private String getCurrentPrincipal() {
@@ -116,8 +116,12 @@ public class ProductController {
         if (principal.startsWith("identity:")) {
             try {
                 Long identityId = Long.parseLong(principal.substring("identity:".length()));
-                return identityId.equals(shop.getAuthIdentityId()) ||
-                        String.valueOf(identityId).equals(shop.getOwnerId());
+                String identityIdStr = String.valueOf(identityId);
+                // Check authIdentityId first (set by ShopOwnerController and updated ShopController)
+                if (identityId.equals(shop.getAuthIdentityId())) return true;
+                // Fall back to ownerId comparison (for shops created before authIdentityId was added)
+                if (identityIdStr.equals(shop.getOwnerId())) return true;
+                return false;
             } catch (NumberFormatException ignored) {
                 return false;
             }

@@ -46,7 +46,6 @@ public class PartnerAdminController {
             item.put("name", user.getName());
             item.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
                     .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
-            item.put("email", user.getEmail());
             item.put("status", p.getVerificationStatus().name());
 
             if (vehicle.isPresent()) {

@@ -15,10 +15,10 @@ public class CloudinaryConfig {
     @Value("${cloudinary.cloud-name:qbm45y5k}")
     private String cloudName;
 
-    @Value("${CLOUDNARY_API_KEY:${CLOUDINARY_API_KEY:}}")
+    @Value("${cloudinary.api-key:867491741549424}")
     private String apiKey;
 
-    @Value("${CLOUDINARY_SECRET:}")
+    @Value("${cloudinary.api-secret:dummy_secret_fallback_key}")
     private String apiSecret;
 
     @Value("${CLOUDINARY_URL:}")

@@ -3,6 +3,7 @@ package Ranex.ruvo.jobs;
 import Ranex.ruvo.model.Settlement;
 import Ranex.ruvo.repository.SettlementRepository;
 import Ranex.ruvo.repository.ShopRepository;
+import Ranex.ruvo.service.RuvoCommissionService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,18 +18,21 @@ public class ScheduledSettlementJob {
 
     private final SettlementRepository settlementRepository;
     private final ShopRepository shopRepository;
+    private final RuvoCommissionService commissionService;
 
     public ScheduledSettlementJob(SettlementRepository settlementRepository,
-                                   ShopRepository shopRepository) {
+                                  ShopRepository shopRepository,
+                                  RuvoCommissionService commissionService) {
         this.settlementRepository = settlementRepository;
         this.shopRepository = shopRepository;
+        this.commissionService = commissionService;
     }
 
     /**
      * Runs every 15 minutes.
      * 1. Finds PENDING settlements past dueAt.
      * 2. Marks them OVERDUE.
-     * 3. Blocks associated shops.
+     * 3. Blocks associated shops for settlement.
      */
     @Scheduled(fixedRate = 900_000) // 15 minutes
     @Transactional
@@ -38,13 +42,11 @@ public class ScheduledSettlementJob {
 
         if (overdueSettlements.isEmpty()) return;
 
-        // Mark each OVERDUE
         for (Settlement s : overdueSettlements) {
             s.setStatus("OVERDUE");
             settlementRepository.save(s);
         }
 
-        // Group by shopId to decide which shops to block
         Map<Long, Long> shopOverdueCount = overdueSettlements.stream()
                 .collect(Collectors.groupingBy(Settlement::getShopId, Collectors.counting()));
 
@@ -57,6 +59,24 @@ public class ScheduledSettlementJob {
                 }
             });
         });
+    }
+
+    /**
+     * Runs every hour to manage RuVo commission 2-day cycles:
+     * 1. Closes cycles past cycleEnd
+     * 2. Marks unpaid closed cycles as OVERDUE after dueAt
+     * 3. Applies COD restriction on shops with overdue cycles past grace period
+     */
+    @Scheduled(fixedRate = 3_600_000) // 1 hour
+    @Transactional
+    public void processCommissionCycles() {
+        try {
+            commissionService.closeExpiredCycles();
+            commissionService.markOverdueCycles();
+            commissionService.applyCodRestrictions();
+        } catch (Exception e) {
+            System.err.println("[CommissionScheduler Error] " + e.getMessage());
+        }
     }
 
     /**

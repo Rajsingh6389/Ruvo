@@ -1,26 +1,28 @@
 package Ranex.ruvo.jobs;
 
 import Ranex.ruvo.model.DeliveryPartner;
+import Ranex.ruvo.model.User;
 import Ranex.ruvo.repository.DeliveryPartnerRepository;
+import Ranex.ruvo.repository.UserRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Automatically sets all currently-online delivery partners to OFFLINE at midnight every day.
  * This prevents partners from remaining online across day boundaries unintentionally.
- *
- * The partner app also has a corresponding client-side midnight timer that shows
- * an "Auto-Offline" banner so the partner is aware they were taken offline.
  */
 @Component
 public class ScheduledPartnerOfflineJob {
 
     private final DeliveryPartnerRepository deliveryPartnerRepository;
+    private final UserRepository userRepository;
 
-    public ScheduledPartnerOfflineJob(DeliveryPartnerRepository deliveryPartnerRepository) {
+    public ScheduledPartnerOfflineJob(DeliveryPartnerRepository deliveryPartnerRepository, UserRepository userRepository) {
         this.deliveryPartnerRepository = deliveryPartnerRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -37,6 +39,14 @@ public class ScheduledPartnerOfflineJob {
 
         for (DeliveryPartner partner : onlinePartners) {
             partner.setAvailable(false);
+            if (partner.getUserId() != null) {
+                Optional<User> uOpt = userRepository.findByMobileNumber(partner.getUserId())
+                        .or(() -> partner.getPhone() != null ? userRepository.findByMobileNumber(partner.getPhone()) : Optional.empty());
+                uOpt.ifPresent(u -> {
+                    u.setIsAvailable(false);
+                    userRepository.save(u);
+                });
+            }
         }
         deliveryPartnerRepository.saveAll(onlinePartners);
 

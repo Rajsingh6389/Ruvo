@@ -14,17 +14,19 @@ class AdminSeeder {
     @Bean
     CommandLineRunner admin(UserRepository users, PasswordEncoder encoder, PricingConfigRepository pricingRepo) {
         return a -> {
-            users.findByEmail("rajs1ngh@gmail.com").ifPresentOrElse(
+            String adminMobile = "9125474036";
+            users.findByMobileNumberFlexible(adminMobile).or(() -> users.findByMobileNumberFlexible("+916389550338")).ifPresentOrElse(
                 user -> {
                     user.setStatus(AccountStatus.APPROVED);
                     user.setRole(Role.ADMIN);
+                    user.setPassword(encoder.encode("Raj@9125"));
                     users.save(user);
                 },
                 () -> {
                     users.save(User.builder()
                         .name("RuVo Admin")
-                        .email("rajs1ngh@gmail.com")
-                        .password(encoder.encode("Raj@123"))
+                        .mobileNumber("+919125474036")
+                        .password(encoder.encode("Raj@9125"))
                         .role(Role.ADMIN)
                         .status(AccountStatus.APPROVED)
                         .build());

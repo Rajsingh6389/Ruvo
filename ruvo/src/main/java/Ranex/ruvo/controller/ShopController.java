@@ -8,6 +8,9 @@ import Ranex.ruvo.service.CloudinaryService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -107,7 +110,7 @@ public class ShopController {
     ) {
 
         List<Shop> shops =
-                shopRepository.findByApprovedTrueAndActiveTrue();
+                shopRepository.findAllApprovedAndActive();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -292,7 +295,7 @@ public class ShopController {
                 );
         // We filter manually here to minimize query changes if we want it active too, 
         // assuming standard category browse wants active shops:
-        shops = shops.stream().filter(Shop::getActive).toList();
+        shops = shops.stream().filter(s -> s.getActive() == null || s.getActive()).toList();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -337,6 +340,23 @@ public class ShopController {
             shop.setAddress((String) map.get("address"));
             shop.setPhone((String) map.get("phone"));
             shop.setOwnerId((String) map.get("ownerId"));
+
+            // Set authIdentityId from JWT so ProductController.ownsShop() can verify ownership
+            try {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.isAuthenticated()) {
+                    Object principal = auth.getPrincipal();
+                    String username;
+                    if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                        username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+                    } else {
+                        username = principal.toString();
+                    }
+                    if (username.startsWith("identity:")) {
+                        shop.setAuthIdentityId(Long.parseLong(username.substring("identity:".length())));
+                    }
+                }
+            } catch (NumberFormatException ignored) {}
 
             if (map.containsKey("upiId")) {
                 shop.setUpiId((String) map.get("upiId"));
