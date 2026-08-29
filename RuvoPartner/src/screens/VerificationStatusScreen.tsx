@@ -31,8 +31,8 @@ export const VerificationStatusScreen = () => {
         setVerificationStatus(data.data.profileStatus);
         setAdminReason(data.data.adminReason);
       }
-    } catch (err) {
-      console.log('Error checking status:', err);
+    } catch {
+      // Failed to check verification status
     } finally {
       setLoading(false);
     }

@@ -18,6 +18,7 @@ import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { sw, sh, sf } from '../../utils/responsive';
+import { RuvoFirstOrderPromoBanner } from '../../components/premium/RuvoFirstOrderPromoBanner';
 
 export default function CartScreen() {
   const { cartItems, updateQuantity, removeFromCart, cartTotal, clearCart } = useCart();
@@ -102,6 +103,7 @@ export default function CartScreen() {
         data={cartItems}
         renderItem={renderItem}
         keyExtractor={item => String(item.product.id ?? item.product.name)}
+        ListHeaderComponent={<RuvoFirstOrderPromoBanner compact={true} />}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />

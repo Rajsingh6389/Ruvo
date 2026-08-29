@@ -7,7 +7,20 @@ import React, {
 } from 'react';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { getUserProfile, User } from '../services/userService';
+import { checkHasShop } from '../services/shopService';
+
+
+// ── Onboarding status values ─────────────────────────────────────────────────
+// NEW                  → show Step 1 (shop details)
+// AADHAAR_PENDING      → show Step 2 (Aadhaar)
+// BANK_PENDING         → show Step 3 (bank)
+// FEE_PENDING          → show Step 4 (onboarding fee ₹0)
+// SHOP_SELECT_PENDING  → show Step 5 (shop visibility confirmation)
+// PENDING_APPROVAL     → show approval waiting screen (polls for admin approval)
+// APPROVED             → open main app
+export type OnboardingStatus = 'NEW' | 'AADHAAR_PENDING' | 'BANK_PENDING' | 'FEE_PENDING' | 'SHOP_SELECT_PENDING' | 'PENDING_APPROVAL' | 'APPROVED';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -16,243 +29,158 @@ interface AuthContextType {
   userId: string | null;
   user: User | null;
   requiredRole: string;
+  onboardingStatus: OnboardingStatus;
 
-  login: (
-    token: string,
-    userId: string,
-    role: string
-  ) => Promise<void>;
-
+  login: (token: string, userId: string, role: string) => Promise<void>;
   logout: () => Promise<void>;
+  setOnboardingStatus: (status: OnboardingStatus) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(
-  undefined
-);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({
   children,
-  requiredRole = 'USER',
+  requiredRole = 'SHOP_OWNER',
 }: {
   children: ReactNode;
   requiredRole?: string;
 }) => {
-  const [isAuthenticated, setIsAuthenticated] =
-    useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading,       setIsLoading]       = useState(true);
+  const [token,           setToken]           = useState<string | null>(null);
+  const [userId,          setUserId]          = useState<string | null>(null);
+  const [user,            setUser]            = useState<User | null>(null);
+  const [onboardingStatus, setOnboardingStatusState] =
+    useState<OnboardingStatus>('NEW');
 
-  const [isLoading, setIsLoading] =
-    useState(true);
+  // ── persist onboarding status ──────────────────────────────────────────────
+  const setOnboardingStatus = async (status: OnboardingStatus) => {
+    setOnboardingStatusState(status);
+    await AsyncStorage.setItem('shopOnboardingStatus', status);
+  };
 
-  const [token, setToken] =
-    useState<string | null>(null);
-
-  const [userId, setUserId] =
-    useState<string | null>(null);
-
-  const [user, setUser] =
-    useState<User | null>(null);
-
-  // =========================================================
-  // FETCH USER PROFILE
-  // =========================================================
-
+  // ── fetch user profile ─────────────────────────────────────────────────────
   const fetchUser = async (authToken: string) => {
     try {
-      console.log('RuVo: Fetching user profile...');
-
       const profile = await getUserProfile(authToken);
-
-      console.log('RuVo: User profile loaded');
-
       setUser(profile);
-    } catch (error) {
-      console.log(
-        'RuVo: Failed to fetch user profile:',
-        error
-      );
-
-      // Don't logout the user just because profile request failed.
+    } catch {
       setUser(null);
     }
   };
 
-  // =========================================================
-  // INITIALIZE AUTHENTICATION
-  // =========================================================
-
+  // ── initialize from storage ────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
-
-    const initializeAuth = async () => {
-      console.log('RuVo: Initializing authentication...');
-
+    const init = async () => {
       try {
-        const storedToken =
-          await AsyncStorage.getItem('authToken');
+        let storedToken = await SecureStore.getItemAsync('authToken');
+        if (!storedToken) {
+          storedToken = await AsyncStorage.getItem('authToken');
+          if (storedToken) {
+            await SecureStore.setItemAsync('authToken', storedToken);
+            await AsyncStorage.removeItem('authToken');
+          }
+        }
 
-        const storedUserId =
-          await AsyncStorage.getItem('userId');
-
-        const storedRole =
-          await AsyncStorage.getItem('userRole');
-
-        console.log(
-          'RuVo: Token:',
-          storedToken ? 'FOUND' : 'NOT FOUND'
-        );
-
-        console.log(
-          'RuVo: User ID:',
-          storedUserId || 'NOT FOUND'
-        );
-
-        console.log(
-          'RuVo: Role:',
-          storedRole || 'NOT FOUND'
-        );
+        const storedUserId   = await AsyncStorage.getItem('userId');
+        const storedRole     = await AsyncStorage.getItem('userRole');
+        const storedStatus   = await AsyncStorage.getItem('shopOnboardingStatus') as OnboardingStatus | null;
 
         if (!mounted) return;
 
         if (storedToken && storedRole === requiredRole) {
-          // Restore authentication immediately
           setToken(storedToken);
           setUserId(storedUserId);
           setIsAuthenticated(true);
-
-          // IMPORTANT:
-          // Stop the startup loader immediately.
-          // Don't wait for backend profile request.
+          // If we have a valid session but no saved onboarding status,
+          // the user completed onboarding in a prior install — default to
+          // APPROVED so they land in the main app, not Step 1.
+          setOnboardingStatusState(storedStatus ?? 'APPROVED');
           setIsLoading(false);
-
-          // Fetch profile in background
           if (requiredRole === 'USER') fetchUser(storedToken);
         } else {
-          // No saved login
-          setToken(null);
-          setUserId(null);
-          setUser(null);
-          setIsAuthenticated(false);
+          // Stale or mismatched session — clear everything so the user
+          // is sent to Login rather than landing on a broken state.
+          if (storedToken) {
+            await SecureStore.deleteItemAsync('authToken').catch(() => {});
+            await AsyncStorage.multiRemove(['userId', 'userRole', 'shopOnboardingStatus']).catch(() => {});
+          }
           setIsLoading(false);
         }
-      } catch (error) {
-        console.log(
-          'RuVo: Authentication initialization error:',
-          error
-        );
-
+      } catch {
         if (!mounted) return;
-
-        setToken(null);
-        setUserId(null);
-        setUser(null);
-        setIsAuthenticated(false);
         setIsLoading(false);
       }
     };
-
-    initializeAuth();
-
-    return () => {
-      mounted = false;
-    };
+    init();
+    return () => { mounted = false; };
   }, []);
 
-  // =========================================================
-  // LOGIN
-  // =========================================================
-
-  const login = async (
-    newToken: string,
-    newUserId: string,
-    role: string
-  ): Promise<void> => {
-    try {
-      if (role !== requiredRole) throw new Error(`This app requires a ${requiredRole} session.`);
-      await AsyncStorage.multiSet([
-        ['authToken', newToken],
-        ['userId', newUserId],
-        ['userRole', role],
-      ]);
-
-      setToken(newToken);
-      setUserId(newUserId);
-      setIsAuthenticated(true);
-
-      // Login is already successful.
-      // Don't keep AppNavigator in loading state.
-      setIsLoading(false);
-
-      // Load profile in background — don't block login completion
-      if (requiredRole === 'USER') fetchUser(newToken);
-    } catch (error) {
-      console.log(
-        'RuVo: Login state error:',
-        error
-      );
-
-      throw error;
+  // ── login ──────────────────────────────────────────────────────────────────
+  const login = async (newToken: string, newUserId: string, role: string) => {
+    if (role !== requiredRole) {
+      throw new Error(`This app requires a ${requiredRole} account.`);
     }
+    await SecureStore.setItemAsync('authToken', newToken);
+    await AsyncStorage.multiSet([
+      ['userId',   newUserId],
+      ['userRole', role],
+    ]);
+
+    // Determine the correct onboarding status:
+    // 1. If there is an in-progress onboarding status saved (user was mid-flow) → resume it.
+    // 2. If the user already has a shop on the backend → APPROVED (skip onboarding).
+    // 3. Otherwise → NEW (brand-new user, start onboarding from Step 1).
+    const storedStatus = await AsyncStorage.getItem('shopOnboardingStatus') as OnboardingStatus | null;
+
+    let resolvedStatus: OnboardingStatus;
+    if (storedStatus && storedStatus !== 'APPROVED') {
+      // User was mid-onboarding (e.g. AADHAAR_PENDING) — resume from where they left off.
+      resolvedStatus = storedStatus;
+    } else {
+      // Check backend: does this user already own a shop?
+      const hasShop = await checkHasShop(newUserId, newToken);
+      resolvedStatus = hasShop ? 'APPROVED' : 'NEW';
+      await AsyncStorage.setItem('shopOnboardingStatus', resolvedStatus);
+    }
+
+    setToken(newToken);
+    setUserId(newUserId);
+    setOnboardingStatusState(resolvedStatus);
+    setIsAuthenticated(true);
+    setIsLoading(false);
   };
 
-  // =========================================================
-  // LOGOUT
-  // =========================================================
 
-  const logout = async (): Promise<void> => {
+  // ── logout ─────────────────────────────────────────────────────────────────
+  const logout = async () => {
     try {
-      await AsyncStorage.multiRemove([
-        'authToken',
-        'userId',
-        'userRole',
-      ]);
-    } catch (error) {
-      console.log(
-        'RuVo: Error clearing auth storage:',
-        error
-      );
-    } finally {
+      await SecureStore.deleteItemAsync('authToken');
+      await AsyncStorage.multiRemove(['userId', 'userRole', 'shopOnboardingStatus']);
+    } catch { /* ignore */ } finally {
       setToken(null);
       setUserId(null);
       setUser(null);
+      setOnboardingStatusState('NEW');
       setIsAuthenticated(false);
       setIsLoading(false);
     }
   };
 
-  // =========================================================
-  // CONTEXT
-  // =========================================================
-
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        isLoading,
-        token,
-        userId,
-        user,
-        requiredRole,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{
+      isAuthenticated, isLoading, token, userId, user,
+      requiredRole, onboardingStatus,
+      login, logout, setOnboardingStatus,
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// =========================================================
-// useAuth HOOK
-// =========================================================
-
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error(
-      'useAuth must be used within an AuthProvider'
-    );
-  }
-
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
 };

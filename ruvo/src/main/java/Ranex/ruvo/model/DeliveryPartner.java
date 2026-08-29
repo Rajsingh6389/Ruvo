@@ -62,6 +62,10 @@ public class DeliveryPartner {
     @Column(name = "cashfree_vendor_id")
     private String cashfreeVendorId;
 
+    /** Comma-separated list of shop IDs selected by delivery partner during onboarding/settings */
+    @Column(name = "preferred_shop_ids", length = 1000)
+    private String preferredShopIds;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -1253,6 +1253,8 @@ import {
   ScrollView,
   RefreshControl,
   Image,
+  TextInput,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -1263,6 +1265,9 @@ import { useToast } from '../../context/ToastContext';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
 import { sw, sh, sf } from '../../utils/responsive';
+import { useOrderNotificationSound } from '../../hooks/useNotificationSound';
+import { NotificationPopup } from '../../components/NotificationPopup';
+import { ShopGalleryModal } from '../../components/ShopGalleryModal';
 
 const formatProductImageUrl = (url?: string) => {
   if (!url) return null;
@@ -1350,8 +1355,48 @@ export default function ShopkeeperDashboardScreen() {
 
   // Modals
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [shopGalleryImages, setShopGalleryImages] = useState<string[]>([]);
   const [partnerModalOrder, setPartnerModalOrder] = useState<Order | null>(null);
   const [assigningPartner, setAssigningPartner] = useState(false);
+
+  // 3D Card Animation & Pulse Hooks
+  const radarAnim = React.useRef(new Animated.Value(0)).current;
+  const tiltAnim = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  useEffect(() => {
+    // Continuous 3D radar pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(radarAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(radarAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [radarAnim]);
+
+  const handleCardPressIn = () => {
+    Animated.spring(tiltAnim, {
+      toValue: { x: 8, y: -6 },
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleCardPressOut = () => {
+    Animated.spring(tiltAnim, {
+      toValue: { x: 0, y: 0 },
+      friction: 5,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
 
   // Countdowns
   const [countdowns, setCountdowns] = useState<Record<number, string>>({});
@@ -1557,6 +1602,7 @@ export default function ShopkeeperDashboardScreen() {
       showToast('Broadcast sent to nearby partners', 'success');
       setPartnerModalOrder(null);
       setAssigningPartner(false);
+      setActiveTab('orders');
       fetchData();
     }, 600);
   };
@@ -1600,6 +1646,9 @@ export default function ShopkeeperDashboardScreen() {
   const pendingOrders = orders.filter(o => o.orderStatus === 'SHOP_PENDING');
   const activeDeliveries = orders.filter(o => ['DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.orderStatus));
   const completedOrders = orders.filter(o => o.orderStatus === 'DELIVERED');
+
+  // Notification sound + popup when new pending orders arrive
+  const { showPopup, popupMessage, dismissPopup } = useOrderNotificationSound(pendingOrders.length);
 
   // Realized Sales vs Pending COD Cash Breakdown
   // COD "cash to collect" = only orders that are actually in active delivery or delivered, COD, not yet settled
@@ -1675,6 +1724,14 @@ export default function ShopkeeperDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* New Order Notification Popup */}
+      <NotificationPopup
+        visible={showPopup}
+        message={popupMessage}
+        subtitle="Tap to view new orders"
+        onDismiss={dismissPopup}
+      />
+
       {/* Top App Header */}
       <View style={styles.topHeader}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
@@ -1685,6 +1742,15 @@ export default function ShopkeeperDashboardScreen() {
             {activeTab === 'dashboard' ? 'Dashboard' : 'My Orders'}
           </Text>
           <TouchableOpacity style={styles.shopSelectorBtn}>
+            {(shop?.logo_url || shop?.logoUrl) ? (
+              <Image
+                source={{ uri: formatProductImageUrl(shop?.logo_url || shop?.logoUrl)! }}
+                style={{ width: 22, height: 22, borderRadius: 11, marginRight: 6 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="storefront-outline" size={16} color="#10B981" style={{ marginRight: 4 }} />
+            )}
             <Text style={styles.shopSelectorText}>{shopName}</Text>
             <Ionicons name="chevron-down" size={16} color="#4B5563" />
           </TouchableOpacity>
@@ -1727,6 +1793,8 @@ export default function ShopkeeperDashboardScreen() {
               upiSales={upiSales}
               avgOrderValue={avgOrderValue}
               partners={partners}
+              galleryImages={shopGalleryImages}
+              onOpenGallery={() => setShowGalleryModal(true)}
               onNavigateOrders={() => setActiveTab('orders')}
               onNavigateProducts={() => navigation.navigate(ROUTES.MY_PRODUCTS as never, { shopId } as never)}
               onNavigateDelivery={() => setActiveTab('delivery')}
@@ -1785,6 +1853,9 @@ export default function ShopkeeperDashboardScreen() {
               partners={partners}
               orders={validOrders}
               onSettleCash={handleSettlePartnerCash}
+              onEditBank={() => navigation.navigate('EditBankAccount')}
+              shopId={shopId}
+              token={token}
             />
           )}
         </ScrollView>
@@ -1911,6 +1982,15 @@ export default function ShopkeeperDashboardScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Shop Photo Gallery Modal */}
+      <ShopGalleryModal
+        visible={showGalleryModal}
+        onClose={() => setShowGalleryModal(false)}
+        shopId={shopId || 1}
+        existingImages={shopGalleryImages}
+        onImagesUpdated={(imgs) => setShopGalleryImages(imgs)}
+      />
     </SafeAreaView>
   );
 }
@@ -1930,6 +2010,8 @@ function DashboardTabContent({
   upiSales,
   avgOrderValue,
   partners,
+  galleryImages = [],
+  onOpenGallery,
   onNavigateOrders,
   onNavigateProducts,
   onNavigateDelivery,
@@ -1944,30 +2026,51 @@ function DashboardTabContent({
       {/* Shop Info Card */}
       <View style={styles.shopCard}>
         <View style={styles.shopCardIconBox}>
-    {(shop?.logo_url || shop?.logoUrl) ? (
-      <Image
-        source={{
-          uri: formatProductImageUrl(shop?.logo_url || shop?.logoUrl)!,
-        }}
-        style={styles.shopLogoImage}
-        resizeMode="cover"
-      />
-    ) : (
-      <Ionicons name="storefront" size={28} color="#10B981" />
-    )}
-  </View>
+          {(shop?.logo_url || shop?.logoUrl) ? (
+            <Image
+              source={{
+                uri: formatProductImageUrl(shop?.logo_url || shop?.logoUrl)!,
+              }}
+              style={styles.shopLogoImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name="storefront" size={28} color="#10B981" />
+          )}
+        </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={styles.shopCardTitle}>{shopName}</Text>
             <View style={styles.openTag}><Text style={styles.openTagText}>OPEN</Text></View>
           </View>
-          <Text style={styles.shopCardSub}>Shop ID: #{shop?.id || '10245'}</Text>
-          <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }}>{shop?.address || 'Jaipur, Rajasthan'}</Text>
+          <Text style={styles.shopCardSub}>
+            {shop?.id ? `Shop ID: #${shop.id}` : 'Shop ID: Pending'}
+          </Text>
+          <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 2 }} numberOfLines={2}>
+            {shop?.address || (shop?.city ? `${shop.city}, ${shop.state || 'India'}` : 'Address Pending')}
+          </Text>
+
+          {/* GALLERY STRIP */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 }}
+            onPress={onOpenGallery}
+          >
+            <Ionicons name="images" size={14} color="#10B981" />
+            <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 12 }}>
+              Shop Gallery ({galleryImages.length > 0 ? galleryImages.length : 'Add Photos'})
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.shopSettingsBtn} onPress={onNavigateSettings}>
-          <Ionicons name="settings-outline" size={15} color="#374151" />
-          <Text style={styles.shopSettingsText}>Shop Settings</Text>
-        </TouchableOpacity>
+        <View style={{ gap: 8 }}>
+          <TouchableOpacity style={styles.shopSettingsBtn} onPress={onOpenGallery}>
+            <Ionicons name="images-outline" size={15} color="#10B981" />
+            <Text style={[styles.shopSettingsText, { color: '#10B981' }]}>Gallery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shopSettingsBtn} onPress={onNavigateSettings}>
+            <Ionicons name="settings-outline" size={15} color="#374151" />
+            <Text style={styles.shopSettingsText}>Settings</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Today's Overview */}
@@ -2335,6 +2438,7 @@ function FinancialsTabContent({
   partners = [],
   orders = [],
   onSettleCash,
+  onEditBank,
   shopId,
   token,
 }: any) {
@@ -2454,6 +2558,33 @@ function FinancialsTabContent({
           💡 UPI Instant Settlements are <Text style={{ fontWeight: '800' }}>Coming Soon</Text>! Use Cash Handover OTP.
         </Text>
       </View>
+
+      {/* Edit Bank Account CTA */}
+      <TouchableOpacity
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          backgroundColor: '#FFF',
+          borderWidth: 1.5,
+          borderColor: '#10B981',
+          borderRadius: 12,
+          paddingVertical: 13,
+          paddingHorizontal: 16,
+          marginBottom: 16,
+        }}
+        onPress={onEditBank}
+        activeOpacity={0.8}
+      >
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="wallet-outline" size={20} color="#10B981" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>Edit Bank Account Details</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Update account number, IFSC, bank name or UPI ID</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color="#10B981" />
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Shopkeeper Settlement Summary</Text>
       

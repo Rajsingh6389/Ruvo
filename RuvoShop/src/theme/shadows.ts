@@ -1,30 +1,43 @@
+/**
+ * Elevation scale — warm-tinted, soft shadows.
+ *
+ * Pure-black shadows over a warm cream surface read as grime rather than depth.
+ * The tint pulls from the RuVo forest (#0B1F1A) so shadows sit in the same
+ * colour family as the surfaces casting them.
+ */
+const SHADOW_TINT = '#0B1F1A';
+
 export const SHADOWS = {
+  /** Resting cards / list rows. */
   sm: {
-    shadowColor: '#000',
+    shadowColor: SHADOW_TINT,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 1,
   },
+  /** Default card elevation — product cards, info panels. */
   md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowColor: SHADOW_TINT,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
     elevation: 3,
   },
+  /** Raised cards, hero surfaces, sticky bars. */
   lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
-  },
-  xl: {
-    shadowColor: '#000',
+    shadowColor: SHADOW_TINT,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.37,
-    shadowRadius: 7.49,
+    shadowOpacity: 0.10,
+    shadowRadius: 18,
+    elevation: 6,
+  },
+  /** Floating layers — modals, toasts, FABs. */
+  xl: {
+    shadowColor: SHADOW_TINT,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 28,
     elevation: 12,
   },
   none: {
@@ -35,3 +48,5 @@ export const SHADOWS = {
     elevation: 0,
   },
 };
+
+export type ShadowToken = keyof typeof SHADOWS;

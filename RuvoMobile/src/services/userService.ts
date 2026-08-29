@@ -3,7 +3,6 @@ import { API_BASE_URL } from '../config/api';
 export interface User {
   id: number;
   name: string;
-  email: string;
   mobileNumber: string;
   role: string;
   status: string;
@@ -25,7 +24,6 @@ export interface UpdateProfileInput {
   address?: string;
   city?: string;
   state?: string;
-  bio?: string;
   gender?: string;
 }
 

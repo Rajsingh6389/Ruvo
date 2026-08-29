@@ -6,245 +6,229 @@ import {
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT = '#ECFDF5';
-const TEXT_DARK = '#0F172A';
-const TEXT_MUTED = '#64748B';
-const CARD_BG = '#FFFFFF';
-const BORDER_COLOR = '#E2E8F0';
-
 export const ProfileScreen = () => {
-  const { colors } = useTheme();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
   const { user, logout, verificationStatus } = useAuth();
   const navigation = useNavigation<any>();
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out of your delivery partner account?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out of your delivery partner account?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: async () => { await logout(); } },
+      ],
+    );
   };
 
   const isApproved = verificationStatus === 'APPROVED';
+  const userName = user?.name || 'Delivery Partner';
+  const initials = userName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: '#F8FAFC' }]}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Account & Profile</Text>
-        <Text style={styles.headerSub}>Manage your driver details and security.</Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* ── HEADER ─────────────────────────────────────────────── */}
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+        <Text style={[typography.headingL, { color: colors.textPrimary }]}>Account</Text>
+        <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
+          Manage your partner details and security
+        </Text>
       </View>
 
-      <View style={styles.content}>
-        {/* Driver Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarBox}>
-            <Ionicons name="person" size={38} color={PRIMARY_EMERALD} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.gutter }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── PROFILE CARD ────────────────────────────────────── */}
+        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.md]}>
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primary, borderRadius: radius.pill }]}>
+            <Text style={styles.avatarText}>{initials}</Text>
           </View>
-          <Text style={styles.nameText}>{user?.name || 'Delivery Partner'}</Text>
-          <Text style={styles.roleText}>RuVo Verified Delivery Partner</Text>
-
-          <View
-            style={[
-              styles.statusPill,
-              { backgroundColor: isApproved ? EMERALD_LIGHT : '#FEF2F2' },
-            ]}
-          >
-            <Ionicons
-              name={isApproved ? 'checkmark-circle' : 'time'}
-              size={14}
-              color={isApproved ? PRIMARY_EMERALD : '#EF4444'}
-            />
-            <Text
-              style={[
-                styles.statusPillText,
-                { color: isApproved ? PRIMARY_EMERALD : '#EF4444' },
-              ]}
-            >
-              {verificationStatus.replaceAll('_', ' ')}
+          <View style={styles.profileInfo}>
+            <Text style={[typography.headingM, { color: colors.textPrimary }]} numberOfLines={1}>
+              {userName}
             </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+              RuVo Delivery Partner
+            </Text>
+            <View style={[
+              styles.statusPill,
+              {
+                backgroundColor: isApproved ? colors.successSoft : colors.warningSoft,
+                borderRadius: radius.xs,
+              },
+            ]}>
+              <Ionicons
+                name={isApproved ? 'checkmark-circle' : 'time'}
+                size={12}
+                color={isApproved ? colors.success : '#D97706'}
+              />
+              <Text style={[typography.overline, {
+                color: isApproved ? colors.success : '#B45309',
+                fontSize: 10,
+                fontWeight: '700',
+              }]}>
+                {verificationStatus?.replaceAll?.('_', ' ') ?? 'Pending'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        {/* Section 1: Personal Info */}
-        <Text style={styles.sectionTitle}>Personal Details</Text>
-        <View style={styles.infoBox}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Mobile Number</Text>
-            <Text style={styles.infoVal}>{user?.mobileNumber || 'N/A'}</Text>
-          </View>
+        {/* ── PERSONAL INFO ────────────────────────────────────── */}
+        <SectionTitle title="Personal Details" colors={colors} typography={typography} />
+        <InfoBox colors={colors} radius={radius} shadows={shadows}>
+          <InfoRow label="Mobile Number" value={user?.mobileNumber || 'N/A'} colors={colors} typography={typography} />
+          <InfoRow label="Role" value="Partner Driver" colors={colors} typography={typography} divider />
+        </InfoBox>
 
-          <View style={[styles.infoRow, styles.borderTop]}>
-            <Text style={styles.infoLabel}>Role</Text>
-            <Text style={styles.infoVal}>Partner Driver</Text>
-          </View>
-        </View>
-
-        {/* Section 2: Vehicle Info */}
-        <Text style={styles.sectionTitle}>Assigned Vehicle</Text>
-        <View style={styles.infoBox}>
+        {/* ── VEHICLE ──────────────────────────────────────────── */}
+        <SectionTitle title="Assigned Vehicle" colors={colors} typography={typography} />
+        <InfoBox colors={colors} radius={radius} shadows={shadows}>
           {user?.vehicle ? (
             <>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Vehicle Type</Text>
-                <Text style={styles.infoVal}>{user.vehicle.vehicleType}</Text>
-              </View>
-              <View style={[styles.infoRow, styles.borderTop]}>
-                <Text style={styles.infoLabel}>Registration Number</Text>
-                <Text style={styles.infoVal}>{user.vehicle.vehicleNumber}</Text>
-              </View>
+              <InfoRow label="Vehicle Type" value={user.vehicle.vehicleType} colors={colors} typography={typography} />
+              <InfoRow label="Registration" value={user.vehicle.vehicleNumber} colors={colors} typography={typography} divider />
             </>
           ) : (
-            <Text style={styles.noVehicleText}>Vehicle details have not been submitted.</Text>
+            <Text style={[typography.body, { color: colors.textSecondary, paddingVertical: 14 }]}>
+              Vehicle details have not been submitted.
+            </Text>
           )}
-        </View>
+        </InfoBox>
 
-        {/* Section 3: Security */}
-        <Text style={styles.sectionTitle}>Security & Access</Text>
-        <View style={styles.infoBox}>
+        {/* ── SECURITY ─────────────────────────────────────────── */}
+        <SectionTitle title="Security & Access" colors={colors} typography={typography} />
+        <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
           <TouchableOpacity
             style={styles.infoRow}
             onPress={() => navigation.navigate('ActiveDevices')}
             activeOpacity={0.7}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Ionicons name="shield-checkmark-outline" size={20} color={PRIMARY_EMERALD} />
-              <Text style={styles.securityText}>Active Devices & Login Sessions</Text>
+            <View style={[styles.menuIcon, { backgroundColor: colors.primarySoft, borderRadius: radius.sm }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
             </View>
-            <Ionicons name="chevron-forward" size={18} color={TEXT_MUTED} />
+            <Text style={[typography.bodyStrong, { color: colors.textPrimary, flex: 1 }]}>
+              Active Devices & Sessions
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.border} />
           </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
+        {/* ── LOGOUT ───────────────────────────────────────────── */}
         <TouchableOpacity
-          style={styles.logoutBtn}
+          style={[styles.logoutBtn, {
+            backgroundColor: colors.errorSoft,
+            borderColor: colors.error + '30',
+            borderRadius: radius.card,
+          }]}
           onPress={handleLogout}
           activeOpacity={0.85}
         >
-          <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-          <Text style={styles.logoutText}>Sign Out Account</Text>
+          <Ionicons name="log-out-outline" size={20} color={colors.error} />
+          <Text style={[typography.button, { color: colors.error }]}>Sign Out Account</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 52 },
-  contentContainer: { paddingBottom: 40 },
+// ── Sub-components ──────────────────────────────────────────────────────────
+const SectionTitle = ({ title, colors, typography }: any) => (
+  <Text style={[
+    typography.label,
+    { color: colors.textHint, fontSize: 11, letterSpacing: 0.8, marginBottom: 8, marginLeft: 2 },
+  ]}>
+    {title}
+  </Text>
+);
 
+const InfoBox = ({ children, colors, radius, shadows }: any) => (
+  <View style={[
+    styles.infoBox,
+    { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, marginBottom: 20 },
+    shadows.sm,
+  ]}>
+    {children}
+  </View>
+);
+
+const InfoRow = ({ label, value, colors, typography, divider }: any) => (
+  <View style={[styles.infoRow, divider && { borderTopWidth: 1, borderTopColor: colors.surfaceSunken }]}>
+    <Text style={[typography.body, { color: colors.textSecondary, fontSize: 13 }]}>{label}</Text>
+    <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>{value}</Text>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: '#FFF',
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: BORDER_COLOR,
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
-  headerSub: { marginTop: 4, color: TEXT_MUTED, fontSize: 13 },
-
-  content: { padding: 16 },
+  scrollContent: { paddingTop: 20, paddingBottom: 40 },
 
   profileCard: {
-    backgroundColor: CARD_BG,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
+    gap: 14,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
-  avatarBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: EMERALD_LIGHT,
-    justifyContent: 'center',
+  avatarCircle: {
+    width: 56,
+    height: 56,
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
   },
-  nameText: { fontSize: 18, fontWeight: '800', color: TEXT_DARK },
-  roleText: { fontSize: 12, color: TEXT_MUTED, marginTop: 2, fontWeight: '500' },
+  avatarText: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
+  profileInfo: { flex: 1 },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    marginTop: 12,
-  },
-  statusPillText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    color: TEXT_MUTED,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    marginLeft: 4,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
   },
 
   infoBox: {
-    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 16,
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   infoRow: {
-    paddingVertical: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 14,
+    gap: 12,
   },
-  borderTop: {
-    borderTopWidth: 1,
-    borderTopColor: BORDER_COLOR,
+  menuIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  infoLabel: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500' },
-  infoVal: { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
-  securityText: { fontSize: 14, fontWeight: '600', color: TEXT_DARK },
-  noVehicleText: { color: TEXT_MUTED, fontSize: 13, paddingVertical: 14 },
 
   logoutBtn: {
-    borderWidth: 1.5,
-    borderColor: '#FCA5A5',
-    borderRadius: 14,
-    paddingVertical: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FEF2F2',
-    marginTop: 8,
+    paddingVertical: 14,
+    borderWidth: 1,
+    marginTop: 4,
   },
-  logoutText: { fontSize: 15, fontWeight: '800', color: '#EF4444' },
 });
-

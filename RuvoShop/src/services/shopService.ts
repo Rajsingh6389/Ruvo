@@ -50,11 +50,17 @@ export async function registerShop(input: NewShopInput, token: string): Promise<
   return parseOrThrow(res);
 }
 
-export async function uploadShop(shopInput: any, logo: any, banner: any, token: string): Promise<Shop> {
+export async function uploadShop(
+  shopInput: any,
+  logo: any,
+  banner: any,
+  token: string,
+  galleryImages?: any[],
+): Promise<Shop> {
   const formData = new FormData();
-  
+
   formData.append('shop', JSON.stringify(shopInput));
-  
+
   if (logo) {
     formData.append('logo', {
       uri: logo.uri,
@@ -69,6 +75,18 @@ export async function uploadShop(shopInput: any, logo: any, banner: any, token: 
       name: banner.fileName || `banner_${Date.now()}.jpg`,
       type: banner.type || 'image/jpeg',
     } as any);
+  }
+
+  // Append each gallery photo as a separate "images" field — the backend
+  // reads MultipartFile[] images and uploads them all to Cloudinary.
+  if (galleryImages && galleryImages.length > 0) {
+    galleryImages.forEach((img, index) => {
+      formData.append('images', {
+        uri: img.uri,
+        name: img.fileName || `gallery_${Date.now()}_${index}.jpg`,
+        type: img.type || 'image/jpeg',
+      } as any);
+    });
   }
 
   try {
@@ -90,6 +108,19 @@ export async function getMyShops(ownerId: string, token: string): Promise<Shop[]
     { headers: { Authorization: `Bearer ${token}` } },
   );
   return parseOrThrow(res);
+}
+
+/** Returns true if the user already owns at least one shop.
+ *  Used by AuthContext.login() to skip onboarding for returning users. */
+export async function checkHasShop(ownerId: string, token: string): Promise<boolean> {
+  try {
+    const shops = await getMyShops(ownerId, token);
+    return Array.isArray(shops) && shops.length > 0;
+  } catch {
+    // If the request fails (network error, cold-start), assume no shop so
+    // onboarding can be shown — safer than accidentally sending new users to main app.
+    return false;
+  }
 }
 
 export async function getApprovedShops(): Promise<Shop[]> {

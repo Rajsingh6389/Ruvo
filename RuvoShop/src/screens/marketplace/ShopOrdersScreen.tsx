@@ -238,12 +238,13 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -253,6 +254,8 @@ import { useAuth } from '../../context/AuthContext';
 import { Order } from '../../types/order';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
+import { OfflineBar } from '../../components/OfflineBar';
+import { OrderSkeleton } from '../../components/OrderSkeleton';
 
 type OrderStatus =
   | 'SHOP_PENDING'
@@ -281,8 +284,8 @@ export default function ShopOrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [processingOrderId, setProcessingOrderId] =
-    useState<number | null>(null);
+  const [processingOrderId, setProcessingOrderId] = useState<number | null>(null);
+  const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'BROADCASTED' | 'COMPLETED' | 'CANCELLED'>('ALL');
 
   // --------------------------------------------------
   // FETCH SHOP ORDERS
@@ -515,7 +518,11 @@ export default function ShopOrdersScreen() {
       case 'READY':
         return '#7C3AED';
 
+      case 'DELIVERY_BROADCASTED':
       case 'DELIVERY_ASSIGNMENT':
+      case 'WAITING_PARTNER':
+      case 'BROADCASTED':
+      case 'SEARCHING_PARTNER':
         return '#EA580C';
 
       case 'DELIVERY_ASSIGNED':
@@ -530,6 +537,9 @@ export default function ShopOrdersScreen() {
 
       case 'CANCELLED':
       case 'SHOP_REJECTED':
+      case 'CANCELLED_NO_PARTNER_FOUND':
+      case 'CANCELLED_BY_SHOP':
+      case 'SHOP_TIMEOUT':
         return '#DC2626';
 
       default:
@@ -549,7 +559,11 @@ export default function ShopOrdersScreen() {
       case 'READY':
         return '#EDE9FE';
 
+      case 'DELIVERY_BROADCASTED':
       case 'DELIVERY_ASSIGNMENT':
+      case 'WAITING_PARTNER':
+      case 'BROADCASTED':
+      case 'SEARCHING_PARTNER':
         return '#FFEDD5';
 
       case 'DELIVERY_ASSIGNED':
@@ -564,6 +578,9 @@ export default function ShopOrdersScreen() {
 
       case 'CANCELLED':
       case 'SHOP_REJECTED':
+      case 'CANCELLED_NO_PARTNER_FOUND':
+      case 'CANCELLED_BY_SHOP':
+      case 'SHOP_TIMEOUT':
         return '#FEE2E2';
 
       default:
@@ -573,7 +590,10 @@ export default function ShopOrdersScreen() {
 
   const formatStatus = (status?: string) => {
     if (!status) return 'UNKNOWN';
-
+    if (['DELIVERY_BROADCASTED', 'DELIVERY_ASSIGNMENT', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER'].includes(status)) {
+      return '📡 Broadcasting Order';
+    }
+    if (status === 'CANCELLED_NO_PARTNER_FOUND') return 'No Partner Available';
     return status
       .replace(/_/g, ' ')
       .replace(/\b\w/g, char => char.toUpperCase());
@@ -1053,23 +1073,48 @@ export default function ShopOrdersScreen() {
   // SCREEN
   // --------------------------------------------------
 
+  const filteredOrders = orders.filter((o) => {
+    const st = o.orderStatus || '';
+    if (filterTab === 'PENDING') return st === 'SHOP_PENDING';
+    if (filterTab === 'BROADCASTED')
+      return [
+        'DELIVERY_BROADCASTED',
+        'DELIVERY_ASSIGNMENT',
+        'WAITING_PARTNER',
+        'BROADCASTED',
+        'SEARCHING_PARTNER',
+        'SHOP_ACCEPTED',
+        'PREPARING',
+        'READY',
+        'DELIVERY_ASSIGNED',
+        'PICKED_UP',
+        'OUT_FOR_DELIVERY',
+      ].includes(st);
+    if (filterTab === 'COMPLETED') return st === 'DELIVERED';
+    if (filterTab === 'CANCELLED')
+      return [
+        'CANCELLED',
+        'SHOP_REJECTED',
+        'CANCELLED_NO_PARTNER_FOUND',
+        'CANCELLED_BY_SHOP',
+        'SHOP_TIMEOUT',
+      ].includes(st);
+    return true;
+  });
+
   return (
     <SafeAreaView
       style={[
         styles.container,
-        {
-          backgroundColor:
-            colors.background,
-        },
+        { backgroundColor: colors.background },
       ]}
     >
+      <OfflineBar />
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() =>
-            navigation.goBack()
-          }
+          onPress={() => navigation.goBack()}
         >
           <Ionicons
             name="arrow-back"
@@ -1094,7 +1139,7 @@ export default function ShopOrdersScreen() {
               { color: colors.textSecondary },
             ]}
           >
-            {orders.length} orders
+            {filteredOrders.length} orders
           </Text>
         </View>
 
@@ -1112,22 +1157,43 @@ export default function ShopOrdersScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* FILTER TABS */}
+      <View style={{ backgroundColor: colors.card, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+          {[
+            { key: 'ALL', label: `All (${orders.length})` },
+            { key: 'PENDING', label: `Pending (${orders.filter(o => o.orderStatus === 'SHOP_PENDING').length})` },
+            { key: 'BROADCASTED', label: `Broadcasted & Active (${orders.filter(o => ['DELIVERY_BROADCASTED', 'DELIVERY_ASSIGNMENT', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.orderStatus || '')).length})` },
+            { key: 'COMPLETED', label: `Completed (${orders.filter(o => o.orderStatus === 'DELIVERED').length})` },
+            { key: 'CANCELLED', label: `Cancelled (${orders.filter(o => ['CANCELLED', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(o.orderStatus || '')).length})` },
+          ].map((tab) => {
+            const active = filterTab === tab.key;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setFilterTab(tab.key as any)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: active ? colors.primary : colors.surfaceSunken,
+                  borderWidth: 1,
+                  borderColor: active ? colors.primary : colors.border,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: active ? '700' : '500', color: active ? colors.onPrimary : colors.textSecondary }}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
       {/* CONTENT */}
       {loading && orders.length === 0 ? (
-        <View style={styles.center}>
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-          />
-
-          <Text
-            style={[
-              styles.loadingText,
-              { color: colors.textSecondary },
-            ]}
-          >
-            Loading orders...
-          </Text>
+        <View style={{ padding: 16 }}>
+          <OrderSkeleton count={4} />
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -1163,7 +1229,7 @@ export default function ShopOrdersScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      ) : orders.length === 0 ? (
+      ) : filteredOrders.length === 0 ? (
         <View style={styles.center}>
           <Ionicons
             name="receipt-outline"
@@ -1177,7 +1243,7 @@ export default function ShopOrdersScreen() {
               { color: colors.textPrimary },
             ]}
           >
-            No Orders Yet
+            No Orders Found
           </Text>
 
           <Text
@@ -1186,12 +1252,12 @@ export default function ShopOrdersScreen() {
               { color: colors.textSecondary },
             ]}
           >
-            New customer orders will appear here.
+            No orders match the selected filter.
           </Text>
         </View>
       ) : (
         <FlatList
-          data={orders}
+          data={filteredOrders}
           keyExtractor={item =>
             String(item.id)
           }
@@ -1228,7 +1294,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
 
   backButton: {
@@ -1424,7 +1489,7 @@ const styles = StyleSheet.create({
   },
 
   acceptBtn: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#173F35',
   },
 
   acceptBtnText: {

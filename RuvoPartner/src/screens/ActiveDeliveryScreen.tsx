@@ -19,6 +19,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { Delivery, partnerService } from '../services/partnerService';
+import { OfflineBar } from '../components/OfflineBar';
+import { OrderSkeleton } from '../components/OrderSkeleton';
 
 const PRIMARY_EMERALD = '#059669';
 const EMERALD_LIGHT = '#ECFDF5';
@@ -113,8 +115,10 @@ export const ActiveDeliveryScreen = () => {
 
   if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={PRIMARY_EMERALD} />
+      <View style={[styles.page, { backgroundColor: '#F8FAFC', padding: 16 }]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+        <OfflineBar />
+        <OrderSkeleton count={2} />
       </View>
     );
 
@@ -133,6 +137,7 @@ export const ActiveDeliveryScreen = () => {
   return (
     <View style={[styles.page, { backgroundColor: '#F8FAFC' }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <OfflineBar />
 
       {/* Header */}
       <View style={styles.header}>

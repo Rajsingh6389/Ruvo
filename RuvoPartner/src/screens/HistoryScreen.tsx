@@ -71,8 +71,8 @@ export const HistoryScreen = () => {
       if (!res.ok) throw new Error('Failed to load history.');
       const data: HistoryItem[] = await res.json();
       setHistory(data);
-    } catch (err) {
-      console.log('Error loading history:', err);
+    } catch {
+      // Failed to load history
     } finally {
       setLoading(false);
       setRefreshing(false);

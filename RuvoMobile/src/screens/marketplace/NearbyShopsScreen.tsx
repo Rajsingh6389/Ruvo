@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -10,590 +10,508 @@ import {
   View,
   Platform,
   StatusBar,
-  LayoutAnimation,
-  UIManager,
+  Dimensions,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ROUTES } from '../../constants/routes';
 import { useTheme } from '../../context/ThemeContext';
-import { Card } from '../../components/Card';
-import { Layout } from '../../components/Layout';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { getNearbyShops, getShops } from '../../services/shopService';
+import { getProductsByShop } from '../../services/productService';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { formatDistance, getDistanceInKm } from '../../utils/distanceUtils';
 import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
-import { sw, sh, sf } from '../../utils/responsive';
 
-// Dynamic category list from backend shops
-const buildCategoryList = (shops: Shop[]): string[] => {
-  const seen = new Set<string>();
-  shops.forEach(shop => {
-    if (shop.category) seen.add(shop.category);
-  });
-  return ['All Shops', ...Array.from(seen).sort()];
-};
+type NearbyShopsRouteProp = RouteProp<RootStackParamList, 'NearbyShops'>;
+import { SHOP_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, GROCERY_IMAGES, getCategoryImage } from '../../assets/cloudinary';
 
-// Fields like rating/deliveryFee/minOrder/eta aren't on the current Shop type.
-// Read them defensively so this compiles today and picks up real data
-// automatically once the backend/type includes them.
-const getShopExtra = (shop: Shop) => {
-  const anyShop = shop as any;
-  return {
-    rating: typeof anyShop.rating === 'number' ? anyShop.rating : null,
-    reviewCount: typeof anyShop.reviewCount === 'number' ? anyShop.reviewCount : null,
-    deliveryFee: typeof anyShop.deliveryFee === 'number' ? anyShop.deliveryFee : 0,
-    minOrder: typeof anyShop.minOrder === 'number' ? anyShop.minOrder : null,
-    etaMinutes: Array.isArray(anyShop.etaMinutes) ? anyShop.etaMinutes : null,
-    isOpen: typeof anyShop.isOpen === 'boolean' ? anyShop.isOpen : true,
-  };
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const FREE_DELIVERY_THRESHOLD = 299;
+// ── Default Mock Shops with 3D Assets for Demonstration ────
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
-const NearbyShopsScreen = () => {
-  const { colors } = useTheme();
+export const NearbyShopsScreen = () => {
+  const { colors, theme, toggleTheme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<NearbyShopsRouteProp>();
+  const categoryFilter = (route.params as any)?.category as string | undefined;
+  const { location: userLocation, refreshFromGps } = useDeliveryLocation();
+  const { cartItems, addToCart, cartTotal } = useCart();
 
-  const [shops, setShops] = useState<Shop[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [shops, setShops] = useState<any[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<number | string | null>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [loading, setLoading] = useState(false);
+  const [shopsLoading, setShopsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const {
-    location: userLocation,
-    isLoading: isFetchingLocation,
-    refreshFromGps,
-  } = useDeliveryLocation();
-
-  const [activeCategory, setActiveCategory] = useState('All Shops');
-
-  const loadShops = useCallback(async (isRefresh = false) => {
-    isRefresh ? setIsRefreshing(true) : setIsLoading(true);
+  // Load shops from backend, optionally filtered by category
+  const loadData = useCallback(async () => {
+    setShopsLoading(true);
     try {
-      // The backend is the source of truth for the 5 km service radius.
-      // Without a delivery location we can only show the general marketplace.
       const data = userLocation
         ? await getNearbyShops(userLocation.latitude, userLocation.longitude, 5)
         : await getShops();
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShops(data || []);
-      setLoadError(null);
-    } catch (error) {
-      console.error('Failed to load shops', error);
-      setLoadError('Could not load nearby shops. Please check your connection.');
+      let all: any[] = Array.isArray(data) ? data : [];
+
+      const merged = all.map((s, idx) => {
+        const validBanner = s.bannerUrl && typeof s.bannerUrl === 'string' && s.bannerUrl.trim().length > 0 ? s.bannerUrl : null;
+        const validLogo = s.logoUrl && typeof s.logoUrl === 'string' && s.logoUrl.trim().length > 0 ? s.logoUrl : null;
+        const catImg = getCategoryImage(s.category || '');
+        const fallbackImg = SHOP_IMAGES.freshMart;
+
+        return {
+          ...s,
+          tag: s.category || 'Store',
+          subtitle: s.address || 'Groceries & Daily Essentials',
+          rating: s.rating ?? 4.5,
+          eta: '20-25 mins',
+          dist: s.distanceKm ? `${s.distanceKm} km` : '0.5 km',
+          image: validBanner || validLogo || catImg || fallbackImg,
+        };
+      });
+
+      // Filter by category if provided; fall back to all if none match
+      let displayed = merged;
+      if (categoryFilter) {
+        const filtered = merged.filter(s =>
+          s.category?.toLowerCase().includes(categoryFilter.toLowerCase()) ||
+          s.tag?.toLowerCase().includes(categoryFilter.toLowerCase())
+        );
+        displayed = filtered.length > 0 ? filtered : merged;
+      }
+
+      setShops(displayed);
+      if (displayed.length > 0) setSelectedShopId(displayed[0].id);
+    } catch {
+      setShops([]);
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      setShopsLoading(false);
     }
-  }, [userLocation]);
+  }, [userLocation, categoryFilter]);
 
   useFocusEffect(
     useCallback(() => {
-      loadShops();
-    }, [loadShops]),
+      loadData();
+    }, [loadData])
   );
 
-  const categories = useMemo(() => buildCategoryList(shops), [shops]);
-
-  const sortedByDistance = useMemo(() => {
-    const filtered =
-      activeCategory === 'All Shops'
-        ? shops
-        : shops.filter(shop => shop.category === activeCategory);
-
-    if (!userLocation) return filtered;
-
-    return [...filtered].sort((a, b) => {
-      const da = getDistanceInKm(userLocation, a) ?? Number.POSITIVE_INFINITY;
-      const db = getDistanceInKm(userLocation, b) ?? Number.POSITIVE_INFINITY;
-      return da - db;
-    });
-  }, [activeCategory, shops, userLocation]);
-
-  const visibleShops = sortedByDistance;
-
-  const renderShop = (shop: Shop, index: number) => {
-    const distance = userLocation ? getDistanceInKm(userLocation, shop) : null;
-    const distanceLabel = formatDistance(distance);
-    const extra = getShopExtra(shop);
-    const isNearest = index === 0 && !!userLocation && !!distance;
-
-    return (
-      <Card
-        key={String(shop.id)}
-        style={[
-          styles.shopCard,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-        onPress={() =>
-          navigation.navigate(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })
+  // Fetch shop products when selected shop changes
+  useEffect(() => {
+    if (!selectedShopId) return;
+    setLoading(true);
+    getProductsByShop(Number(selectedShopId))
+      .then(prods => {
+        if (Array.isArray(prods) && prods.length > 0) {
+          setProducts(prods.map(p => ({
+            id: p.id,
+            name: p.name,
+            unit: p.unit || '1 unit',
+            price: p.sellingPrice || p.actualPrice,
+            category: p.category || 'All',
+            image: (p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0) ? p.imageUrl : PRODUCT_IMAGES.milk,
+          })));
+        } else {
+          setProducts(MOCK_PRODUCTS);
         }
-      >
-        <View style={styles.shopBannerWrap}>
-          {shop.logoUrl || (shop as any).bannerUrl ? (
-            <Image
-              source={{ uri: shop.logoUrl || (shop as any).bannerUrl }}
-              style={styles.shopBanner}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={[styles.shopBanner, styles.shopBannerPlaceholder]}>
-              <Ionicons name="storefront-outline" size={30} color={colors.primary} />
-            </View>
-          )}
+      })
+      .catch(() => setProducts(MOCK_PRODUCTS))
+      .finally(() => setLoading(false));
+  }, [selectedShopId]);
 
-          {extra.isOpen && (
-            <View style={styles.openBadge}>
-              <Text style={styles.openBadgeText}>Open</Text>
-            </View>
-          )}
+  const selectedShop = useMemo(
+    () => shops.find(s => String(s.id) === String(selectedShopId)) || shops[0] || null,
+    [shops, selectedShopId]
+  );
 
-          {isNearest && (
-            <View style={styles.nearestBadge}>
-              <Text style={[styles.nearestBadgeText, { color: colors.primary }]}>Nearest</Text>
-            </View>
-          )}
-        </View>
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === 'All') return products;
+    return products.filter(p => p.category === activeCategory);
+  }, [products, activeCategory]);
 
-        <View style={styles.shopInfo}>
-          <Text style={[styles.shopName, { color: colors.textPrimary }]} numberOfLines={1}>
-            {shop.name}
-          </Text>
-
-          <View style={styles.metaRow}>
-            {extra.rating != null && (
-              <>
-                <Ionicons name="star" size={13} color={colors.primary} />
-                <Text style={[styles.ratingText, { color: colors.textPrimary }]}>
-                  {extra.rating.toFixed(1)}
-                </Text>
-                {extra.reviewCount != null && (
-                  <Text style={[styles.reviewText, { color: colors.textSecondary }]}>
-                    ({extra.reviewCount})
-                  </Text>
-                )}
-                <Text style={[styles.dotSep, { color: colors.border }]}>•</Text>
-              </>
-            )}
-            {shop.category ? (
-              <Text
-                style={[styles.tagsText, { color: colors.textSecondary }]}
-                numberOfLines={1}
-              >
-                {shop.category}
-              </Text>
-            ) : null}
-          </View>
-
-          {distanceLabel ? (
-            <View style={styles.metaRow}>
-              <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-              <Text style={[styles.distanceText, { color: colors.textSecondary }]}>
-                {distanceLabel}
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={styles.metaRow}>
-            <View
-              style={[
-                styles.deliveryPill,
-                { backgroundColor: extra.deliveryFee === 0 ? colors.primary + '1a' : '#FFF3E0' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.deliveryPillText,
-                  { color: extra.deliveryFee === 0 ? colors.primary : '#E65100' },
-                ]}
-              >
-                {extra.deliveryFee === 0 ? 'Free delivery' : `₹${extra.deliveryFee} delivery`}
-              </Text>
-            </View>
-            {extra.minOrder != null && (
-              <>
-                <Text style={[styles.dotSep, { color: colors.border }]}>•</Text>
-                <Text style={[styles.minOrderText, { color: colors.textSecondary }]}>
-                  Min. order ₹{extra.minOrder}
-                </Text>
-              </>
-            )}
-          </View>
-
-          <View style={styles.footerRow}>
-            {extra.etaMinutes ? (
-              <View style={styles.etaRow}>
-                <Ionicons name="time-outline" size={13} color={colors.textSecondary} />
-                <Text style={[styles.etaText, { color: colors.textSecondary }]}>
-                  {extra.etaMinutes[0]}-{extra.etaMinutes[1]} mins
-                </Text>
-              </View>
-            ) : (
-              <View />
-            )}
-
-            <TouchableOpacity
-              style={[styles.viewItemsBtn, { borderColor: colors.primary }]}
-              onPress={() =>
-                navigation.navigate(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })
-              }
-            >
-              <Text style={[styles.viewItemsBtnText, { color: colors.primary }]}>
-                View Items
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Card>
+  if (shopsLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC', justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#EAB308" />
+        <Text style={{ color: theme === 'dark' ? '#F8FAFC' : '#0F172A', marginTop: 12, fontWeight: '600' }}>Finding shops near you...</Text>
+      </View>
     );
-  };
+  }
 
   return (
-    <Layout style={styles.layout}>
-      {/* Top Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={8}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Nearest Shops</Text>
-          <Text style={[styles.subTitle, { color: colors.textSecondary }]} numberOfLines={1}>
-            Shops near your location
-          </Text>
-        </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity hitSlop={8} style={styles.headerIconBtn}>
-            <Ionicons name="search" size={22} color={colors.textPrimary} />
+    <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC' }]}>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+
+      {/* ── Top Header ────────────────────────────────────────────── */}
+      <View style={[styles.header, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF', borderBottomColor: theme === 'dark' ? '#334155' : '#E2E8F0' }]}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : (navigation.navigate as any)(ROUTES.HOME))} style={styles.iconBtn}>
+            <Ionicons name="menu-outline" size={24} color={theme === 'dark' ? '#F8FAFC' : '#1E293B'} />
           </TouchableOpacity>
-          <TouchableOpacity hitSlop={8} style={styles.headerIconBtn}>
-            <Ionicons name="options-outline" size={22} color={colors.textPrimary} />
+
+          <Text style={styles.logoRuvo}>
+            ru<Text style={styles.logoVo}>vo</Text>
+          </Text>
+
+          <TouchableOpacity style={styles.locationPill} onPress={refreshFromGps}>
+            <Ionicons name="location-sharp" size={14} color="#EAB308" />
+            <Text style={[styles.locationText, { color: theme === 'dark' ? '#E2E8F0' : '#334155' }]} numberOfLines={1}>
+              {getDeliveryLocationLabel(userLocation) || 'Connaught Place, Delhi'}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={theme === 'dark' ? '#94A3B8' : '#64748B'} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.headerRight}>
+          {/* Theme Toggle Button */}
+          <TouchableOpacity onPress={toggleTheme} style={styles.iconBtn}>
+            <Ionicons name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={22} color={theme === 'dark' ? '#FACC15' : '#475569'} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate(ROUTES.CART)}>
+            <Ionicons name="cart-outline" size={24} color={theme === 'dark' ? '#F8FAFC' : '#1E293B'} />
+            {cartItems.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Deliver-to row */}
-      <View style={[styles.deliverRow, { borderBottomColor: colors.border }]}>
-        <Ionicons name="location" size={20} color={colors.primary} />
-        <View style={styles.deliverTextWrap}>
-          <Text style={[styles.deliverLabel, { color: colors.textPrimary }]}>
-            Deliver to{' '}
-            <Text style={[styles.deliverHome, { color: colors.primary }]}>Home</Text>
-          </Text>
-          <Text
-            style={[styles.deliverAddress, { color: colors.textSecondary }]}
-            numberOfLines={1}
-          >
-            {getDeliveryLocationLabel(userLocation)}
-          </Text>
+      {/* ── Search Bar ───────────────────────────────────────────── */}
+      <View style={[styles.searchWrap, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
+        <View style={[styles.searchBar, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F1F5F9' }]}>
+          <Ionicons name="search-outline" size={18} color="#94A3B8" />
+          <Text style={styles.searchPlaceholder}>Search for shops or products...</Text>
+          <Ionicons name="mic-outline" size={18} color="#94A3B8" />
         </View>
-        <TouchableOpacity
-          style={[styles.locationBtn, { borderColor: colors.primary }]}
-          onPress={refreshFromGps}
-        >
-          {isFetchingLocation ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons name="locate" size={14} color={colors.primary} />
-          )}
-          <Text style={[styles.locationBtnText, { color: colors.primary }]}>
-            Use My Location
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Dynamic Category Chips */}
-      {categories.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          {categories.map(category => {
-            const active = category === activeCategory;
-            return (
-              <TouchableOpacity
-                key={category}
-                activeOpacity={0.72}
-                style={[
-                  styles.chip,
-                  active
-                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                    : { backgroundColor: colors.card, borderColor: colors.textSecondary + '55' },
-                ]}
-                onPress={() => setActiveCategory(category)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: active ? '#FFFFFF' : colors.textPrimary },
-                  ]}
-                >
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+      {/* ── Category filter header if coming from category tap ──── */}
+      {categoryFilter && (
+        <View style={[styles.catFilterBanner, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FEFCE8' }]}>
+          <Ionicons name="filter-outline" size={14} color="#EAB308" />
+          <Text style={styles.catFilterText}>Showing shops for: <Text style={{ color: '#EAB308', fontWeight: '800' }}>{categoryFilter}</Text></Text>
+          <TouchableOpacity onPress={() => (navigation as any).setParams({ category: undefined })}>
+            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        </View>
       )}
 
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => loadShops(true)}
-            tintColor={colors.primary}
-          />
-        }
-      >
-        {!userLocation && !isFetchingLocation && (
-          <View style={[styles.warnBanner, { backgroundColor: '#f59e0b1a', borderColor: '#f59e0b4d' }]}>
-            <Ionicons name="location-outline" size={18} color="#f59e0b" />
-            <Text style={styles.warnText}>Set your location to view exact distances.</Text>
+      {/* ── 2-Panel Split Body ───────────────────────────────────── */}
+      <View style={styles.splitBody}>
+        {/* ── Left Panel: Shops List ────────────────────────────── */}
+        <View style={[styles.leftPanel, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF', borderRightColor: theme === 'dark' ? '#334155' : '#E2E8F0' }]}>
+          <View style={styles.panelHeader}>
+            <Text style={[styles.panelTitle, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>Shops Near You</Text>
+            <Text style={styles.panelSubtitle}>Discover top shops around you</Text>
           </View>
-        )}
 
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loading} />
-        ) : loadError ? (
-          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="cloud-offline-outline" size={44} color={colors.textSecondary} />
-            <Text style={[styles.statusText, { color: colors.textSecondary }]}>{loadError}</Text>
-            <TouchableOpacity
-              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => loadShops()}
-            >
-              <Text style={styles.retryBtnText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : visibleShops.length === 0 && userLocation && shops.length === 0 ? (
-          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.outOfServiceIcon, { backgroundColor: colors.primary + '18' }]}>
-              <Ionicons name="location-outline" size={34} color={colors.primary} />
-            </View>
-            <Text style={[styles.outOfServiceTitle, { color: colors.textPrimary }]}>Currently, we’re out of service in your area</Text>
-            <Text style={[styles.statusText, { color: colors.textSecondary }]}>We’ll be in your area soon.</Text>
-            <TouchableOpacity
-              style={[styles.retryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => refreshFromGps()}
-            >
-              <Text style={styles.retryBtnText}>Update Location</Text>
-            </TouchableOpacity>
-          </View>
-        ) : visibleShops.length === 0 ? (
-          <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="storefront-outline" size={44} color={colors.textSecondary} />
-            <Text style={[styles.statusText, { color: colors.textSecondary }]}>
-              No shops found{activeCategory !== 'All Shops' ? ` in ${activeCategory}` : ''}.
-            </Text>
-          </View>
-        ) : (
-          <>
-            <View style={[styles.serviceSummary, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '28' }]}>
-              <Ionicons name="flash-outline" size={17} color={colors.primary} />
-              <Text style={[styles.serviceSummaryText, { color: colors.textPrimary }]}>
-                {visibleShops.length} shop{visibleShops.length === 1 ? '' : 's'} delivering near you
-              </Text>
-            </View>
-            {visibleShops.map(renderShop)}
-          </>
-        )}
-      </ScrollView>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            {shops.map(shop => {
+              const isSelected = String(shop.id) === String(selectedShopId);
+              return (
+                <TouchableOpacity
+                  key={String(shop.id)}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedShopId(shop.id)}
+                  style={[
+                    styles.shopItemCard,
+                    {
+                      backgroundColor: isSelected
+                        ? theme === 'dark' ? '#334155' : '#FEFCE8'
+                        : theme === 'dark' ? '#1E293B' : '#FFFFFF',
+                      borderColor: isSelected ? '#EAB308' : theme === 'dark' ? '#334155' : '#F1F5F9',
+                    },
+                  ]}
+                >
+                  <Image source={{ uri: shop.image }} style={styles.shopItemImg} resizeMode="contain" />
+                  <View style={styles.shopItemInfo}>
+                    <View style={styles.shopTitleRow}>
+                      <Text style={[styles.shopItemName, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]} numberOfLines={1}>
+                        {shop.name}
+                      </Text>
+                    </View>
 
-      {/* Free delivery progress banner (static threshold — wire to real cart total when available) */}
-      <View style={[styles.freeDeliveryBanner, { backgroundColor: colors.primary + '14' }]}>
-        <View style={styles.bannerLeft}>
-          <Text style={[styles.bannerTitle, { color: colors.textPrimary }]}>
-            Free delivery on orders above ₹{FREE_DELIVERY_THRESHOLD}
-          </Text>
-          <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>
-            Shop more, save more!
-          </Text>
+                    <View style={styles.tagBadge}>
+                      <Text style={styles.tagBadgeText}>{shop.tag || 'Store'}</Text>
+                    </View>
+
+                    <Text style={styles.shopItemSub} numberOfLines={1}>{shop.subtitle || 'Groceries & Essentials'}</Text>
+
+                    <View style={styles.metaRow}>
+                      <Ionicons name="star" size={11} color="#EAB308" />
+                      <Text style={styles.metaText}>{shop.rating || 4.5} • {shop.eta || '25 mins'}</Text>
+                    </View>
+                    <Text style={styles.distText}>{shop.dist || '0.3 km'}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity style={styles.viewAllBtn} onPress={() => navigation.navigate(ROUTES.GROCERIES)}>
+              <Text style={styles.viewAllBtnText}>View all shops</Text>
+              <Ionicons name="chevron-forward" size={14} color="#0F172A" />
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-        <TouchableOpacity style={[styles.bannerArrowBtn, { backgroundColor: colors.card }]}>
-          <Ionicons name="arrow-forward" size={18} color={colors.primary} />
-        </TouchableOpacity>
+
+        {/* ── Right Panel: Selected Shop & Product Grid ─────────── */}
+        <View style={styles.rightPanel}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+            {/* Selected Shop Header Card */}
+            <View style={[styles.shopHeaderCard, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
+              <TouchableOpacity style={styles.backCircle}>
+                <Ionicons name="chevron-back" size={18} color="#0F172A" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.shareCircle}>
+                <Ionicons name="share-outline" size={18} color="#0F172A" />
+              </TouchableOpacity>
+
+              <Image source={{ uri: selectedShop?.image || SHOP_IMAGES.freshMart }} style={styles.heroShopImg} resizeMode="contain" />
+
+              <View style={styles.heroShopDetails}>
+                <View style={styles.heroTitleRow}>
+                  <Text style={[styles.heroShopName, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>{selectedShop?.name || 'Local Shop'}</Text>
+                  <View style={styles.superBadge}>
+                    <Text style={styles.superBadgeText}>{selectedShop?.tag || 'Super Store'}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.heroShopSub}>{selectedShop?.subtitle || 'Groceries & Daily Essentials'}</Text>
+
+                <View style={styles.heroMetaRow}>
+                  <Ionicons name="star" size={13} color="#EAB308" />
+                  <Text style={styles.heroMetaText}>
+                    {selectedShop?.rating || 4.6} • {selectedShop?.eta || '25 mins'} • {selectedShop?.dist || '0.3 km'}
+                  </Text>
+                </View>
+
+                <View style={styles.freeDelPill}>
+                  <Ionicons name="leaf-outline" size={12} color="#16A34A" />
+                  <Text style={styles.freeDelText}>Free delivery on orders above ₹199</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Category Filter Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryBar} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
+              {['All', 'Staples', 'Snacks', 'More'].map(cat => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setActiveCategory(cat)}
+                  style={[
+                    styles.catPill,
+                    {
+                      backgroundColor: activeCategory === cat ? '#EAB308' : theme === 'dark' ? '#1E293B' : '#FFFFFF',
+                      borderColor: activeCategory === cat ? '#EAB308' : '#E2E8F0',
+                    },
+                  ]}
+                >
+                  <Text style={[styles.catPillText, { color: activeCategory === cat ? '#FFFFFF' : theme === 'dark' ? '#F8FAFC' : '#334155' }]}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* 2-Column Product Grid */}
+            <View style={styles.productGrid}>
+              {filteredProducts.map(prod => (
+                <View key={String(prod.id)} style={[styles.prodCard, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
+                  <Image source={{ uri: prod.image || PRODUCT_IMAGES.milk }} style={styles.prodImg} resizeMode="contain" />
+                  <Text style={[styles.prodTitle, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]} numberOfLines={1}>{prod.name}</Text>
+                  <Text style={styles.prodUnit}>{prod.unit}</Text>
+
+                  <View style={styles.prodBottomRow}>
+                    <Text style={[styles.prodPrice, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>₹{prod.price}</Text>
+                    <TouchableOpacity
+                      style={styles.addYellowBtn}
+                      onPress={() => addToCart(prod as any)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.addYellowText}>+ Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Sticky Cart Footer Bar */}
+          {cartItems.length > 0 && (
+            <View style={styles.stickyCartBar}>
+              <View style={styles.cartBarLeft}>
+                <Ionicons name="bag-handle" size={22} color="#EAB308" />
+                <View>
+                  <Text style={styles.cartBarTitle}>{cartItems.length} Items</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate(ROUTES.CART)}>
+                    <Text style={styles.cartBarSub}>View Cart ›</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.checkoutYellowBtn}
+                onPress={() => navigation.navigate(ROUTES.CHECKOUT, { fromCart: true })}
+              >
+                <Text style={styles.checkoutYellowText}>Checkout ₹{cartTotal}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
-    </Layout>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  layout: {
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(12),
-    borderBottomWidth: 1,
-    gap: sw(12),
-  },
-  headerTitleWrap: { flex: 1, minWidth: 0 },
-  title: { fontSize: sf(20), fontWeight: '800' },
-  subTitle: { fontSize: sf(13), marginTop: sh(2) },
-  headerIcons: { flexDirection: 'row', gap: sw(16), flexShrink: 0 },
-  headerIconBtn: { padding: 2 },
-
-  deliverRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: sw(8),
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(14),
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 6 : 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
-  deliverTextWrap: { flex: 1, minWidth: 0 },
-  deliverLabel: { fontSize: sf(14) },
-  deliverHome: { fontWeight: '700' },
-  deliverAddress: { fontSize: sf(13), marginTop: sh(1) },
-  locationBtn: {
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  iconBtn: { padding: 4 },
+  logoRuvo: { fontSize: 22, fontWeight: '900', color: '#EAB308', letterSpacing: -0.5 },
+  logoVo: { color: '#CA8A04' },
+  locationPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: sw(6),
-    borderWidth: 1,
-    borderRadius: sw(8),
-    paddingHorizontal: sw(10),
-    paddingVertical: sh(8),
-    flexShrink: 0,
+    gap: 4,
+    maxWidth: 160,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
   },
-  locationBtnText: { fontSize: sf(12), fontWeight: '600' },
-
-  chipRow: { paddingHorizontal: sw(16), paddingVertical: sh(12), gap: sw(10) },
-  chip: {
-    borderWidth: 1.5,
-    borderRadius: sw(20),
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(8),
-    marginRight: sw(10),
-    minWidth: sw(60),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipText: { fontSize: sf(13), fontWeight: '600' },
-
-  container: { padding: sw(16), paddingBottom: sh(120) },
-
-  warnBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sw(8),
-    padding: sw(10),
-    borderRadius: sw(10),
-    borderWidth: 1,
-    marginBottom: sh(12),
-  },
-  warnText: { flex: 1, color: '#f59e0b', fontSize: sf(12) },
-
-  loading: { marginVertical: sh(32) },
-  statusCard: {
-    minHeight: sh(140),
-    borderRadius: sw(14),
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: sw(20),
-    gap: sh(10),
-  },
-  statusText: { textAlign: 'center', fontSize: sf(14), lineHeight: sf(20) },
-  outOfServiceIcon: { width: sw(68), height: sw(68), borderRadius: sw(34), alignItems: 'center', justifyContent: 'center' },
-  outOfServiceTitle: { textAlign: 'center', fontSize: sf(17), fontWeight: '700', lineHeight: sf(23) },
-  retryBtn: { paddingHorizontal: sw(22), paddingVertical: sh(9), borderRadius: sw(20) },
-  retryBtnText: { color: '#fff', fontWeight: '600', fontSize: sf(13) },
-  serviceSummary: { flexDirection: 'row', alignItems: 'center', gap: sw(8), borderWidth: 1, borderRadius: sw(10), paddingHorizontal: sw(12), paddingVertical: sh(10), marginBottom: sh(14) },
-  serviceSummaryText: { fontSize: sf(13), fontWeight: '700' },
-
-  shopCard: {
-    marginBottom: sh(16),
-    borderRadius: sw(14),
-    borderWidth: 1,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-  },
-  shopBannerWrap: { width: '100%', height: sh(140), position: 'relative' },
-  shopBanner: { width: '100%', height: '100%' },
-  shopBannerPlaceholder: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F2' },
-  openBadge: {
+  locationText: { fontSize: 12, fontWeight: '600' },
+  cartBadge: {
     position: 'absolute',
-    bottom: sh(10),
-    left: sw(10),
-    backgroundColor: '#2E7D32',
-    borderRadius: sw(6),
-    paddingHorizontal: sw(10),
-    paddingVertical: sh(4),
-  },
-  openBadgeText: { color: '#FFF', fontSize: sf(12), fontWeight: '700' },
-  nearestBadge: {
-    position: 'absolute',
-    top: sh(10),
-    right: sw(10),
-    borderRadius: sw(6),
-    paddingHorizontal: sw(10),
-    paddingVertical: sh(4),
-    backgroundColor: 'rgba(255,255,255,0.92)',
-  },
-  nearestBadgeText: { fontSize: sf(12), fontWeight: '700' },
-
-  shopInfo: { padding: sw(14) },
-  shopName: { fontSize: sf(17), fontWeight: '800', marginBottom: sh(6) },
-
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginBottom: sh(6) },
-  ratingText: { fontSize: sf(13), fontWeight: '700' },
-  reviewText: { fontSize: sf(13) },
-  dotSep: { fontSize: sf(13), marginHorizontal: sw(2) },
-  tagsText: { fontSize: sf(13), flexShrink: 1 },
-  distanceText: { fontSize: sf(13) },
-
-  deliveryPill: { borderRadius: sw(6), paddingHorizontal: sw(8), paddingVertical: sh(3) },
-  deliveryPillText: { fontSize: sf(12), fontWeight: '600' },
-  minOrderText: { fontSize: sf(13) },
-
-  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: sh(8) },
-  etaRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4) },
-  etaText: { fontSize: sf(13) },
-  viewItemsBtn: {
-    borderWidth: 1.5,
-    borderRadius: sw(8),
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(8),
-  },
-  viewItemsBtnText: { fontSize: sf(13), fontWeight: '700' },
-
-  freeDeliveryBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: sw(12),
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(14),
-  },
-  bannerLeft: { flex: 1 },
-  bannerTitle: { fontSize: sf(13), fontWeight: '700' },
-  bannerSub: { fontSize: sf(12), marginTop: sh(2) },
-  bannerArrowBtn: {
-    width: sw(32),
-    height: sw(32),
-    borderRadius: sw(16),
+    top: -2,
+    right: -2,
+    backgroundColor: '#EF4444',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cartBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+
+  searchWrap: { paddingHorizontal: 12, paddingVertical: 8 },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 8,
+  },
+  searchPlaceholder: { flex: 1, color: '#94A3B8', fontSize: 13 },
+
+  splitBody: { flex: 1, flexDirection: 'row' },
+  leftPanel: { width: '22%', borderRightWidth: 1, padding: 6 },
+  rightPanel: { flex: 1, padding: 8 },
+  catFilterBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#FEF08A' },
+  catFilterText: { flex: 1, fontSize: 11, color: '#64748B', fontWeight: '600' },
+
+  panelHeader: { marginBottom: 8, paddingHorizontal: 4 },
+  panelTitle: { fontSize: 14, fontWeight: '800' },
+  panelSubtitle: { fontSize: 10, color: '#64748B', marginTop: 1 },
+
+  shopItemCard: {
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 8,
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  shopItemImg: { width: 56, height: 56, marginBottom: 4 },
+  shopItemInfo: { alignItems: 'center', width: '100%' },
+  shopTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  shopItemName: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  tagBadge: { backgroundColor: '#FEF08A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginVertical: 2 },
+  tagBadgeText: { fontSize: 9, fontWeight: '800', color: '#854D0E' },
+  shopItemSub: { fontSize: 9, color: '#64748B', textAlign: 'center' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  metaText: { fontSize: 9, color: '#475569', fontWeight: '600' },
+  distText: { fontSize: 9, color: '#94A3B8', marginTop: 1 },
+
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    marginTop: 6,
+    gap: 4,
+  },
+  viewAllBtnText: { fontSize: 11, fontWeight: '700', color: '#0F172A' },
+
+  shopHeaderCard: { padding: 12, borderRadius: 14, marginBottom: 10, position: 'relative', alignItems: 'center' },
+  backCircle: { position: 'absolute', top: 8, left: 8, padding: 6, backgroundColor: '#F1F5F9', borderRadius: 12 },
+  shareCircle: { position: 'absolute', top: 8, right: 8, padding: 6, backgroundColor: '#F1F5F9', borderRadius: 12 },
+  heroShopImg: { width: 70, height: 70, marginTop: 10 },
+  heroShopDetails: { alignItems: 'center', marginTop: 6 },
+  heroTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroShopName: { fontSize: 15, fontWeight: '900' },
+  superBadge: { backgroundColor: '#FEF08A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  superBadgeText: { fontSize: 9, fontWeight: '800', color: '#854D0E' },
+  heroShopSub: { fontSize: 10, color: '#64748B', marginTop: 2 },
+  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  heroMetaText: { fontSize: 10, color: '#475569', fontWeight: '600' },
+  freeDelPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
+  freeDelText: { fontSize: 9, fontWeight: '700', color: '#15803D' },
+
+  categoryBar: { marginBottom: 10 },
+  catPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  catPillText: { fontSize: 11, fontWeight: '700' },
+
+  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  prodCard: { width: '48%', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' },
+  prodImg: { width: '100%', height: 65, marginBottom: 4 },
+  prodTitle: { fontSize: 11, fontWeight: '700' },
+  prodUnit: { fontSize: 9, color: '#94A3B8', marginTop: 1 },
+  prodBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  prodPrice: { fontSize: 12, fontWeight: '800' },
+  addYellowBtn: { backgroundColor: '#FACC15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  addYellowText: { fontSize: 10, fontWeight: '800', color: '#713F12' },
+
+  stickyCartBar: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    right: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 6,
+  },
+  cartBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cartBarTitle: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  cartBarSub: { color: '#EAB308', fontSize: 10, fontWeight: '700' },
+  checkoutYellowBtn: { backgroundColor: '#FACC15', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
+  checkoutYellowText: { color: '#713F12', fontSize: 11, fontWeight: '800' },
 });
 
-export { NearbyShopsScreen };
 export default NearbyShopsScreen;

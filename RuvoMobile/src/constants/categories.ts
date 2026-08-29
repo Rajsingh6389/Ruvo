@@ -1,21 +1,28 @@
 /**
- * Shared product category list for RuVo.
- * Used consistently in: AddProduct, EditProduct, MyProducts,
- * ShopDetails (filter chips), and backend validation.
+ * Shared category list for RuVo — single source of truth.
+ *
+ * IMPORTANT: These strings are stored in the DB as-is.
+ * Never change the spelling without also migrating existing DB rows.
+ * Filtering in NearbyShopsScreen depends on exact case-sensitive match
+ * between the shop's `category` column and these values.
  */
+
 export const PRODUCT_CATEGORIES: string[] = [
   'Grocery',
   'Fruits & Vegetables',
-  'Dairy',
-  'Bakery',
-  'Meat & Fish',
-  'Beverages',
   'Snacks',
   'Personal Care',
   'Household',
   'Stationery',
   'Pharmacy',
   'Electronics',
-  'Clothing',
+  'Cafe',
+  'General Store',
   'Other',
 ];
+
+/**
+ * Shop-level categories — same spelling as PRODUCT_CATEGORIES
+ * so that clicking a category on HomeScreen correctly filters shops.
+ */
+export const SHOP_CATEGORIES: string[] = PRODUCT_CATEGORIES;

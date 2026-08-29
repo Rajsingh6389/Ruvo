@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,103 +9,165 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
+  Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
-import { API_BASE_URL } from '../config/api';
+import { api } from '../services/api';
 
 export const LoginScreen = () => {
   const navigation = useNavigation<any>();
-  const { colors } = useTheme();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
 
   const [mobileNumber, setMobileNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const pressBtnIn = () =>
+    Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const pressBtnOut = () =>
+    Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
   const handleSendOtp = async () => {
     const cleanMobile = mobileNumber.replace(/[^0-9]/g, '');
-    if (!cleanMobile) {
-      Alert.alert('Error', 'Please enter your mobile number.');
+    if (!cleanMobile || cleanMobile.length !== 10) {
+      setError('Please enter a valid 10-digit mobile number');
       return;
     }
-
-    if (cleanMobile.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit Indian mobile number.');
-      return;
-    }
-
+    setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
+      await api('/api/auth/otp/send', null, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mobileNumber: '+91' + cleanMobile,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobileNumber: '+91' + cleanMobile }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to send OTP.');
-      }
-
-      Alert.alert('OTP Sent', 'Enter the 6-digit OTP sent to your mobile number.');
       navigation.navigate('OtpVerification', { mobileNumber: '+91' + cleanMobile });
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'Check your network connection and try again.');
+      setError(err.message || 'Check your network connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Back Button */}
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {navigation.canGoBack() && (
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        <TouchableOpacity
+          style={[styles.backBtn, { backgroundColor: colors.surfaceSunken, borderRadius: radius.sm }]}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
       )}
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
+        style={styles.kav}
       >
         <View style={styles.content}>
-          <Text style={[styles.title, { color: colors.primary }]}>RuVo Partner</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enter your mobile number to sign in or register
+          {/* Brand */}
+          <View style={styles.brandRow}>
+            <View style={[styles.brandIcon, { backgroundColor: colors.primary, borderRadius: radius.md }]}>
+              <Ionicons name="bicycle" size={26} color={colors.onPrimary} />
+            </View>
+            <View>
+              <Text style={[typography.headingM, { color: colors.primary, fontWeight: '800' }]}>
+                RuVo Partner
+              </Text>
+              <Text style={[typography.caption, { color: colors.textHint }]}>
+                Delivery Partner Portal
+              </Text>
+            </View>
+          </View>
+
+          {/* Heading */}
+          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
+            Sign In
+          </Text>
+          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
+            Enter your mobile number to receive an OTP
           </Text>
 
-          <View style={styles.form}>
-            <Text style={[styles.label, { color: colors.textPrimary }]}>Mobile Number</Text>
-            <View style={styles.inputContainer}>
-              <Text style={[styles.prefix, { color: colors.textPrimary }]}>+91</Text>
+          {/* Form card */}
+          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad }, shadows.md]}>
+            <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>
+              Mobile Number
+            </Text>
+
+            <View style={[
+              styles.inputWrap,
+              {
+                backgroundColor: colors.surfaceSunken,
+                borderColor: focused ? colors.primary : colors.border,
+                borderRadius: radius.input,
+              },
+              focused && styles.inputFocused,
+            ]}>
+              <View style={[styles.prefixBox, { borderRightColor: colors.border }]}>
+                <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 14 }]}>
+                  🇮🇳  +91
+                </Text>
+              </View>
               <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                placeholder="XXXXX XXXXX"
-                placeholderTextColor={colors.textSecondary}
+                style={[typography.body, styles.input, { color: colors.textPrimary }]}
+                placeholder="10-digit number"
+                placeholderTextColor={colors.placeholder}
                 value={mobileNumber}
-                onChangeText={setMobileNumber}
+                onChangeText={t => { setMobileNumber(t); setError(null); }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
                 keyboardType="number-pad"
                 maxLength={10}
+                returnKeyType="done"
+                onSubmitEditing={handleSendOtp}
               />
+              {mobileNumber.length === 10 && (
+                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              )}
             </View>
 
-            <TouchableOpacity
-              style={[styles.btn, { backgroundColor: colors.primary }]}
-              onPress={handleSendOtp}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.btnText}>Send OTP</Text>
-              )}
-            </TouchableOpacity>
+            {/* Error */}
+            {error ? (
+              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft, borderRadius: radius.sm }]}>
+                <Ionicons name="alert-circle" size={15} color={colors.error} />
+                <Text style={[typography.caption, { color: colors.error, flex: 1 }]}>{error}</Text>
+              </View>
+            ) : null}
+
+            {/* CTA */}
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+                onPress={handleSendOtp}
+                onPressIn={pressBtnIn}
+                onPressOut={pressBtnOut}
+                disabled={loading}
+                activeOpacity={1}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.onPrimary} />
+                ) : (
+                  <>
+                    <Text style={[typography.button, { color: colors.onPrimary }]}>Send OTP</Text>
+                    <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+                  </>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+
+          {/* Trust */}
+          <View style={styles.trustRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textHint} />
+            <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>
+              Secure OTP-based login
+            </Text>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -114,76 +176,36 @@ export const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+  safe: { flex: 1 },
+  kav: { flex: 1 },
   backBtn: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 10,
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  container: {
-    flex: 1,
+    position: 'absolute', top: 16, left: 16, zIndex: 10,
+    width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+    flex: 1, justifyContent: 'center', paddingHorizontal: 24,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+  brandRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 32,
   },
-  subtitle: {
-    fontSize: 15,
-    textAlign: 'center',
-    marginBottom: 36,
+  brandIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  title: { marginBottom: 6 },
+  subtitle: { marginBottom: 28, lineHeight: 20 },
+  formCard: { borderWidth: 1, marginBottom: 20 },
+  label: { marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', borderWidth: 1.5,
+    height: 52, marginBottom: 16, paddingHorizontal: 14, gap: 10,
   },
-  form: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 6,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  prefix: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginRight: 10,
-    paddingVertical: 12,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#FFFFFF',
-  },
+  inputFocused: { borderWidth: 2 },
+  prefixBox: { paddingRight: 10, borderRightWidth: 1, height: '60%', justifyContent: 'center' },
+  input: { flex: 1 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginBottom: 14 },
   btn: {
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    elevation: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 52, gap: 8,
   },
-  btnText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  trustRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
   },
 });

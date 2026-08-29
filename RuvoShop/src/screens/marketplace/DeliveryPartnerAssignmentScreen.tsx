@@ -3,12 +3,12 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -101,9 +101,7 @@ export default function DeliveryPartnerAssignmentScreen() {
       );
       if (!res.ok) return;
       const data: CurrentRequest = await res.json();
-      console.log('====================================');
-      console.log('📍 [Shopkeeper] Current Delivery Partner Request:', JSON.stringify(data, null, 2));
-      console.log('====================================');
+      // Delivery partner request data received
       setRequest(data);
       setLoading(false);
 

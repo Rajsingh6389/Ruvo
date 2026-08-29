@@ -9,25 +9,37 @@
     "scheme": "ruvopartner",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "com.ruvo.partner",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RuvoPartner needs your location to track deliveries and update your availability.",
+        "NSCameraUsageDescription": "RuvoPartner needs camera access for verification documents.",
+        "NSPhotoLibraryUsageDescription": "RuvoPartner needs photo library access for verification documents."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#173F35"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.RuvoPartner"
+      "package": "com.ruvo.partner"
     },
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F8F3"
+    },
+    "extra": {
+      "apiBaseUrl": "https://api.ruvo.in"
+    },
     "plugins": [
       "expo-font",
       "expo-secure-store",
+      "expo-splash-screen",
       "@react-native-community/datetimepicker",
       [
         "expo-location",

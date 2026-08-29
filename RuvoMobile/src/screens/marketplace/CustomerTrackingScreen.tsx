@@ -1,17 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ScrollView,
   Image,
   Animated,
   Linking,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -70,7 +72,7 @@ function formatProductImageUrl(url?: string): string | null {
 export default function CustomerTrackingScreen() {
   const navigation  = useNavigation<any>();
   const route       = useRoute<any>();
-  const { colors }  = useTheme();
+  const { colors, typography, radius, shadows, spacing }  = useTheme();
   const { token }   = useAuth();
 
   const orderId = route.params?.orderId;
@@ -78,6 +80,7 @@ export default function CustomerTrackingScreen() {
   const [order, setOrder]             = useState<Order | null>(null);
   const [loading, setLoading]         = useState(true);
   const [cancelling, setCancelling]   = useState(false);
+  const [refreshing, setRefreshing]   = useState(false);
   const [partnerLocation, setPartnerLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [partnerInfo, setPartnerInfo] = useState<{ id?: number; name: string; phone: string; locationName?: string; latitude?: number; longitude?: number } | null>(null);
 
@@ -161,7 +164,7 @@ export default function CustomerTrackingScreen() {
   };
 
   // Fetch order details & initial partner info
-  useEffect(() => {
+  const fetchOrder = useCallback(() => {
     if (!orderId || !token) { setLoading(false); return; }
 
     getOrder(orderId, token)
@@ -177,6 +180,16 @@ export default function CustomerTrackingScreen() {
         setLoading(false);
       });
   }, [orderId, token]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrder();
+    setTimeout(() => setRefreshing(false), 1500);
+  }, [fetchOrder]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   // Polling partner location every 5 seconds while active
   useEffect(() => {
@@ -265,13 +278,15 @@ export default function CustomerTrackingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      {/* ─ HEADER ────────────────────────────────────────────────── */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Track Order</Text>
-        <Text style={[styles.headerSub, { color: colors.textSecondary }]}>#{order.id}</Text>
+        <Text style={[typography.headingXL, styles.headerTitle, { color: colors.textPrimary }]}>Track Order</Text>
+        <View style={{ width: 24 }} />
       </View>
 
       {/* Red Cancelled Banner */}
@@ -295,7 +310,33 @@ export default function CustomerTrackingScreen() {
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
+        {/* ─ ORDER DETAILS ───────────────────────────────────────── */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad }, shadows.sm]}>
+          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Order Details</Text>
+          <View style={styles.billingRow}>
+            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Items</Text>
+            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>{order.quantity || 1}</Text>
+          </View>
+          <View style={styles.billingRow}>
+            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Total</Text>
+            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.totalAmount}</Text>
+          </View>
+          <View style={styles.billingRow}>
+            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Payment</Text>
+            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>{order.paymentMethod || 'COD'}</Text>
+          </View>
+        </View>
 
         {/* Map Section */}
         <View style={styles.mapContainer}>
@@ -341,8 +382,8 @@ export default function CustomerTrackingScreen() {
         </View>
 
         {/* Product Details Card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Order Items</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
+          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Order Items</Text>
           <View style={styles.productRow}>
             {productImgUri ? (
               <Image source={{ uri: productImgUri }} style={styles.productImg} resizeMode="cover" />
@@ -352,43 +393,44 @@ export default function CustomerTrackingScreen() {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={[styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
+              <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
                 {order.productName || 'Your Order'}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
                 Qty: {order.quantity}
               </Text>
             </View>
-            <Text style={[styles.productPrice, { color: colors.primary }]}>
+            <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.primary }]}>
               ₹{order.totalAmount}
             </Text>
           </View>
 
-          <View style={[styles.billingBox, { borderTopColor: colors.border }]}>
+          <View style={[styles.billingBox, { borderTopColor: colors.border, padding: spacing.cardPad }]}>
             {!!order.subtotal && (
               <View style={styles.billingRow}>
-                <Text style={[styles.billingLabel, { color: colors.textSecondary }]}>Item Total</Text>
-                <Text style={[styles.billingValue, { color: colors.textPrimary }]}>₹{order.subtotal}</Text>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Item Total</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.subtotal}</Text>
               </View>
             )}
             {!!order.deliveryFee && (
               <View style={styles.billingRow}>
-                <Text style={[styles.billingLabel, { color: colors.textSecondary }]}>Delivery Fee</Text>
-                <Text style={[styles.billingValue, { color: colors.textPrimary }]}>₹{order.deliveryFee}</Text>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Delivery Fee</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.deliveryFee}</Text>
               </View>
             )}
             {!!order.platformFee && (
               <View style={styles.billingRow}>
-                <Text style={[styles.billingLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
-                <Text style={[styles.billingValue, { color: colors.textPrimary }]}>₹{order.platformFee}</Text>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.platformFee}</Text>
               </View>
             )}
             <View style={[styles.billingRow, { marginTop: 6 }]}>
-              <Text style={[styles.billingLabel, { color: colors.textPrimary, fontWeight: '700' }]}>Grand Total</Text>
-              <Text style={[styles.billingValue, { color: colors.primary, fontWeight: '800' }]}>₹{order.totalAmount}</Text>
+              <Text style={[typography.bodyStrong, styles.billingLabel, { color: colors.textPrimary, fontWeight: '700' }]}>Grand Total</Text>
+              <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.primary, fontWeight: '800' }]}>₹{order.totalAmount}</Text>
             </View>
           </View>
         </View>
+
         {/* Delivery Verification OTP Card - Only shown when OUT_FOR_DELIVERY */}
         {!isCancelled && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'PICKED_UP') && (
           <View style={styles.otpBox}>
@@ -427,14 +469,14 @@ export default function CustomerTrackingScreen() {
                   <Text style={{ color: '#1D4ED8', fontSize: 10, fontWeight: '700' }}>DELIVERY PARTNER</Text>
                 </View>
               </View>
-              <Text style={styles.partnerPhone}>📞 {partnerInfo.phone}</Text>
+              <Text style={styles.partnerPhone}> {partnerInfo.phone}</Text>
               {partnerInfo.locationName ? (
                 <Text style={{ color: '#4B5563', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                  📍 {partnerInfo.locationName}
+                  {partnerInfo.locationName}
                 </Text>
               ) : (
                 <Text style={{ color: '#059669', fontSize: 12, marginTop: 2, fontWeight: '600' }}>
-                  ⚡ Live Tracking Active
+                  Live Tracking Active
                 </Text>
               )}
             </View>
@@ -449,8 +491,8 @@ export default function CustomerTrackingScreen() {
 
         {/* Animated Timeline or Red Cancel Card */}
         {!isCancelled ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Delivery Progress</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
+            <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Delivery Progress</Text>
             {TIMELINE_STEPS.map((step, i) => {
               const active = isStepActive(step.key, order.orderStatus || '');
               const isLast = i === TIMELINE_STEPS.length - 1;
@@ -479,7 +521,7 @@ export default function CustomerTrackingScreen() {
                   <Animated.View style={{ flex: 1, paddingBottom: isLast ? 0 : 18, opacity }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons name={step.icon} size={15} color={active ? '#059669' : colors.textSecondary} />
-                      <Text style={[styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '700' : '400' }]}>
+                      <Text style={[typography.bodyStrong, styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '700' : '400' }]}>
                         {step.label}
                       </Text>
                       {i === 1 && active && (order.orderStatus === 'DELIVERY_ASSIGNMENT' || order.orderStatus === 'DELIVERY_ASSIGNED') && (
@@ -518,13 +560,13 @@ export default function CustomerTrackingScreen() {
         )}
 
         {/* Payment Method */}
-        <View style={[styles.paymentRow, { borderColor: colors.border }]}>
+        <View style={[styles.paymentRow, { borderColor: colors.border, padding: spacing.cardPad }]}>
           <Ionicons
             name={order.paymentMethod === 'ONLINE' ? 'card-outline' : 'cash-outline'}
             size={18}
             color={colors.textSecondary}
           />
-          <Text style={[styles.paymentText, { color: colors.textSecondary }]}>
+          <Text style={[typography.body, styles.paymentText, { color: colors.textSecondary }]}>
             {order.paymentMethod === 'ONLINE' ? 'Paid Online' : 'Cash on Delivery'}
           </Text>
         </View>
@@ -535,18 +577,10 @@ export default function CustomerTrackingScreen() {
          order.orderStatus !== 'OUT_FOR_DELIVERY' &&
          order.orderStatus !== 'DELIVERED' && (
           <TouchableOpacity
-            style={[styles.cancelBtn, cancelling && { opacity: 0.6 }]}
+            style={[styles.cancelBtn, { backgroundColor: colors.error, borderRadius: radius.button }, shadows.sm]}
             onPress={handleCancelOrder}
-            disabled={cancelling}
           >
-            {cancelling ? (
-              <ActivityIndicator color="#EF4444" size="small" />
-            ) : (
-              <>
-                <Ionicons name="close-circle-outline" size={20} color="#EF4444" />
-                <Text style={styles.cancelBtnText}>Cancel Order</Text>
-              </>
-            )}
+            <Text style={[typography.button, styles.cancelBtnText, { color: '#FFF' }]}>Cancel Order</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -577,7 +611,6 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 8, marginRight: 4 },
   headerTitle: { fontSize: 18, fontWeight: '700', flex: 1 },
-  headerSub: { fontSize: 13, fontWeight: '600' },
 
   cancelBanner: {
     backgroundColor: '#EF4444',

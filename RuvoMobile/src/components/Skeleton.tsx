@@ -6,7 +6,9 @@ import {
   ViewStyle,
   DimensionValue,
 } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+
+const SKELETON_BG = '#E5E7EB';
 
 interface SkeletonProps {
   width?: DimensionValue;
@@ -23,11 +25,16 @@ export const Skeleton = ({
   variant = 'rect',
   style,
 }: SkeletonProps) => {
-  const { colors } = useTheme();
+  const reduceMotion = useReducedMotion();
   const animatedValue = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    Animated.loop(
+    if (reduceMotion) {
+      animatedValue.setValue(0.5);
+      return;
+    }
+
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 0.7,
@@ -40,15 +47,21 @@ export const Skeleton = ({
           useNativeDriver: true,
         }),
       ]),
-    ).start();
-  }, [animatedValue]);
+    );
+    loop.start();
+
+    return () => loop.stop();
+  }, [animatedValue, reduceMotion]);
 
   return (
     <Animated.View
+      accessible
+      accessibilityLabel="Loading"
+      accessibilityRole="progressbar"
       style={[
         styles.skeleton,
         {
-          backgroundColor: colors.border,
+          backgroundColor: SKELETON_BG,
           opacity: animatedValue,
           width: width ?? '100%',
           height: height ?? 20,
@@ -72,4 +85,3 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 });
-

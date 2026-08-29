@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { getUserProfile, User } from '../services/userService';
 
 interface AuthContextType {
@@ -59,19 +60,9 @@ export const AuthProvider = ({
 
   const fetchUser = async (authToken: string) => {
     try {
-      console.log('RuVo: Fetching user profile...');
-
       const profile = await getUserProfile(authToken);
-
-      console.log('RuVo: User profile loaded');
-
       setUser(profile);
-    } catch (error) {
-      console.log(
-        'RuVo: Failed to fetch user profile:',
-        error
-      );
-
+    } catch {
       // Don't logout the user just because profile request failed.
       setUser(null);
     }
@@ -85,32 +76,22 @@ export const AuthProvider = ({
     let mounted = true;
 
     const initializeAuth = async () => {
-      console.log('RuVo: Initializing authentication...');
-
       try {
-        const storedToken =
-          await AsyncStorage.getItem('authToken');
+        // Read token from SecureStore (with one-time migration from AsyncStorage)
+        let storedToken = await SecureStore.getItemAsync('authToken');
+        if (!storedToken) {
+          storedToken = await AsyncStorage.getItem('authToken');
+          if (storedToken) {
+            await SecureStore.setItemAsync('authToken', storedToken);
+            await AsyncStorage.removeItem('authToken');
+          }
+        }
 
         const storedUserId =
           await AsyncStorage.getItem('userId');
 
         const storedRole =
           await AsyncStorage.getItem('userRole');
-
-        console.log(
-          'RuVo: Token:',
-          storedToken ? 'FOUND' : 'NOT FOUND'
-        );
-
-        console.log(
-          'RuVo: User ID:',
-          storedUserId || 'NOT FOUND'
-        );
-
-        console.log(
-          'RuVo: Role:',
-          storedRole || 'NOT FOUND'
-        );
 
         if (!mounted) return;
 
@@ -135,12 +116,7 @@ export const AuthProvider = ({
           setIsAuthenticated(false);
           setIsLoading(false);
         }
-      } catch (error) {
-        console.log(
-          'RuVo: Authentication initialization error:',
-          error
-        );
-
+      } catch {
         if (!mounted) return;
 
         setToken(null);
@@ -167,32 +143,25 @@ export const AuthProvider = ({
     newUserId: string,
     role: string
   ): Promise<void> => {
-    try {
-      if (role !== requiredRole) throw new Error(`This app requires a ${requiredRole} session.`);
-      await AsyncStorage.multiSet([
-        ['authToken', newToken],
-        ['userId', newUserId],
-        ['userRole', role],
-      ]);
+    if (role !== requiredRole) throw new Error(`This app requires a ${requiredRole} session.`);
 
-      setToken(newToken);
-      setUserId(newUserId);
-      setIsAuthenticated(true);
+    // Store token securely
+    await SecureStore.setItemAsync('authToken', newToken);
+    await AsyncStorage.multiSet([
+      ['userId', newUserId],
+      ['userRole', role],
+    ]);
 
-      // Login is already successful.
-      // Don't keep AppNavigator in loading state.
-      setIsLoading(false);
+    setToken(newToken);
+    setUserId(newUserId);
+    setIsAuthenticated(true);
 
-      // Load profile in background — don't block login completion
-      if (requiredRole === 'USER') fetchUser(newToken);
-    } catch (error) {
-      console.log(
-        'RuVo: Login state error:',
-        error
-      );
+    // Login is already successful.
+    // Don't keep AppNavigator in loading state.
+    setIsLoading(false);
 
-      throw error;
-    }
+    // Load profile in background — don't block login completion
+    if (requiredRole === 'USER') fetchUser(newToken);
   };
 
   // =========================================================
@@ -201,16 +170,13 @@ export const AuthProvider = ({
 
   const logout = async (): Promise<void> => {
     try {
+      await SecureStore.deleteItemAsync('authToken');
       await AsyncStorage.multiRemove([
-        'authToken',
         'userId',
         'userRole',
       ]);
-    } catch (error) {
-      console.log(
-        'RuVo: Error clearing auth storage:',
-        error
-      );
+    } catch {
+      // Ignore storage clear errors during logout
     } finally {
       setToken(null);
       setUserId(null);

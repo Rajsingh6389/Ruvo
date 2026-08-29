@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/partner")
@@ -143,12 +144,92 @@ public class PartnerController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
+    @GetMapping("/nearby-shops")
+    public ResponseEntity<?> getNearbyShops(
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(defaultValue = "5") Double radius) {
+        List<Shop> approvedShops = shopRepository.findAllApprovedAndActive();
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Shop s : approvedShops) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", s.getId());
+            map.put("name", s.getName());
+            map.put("address", s.getAddress() != null ? s.getAddress() : "");
+            map.put("category", s.getCategory() != null ? s.getCategory() : "General");
+            double distanceKm = 1.0;
+            if (lat != null && lng != null && s.getLatitude() != null && s.getLongitude() != null) {
+                distanceKm = Ranex.ruvo.util.DistanceUtils.calculateDistance(lat, lng, s.getLatitude(), s.getLongitude());
+                distanceKm = Math.round(distanceKm * 10.0) / 10.0;
+            }
+            map.put("distanceKm", distanceKm);
+            result.add(map);
+        }
+
+        result.sort((a, b) -> Double.compare((Double) a.get("distanceKm"), (Double) b.get("distanceKm")));
+        return ResponseEntity.ok(Map.of("success", true, "data", result));
+    }
+
+    @PostMapping("/shop-preferences")
+    public ResponseEntity<?> updateShopPreferences(
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal,
+            @RequestBody Map<String, Object> body) {
+        DeliveryPartner dp = resolveDeliveryPartner(principal);
+        if (dp == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Partner profile not found."));
+        }
+
+        Object shopIdsObj = body.get("shopIds");
+        if (shopIdsObj instanceof List<?> list) {
+            List<String> idsStr = list.stream().map(Object::toString).toList();
+            String joined = String.join(",", idsStr);
+            dp.setPreferredShopIds(joined);
+            deliveryPartnerRepository.save(dp);
+            System.out.println("🛍️ [PartnerController] Partner #" + dp.getId() + " updated preferred shop IDs: " + joined);
+        }
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Shop preferences updated successfully."));
+    }
+
     @GetMapping("/deliveries/available")
     public ResponseEntity<List<Delivery>> getAvailableDeliveries(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
+        DeliveryPartner dp = resolveDeliveryPartner(principal);
+
+        // REQUIREMENT: Delivery partner MUST BE ONLINE (available == true) to receive/view deliveries
+        if (dp != null && !Boolean.TRUE.equals(dp.getAvailable())) {
+            return ResponseEntity.ok(List.of());
+        }
+
         // Only return deliveries in status CREATED (unassigned)
-        List<Delivery> deliveries = deliveryRepository.findByStatus("CREATED");
-        return ResponseEntity.ok(deliveries);
+        List<Delivery> allAvailable = deliveryRepository.findByStatus("CREATED");
+        if (dp == null || dp.getPreferredShopIds() == null || dp.getPreferredShopIds().isBlank()) {
+            return ResponseEntity.ok(allAvailable);
+        }
+
+        // Parse preferred shop IDs
+        Set<Long> preferredSet = Arrays.stream(dp.getPreferredShopIds().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .collect(Collectors.toSet());
+
+        if (preferredSet.isEmpty()) {
+            return ResponseEntity.ok(allAvailable);
+        }
+
+        // Filter available deliveries to only those belonging to the partner's preferred shops
+        List<Delivery> filtered = allAvailable.stream().filter(d -> {
+            if (d.getOrderId() == null) return false;
+            Optional<Order> oOpt = orderRepository.findById(d.getOrderId());
+            if (oOpt.isEmpty()) return false;
+            Long shopId = oOpt.get().getShopId();
+            return shopId != null && preferredSet.contains(shopId);
+        }).toList();
+
+        return ResponseEntity.ok(filtered);
     }
 
     @GetMapping("/deliveries")

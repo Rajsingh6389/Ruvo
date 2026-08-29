@@ -44,8 +44,6 @@ export async function getProductsByShop(
 
   const url = `${API_BASE_URL}/api/products/shop/${shopId}`;
 
-  console.log('PRODUCT API URL:', url);
-
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -57,8 +55,6 @@ export async function getProductsByShop(
     method: 'GET',
     headers,
   });
-
-  console.log('PRODUCT API STATUS:', res.status);
 
   const data = await parseOrThrow(res);
 
@@ -93,13 +89,7 @@ export async function addProduct(
 
   const url = `${API_BASE_URL}/api/products`;
 
-  console.log('1️⃣ ADD PRODUCT URL:', url);
-  console.log('2️⃣ PRODUCT DATA:', product);
-  console.log('3️⃣ TOKEN EXISTS:', !!token);
-
   try {
-    console.log('4️⃣ Sending POST request...');
-
     const res = await fetch(url, {
       method: 'POST',
       headers: {
@@ -110,16 +100,10 @@ export async function addProduct(
       body: JSON.stringify(product),
     });
 
-    console.log('5️⃣ RESPONSE STATUS:', res.status);
-    console.log('6️⃣ RESPONSE OK:', res.ok);
-
     const data = await parseOrThrow(res);
-
-    console.log('7️⃣ PRODUCT CREATED:', data);
 
     return data;
   } catch (error) {
-    console.log('❌ ADD PRODUCT ERROR:', error);
     throw error;
   }
 }
@@ -162,9 +146,6 @@ export async function uploadProduct(
     );
 
     xhr.onload = () => {
-      console.log('UPLOAD STATUS:', xhr.status);
-      console.log('UPLOAD RESPONSE:', xhr.responseText);
-
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           resolve(JSON.parse(xhr.responseText));

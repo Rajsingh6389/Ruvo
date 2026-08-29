@@ -1,29 +1,40 @@
-import type { NavigatorScreenParams } from '@react-navigation/native';
 import { ROUTES } from '../constants/routes';
 
 export type MainTabParamList = {
   [ROUTES.HOME]: undefined;
-  [ROUTES.MARKET]: undefined;
+  [ROUTES.NEARBY_SHOPS]: { category?: string } | undefined;
   [ROUTES.CART]: undefined;
+  [ROUTES.LOCAL_JOBS]: undefined;
   [ROUTES.PROFILE]: undefined;
 };
 
 export type RootStackParamList = {
+  // Auth
   Splash: undefined;
   Login: undefined;
   Signup: undefined;
-  MainTabs: NavigatorScreenParams<MainTabParamList>;
+  // Tabs root
+  MainTabs: undefined;
+  // Tab screens (also navigable as stack for deep links)
+  Home: undefined;
+  NearbyShops: { category?: string } | undefined;
+  Cart: undefined;
+  LocalJobs: undefined;
+  Profile: undefined;
+  // Stack screens
   Groceries: undefined;
   Jobs: undefined;
-  NearbyShops: undefined;
+  Cafe: undefined;
+  Nearbycafe: undefined;
   ShopDetails: { shopId: number };
-  ProductDetails: { product: Product };
-  Checkout: { product?: Product; quantity?: number; fromCart?: boolean };
+  ProductDetails: { product: any };
+  Checkout: { product?: any; quantity?: number; fromCart?: boolean };
   OrderHistory: undefined;
-  [ROUTES.REGISTER_SHOP]: undefined;
-  [ROUTES.ADMIN_DASHBOARD]: undefined;
+  RegisterShop: undefined;
+  AdminDashboard: undefined;
   EditProfile: undefined;
-  Cart: undefined;
   OrderSuccess: { orderId: number };
   CustomerTracking: { orderId: number };
+  PaymentFailure: undefined;
+  Market: undefined;
 };

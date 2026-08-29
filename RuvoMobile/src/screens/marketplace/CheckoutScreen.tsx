@@ -151,6 +151,10 @@ export default function CheckoutScreen() {
       setLocationPickerVisible(true);
       return;
     }
+    if (!primaryItem.product.id) {
+      Alert.alert('Product unavailable', 'This product is missing its catalogue ID. Refresh the shop and try again.');
+      return;
+    }
 
     setSubmitting(true);
 
@@ -160,7 +164,7 @@ export default function CheckoutScreen() {
           {
             userId: String(userId),
             shopId,
-            productId: primaryItem.product.id || 0,
+            productId: primaryItem.product.id,
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
             deliveryAddress,
@@ -184,7 +188,7 @@ export default function CheckoutScreen() {
           {
             userId: String(userId),
             shopId,
-            productId: primaryItem.product.id || 0,
+            productId: primaryItem.product.id,
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
             paymentMethod: 'COD',

@@ -239,6 +239,23 @@ public class DeliveryService {
                 }
                 return true;
             })
+            .filter(p -> {
+                // If partner has set preferred shop IDs, verify order's shop is selected
+                if (p.getPreferredShopIds() != null && !p.getPreferredShopIds().isBlank()) {
+                    Long orderShopId = order.getShopId();
+                    if (orderShopId != null) {
+                        java.util.Set<Long> preferredSet = java.util.Arrays.stream(p.getPreferredShopIds().split(","))
+                                .map(String::trim)
+                                .filter(s -> !s.isEmpty())
+                                .map(Long::parseLong)
+                                .collect(java.util.stream.Collectors.toSet());
+                        if (!preferredSet.contains(orderShopId)) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            })
             .filter(p -> !rejectedPartnerIds.contains(p.getId()))
             .filter(p -> !pendingPartnerIds.contains(p.getId()))
             .filter(p -> !busyPartnerIds.contains(p.getId()))

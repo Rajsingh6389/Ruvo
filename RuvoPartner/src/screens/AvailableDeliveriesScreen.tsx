@@ -8,34 +8,35 @@ import {
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { Delivery } from '../services/partnerService';
-
-const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT = '#ECFDF5';
-const TEXT_DARK = '#0F172A';
-const TEXT_MUTED = '#64748B';
-const CARD_BG = '#FFFFFF';
-const BORDER_COLOR = '#E2E8F0';
+import { OfflineBar } from '../components/OfflineBar';
+import { OrderSkeleton } from '../components/OrderSkeleton';
+import { NotificationPopup } from '../components/NotificationPopup';
+import { useNewDeliverySound } from '../hooks/useNotificationSound';
 
 export const AvailableDeliveriesScreen = () => {
   const { token } = useAuth();
-  const { colors } = useTheme();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
   const navigation = useNavigation<any>();
 
   const [runs, setRuns] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const { showPopup, popupMessage, dismissPopup } = useNewDeliverySound(runs.length);
+
+  const load = useCallback(async (isRefresh = false) => {
     if (!token) return;
+    isRefresh ? setRefreshing(true) : setLoading(true);
     try {
       setError(null);
       setRuns(await api<Delivery[]>('/api/partner/deliveries/available', token));
@@ -43,22 +44,17 @@ export const AvailableDeliveriesScreen = () => {
       setError(e.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const accept = async (run: Delivery) => {
     if (!token) return;
     setBusy(run.id);
     try {
-      await api(`/api/partner/deliveries/${run.id}/accept`, token, {
-        method: 'POST',
-      });
+      await api(`/api/partner/deliveries/${run.id}/accept`, token, { method: 'POST' });
       navigation.navigate('ActiveDelivery', { deliveryId: run.id });
     } catch (e: any) {
       Alert.alert('Run Unavailable', e.message);
@@ -69,35 +65,56 @@ export const AvailableDeliveriesScreen = () => {
   };
 
   return (
-    <View style={[styles.page, { backgroundColor: '#F8FAFC' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      <OfflineBar />
 
-      {/* Header */}
-      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+      {/* New delivery notification popup */}
+      <NotificationPopup
+        visible={showPopup}
+        message={popupMessage}
+        subtitle="Tap to view available deliveries"
+        onDismiss={dismissPopup}
+      />
+
+      {/* ── HEADER ─────────────────────────────────────────────── */}
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Available Deliveries</Text>
-          <Text style={styles.subtitle}>
-            Real-time server assignments matching your location.
+          <Text style={[typography.headingL, { color: colors.textPrimary }]}>
+            Available Deliveries
+          </Text>
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
+            Real-time runs matching your location
           </Text>
         </View>
         <TouchableOpacity
-          style={{ padding: 8, backgroundColor: EMERALD_LIGHT, borderRadius: 20 }}
-          onPress={load}
+          style={[styles.refreshBtn, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}
+          onPress={() => load(true)}
         >
-          <Ionicons name="refresh" size={20} color={PRIMARY_EMERALD} />
+          <Ionicons name="refresh" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
+      {/* ── CONTENT ────────────────────────────────────────────── */}
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={PRIMARY_EMERALD} />
+        <View style={{ padding: spacing.gutter }}>
+          <OrderSkeleton count={3} />
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Ionicons name="cloud-offline-outline" size={48} color="#EF4444" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={load}>
-            <Text style={styles.retryBtnText}>Tap to Retry</Text>
+          <View style={[styles.emptyIcon, { backgroundColor: colors.errorSoft, borderRadius: 48 }]}>
+            <Ionicons name="cloud-offline-outline" size={44} color={colors.error} />
+          </View>
+          <Text style={[typography.headingS, { color: colors.textPrimary, marginTop: 20 }]}>
+            Connection Error
+          </Text>
+          <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 6 }]}>
+            {error}
+          </Text>
+          <TouchableOpacity
+            style={[styles.retryBtn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+            onPress={() => load()}
+          >
+            <Text style={[typography.button, { color: colors.onPrimary }]}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -106,65 +123,95 @@ export const AvailableDeliveriesScreen = () => {
           keyExtractor={x => String(x.id)}
           refreshControl={
             <RefreshControl
-              refreshing={loading}
-              onRefresh={load}
-              tintColor={PRIMARY_EMERALD}
+              refreshing={refreshing}
+              onRefresh={() => load(true)}
+              tintColor={colors.primary}
             />
           }
-          contentContainerStyle={runs.length ? styles.list : styles.empty}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingHorizontal: spacing.gutter },
+            runs.length === 0 && styles.emptyList,
+          ]}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconBox}>
-                <Ionicons name="bicycle" size={42} color={PRIMARY_EMERALD} />
+            <View style={styles.emptyBox}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft, borderRadius: 48 }]}>
+                <Ionicons name="bicycle" size={44} color={colors.primary} />
               </View>
-              <Text style={styles.emptyTitle}>No Active Deliveries Right Now</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[typography.headingM, { color: colors.textPrimary, marginTop: 20, textAlign: 'center' }]}>
+                No Active Deliveries
+              </Text>
+              <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20 }]}>
                 Stay online and keep this tab active to receive automated server orders.
               </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.md]}>
+              {/* Card header */}
               <View style={styles.cardHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.orderNumber}>Order #{item.orderId}</Text>
-                  <View style={styles.badgePill}>
-                    <Text style={styles.badgeText}>{item.status.replaceAll('_', ' ')}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[typography.headingS, { color: colors.textPrimary }]}>
+                    Order #{item.orderId}
+                  </Text>
+                  <View style={[styles.statusPill, { backgroundColor: colors.surfaceSunken, borderRadius: radius.xs }]}>
+                    <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '700', fontSize: 10 }]}>
+                      {item.status.replaceAll('_', ' ')}
+                    </Text>
                   </View>
                 </View>
-                <Text style={styles.payoutText}>+₹{item.deliveryFee}</Text>
+                <Text style={[typography.headingS, { color: colors.success, fontWeight: '900' }]}>
+                  +₹{item.deliveryFee}
+                </Text>
               </View>
 
-              <View style={styles.locationSection}>
+              {/* Location section */}
+              <View style={[styles.locationSection, { backgroundColor: colors.surfaceSunken, borderRadius: radius.md }]}>
                 <View style={styles.locRow}>
-                  <Ionicons name="storefront-outline" size={18} color={PRIMARY_EMERALD} />
-                  <Text style={styles.locLabel}>Pickup:</Text>
-                  <Text style={styles.locVal} numberOfLines={1}>
+                  <View style={[styles.locDot, { backgroundColor: colors.primary }]} />
+                  <Text style={[typography.caption, { color: colors.textHint, width: 46, fontWeight: '700' }]}>
+                    Pickup
+                  </Text>
+                  <Text style={[typography.bodyStrong, { flex: 1, color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
                     {item.pickupLocation}
                   </Text>
                 </View>
 
+                {/* Connector line */}
+                <View style={[styles.connectorLine, { backgroundColor: colors.border }]} />
+
                 <View style={styles.locRow}>
-                  <Ionicons name="location-outline" size={18} color="#F97316" />
-                  <Text style={styles.locLabel}>Drop:</Text>
-                  <Text style={styles.locVal} numberOfLines={1}>
+                  <View style={[styles.locDot, { backgroundColor: '#F97316' }]} />
+                  <Text style={[typography.caption, { color: colors.textHint, width: 46, fontWeight: '700' }]}>
+                    Drop
+                  </Text>
+                  <Text style={[typography.bodyStrong, { flex: 1, color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
                     {item.deliveryLocation}
                   </Text>
                 </View>
               </View>
 
+              {/* Accept button */}
               <TouchableOpacity
                 disabled={busy === item.id}
                 onPress={() => accept(item)}
-                style={styles.acceptBtn}
-                activeOpacity={0.85}
+                style={[
+                  styles.acceptBtn,
+                  { backgroundColor: colors.primary, borderRadius: radius.button },
+                  shadows.brand,
+                  busy === item.id && { opacity: 0.7 },
+                ]}
+                activeOpacity={0.88}
               >
                 {busy === item.id ? (
-                  <ActivityIndicator color="#FFF" />
+                  <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark-circle-outline" size={20} color="#FFF" />
-                    <Text style={styles.acceptBtnText}>ACCEPT DELIVERY RUN</Text>
+                    <Ionicons name="checkmark-circle-outline" size={20} color={colors.onPrimary} />
+                    <Text style={[typography.button, { color: colors.onPrimary, letterSpacing: 0.3 }]}>
+                      Accept Delivery Run
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -172,60 +219,41 @@ export const AvailableDeliveriesScreen = () => {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  page: { flex: 1, paddingTop: 52 },
-  header: { paddingHorizontal: 20, paddingBottom: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: BORDER_COLOR },
-  title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
-  subtitle: { marginTop: 4, color: TEXT_MUTED, fontSize: 13 },
-
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 14 },
-  errorText: { textAlign: 'center', color: TEXT_DARK, fontSize: 14 },
-  retryBtn: { backgroundColor: EMERALD_LIGHT, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  retryBtnText: { color: PRIMARY_EMERALD, fontWeight: '700' },
-
-  list: { padding: 16, gap: 12 },
-  empty: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 35 },
-  emptyContainer: { alignItems: 'center', justifyContent: 'center' },
-  emptyIconBox: { width: 72, height: 72, borderRadius: 36, backgroundColor: EMERALD_LIGHT, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '800', color: TEXT_DARK, textAlign: 'center' },
-  emptySub: { textAlign: 'center', lineHeight: 20, marginTop: 6, color: TEXT_MUTED, fontSize: 13 },
-
-  card: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+  safe: { flex: 1 },
+  header: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  orderNumber: { fontSize: 16, fontWeight: '800', color: TEXT_DARK },
-  badgePill: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED },
-  payoutText: { color: PRIMARY_EMERALD, fontSize: 18, fontWeight: '800' },
+  refreshBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
-  locationSection: { backgroundColor: '#F8FAFC', padding: 12, borderRadius: 12, gap: 8, marginBottom: 14 },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  locLabel: { fontSize: 12, fontWeight: '700', color: TEXT_MUTED, width: 50 },
-  locVal: { flex: 1, fontSize: 13, fontWeight: '600', color: TEXT_DARK },
+  center: {
+    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28,
+  },
+  retryBtn: { paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
+
+  listContent: { paddingTop: 16, paddingBottom: 40, gap: 12 },
+  emptyList: { flexGrow: 1 },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  emptyIcon: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
+
+  card: { borderWidth: 1, padding: 16 },
+  cardHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14,
+  },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 3 },
+
+  locationSection: { padding: 12, marginBottom: 14, gap: 4 },
+  locRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
+  locDot: { width: 8, height: 8, borderRadius: 4 },
+  connectorLine: { width: 1, height: 10, marginLeft: 3 },
 
   acceptBtn: {
-    backgroundColor: PRIMARY_EMERALD,
-    borderRadius: 12,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 14, gap: 8,
   },
-  acceptBtnText: { color: '#FFF', fontWeight: '800', fontSize: 14, letterSpacing: 0.5 },
 });
-

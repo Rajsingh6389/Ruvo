@@ -6,8 +6,8 @@ import {
   Modal,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { PRODUCT_CATEGORIES } from '../constants/categories';
 
@@ -16,7 +16,7 @@ const PRIMARY_LIGHT = '#E8F5E9';
 const BORDER = '#E0E0E0';
 const TEXT = '#1A1A1A';
 const SUBTEXT = '#6B7280';
-const BG = '#F7F8FA';
+const BG = '#F8F1E7'; // warm ivory canvas
 
 interface CategoryDropdownProps {
   value: string;

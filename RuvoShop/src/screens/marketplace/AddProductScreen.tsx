@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  SafeAreaView,
   StatusBar,
   Alert,
   Image,
@@ -15,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,12 +24,21 @@ import { uploadProduct, addProduct } from '../../services/productService';
 
 const PRIMARY = '#2E7D32';
 const PRIMARY_LIGHT = '#E8F5E9';
-const BG = '#F7F8FA';
+const BG = '#F8F1E7'; // warm ivory canvas
 const TEXT = '#1A1A1A';
 const SUBTEXT = '#6B7280';
 const BORDER = '#E0E0E0';
 const ERROR = '#E53935';
 const CARD = '#FFFFFF';
+const WHITE = '#FFFFFF';
+
+const MAX_IMAGES = 8;
+
+interface ProductImage {
+  uri: string;
+  type: string;
+  fileName: string;
+}
 
 interface FormErrors {
   name?: string;
@@ -55,9 +64,11 @@ export const AddProductScreen = () => {
   const [stockQuantity, setStockQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [imageType, setImageType] = useState<string>('image/jpeg');
-  const [imageName, setImageName] = useState<string>('product.jpg');
+
+  // ── Multi-image State ──
+  // images[0] is treated as the primary/cover image (sent as "image")
+  // images[1..n] are sent as "images" gallery fields
+  const [images, setImages] = useState<ProductImage[]>([]);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
@@ -74,22 +85,36 @@ export const AddProductScreen = () => {
   }, [actualPrice, sellingPrice]);
 
   // ── Image Picker ──
-  const pickImage = async () => {
+  const pickImages = async () => {
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES} product photos.`);
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.8,
-        allowsEditing: true,
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        setImageUri(asset.uri ?? null);
-        setImageType(asset.mimeType ?? 'image/jpeg');
-        setImageName(asset.fileName ?? 'product.jpg');
-      }
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const newImgs: ProductImage[] = result.assets.map((asset, i) => ({
+        uri: asset.uri,
+        type: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || `product_${Date.now()}_${i}.jpg`,
+      }));
+
+      setImages(prev => [...prev, ...newImgs].slice(0, MAX_IMAGES));
     } catch (e) {
-      console.warn('Image pick cancelled or failed', e);
+      Alert.alert('Image error', 'Could not select images.');
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   // ── Validation ──
@@ -121,131 +146,85 @@ export const AddProductScreen = () => {
 
   // ── Submit ──
   const handleSubmit = async () => {
-  console.log('🟢 1. SUBMIT BUTTON CLICKED');
+    if (!validate()) return;
 
-  if (!validate()) {
-    console.log('❌ 2. VALIDATION FAILED');
-    return;
-  }
+    if (!token) {
+      Alert.alert('Error', 'You are not logged in');
+      return;
+    }
 
-  console.log('🟢 2. VALIDATION PASSED');
+    setLoading(true);
 
-  if (!token) {
-    console.log('❌ NO TOKEN');
-    Alert.alert('Error', 'You are not logged in');
-    return;
-  }
+    try {
+      const ap = parseFloat(actualPrice);
+      const sp = parseFloat(sellingPrice);
+      const sq = parseInt(stockQuantity, 10);
+      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100 * 100) / 100 : 0;
 
-  console.log('🟢 3. TOKEN EXISTS');
-  console.log('🟢 SHOP ID:', shopId);
-  console.log('🟢 IMAGE URI:', imageUri);
+      if (images.length > 0) {
+        const formData = new FormData();
 
-  setLoading(true);
-
-  try {
-    const ap = parseFloat(actualPrice);
-    const sp = parseFloat(sellingPrice);
-    const sq = parseInt(stockQuantity, 10);
-
-    const disc =
-      ap > 0
-        ? Math.round(((ap - sp) / ap) * 100 * 100) / 100
-        : 0;
-
-    console.log('🟢 4. Product values prepared');
-
-    if (imageUri) {
-      console.log('🟢 5. IMAGE EXISTS');
-      console.log('Image type:', imageType);
-      console.log('Image name:', imageName);
-
-      console.log('🟢 6. Creating FormData');
-
-      const formData = new FormData();
-
-      console.log('🟢 7. FormData created');
-
-      const productData = JSON.stringify({
-        shopId,
-        name: name.trim(),
-        category,
-        brandName: brandName.trim() || null,
-        description: description.trim() || null,
-        actualPrice: ap,
-        sellingPrice: sp,
-        discount: disc,
-        stockQuantity: sq,
-        unit: unit.trim() || null,
-        isAvailable,
-      });
-
-      console.log('🟢 8. Product JSON created');
-
-      formData.append('product', productData);
-
-      console.log('🟢 9. Product appended');
-
-      formData.append('image', {
-        uri: imageUri,
-        type: imageType,
-        name: imageName,
-      } as any);
-
-      console.log('🟢 10. Image appended');
-
-      console.log('🟢 11. Calling uploadProduct');
-
-      await uploadProduct(formData, token);
-
-      console.log('✅ 12. UPLOAD SUCCESS');
-
-    } else {
-      console.log('🟢 5. NO IMAGE - using JSON API');
-
-      await addProduct(
-        {
+        const productData = JSON.stringify({
           shopId,
           name: name.trim(),
           category,
-          brandName: brandName.trim() || undefined,
-          description: description.trim() || undefined,
+          brandName: brandName.trim() || null,
+          description: description.trim() || null,
           actualPrice: ap,
           sellingPrice: sp,
           discount: disc,
           stockQuantity: sq,
-          unit: unit.trim() || undefined,
+          unit: unit.trim() || null,
           isAvailable,
-        },
-        token,
-      );
+        });
 
-      console.log('✅ JSON PRODUCT SUCCESS');
+        formData.append('product', productData);
+
+        // First image → primary "image" field
+        formData.append('image', {
+          uri: images[0].uri,
+          type: images[0].type,
+          name: images[0].fileName,
+        } as any);
+
+        // Remaining images → "images" gallery array
+        for (let i = 1; i < images.length; i++) {
+          formData.append('images', {
+            uri: images[i].uri,
+            type: images[i].type,
+            name: images[i].fileName,
+          } as any);
+        }
+
+        await uploadProduct(formData, token);
+      } else {
+        await addProduct(
+          {
+            shopId,
+            name: name.trim(),
+            category,
+            brandName: brandName.trim() || undefined,
+            description: description.trim() || undefined,
+            actualPrice: ap,
+            sellingPrice: sp,
+            discount: disc,
+            stockQuantity: sq,
+            unit: unit.trim() || undefined,
+            isAvailable,
+          },
+          token,
+        );
+      }
+
+      Alert.alert('Success', 'Product added successfully!', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to add product');
+    } finally {
+      setLoading(false);
     }
-
-    Alert.alert('Success', 'Product added successfully!', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
-
-  } catch (err: any) {
-    console.log('🔥 ===============================');
-    console.log('🔥 ADD PRODUCT ERROR');
-    console.log('🔥 ERROR:', err);
-    console.log('🔥 MESSAGE:', err?.message);
-    console.log('🔥 STACK:', err?.stack);
-    console.log('🔥 ===============================');
-
-    Alert.alert(
-      'Error',
-      err?.message || 'Failed to add product'
-    );
-
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const discount = computedDiscount();
   const spNum = parseFloat(sellingPrice);
@@ -281,30 +260,80 @@ export const AddProductScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── PRODUCT IMAGE ── */}
+          {/* ── PRODUCT PHOTOS ── */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>PRODUCT IMAGE</Text>
-            <TouchableOpacity
-              style={styles.imagePicker}
-              onPress={pickImage}
-              activeOpacity={0.8}
-            >
-              {imageUri ? (
-                <View style={styles.imagePreviewWrapper}>
-                  <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-                  <View style={styles.changeOverlay}>
-                    <Ionicons name="camera" size={20} color="#FFF" />
-                    <Text style={styles.changeText}>Change Photo</Text>
+            <View style={styles.photoSectionHeader}>
+              <Text style={styles.sectionLabel}>PRODUCT PHOTOS</Text>
+              <Text style={styles.photoCount}>{images.length}/{MAX_IMAGES}</Text>
+            </View>
+
+            {/* Primary image large preview */}
+            {images.length > 0 ? (
+              <View style={styles.primaryImageWrapper}>
+                <Image source={{ uri: images[0].uri }} style={styles.primaryImage} />
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryBadgeText}>Cover photo</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.primaryRemoveBtn}
+                  onPress={() => removeImage(0)}
+                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                >
+                  <Ionicons name="close-circle" size={22} color={ERROR} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              // Empty state placeholder — tapping opens picker
+              <TouchableOpacity
+                style={styles.imagePlaceholder}
+                onPress={pickImages}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="camera-outline" size={36} color={SUBTEXT} />
+                <Text style={styles.imagePlaceholderText}>Add Product Photos</Text>
+                <Text style={styles.imagePlaceholderSub}>
+                  Select up to {MAX_IMAGES} photos · First photo is the cover
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Thumbnail strip + add tile */}
+            {images.length > 0 && (
+              <View style={styles.thumbStrip}>
+                {images.map((img, index) => (
+                  <View key={`${img.uri}-${index}`} style={styles.thumbWrapper}>
+                    <Image source={{ uri: img.uri }} style={styles.thumb} />
+                    {index === 0 && (
+                      <View style={styles.thumbCoverDot} />
+                    )}
+                    <TouchableOpacity
+                      style={styles.thumbRemoveBtn}
+                      onPress={() => removeImage(index)}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    >
+                      <Ionicons name="close-circle" size={18} color={ERROR} />
+                    </TouchableOpacity>
                   </View>
-                </View>
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera-outline" size={36} color={SUBTEXT} />
-                  <Text style={styles.imagePlaceholderText}>Add Product Photo</Text>
-                  <Text style={styles.imagePlaceholderSub}>Tap to select from gallery</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+                ))}
+
+                {images.length < MAX_IMAGES && (
+                  <TouchableOpacity
+                    style={styles.thumbAddBtn}
+                    onPress={pickImages}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="add" size={22} color={PRIMARY} />
+                    <Text style={styles.thumbAddText}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {images.length > 0 && (
+              <Text style={styles.photoHint}>
+                Tap a photo's ✕ to remove it · First photo is shown as the cover
+              </Text>
+            )}
           </View>
 
           {/* ── BASIC INFORMATION ── */}
@@ -541,6 +570,124 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  // ── Photo section ──
+  photoSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  photoCount: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: SUBTEXT,
+  },
+
+  imagePlaceholder: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: BG,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: BORDER,
+    borderStyle: 'dashed',
+  },
+  imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: TEXT, marginTop: 10 },
+  imagePlaceholderSub: { fontSize: 12, color: SUBTEXT, marginTop: 3, textAlign: 'center', paddingHorizontal: 16 },
+
+  primaryImageWrapper: {
+    borderRadius: 14,
+    overflow: 'visible',
+    marginBottom: 12,
+    position: 'relative',
+  },
+  primaryImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 14,
+  },
+  primaryBadge: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  primaryBadgeText: {
+    color: WHITE,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  primaryRemoveBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: WHITE,
+    borderRadius: 11,
+  },
+
+  thumbStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  thumbWrapper: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    overflow: 'visible',
+    position: 'relative',
+  },
+  thumb: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+  },
+  thumbCoverDot: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: PRIMARY,
+    borderWidth: 1.5,
+    borderColor: WHITE,
+  },
+  thumbRemoveBtn: {
+    position: 'absolute',
+    top: -7,
+    right: -7,
+    backgroundColor: WHITE,
+    borderRadius: 9,
+  },
+  thumbAddBtn: {
+    width: 68,
+    height: 68,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    borderStyle: 'dashed',
+    backgroundColor: PRIMARY_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbAddText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: PRIMARY,
+    marginTop: 1,
+  },
+  photoHint: {
+    fontSize: 11,
+    color: SUBTEXT,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+
+  // ── Form fields ──
   fieldLabel: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 6 },
   required: { color: ERROR },
 
@@ -600,36 +747,6 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   charCounter: { fontSize: 11, color: SUBTEXT, textAlign: 'right', marginTop: 4 },
-
-  imagePicker: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
-  },
-  imagePlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    backgroundColor: BG,
-  },
-  imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: TEXT, marginTop: 10 },
-  imagePlaceholderSub: { fontSize: 12, color: SUBTEXT, marginTop: 3 },
-  imagePreviewWrapper: { position: 'relative' },
-  imagePreview: { width: '100%', height: 200 },
-  changeOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingVertical: 10,
-  },
-  changeText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
 
   toggleRow: {
     flexDirection: 'row',

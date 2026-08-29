@@ -1,20 +1,22 @@
 {
   "expo": {
-    "name": "RuvoMobile",
+    "name": "Ruvo",
     "slug": "RuvoMobile",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "ruvomobile",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.anonymous.ruvomobile",
+      "package": "com.ruvo.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#173F35"
       },
       "config": {
         "googleMaps": {
-          "apiKey": ""
+          "apiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
         }
       },
       "permissions": [
@@ -24,6 +26,27 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
       ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.ruvo.mobile",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RuVo uses your location to find nearby shops and fill delivery addresses.",
+        "NSCameraUsageDescription": "RuVo needs camera access to upload shop and product photos.",
+        "NSPhotoLibraryUsageDescription": "RuVo needs photo library access to select images for uploads."
+      }
+    },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F8F3"
+    },
+    "extra": {
+      "apiBaseUrl": "https://api.ruvo.in",
+      "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+
     },
     "plugins": [
       [
@@ -40,7 +63,9 @@
       ],
       "expo-asset",
       "expo-build-properties",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store",
+      "expo-splash-screen"
     ]
   }
 }

@@ -9,7 +9,12 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Skeleton } from './Skeleton';
+
+const FALLBACK_BG = '#FFFFFF';
+const FALLBACK_BORDER = '#E5E7EB';
+const FALLBACK_ICON = '#9CA3AF';
 
 interface SmartImageProps
   extends Omit<ImageProps, 'style' | 'width' | 'height'> {
@@ -18,7 +23,17 @@ interface SmartImageProps
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
   imageStyle?: StyleProp<ImageStyle>;
+  /** Glyph shown when the image cannot be loaded. */
+  fallbackIcon?: keyof typeof Ionicons.glyphMap;
 }
+
+/** True when the source is a remote URI that is missing or blank. */
+const hasNoUsableUri = (source: ImageProps['source']): boolean => {
+  if (!source) return true;
+  if (typeof source === 'number') return false; // require()'d local asset
+  if (Array.isArray(source)) return source.length === 0;
+  return !source.uri || !String(source.uri).trim();
+};
 
 export const SmartImage = ({
   width,
@@ -26,18 +41,33 @@ export const SmartImage = ({
   borderRadius,
   style,
   imageStyle,
+  fallbackIcon = 'image-outline',
+  source,
+  onLoad,
+  onError,
   ...props
 }: SmartImageProps) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const missingSource = hasNoUsableUri(source);
+  const [isLoading, setIsLoading] = useState(!missingSource);
+  const [hasFailed, setHasFailed] = useState(missingSource);
   const opacity = useRef(new Animated.Value(0)).current;
 
-  const handleLoad = () => {
+  const handleLoad: ImageProps['onLoad'] = event => {
     setIsLoading(false);
     Animated.timing(opacity, {
       toValue: 1,
       duration: 300,
       useNativeDriver: true,
     }).start();
+    onLoad?.(event);
+  };
+
+  // Without this the skeleton shimmers forever on a dead URL, which reads as a
+  // hung screen rather than a missing picture.
+  const handleError: ImageProps['onError'] = event => {
+    setIsLoading(false);
+    setHasFailed(true);
+    onError?.(event);
   };
 
   const containerStyle = {
@@ -49,17 +79,39 @@ export const SmartImage = ({
 
   return (
     <View style={[containerStyle, style]}>
-      {isLoading && (
+      {isLoading && !hasFailed && (
         <View style={StyleSheet.absoluteFill}>
           <Skeleton width="100%" height="100%" />
         </View>
       )}
-      <Animated.Image
-        {...props}
-        onLoad={handleLoad}
-        style={[StyleSheet.absoluteFill, { opacity }, imageStyle]}
-      />
+
+      {hasFailed ? (
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.fallback,
+            { backgroundColor: FALLBACK_BG, borderColor: FALLBACK_BORDER },
+          ]}
+        >
+          <Ionicons name={fallbackIcon} size={28} color={FALLBACK_ICON} />
+        </View>
+      ) : (
+        <Animated.Image
+          {...props}
+          source={source}
+          onLoad={handleLoad}
+          onError={handleError}
+          style={[StyleSheet.absoluteFill, { opacity }, imageStyle]}
+        />
+      )}
     </View>
   );
 };
 
+const styles = StyleSheet.create({
+  fallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+});

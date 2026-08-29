@@ -41,7 +41,7 @@ export const ShopSettlementScreen = () => {
 
   const fetchSettlementSummary = async () => {
     try {
-      const partnerId = user?.id || 1;
+      const partnerId = user?.userId || 1;
       const res = await fetch(`${API_BASE_URL}/api/settlements/partner?partnerId=${partnerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -49,8 +49,8 @@ export const ShopSettlementScreen = () => {
         const data = await res.json();
         setSummaryData(data);
       }
-    } catch (e) {
-      console.log('Error fetching partner settlements:', e);
+    } catch {
+      // Failed to fetch partner settlements
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,7 +78,7 @@ export const ShopSettlementScreen = () => {
     setSelectedShop(shop);
     setLoading(true);
     try {
-      const partnerId = user?.id || 1;
+      const partnerId = user?.userId || 1;
       const res = await fetch(
         `${API_BASE_URL}/api/settlements/generate-otp?partnerId=${partnerId}&shopId=${shop.shopId}`,
         { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
@@ -89,31 +89,17 @@ export const ShopSettlementScreen = () => {
         setTimerSeconds(300);
         setOtpModalVisible(true);
       } else {
-        // Fallback demo response matching exact formulas
-        const mockOtp = String(Math.floor(100000 + Math.random() * 900000));
-        setOtpData({
-          settlementId: 'SETT-' + Date.now(),
-          otp: mockOtp,
-          netCashToShop: shop.netCashToShop || 720,
-          codCollected: shop.codCollected || 940,
-          deliveryCharge: shop.deliveryCharge || 220,
-          ruvoCommission: shop.ruvoCommission || 20,
-        });
-        setTimerSeconds(300);
-        setOtpModalVisible(true);
+        // OTP not returned - show error instead of using fake random OTP
+        Alert.alert(
+          'Settlement Error',
+          data.message || 'Unable to generate settlement OTP. Please try again or contact support.'
+        );
       }
     } catch (e) {
-      const mockOtp = String(Math.floor(100000 + Math.random() * 900000));
-      setOtpData({
-        settlementId: 'SETT-' + Date.now(),
-        otp: mockOtp,
-        netCashToShop: shop.netCashToShop || 720,
-        codCollected: shop.codCollected || 940,
-        deliveryCharge: shop.deliveryCharge || 220,
-        ruvoCommission: shop.ruvoCommission || 20,
-      });
-      setTimerSeconds(300);
-      setOtpModalVisible(true);
+      Alert.alert(
+        'Network Error',
+        'Failed to initiate settlement. Please check your connection and try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -133,32 +119,11 @@ export const ShopSettlementScreen = () => {
     );
   }
 
-  const codTotal = summaryData?.codCollected || 2045;
-  const delEarnings = summaryData?.deliveryEarnings || 710;
-  const netCashToShops = summaryData?.netCashToShops || 1335;
-  const pendingCount = summaryData?.pendingSettlements || 2;
-  const shops = summaryData?.shops || [
-    {
-      shopId: 1,
-      shopName: 'RuVo Mart',
-      ordersCount: 12,
-      codCount: 8,
-      codCollected: 940,
-      deliveryCharge: 220,
-      netCashToShop: 720,
-      status: 'PENDING',
-    },
-    {
-      shopId: 2,
-      shopName: 'Fashion Hub',
-      ordersCount: 6,
-      codCount: 3,
-      codCollected: 560,
-      deliveryCharge: 140,
-      netCashToShop: 420,
-      status: 'PENDING',
-    },
-  ];
+  const codTotal = summaryData?.codCollected || 0;
+  const delEarnings = summaryData?.deliveryEarnings || 0;
+  const netCashToShops = summaryData?.netCashToShops || 0;
+  const pendingCount = summaryData?.pendingSettlements || 0;
+  const shops = summaryData?.shops || [];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -292,7 +257,7 @@ export const ShopSettlementScreen = () => {
 
             {/* OTP Display Box */}
             <View style={styles.otpBoxContainer}>
-              {String(otpData?.otp || '847261')
+              {String(otpData?.otp || '------')
                 .split('')
                 .map((digit: string, idx: number) => (
                   <View key={idx} style={styles.digitBox}>
@@ -313,15 +278,15 @@ export const ShopSettlementScreen = () => {
             <View style={styles.modalSummaryBox}>
               <View style={styles.summaryLine}>
                 <Text style={styles.sumLabel}>COD Collected:</Text>
-                <Text style={styles.sumVal}>₹{otpData?.codCollected || 940}</Text>
+                <Text style={styles.sumVal}>₹{otpData?.codCollected || 0}</Text>
               </View>
               <View style={styles.summaryLine}>
                 <Text style={styles.sumLabel}>Delivery Charge:</Text>
-                <Text style={styles.sumVal}>₹{otpData?.deliveryCharge || 220}</Text>
+                <Text style={styles.sumVal}>₹{otpData?.deliveryCharge || 0}</Text>
               </View>
               <View style={[styles.summaryLine, { marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#CBD5E1' }]}>
                 <Text style={{ fontWeight: '800', color: '#0F172A' }}>Cash Given to Shopkeeper:</Text>
-                <Text style={{ fontWeight: '900', color: EMERALD, fontSize: 16 }}>₹{otpData?.netCashToShop || 720}</Text>
+                <Text style={{ fontWeight: '900', color: EMERALD, fontSize: 16 }}>₹{otpData?.netCashToShop || 0}</Text>
               </View>
             </View>
 
@@ -402,7 +367,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 19,
     backgroundColor: EMERALD_LIGHT,
-    justify: 'center',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   shopName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },

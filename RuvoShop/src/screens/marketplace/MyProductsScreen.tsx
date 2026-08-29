@@ -23,10 +23,12 @@ import {
   Product,
 } from '../../services/productService';
 import { ROUTES } from '../../constants/routes';
+import { OfflineBar } from '../../components/OfflineBar';
+import { ProductSkeleton } from '../../components/ProductSkeleton';
 
 const GREEN = '#2E7D32';
 const LIGHT_GREEN = '#E8F5E9';
-const BG = '#F7F8FA';
+const BG = '#F8F1E7'; // warm ivory canvas
 const TEXT = '#1A1A1A';
 const MUTED = '#6B7280';
 const BORDER = '#E5E7EB';
@@ -362,27 +364,12 @@ export const MyProductsScreen = () => {
     return (
       <View
         style={[
-          styles.center,
-          { backgroundColor: colors.background },
+          styles.container,
+          { backgroundColor: colors.background, padding: 16 },
         ]}
       >
-        <View style={styles.loadingIcon}>
-          <Ionicons
-            name="cube-outline"
-            size={25}
-            color={GREEN}
-          />
-        </View>
-
-        <ActivityIndicator
-          size="small"
-          color={GREEN}
-          style={{ marginTop: 12 }}
-        />
-
-        <Text style={styles.loadingText}>
-          Loading your products...
-        </Text>
+        <OfflineBar />
+        <ProductSkeleton count={6} />
       </View>
     );
   }
@@ -394,6 +381,7 @@ export const MyProductsScreen = () => {
         { backgroundColor: colors.background },
       ]}
     >
+      <OfflineBar />
       {/* HEADER */}
 
       <View style={styles.header}>

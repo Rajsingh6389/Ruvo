@@ -1,0 +1,15 @@
+__tests__/App.test.tsx(6,31): error TS2307: Cannot find module 'react-test-renderer' or its corresponding type declarations.
+src/navigation/AppNavigator.tsx(192,9): error TS2322: Type 'LinkingOptions<RootStackParamList>' is not assignable to type 'LinkingOptions<RootParamList>'.
+  Types of property 'config' are incompatible.
+    Type '{ path?: string | undefined; screens: PathConfigMap<RootStackParamList>; initialRouteName?: keyof RootStackParamList | undefined; } | undefined' is not assignable to type '{ path?: string | undefined; screens: PathConfigMap<RootParamList>; initialRouteName?: undefined; } | undefined'.
+      Type '{ path?: string | undefined; screens: PathConfigMap<RootStackParamList>; initialRouteName?: keyof RootStackParamList | undefined; }' is not assignable to type '{ path?: string | undefined; screens: PathConfigMap<RootParamList>; initialRouteName?: undefined; }'.
+        Types of property 'initialRouteName' are incompatible.
+          Type 'keyof RootStackParamList | undefined' is not assignable to type 'undefined'.
+            Type '"Search"' is not assignable to type 'undefined'.
+src/screens/grocery/GroceriesScreen.tsx(739,19): error TS2322: Type 'string' is not assignable to type 'number'.
+src/screens/grocery/GroceriesScreen.tsx(746,21): error TS2322: Type 'string' is not assignable to type 'number'.
+src/screens/grocery/GroceriesScreen.tsx(751,21): error TS2322: Type 'string' is not assignable to type 'number'.
+src/screens/grocery/GroceriesScreen.tsx(756,21): error TS2322: Type 'string' is not assignable to type 'number'.
+src/screens/profile/EditProfileScreen.tsx(22,124): error TS2353: Object literal may only specify known properties, and 'bio' does not exist in type 'UpdateProfileInput'.
+src/screens/search/SearchScreen.tsx(83,42): error TS2345: Argument of type '[never, never]' is not assignable to parameter of type 'never'.
+src/screens/search/SearchScreen.tsx(116,42): error TS2345: Argument of type '[never, never]' is not assignable to parameter of type 'never'.

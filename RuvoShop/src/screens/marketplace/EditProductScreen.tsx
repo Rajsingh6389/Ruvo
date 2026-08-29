@@ -7,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  SafeAreaView,
   StatusBar,
   Alert,
   Image,
@@ -15,6 +14,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,7 +25,7 @@ import type { Product } from '../../services/productService';
 
 const PRIMARY = '#2E7D32';
 const PRIMARY_LIGHT = '#E8F5E9';
-const BG = '#F7F8FA';
+const BG = '#F8F1E7'; // warm ivory canvas
 const TEXT = '#1A1A1A';
 const SUBTEXT = '#6B7280';
 const BORDER = '#E0E0E0';

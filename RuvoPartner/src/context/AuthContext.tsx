@@ -87,8 +87,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setIsAuthenticated(true);
           fetchProfile(storedToken);
         }
-      } catch (err) {
-        console.log('Error initializing auth:', err);
+      } catch {
+        // Auth initialization failed silently
       } finally {
         setIsLoading(false);
       }

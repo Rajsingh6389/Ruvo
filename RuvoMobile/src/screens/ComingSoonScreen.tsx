@@ -13,260 +13,272 @@ import {
 } from 'react-native';
 
 const COLORS = {
-  primary: '#2E7D32',
-  green: '#4C9A55',
-  lightGreen: '#E8F5E9',
-  background: '#F7F8FA',
+  primary: '#F5B700',
+  primaryDark: '#C98F00',
+  light: '#FFF8E6',
+  background: '#F8F9FB',
   white: '#FFFFFF',
-  text: '#1A1A1A',
+  text: '#111827',
   secondary: '#6B7280',
-  border: '#DDEFE0',
+  border: '#E5E7EB',
 };
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const TV_WIDTH = Math.min(SCREEN_WIDTH - 40, 390);
-const TV_HEIGHT = TV_WIDTH * 0.62;
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 52, 360);
+const CARD_HEIGHT = CARD_WIDTH * 0.68;
 
 export default function ComingSoonScreen({ navigation }: any) {
-  // TV entrance
-  const tvOpacity = useRef(new Animated.Value(0)).current;
-  const tvScale = useRef(new Animated.Value(0.94)).current;
-  const tvTranslateY = useRef(new Animated.Value(20)).current;
+  // Main entrance
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.82)).current;
+  const translateY = useRef(new Animated.Value(35)).current;
 
-  // Broadcast indicator
-  const indicatorOpacity = useRef(new Animated.Value(0.4)).current;
+  // 3D floating motion
+  const floatY = useRef(new Animated.Value(0)).current;
+  const rotateY = useRef(new Animated.Value(0)).current;
+  const rotateX = useRef(new Animated.Value(0)).current;
 
-  // Hand / gesture animation
-  const handX = useRef(new Animated.Value(-35)).current;
-  const handY = useRef(new Animated.Value(35)).current;
-  const handOpacity = useRef(new Animated.Value(0)).current;
-  const handScale = useRef(new Animated.Value(0.8)).current;
+  // 3D depth / glow
+  const glowOpacity = useRef(new Animated.Value(0.35)).current;
+  const glowScale = useRef(new Animated.Value(0.9)).current;
 
-  // Gesture trail
-  const trailOpacity = useRef(new Animated.Value(0)).current;
-  const rippleScale = useRef(new Animated.Value(0.4)).current;
-  const rippleOpacity = useRef(new Animated.Value(0)).current;
+  // Content reveal
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleScale = useRef(new Animated.Value(0.75)).current;
+  const cardsOpacity = useRef(new Animated.Value(0)).current;
 
-  // Coming soon reveal
-  const comingOpacity = useRef(new Animated.Value(0)).current;
-  const comingScale = useRef(new Animated.Value(0.75)).current;
-  const comingTranslateY = useRef(new Animated.Value(12)).current;
+  // Floating mini icons
+  const icon1Y = useRef(new Animated.Value(0)).current;
+  const icon2Y = useRef(new Animated.Value(0)).current;
+  const icon3Y = useRef(new Animated.Value(0)).current;
 
-  const subtitleOpacity = useRef(new Animated.Value(0)).current;
-
-  // Bottom content
-  const bottomOpacity = useRef(new Animated.Value(0)).current;
+  // Pulse
+  const pulse = useRef(new Animated.Value(0.45)).current;
 
   useEffect(() => {
-    const animation = Animated.sequence([
-      // ---------------------------------------
-      // 1. TV enters
-      // ---------------------------------------
+    const entrance = Animated.sequence([
       Animated.parallel([
-        Animated.timing(tvOpacity, {
+        Animated.timing(opacity, {
           toValue: 1,
           duration: 450,
           useNativeDriver: true,
         }),
-
-        Animated.spring(tvScale, {
+        Animated.spring(scale, {
           toValue: 1,
-          friction: 7,
+          friction: 6,
           tension: 70,
           useNativeDriver: true,
         }),
-
-        Animated.timing(tvTranslateY, {
+        Animated.timing(translateY, {
           toValue: 0,
-          duration: 450,
+          duration: 500,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
 
-      // ---------------------------------------
-      // 2. Small pause
-      // ---------------------------------------
-      Animated.delay(350),
+      Animated.delay(250),
 
-      // ---------------------------------------
-      // 3. Hand appears inside TV
-      // ---------------------------------------
       Animated.parallel([
-        Animated.timing(handOpacity, {
+        Animated.timing(titleOpacity, {
           toValue: 1,
-          duration: 250,
+          duration: 400,
           useNativeDriver: true,
         }),
-
-        Animated.spring(handScale, {
-          toValue: 1,
-          friction: 6,
-          tension: 80,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // ---------------------------------------
-      // 4. Hand moves across TV
-      // ---------------------------------------
-      Animated.parallel([
-        Animated.timing(handX, {
-          toValue: 45,
-          duration: 650,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(handY, {
-          toValue: -5,
-          duration: 650,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(trailOpacity, {
-          toValue: 0.7,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // ---------------------------------------
-      // 5. Hand performs gesture
-      // ---------------------------------------
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(handX, {
-            toValue: 75,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-          Animated.timing(handX, {
-            toValue: 48,
-            duration: 220,
-            useNativeDriver: true,
-          }),
-        ]),
-
-        Animated.sequence([
-          Animated.timing(handScale, {
-            toValue: 1.08,
-            duration: 180,
-            useNativeDriver: true,
-          }),
-          Animated.timing(handScale, {
-            toValue: 0.96,
-            duration: 220,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-
-      // ---------------------------------------
-      // 6. Ripple
-      // ---------------------------------------
-      Animated.parallel([
-        Animated.timing(rippleScale, {
-          toValue: 2.4,
-          duration: 500,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-
-        Animated.sequence([
-          Animated.timing(rippleOpacity, {
-            toValue: 0.5,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(rippleOpacity, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-
-      // ---------------------------------------
-      // 7. Hide hand
-      // ---------------------------------------
-      Animated.timing(handOpacity, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-
-      // ---------------------------------------
-      // 8. COMING SOON reveal
-      // ---------------------------------------
-      Animated.parallel([
-        Animated.timing(comingOpacity, {
-          toValue: 1,
-          duration: 450,
-          useNativeDriver: true,
-        }),
-
-        Animated.spring(comingScale, {
+        Animated.spring(titleScale, {
           toValue: 1,
           friction: 5,
-          tension: 80,
-          useNativeDriver: true,
-        }),
-
-        Animated.timing(comingTranslateY, {
-          toValue: 0,
-          duration: 400,
-          easing: Easing.out(Easing.cubic),
+          tension: 75,
           useNativeDriver: true,
         }),
       ]),
 
-      // ---------------------------------------
-      // 9. Subtitle
-      // ---------------------------------------
-      Animated.timing(subtitleOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-
-      // ---------------------------------------
-      // 10. Bottom cards
-      // ---------------------------------------
-      Animated.timing(bottomOpacity, {
+      Animated.timing(cardsOpacity, {
         toValue: 1,
         duration: 400,
         useNativeDriver: true,
       }),
     ]);
 
-    animation.start();
+    entrance.start();
 
-    // Broadcast indicator pulse
-    const pulse = Animated.loop(
+    // Gentle 3D floating
+    const floating = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(floatY, {
+            toValue: -10,
+            duration: 1800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(floatY, {
+            toValue: 0,
+            duration: 1800,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(rotateY, {
+            toValue: 1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateY, {
+            toValue: -1,
+            duration: 2200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateY, {
+            toValue: 0,
+            duration: 1100,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(rotateX, {
+            toValue: 1,
+            duration: 1900,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateX, {
+            toValue: -1,
+            duration: 1900,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotateX, {
+            toValue: 0,
+            duration: 950,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    );
+
+    // Glow breathing
+    const glow = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(glowOpacity, {
+            toValue: 0.72,
+            duration: 1300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowOpacity, {
+            toValue: 0.3,
+            duration: 1300,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(glowScale, {
+            toValue: 1.12,
+            duration: 1300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowScale, {
+            toValue: 0.9,
+            duration: 1300,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    );
+
+    // Small floating icons
+    const iconFloat = Animated.parallel([
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(icon1Y, {
+            toValue: -12,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(icon1Y, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(300),
+          Animated.timing(icon2Y, {
+            toValue: -15,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(icon2Y, {
+            toValue: 0,
+            duration: 1400,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(600),
+          Animated.timing(icon3Y, {
+            toValue: -10,
+            duration: 1100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(icon3Y, {
+            toValue: 0,
+            duration: 1100,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    ]);
+
+    // Status pulse
+    const statusPulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(indicatorOpacity, {
+        Animated.timing(pulse, {
           toValue: 1,
-          duration: 700,
+          duration: 800,
           useNativeDriver: true,
         }),
-        Animated.timing(indicatorOpacity, {
+        Animated.timing(pulse, {
           toValue: 0.35,
-          duration: 700,
+          duration: 800,
           useNativeDriver: true,
         }),
       ]),
     );
 
-    pulse.start();
+    floating.start();
+    glow.start();
+    iconFloat.start();
+    statusPulse.start();
 
     return () => {
-      animation.stop();
-      pulse.stop();
+      entrance.stop();
+      floating.stop();
+      glow.stop();
+      iconFloat.stop();
+      statusPulse.stop();
     };
   }, []);
+
+  const cardRotateY = rotateY.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-7deg', '0deg', '7deg'],
+  });
+
+  const cardRotateX = rotateX.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['5deg', '0deg', '-5deg'],
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -275,7 +287,6 @@ export default function ComingSoonScreen({ navigation }: any) {
         backgroundColor={COLORS.background}
       />
 
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -288,195 +299,199 @@ export default function ComingSoonScreen({ navigation }: any) {
       </View>
 
       <View style={styles.content}>
-        {/* Small RuVo heading */}
+        {/* Small label */}
         <Animated.View
           style={[
             styles.topLabel,
             {
-              opacity: tvOpacity,
-              transform: [{ translateY: tvTranslateY }],
+              opacity,
+              transform: [{ translateY }],
             },
           ]}
         >
-          <View style={styles.ruvoDot} />
-          <Text style={styles.topLabelText}>RUVO PREVIEW</Text>
+          <Animated.View
+            style={[styles.statusDot, { opacity: pulse }]}
+          />
+          <Text style={styles.topLabelText}>
+            RUVO • SOMETHING NEW
+          </Text>
         </Animated.View>
 
-        {/* TV */}
+        {/* 3D HERO */}
         <Animated.View
           style={[
-            styles.tvWrapper,
+            styles.hero,
             {
-              opacity: tvOpacity,
+              opacity,
               transform: [
-                { scale: tvScale },
-                { translateY: tvTranslateY },
+                { perspective: 900 },
+                { translateY },
+                { scale },
+                { rotateX: cardRotateX },
+                { rotateY: cardRotateY },
               ],
             },
           ]}
         >
-          {/* TV outer frame */}
-          <View style={styles.tvFrame}>
-            {/* TV top bar */}
-            <View style={styles.tvTopBar}>
-              <View style={styles.broadcastLeft}>
-                <Animated.View
-                  style={[
-                    styles.liveDot,
-                    { opacity: indicatorOpacity },
-                  ]}
-                />
-                <Text style={styles.broadcastText}>RUVO</Text>
+          {/* Ambient glow */}
+          <Animated.View
+            style={[
+              styles.heroGlow,
+              {
+                opacity: glowOpacity,
+                transform: [{ scale: glowScale }],
+              },
+            ]}
+          />
+
+          {/* Floating objects behind the main object */}
+          <Animated.View
+            style={[
+              styles.floatingIcon,
+              styles.iconOne,
+              { transform: [{ translateY: icon1Y }, { rotate: '-10deg' }] },
+            ]}
+          >
+            <Text style={styles.iconText}>⚡</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.floatingIcon,
+              styles.iconTwo,
+              { transform: [{ translateY: icon2Y }, { rotate: '9deg' }] },
+            ]}
+          >
+            <Text style={styles.iconText}>✦</Text>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.floatingIcon,
+              styles.iconThree,
+              { transform: [{ translateY: icon3Y }, { rotate: '-7deg' }] },
+            ]}
+          >
+            <Text style={styles.iconText}>●</Text>
+          </Animated.View>
+
+          {/* Back depth layers */}
+          <View style={[styles.depthLayer, styles.depthLayer3]} />
+          <View style={[styles.depthLayer, styles.depthLayer2]} />
+          <View style={[styles.depthLayer, styles.depthLayer1]} />
+
+          {/* Main glass card */}
+          <View style={styles.mainCard}>
+            <View style={styles.cardTop}>
+              <View style={styles.brandRow}>
+                <View style={styles.brandMark}>
+                  <Text style={styles.brandMarkText}>R</Text>
+                </View>
+
+                <View>
+                  <Text style={styles.brandName}>RuVo</Text>
+                  <Text style={styles.brandCaption}>
+                    THE NEXT LOCAL EXPERIENCE
+                  </Text>
+                </View>
               </View>
 
-              <Text style={styles.previewText}>PREVIEW</Text>
+              <View style={styles.previewPill}>
+                <Animated.View
+                  style={[styles.previewDot, { opacity: pulse }]}
+                />
+                <Text style={styles.previewText}>PREVIEW</Text>
+              </View>
             </View>
 
-            {/* Actual TV screen */}
-            <View style={styles.tvScreen}>
-              {/* subtle screen lines */}
-              <View style={styles.screenLineOne} />
-              <View style={styles.screenLineTwo} />
+            <View style={styles.cardCenter}>
+              <View style={[styles.orbit, styles.orbitOne]} />
+              <View style={[styles.orbit, styles.orbitTwo]} />
 
-              {/* Center RuVo mark */}
-              <Text style={styles.screenRuvo}>RuVo</Text>
+              <View style={styles.coreShadow} />
 
-              {/* Hand gesture */}
-              <Animated.View
-                style={[
-                  styles.handContainer,
-                  {
-                    opacity: handOpacity,
-                    transform: [
-                      { translateX: handX },
-                      { translateY: handY },
-                      { scale: handScale },
-                    ],
-                  },
-                ]}
-              >
-                {/* palm */}
-                <View style={styles.palm} />
+              <View style={styles.core}>
+                <View style={styles.coreHighlight} />
+                <Text style={styles.coreRuVo}>RuVo</Text>
+                <Text style={styles.coreSmall}>BUILDING</Text>
+              </View>
+            </View>
 
-                {/* index finger */}
-                <View style={styles.indexFinger} />
-
-                {/* thumb */}
-                <View style={styles.thumb} />
-              </Animated.View>
-
-              {/* Gesture trail */}
-              <Animated.View
-                style={[
-                  styles.gestureTrail,
-                  {
-                    opacity: trailOpacity,
-                  },
-                ]}
-              />
-
-              {/* Ripple */}
-              <Animated.View
-                style={[
-                  styles.ripple,
-                  {
-                    opacity: rippleOpacity,
-                    transform: [{ scale: rippleScale }],
-                  },
-                ]}
-              />
-
-              {/* Coming Soon */}
-              <Animated.View
-                style={[
-                  styles.comingContainer,
-                  {
-                    opacity: comingOpacity,
-                    transform: [
-                      { scale: comingScale },
-                      { translateY: comingTranslateY },
-                    ],
-                  },
-                ]}
-              >
-                <Text style={styles.comingSmall}>RUVO</Text>
-
-                <Text style={styles.comingText}>
+            <View style={styles.cardBottom}>
+              <View>
+                <Text style={styles.bottomSmall}>
+                  NEW EXPERIENCE
+                </Text>
+                <Text style={styles.bottomMain}>
                   COMING SOON
                 </Text>
+              </View>
 
-                <View style={styles.greenLine} />
-              </Animated.View>
-            </View>
-
-            {/* TV bottom */}
-            <View style={styles.tvBottomBar}>
-              <Text style={styles.bottomBroadcast}>
-                SOMETHING NEW IS COMING
-              </Text>
-
-              <View style={styles.signalBars}>
-                <View style={[styles.signal, { height: 5 }]} />
-                <View style={[styles.signal, { height: 8 }]} />
-                <View style={[styles.signal, { height: 11 }]} />
-                <View style={[styles.signal, { height: 14 }]} />
+              <View style={styles.progressTrack}>
+                <Animated.View
+                  style={[
+                    styles.progressFill,
+                    {
+                      opacity: pulse,
+                    },
+                  ]}
+                />
               </View>
             </View>
+
+            {/* Glass shine */}
+            <View style={styles.glassShine} />
           </View>
 
-          {/* TV stand */}
-          <View style={styles.tvStand}>
-            <View style={styles.standNeck} />
-            <View style={styles.standBase} />
-          </View>
+          {/* Front bottom shadow */}
+          <View style={styles.groundShadow} />
         </Animated.View>
 
-        {/* Message */}
+        {/* Main message */}
         <Animated.View
           style={[
-            styles.messageContainer,
-            { opacity: subtitleOpacity },
+            styles.message,
+            {
+              opacity: titleOpacity,
+              transform: [{ scale: titleScale }],
+            },
           ]}
         >
-          <Text style={styles.mainMessage}>
-            This feature is coming soon.
+          <Text style={styles.mainTitle}>
+            Something better is coming.
           </Text>
 
-          <Text style={styles.subMessage}>
-            RuVo is building something better for your neighborhood.
+          <Text style={styles.subtitle}>
+            RuVo is building a new experience for your neighborhood.
           </Text>
         </Animated.View>
 
-        {/* Coming Soon features */}
+        {/* Feature cards */}
         <Animated.View
           style={[
-            styles.featuresRow,
-            { opacity: bottomOpacity },
+            styles.features,
+            {
+              opacity: cardsOpacity,
+            },
           ]}
         >
-          <View style={styles.featureCard}>
-            <Text style={styles.featureIcon}>🔧</Text>
-            <Text style={styles.featureTitle}>Local Services</Text>
-            <Text style={styles.featureStatus}>COMING SOON</Text>
-          </View>
+        
 
           <View style={styles.featureCard}>
-            <Text style={styles.featureIcon}>💼</Text>
+            <View style={styles.featureIconBox}>
+              <Text style={styles.featureIcon}>💼</Text>
+            </View>
             <Text style={styles.featureTitle}>Local Jobs</Text>
             <Text style={styles.featureStatus}>COMING SOON</Text>
           </View>
 
-          <View style={styles.featureCard}>
-            <Text style={styles.featureIcon}>📱</Text>
-            <Text style={styles.featureTitle}>UPI</Text>
-            <Text style={styles.featureStatus}>COMING SOON</Text>
-          </View>
+        
         </Animated.View>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Built for your neighborhood.
+          Built for you.
         </Text>
       </View>
     </SafeAreaView>
@@ -524,10 +539,10 @@ const styles = StyleSheet.create({
   topLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
-  ruvoDot: {
+  statusDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
@@ -536,52 +551,180 @@ const styles = StyleSheet.create({
   },
 
   topLabelText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-    color: COLORS.primary,
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1.5,
+    color: COLORS.primaryDark,
   },
 
-  tvWrapper: {
+  hero: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT + 35,
     alignItems: 'center',
-    width: '100%',
+    justifyContent: 'center',
+    position: 'relative',
   },
 
-  tvFrame: {
-    width: TV_WIDTH,
-    height: TV_HEIGHT,
-    maxWidth: 390,
-    backgroundColor: COLORS.white,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    padding: 7,
-
+  heroGlow: {
+    position: 'absolute',
+    width: CARD_WIDTH * 0.78,
+    height: CARD_WIDTH * 0.78,
+    borderRadius: CARD_WIDTH * 0.39,
+    backgroundColor: COLORS.primary,
     shadowColor: COLORS.primary,
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-
-    elevation: 8,
+    shadowOpacity: 0.55,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 12 },
   },
 
-  tvTopBar: {
-    height: 26,
+  floatingIcon: {
+    position: 'absolute',
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+    elevation: 7,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+  },
+
+  iconOne: {
+    left: 6,
+    top: 35,
+  },
+
+  iconTwo: {
+    right: 3,
+    top: 60,
+  },
+
+  iconThree: {
+    right: 25,
+    bottom: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+  },
+
+  iconText: {
+    fontSize: 18,
+    color: COLORS.primaryDark,
+  },
+
+  depthLayer: {
+    position: 'absolute',
+    width: CARD_WIDTH - 22,
+    height: CARD_HEIGHT,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  depthLayer3: {
+    backgroundColor: '#EAD79B',
+    transform: [
+      { translateY: 17 },
+      { translateX: 12 },
+      { rotate: '2deg' },
+    ],
+    opacity: 0.9,
+  },
+
+  depthLayer2: {
+    backgroundColor: '#F0E3B7',
+    transform: [
+      { translateY: 11 },
+      { translateX: 8 },
+      { rotate: '1deg' },
+    ],
+  },
+
+  depthLayer1: {
+    backgroundColor: '#FFF2C8',
+    transform: [
+      { translateY: 6 },
+      { translateX: 4 },
+    ],
+  },
+
+  mainCard: {
+    width: CARD_WIDTH - 22,
+    height: CARD_HEIGHT,
+    borderRadius: 24,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#E8D79E',
+    overflow: 'hidden',
+    elevation: 12,
+    shadowColor: COLORS.primaryDark,
+    shadowOpacity: 0.2,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 13 },
+  },
+
+  cardTop: {
+    height: 58,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.light,
   },
 
-  broadcastLeft: {
+  brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
 
-  liveDot: {
+  brandMark: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 9,
+    transform: [{ rotate: '-5deg' }],
+  },
+
+  brandMarkText: {
+    color: COLORS.white,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+
+  brandName: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  brandCaption: {
+    color: COLORS.secondary,
+    fontSize: 6.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginTop: 1,
+  },
+
+  previewPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: COLORS.light,
+  },
+
+  previewDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
@@ -589,254 +732,230 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
 
-  broadcastText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: 1,
-  },
-
   previewText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: COLORS.secondary,
-    letterSpacing: 0.8,
+    color: COLORS.primaryDark,
+    fontSize: 7,
+    fontWeight: '900',
+    letterSpacing: 0.7,
   },
 
-  tvScreen: {
+  cardCenter: {
     flex: 1,
-    backgroundColor: '#F3FAF4',
-    borderRadius: 13,
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'relative',
+    backgroundColor: '#FFFCF2',
+  },
+
+  orbit: {
+    position: 'absolute',
     borderWidth: 1,
-    borderColor: COLORS.lightGreen,
+    borderColor: '#F0D77E',
+    borderRadius: 999,
   },
 
-  screenLineOne: {
-    position: 'absolute',
-    width: '80%',
-    height: 1,
-    backgroundColor: COLORS.lightGreen,
-    top: '24%',
+  orbitOne: {
+    width: 150,
+    height: 72,
+    transform: [{ rotate: '-12deg' }],
   },
 
-  screenLineTwo: {
-    position: 'absolute',
-    width: '65%',
-    height: 1,
-    backgroundColor: COLORS.lightGreen,
-    bottom: '24%',
-  },
-
-  screenRuvo: {
-    position: 'absolute',
-    top: '18%',
-    fontSize: 13,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: 2,
-  },
-
-  handContainer: {
-    position: 'absolute',
-    width: 55,
-    height: 65,
-    left: '50%',
-    top: '45%',
-    marginLeft: -27,
-    marginTop: -30,
-  },
-
-  palm: {
-    position: 'absolute',
-    width: 35,
-    height: 34,
-    bottom: 2,
-    left: 10,
-    borderRadius: 17,
-    backgroundColor: COLORS.primary,
-    transform: [{ rotate: '-8deg' }],
-  },
-
-  indexFinger: {
-    position: 'absolute',
-    width: 12,
-    height: 39,
-    top: 0,
-    left: 27,
-    borderRadius: 8,
-    backgroundColor: COLORS.green,
-    transform: [{ rotate: '5deg' }],
-  },
-
-  thumb: {
-    position: 'absolute',
-    width: 13,
-    height: 25,
-    bottom: 10,
-    left: 3,
-    borderRadius: 8,
-    backgroundColor: COLORS.green,
-    transform: [{ rotate: '-45deg' }],
-  },
-
-  gestureTrail: {
-    position: 'absolute',
-    width: 75,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: COLORS.primary,
-    left: '34%',
-    top: '55%',
-    transform: [{ rotate: '-15deg' }],
-  },
-
-  ripple: {
-    position: 'absolute',
-    width: 55,
+  orbitTwo: {
+    width: 110,
     height: 55,
-    borderRadius: 28,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    transform: [{ rotate: '22deg' }],
+    opacity: 0.65,
   },
 
-  comingContainer: {
+  coreShadow: {
     position: 'absolute',
+    width: 94,
+    height: 24,
+    borderRadius: 50,
+    backgroundColor: '#D8B45B',
+    opacity: 0.2,
+    bottom: '27%',
+  },
+
+  core: {
+    width: 105,
+    height: 105,
+    borderRadius: 30,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    transform: [
+      { rotate: '-7deg' },
+      { perspective: 400 },
+      { rotateX: '5deg' },
+    ],
+    elevation: 10,
+    shadowColor: COLORS.primaryDark,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    overflow: 'hidden',
   },
 
-  comingSmall: {
-    fontSize: 9,
+  coreHighlight: {
+    position: 'absolute',
+    width: 60,
+    height: 115,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    transform: [{ rotate: '25deg' }, { translateX: -28 }],
+  },
+
+  coreRuVo: {
+    color: COLORS.white,
+    fontSize: 25,
     fontWeight: '900',
-    color: COLORS.green,
-    letterSpacing: 3,
-    marginBottom: 4,
+    letterSpacing: -1,
   },
 
-  comingText: {
-    fontSize: Math.min(SCREEN_WIDTH * 0.065, 27),
+  coreSmall: {
+    color: COLORS.white,
+    fontSize: 7,
     fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: 1,
+    letterSpacing: 2,
+    marginTop: 4,
+    opacity: 0.85,
   },
 
-  greenLine: {
-    width: 55,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: COLORS.primary,
-    marginTop: 8,
-  },
-
-  tvBottomBar: {
-    height: 25,
+  cardBottom: {
+    height: 57,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.light,
   },
 
-  bottomBroadcast: {
-    fontSize: 7,
-    fontWeight: '700',
+  bottomSmall: {
     color: COLORS.secondary,
-    letterSpacing: 0.4,
-  },
-
-  signalBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-
-  signal: {
-    width: 3,
-    backgroundColor: COLORS.primary,
-    borderRadius: 1,
-  },
-
-  tvStand: {
-    alignItems: 'center',
-  },
-
-  standNeck: {
-    width: 35,
-    height: 12,
-    backgroundColor: COLORS.white,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: COLORS.border,
-  },
-
-  standBase: {
-    width: 85,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.primary,
-  },
-
-  messageContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 25,
-    marginTop: 18,
-  },
-
-  mainMessage: {
-    fontSize: 17,
+    fontSize: 6.5,
     fontWeight: '800',
+    letterSpacing: 1,
+  },
+
+  bottomMain: {
+    color: COLORS.primaryDark,
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+
+  progressTrack: {
+    width: 55,
+    height: 5,
+    borderRadius: 5,
+    backgroundColor: COLORS.light,
+    overflow: 'hidden',
+  },
+
+  progressFill: {
+    width: '70%',
+    height: '100%',
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+
+  glassShine: {
+    position: 'absolute',
+    top: -CARD_HEIGHT * 0.15,
+    left: CARD_WIDTH * 0.44,
+    width: 70,
+    height: CARD_HEIGHT * 1.3,
+    backgroundColor: 'rgba(255,255,255,0.32)',
+    transform: [{ rotate: '24deg' }],
+  },
+
+  groundShadow: {
+    position: 'absolute',
+    bottom: 4,
+    width: CARD_WIDTH * 0.55,
+    height: 15,
+    borderRadius: 50,
+    backgroundColor: '#D9C98F',
+    opacity: 0.25,
+    transform: [{ scaleX: 1.15 }],
+    zIndex: -1,
+  },
+
+  message: {
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    marginTop: 13,
+  },
+
+  mainTitle: {
     color: COLORS.text,
+    fontSize: 19,
+    fontWeight: '900',
     textAlign: 'center',
   },
 
-  subMessage: {
+  subtitle: {
+    color: COLORS.secondary,
     fontSize: 12,
     lineHeight: 18,
-    color: COLORS.secondary,
     textAlign: 'center',
-    marginTop: 5,
-    maxWidth: 300,
+    marginTop: 6,
+    maxWidth: 315,
   },
 
-  featuresRow: {
+  features: {
     flexDirection: 'row',
     width: '100%',
     maxWidth: 390,
-    marginTop: 14,
+    marginTop: 15,
     gap: 7,
   },
 
   featureCard: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.lightGreen,
-    paddingVertical: 9,
+    borderColor: COLORS.light,
+    paddingVertical: 10,
     paddingHorizontal: 4,
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+  },
+
+  featureIconBox: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: COLORS.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
   },
 
   featureIcon: {
-    fontSize: 18,
-    marginBottom: 3,
+    fontSize: 17,
   },
 
   featureTitle: {
-    fontSize: 9,
-    fontWeight: '700',
+    fontSize: 8.5,
+    fontWeight: '800',
     color: COLORS.text,
     textAlign: 'center',
   },
 
   featureStatus: {
-    fontSize: 6.5,
-    fontWeight: '800',
-    color: COLORS.primary,
+    fontSize: 6,
+    fontWeight: '900',
+    color: COLORS.primaryDark,
     marginTop: 3,
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
 
   footer: {
@@ -845,7 +964,7 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: COLORS.secondary,
   },
 });

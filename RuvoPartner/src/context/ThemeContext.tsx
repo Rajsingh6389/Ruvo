@@ -1,26 +1,60 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { LightTheme, DarkTheme } from '../theme/theme';
+import { Colors } from '../theme/colors';
+import { SPACING } from '../theme/spacing';
+import { TYPOGRAPHY } from '../theme/typography';
+import { SHADOWS } from '../theme/shadows';
+import { RADIUS } from '../theme/radius';
 
-export const theme = {
-  colors: {
-    primary: '#173F35', // Shared RuVo forest; lavender is reserved for AI assistance.
-    primaryLight: '#6FA58C',
-    accent: '#C7F36B',
-    ai: '#B8A4FF',
-    background: '#F7F8F3',
-    card: '#FFFFFF',
-    textPrimary: '#17201D',
-    textSecondary: '#58645E',
-    border: '#E6EBE6',
-    error: '#E76F51',
-    warning: '#F4B942',
-    success: '#5BAE7A',
+type Theme = 'light' | 'dark';
+
+type ThemeContextProps = {
+  theme: Theme;
+  toggleTheme: () => void;
+  // React Nav colors
+  navColors: typeof LightTheme.colors;
+  // Full Design System Tokens
+  colors: typeof Colors.light & { primary: string; primaryLight: string; primarySoft: string; secondary: string; accent: string; ai: string; error: string; warning: string; success: string; info: string };
+  spacing: typeof SPACING;
+  typography: typeof TYPOGRAPHY;
+  shadows: typeof SHADOWS;
+  radius: typeof RADIUS;
+};
+
+const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
+
+export const ThemeProvider = ({ children }: { children: ReactNode }) => {
+  const [theme, setTheme] = useState<Theme>('light');
+  const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+
+  const navColors = theme === 'light' ? LightTheme.colors : DarkTheme.colors;
+  const sysColors = theme === 'light' ? Colors.light : Colors.dark;
+
+  const colors = {
+    ...sysColors,
+    primary: Colors.primary,
+    primaryLight: Colors.primaryLight,
+    primarySoft: Colors.primarySoft,
+    secondary: Colors.secondary,
+    accent: Colors.accent,
+    ai: Colors.ai,
+    error: Colors.error,
+    warning: Colors.warning,
+    success: Colors.success,
+    info: Colors.info,
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme, navColors, colors, spacing: SPACING, typography: TYPOGRAPHY, shadows: SHADOWS, radius: RADIUS }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = (): ThemeContextProps => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
+  return context;
 };
-
-const ThemeContext = createContext(theme);
-
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  return <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>;
-};
-
-export const useTheme = () => useContext(ThemeContext);

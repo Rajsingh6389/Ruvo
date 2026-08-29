@@ -28,8 +28,8 @@ export const ActiveDevicesScreen = () => {
         const data = await res.json();
         setSessions(data.data);
       }
-    } catch (err) {
-      console.log('Error fetching sessions:', err);
+    } catch {
+      // Failed to fetch sessions
     } finally {
       setLoading(false);
     }

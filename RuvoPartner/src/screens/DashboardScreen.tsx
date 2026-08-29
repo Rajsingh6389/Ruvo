@@ -19,18 +19,18 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ApiError } from '../services/api';
 import { Delivery, DeliveryRequest, Earnings, partnerService } from '../services/partnerService';
+import { OfflineBar } from '../components/OfflineBar';
+import { NotificationPopup } from '../components/NotificationPopup';
+import { useDeliveryRequestSound } from '../hooks/useNotificationSound';
 
 const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT = '#ECFDF5';
-const ACCENT_ORANGE = '#F97316';
-const CARD_BG = '#FFFFFF';
-const TEXT_DARK = '#0F172A';
-const TEXT_MUTED = '#64748B';
-const BORDER_COLOR = '#E2E8F0';
+const EMERALD_LIGHT   = '#ECFDF5';
+const TEXT_DARK       = '#1C1410';
+const TEXT_MUTED      = '#5C4F42';
 
 export const DashboardScreen = () => {
   const { user, token, verificationStatus, refreshProfile } = useAuth();
-  const { colors } = useTheme();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
   const navigation = useNavigation<any>();
 
   const [online, setOnline] = useState(false);
@@ -46,6 +46,9 @@ export const DashboardScreen = () => {
   const [autoOfflineBanner, setAutoOfflineBanner] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Notification sound + popup when new delivery request arrives
+  const { showPopup, popupMessage, dismissPopup } = useDeliveryRequestSound(Boolean(incomingRequest));
+
   const fetchAddressName = async (lat: number, lng: number): Promise<string> => {
     try {
       const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
@@ -54,8 +57,8 @@ export const DashboardScreen = () => {
         const parts = [item.name, item.street, item.subregion || item.district, item.city].filter(Boolean);
         if (parts.length > 0) return parts.join(', ');
       }
-    } catch (e) {
-      console.warn('Expo reverse geocode failed, trying fallback...', e);
+    } catch {
+      // Expo reverse geocode failed, trying fallback
     }
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
@@ -69,8 +72,8 @@ export const DashboardScreen = () => {
           .join(', ');
         return shortName || data.display_name.split(',').slice(0, 3).join(',');
       }
-    } catch (e) {
-      console.warn('Fallback reverse geocode failed:', e);
+    } catch {
+      // Fallback reverse geocode failed
     }
     return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
   };
@@ -90,8 +93,7 @@ export const DashboardScreen = () => {
       setCurrentCoords({ latitude: lat, longitude: lng });
       setCurrentLocationName(name);
       return { lat, lng, name };
-    } catch (e: any) {
-      console.warn('Error fetching location:', e);
+    } catch {
       Alert.alert('Location Error', 'Could not obtain your current location. Please turn on GPS.');
       return null;
     }
@@ -321,19 +323,27 @@ export const DashboardScreen = () => {
 
   return (
     <ScrollView
-      style={[styles.page, { backgroundColor: '#F8FAFC' }]}
+      style={[styles.page, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={PRIMARY_EMERALD}
-          colors={[PRIMARY_EMERALD]}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
     >
-      <StatusBar barStyle="light-content" backgroundColor={PRIMARY_EMERALD} />
+      {/* New Request Notification Popup */}
+      <NotificationPopup
+        visible={showPopup}
+        message={popupMessage}
+        subtitle="Tap to accept or decline"
+        onDismiss={dismissPopup}
+      />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <OfflineBar />
 
       {/* Auto-Offline Banner */}
       {autoOfflineBanner && (
@@ -346,7 +356,7 @@ export const DashboardScreen = () => {
       )}
 
       {/* Hero Header */}
-      <View style={styles.hero}>
+      <View style={[styles.hero, { backgroundColor: colors.primary }]}>
         <View>
           <Text style={styles.hello}>Welcome back,</Text>
           <Text style={styles.name}>{user?.name || 'Delivery Partner'}</Text>
@@ -384,20 +394,21 @@ export const DashboardScreen = () => {
         style={[
           styles.dutyBtn,
           {
-            backgroundColor: online ? EMERALD_LIGHT : PRIMARY_EMERALD,
-            borderColor: online ? '#A7F3D0' : PRIMARY_EMERALD,
+            backgroundColor: online ? colors.primarySoft : colors.primary,
+            borderColor: online ? colors.primaryLight : colors.primary,
+            borderRadius: radius.card,
           },
         ]}
       >
         <Ionicons
           name={online ? 'radio-button-on' : 'power'}
           size={24}
-          color={online ? PRIMARY_EMERALD : '#FFF'}
+          color={online ? colors.primary : colors.onPrimary}
         />
         <Text
           style={[
             styles.dutyBtnText,
-            { color: online ? PRIMARY_EMERALD : '#FFF' },
+            { color: online ? colors.primary : colors.onPrimary },
           ]}
         >
           {online ? 'GO OFFLINE' : 'GO ONLINE'}
@@ -406,8 +417,8 @@ export const DashboardScreen = () => {
 
       {/* Live Location Card */}
       {online && (
-        <View style={styles.locationCard}>
-          <Ionicons name="location" size={22} color={PRIMARY_EMERALD} />
+        <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }]}>
+          <Ionicons name="location" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.locationTitle}>Live Location (Reverse Geocoded)</Text>
             <Text style={styles.locationSubtitle} numberOfLines={2}>
@@ -433,21 +444,22 @@ export const DashboardScreen = () => {
             style={[
               styles.activeCard,
               {
-                backgroundColor: active ? '#FFF7ED' : CARD_BG,
-                borderColor: active ? '#FFEDD5' : BORDER_COLOR,
+                backgroundColor: active ? colors.warningSoft : colors.card,
+                borderColor: active ? '#FFEDD5' : colors.border,
+                borderRadius: radius.card,
               },
             ]}
           >
             <View
               style={[
                 styles.activeIconCircle,
-                { backgroundColor: active ? '#FFEDD5' : EMERALD_LIGHT },
+                { backgroundColor: active ? '#FFEDD5' : colors.primarySoft },
               ]}
             >
               <Ionicons
                 name={active ? 'bicycle' : 'checkmark-circle'}
                 size={26}
-                color={active ? ACCENT_ORANGE : PRIMARY_EMERALD}
+                color={active ? '#F97316' : colors.primary}
               />
             </View>
 
@@ -485,13 +497,13 @@ export const DashboardScreen = () => {
               icon="today-outline"
               label="Today"
               value={`₹${earnings?.todayEarnings ?? 0}`}
-              color={PRIMARY_EMERALD}
+              color={colors.primary}
             />
             <MetricCard
               icon="wallet-outline"
               label="Wallet"
               value={`₹${earnings?.walletBalance ?? 0}`}
-              color="#3B82F6"
+              color={colors.info}
             />
             <MetricCard
               icon="trending-up-outline"
@@ -629,13 +641,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: PRIMARY_EMERALD,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
-  hello: { color: '#A7F3D0', fontSize: 13, fontWeight: '600' },
-  name: { color: '#FFF', fontSize: 22, fontWeight: '800', marginTop: 2 },
-  vehicleSub: { color: '#D1FAE5', fontSize: 12, marginTop: 3, fontWeight: '500' },
+  hello: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' },
+  name: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginTop: 2 },
+  vehicleSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, fontWeight: '500' },
 
   statusBox: { alignItems: 'center' },
   statusText: { fontWeight: '800', fontSize: 11, marginBottom: 4, letterSpacing: 0.5 },
@@ -681,33 +690,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeTitle: { fontSize: 15, fontWeight: '800', color: TEXT_DARK },
-  activeSub: { color: TEXT_MUTED, fontSize: 12, marginTop: 2, lineHeight: 17 },
+  activeTitle: { fontSize: 15, fontWeight: '800', color: '#1C1410' },
+  activeSub: { color: '#5C4F42', fontSize: 12, marginTop: 2, lineHeight: 17 },
   liveBadge: {
     backgroundColor: '#FFEDD5',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
-  liveBadgeText: { color: ACCENT_ORANGE, fontSize: 9, fontWeight: '800' },
+  liveBadgeText: { color: '#F97316', fontSize: 9, fontWeight: '800' },
 
   sectionHeader: { marginHorizontal: 16, marginTop: 24, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: TEXT_DARK },
+  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1C1410' },
 
   grid: { paddingHorizontal: 16, flexDirection: 'row', gap: 10 },
   metricCard: {
     flex: 1,
-    backgroundColor: CARD_BG,
+    backgroundColor: '#FFFDF9',
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
+    borderColor: '#EDE4D8',
     borderRadius: 16,
     padding: 14,
     alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
+    shadowColor: '#2E2313',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    elevation: 2,
   },
   metricIconCircle: {
     width: 36,
@@ -717,8 +726,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  metricValue: { fontSize: 18, fontWeight: '800', color: TEXT_DARK },
-  metricLabel: { color: TEXT_MUTED, fontSize: 11, marginTop: 2, fontWeight: '600' },
+  metricValue: { fontSize: 18, fontWeight: '800', color: '#1C1410' },
+  metricLabel: { color: '#5C4F42', fontSize: 11, marginTop: 2, fontWeight: '600' },
 
   locationCard: {
     marginHorizontal: 16,

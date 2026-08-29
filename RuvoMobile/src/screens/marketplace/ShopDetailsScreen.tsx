@@ -109,7 +109,7 @@ export const ShopDetailsScreen = () => {
   }, [products]);
 
   const visibleProducts = useMemo(() => {
-    let list = products.filter(product => Boolean(product.imageUrl && product.imageUrl.trim() !== ''));
+    let list = products;
 
     if (activeCategory !== 'All') {
       list = list.filter(product => product.category === activeCategory);

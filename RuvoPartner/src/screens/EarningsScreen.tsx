@@ -7,31 +7,26 @@ import {
   Text,
   TouchableOpacity,
   View,
-  StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Delivery, Earnings, partnerService } from '../services/partnerService';
 
-const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT = '#ECFDF5';
-const TEXT_DARK = '#0F172A';
-const TEXT_MUTED = '#64748B';
-const CARD_BG = '#FFFFFF';
-const BORDER_COLOR = '#E2E8F0';
-
 export const EarningsScreen = () => {
   const { token } = useAuth();
-  const { colors } = useTheme();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
 
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [history, setHistory] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isRefresh = false) => {
     if (!token) return;
+    isRefresh ? setRefreshing(true) : setLoading(true);
     try {
       const [e, h] = await Promise.all([
         partnerService.earnings(token),
@@ -41,142 +36,192 @@ export const EarningsScreen = () => {
       setHistory(h.sort((a, b) => b.id - a.id));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <View style={[styles.page, { backgroundColor: '#F8FAFC' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-
-      {/* Header */}
-      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* ── HEADER ─────────────────────────────────────────────── */}
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Earnings & Payouts</Text>
-          <Text style={styles.subtitle}>Track daily income, wallet, and delivery payouts.</Text>
+          <Text style={[typography.headingL, { color: colors.textPrimary }]}>Earnings & Payouts</Text>
+          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
+            Track daily income, wallet, and delivery payouts
+          </Text>
         </View>
         <TouchableOpacity
-          style={{ padding: 8, backgroundColor: EMERALD_LIGHT, borderRadius: 20 }}
-          onPress={load}
+          style={[styles.refreshBtn, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}
+          onPress={() => load(true)}
         >
-          <Ionicons name="refresh" size={20} color={PRIMARY_EMERALD} />
+          <Ionicons name="refresh" size={20} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* Today Earnings Banner */}
-      <View style={styles.heroBanner}>
-        <Text style={styles.heroLabel}>TODAY'S TOTAL EARNINGS</Text>
-        <Text style={styles.heroAmount}>₹{earnings?.todayEarnings ?? 0}</Text>
-        <View style={styles.heroRow}>
-          <Ionicons name="wallet-outline" size={16} color="#D1FAE5" />
-          <Text style={styles.heroWalletText}>
-            Wallet Balance • ₹{earnings?.walletBalance ?? 0}
+      {/* ── HERO BANNER ────────────────────────────────────────── */}
+      <View style={[styles.heroBanner, { backgroundColor: colors.primary, borderRadius: radius.card }, shadows.raised]}>
+        {/* Decorative inner circle */}
+        <View style={styles.heroBg} />
+
+        <Text style={[typography.label, { color: colors.primarySoft, letterSpacing: 1, fontSize: 11 }]}>
+          TODAY'S TOTAL EARNINGS
+        </Text>
+        <Text style={[typography.headingXL, { color: colors.onPrimary, fontSize: 38, fontWeight: '900', marginVertical: 4 }]}>
+          ₹{earnings?.todayEarnings ?? 0}
+        </Text>
+
+        <View style={styles.heroMetaRow}>
+          <View style={styles.heroMeta}>
+            <Ionicons name="wallet-outline" size={14} color={colors.primarySoft} />
+            <Text style={[typography.caption, { color: colors.primarySoft, marginLeft: 5 }]}>
+              Wallet Balance
+            </Text>
+            <Text style={[typography.bodyStrong, { color: colors.onPrimary, marginLeft: 6 }]}>
+              ₹{earnings?.walletBalance ?? 0}
+            </Text>
+          </View>
+          <View style={[styles.heroDivider, { backgroundColor: colors.onPrimary + '30' }]} />
+          <View style={styles.heroMeta}>
+            <Ionicons name="trending-up-outline" size={14} color={colors.primarySoft} />
+            <Text style={[typography.caption, { color: colors.primarySoft, marginLeft: 5 }]}>
+              All Time
+            </Text>
+            <Text style={[typography.bodyStrong, { color: colors.onPrimary, marginLeft: 6 }]}>
+              ₹{earnings?.totalEarnings ?? 0}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── SECTION HEADER ─────────────────────────────────────── */}
+      <View style={[styles.sectionHeader, { paddingHorizontal: spacing.gutter }]}>
+        <Text style={[typography.headingS, { color: colors.textPrimary }]}>Delivery History</Text>
+        <View style={[styles.countPill, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}>
+          <Text style={[typography.caption, { color: colors.primaryLight, fontWeight: '700' }]}>
+            {history.length} runs
           </Text>
         </View>
       </View>
 
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Completed Delivery History</Text>
-        <Text style={styles.historyCount}>{history.length} Runs</Text>
-      </View>
-
+      {/* ── LIST ───────────────────────────────────────────────── */}
       {loading ? (
-        <ActivityIndicator color={PRIMARY_EMERALD} style={{ marginVertical: 32 }} />
+        <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
       ) : (
         <FlatList
           data={history}
           keyExtractor={x => String(x.id)}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={load} tintColor={PRIMARY_EMERALD} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
           }
-          contentContainerStyle={history.length ? styles.list : styles.empty}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingHorizontal: spacing.gutter },
+            history.length === 0 && styles.emptyList,
+          ]}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Ionicons name="receipt-outline" size={42} color={BORDER_COLOR} />
-              <Text style={styles.emptyText}>Completed delivery earnings will appear here.</Text>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft, borderRadius: 48 }]}>
+                <Ionicons name="receipt-outline" size={44} color={colors.textHint} />
+              </View>
+              <Text style={[typography.headingS, { color: colors.textPrimary, marginTop: 20 }]}>
+                No completed runs yet
+              </Text>
+              <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 }]}>
+                Completed delivery earnings will appear here once you start accepting runs.
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.historyCard}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="checkmark-done" size={20} color={PRIMARY_EMERALD} />
+            <View style={[styles.historyCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
+              {/* Left accent */}
+              <View style={[styles.cardAccent, { backgroundColor: colors.success }]} />
+
+              <View style={styles.cardRow}>
+                <View style={[styles.iconCircle, { backgroundColor: colors.successSoft, borderRadius: radius.pill }]}>
+                  <Ionicons name="checkmark-done" size={20} color={colors.success} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>
+                    Order #{item.orderId}
+                  </Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                    Completed · Run #{item.id}
+                  </Text>
+                </View>
+                <Text style={[typography.headingS, { color: colors.success }]}>
+                  +₹{item.deliveryFee}
+                </Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.orderIdText}>Order #{item.orderId}</Text>
-                <Text style={styles.dateText}>Completed • Run #{item.id}</Text>
-              </View>
-              <Text style={styles.payoutAmount}>+₹{item.deliveryFee}</Text>
             </View>
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  page: { flex: 1, paddingTop: 52 },
-  header: { paddingHorizontal: 20, paddingBottom: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: BORDER_COLOR },
-  title: { fontSize: 22, fontWeight: '800', color: TEXT_DARK },
-  subtitle: { marginTop: 4, color: TEXT_MUTED, fontSize: 13 },
+  safe: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  refreshBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
 
   heroBanner: {
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 20,
     padding: 20,
-    backgroundColor: PRIMARY_EMERALD,
-    shadowColor: PRIMARY_EMERALD,
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    overflow: 'hidden',
   },
-  heroLabel: { color: '#A7F3D0', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  heroAmount: { color: '#FFF', fontSize: 36, fontWeight: '900', marginVertical: 6 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  heroWalletText: { color: '#E0F2FE', fontSize: 13, fontWeight: '600' },
+  heroBg: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    top: -50,
+    right: -40,
+  },
+  heroMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 12 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center' },
+  heroDivider: { width: 1, height: 16 },
 
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: 20,
+    justifyContent: 'space-between',
     marginTop: 24,
     marginBottom: 12,
   },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: TEXT_DARK },
-  historyCount: { fontSize: 12, fontWeight: '700', color: TEXT_MUTED },
+  countPill: { paddingHorizontal: 10, paddingVertical: 4 },
 
-  list: { paddingHorizontal: 16, paddingBottom: 32, gap: 10 },
-  empty: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
-  emptyBox: { alignItems: 'center', gap: 10 },
-  emptyText: { color: TEXT_MUTED, textAlign: 'center', fontSize: 13 },
+  listContent: { paddingBottom: 40, gap: 10 },
+  emptyList: { flexGrow: 1 },
+  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  emptyIcon: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
 
   historyCard: {
-    backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 14,
-    padding: 14,
+    overflow: 'hidden',
+  },
+  cardAccent: { height: 3, width: '100%' },
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
+    padding: 14,
   },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: EMERALD_LIGHT, alignItems: 'center', justifyContent: 'center' },
-  orderIdText: { color: TEXT_DARK, fontWeight: '800', fontSize: 15 },
-  dateText: { color: TEXT_MUTED, fontSize: 12, marginTop: 2 },
-  payoutAmount: { color: PRIMARY_EMERALD, fontSize: 17, fontWeight: '900' },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
-

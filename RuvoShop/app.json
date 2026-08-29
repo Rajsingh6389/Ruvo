@@ -4,9 +4,31 @@
     "slug": "ruvo-shop",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
     "scheme": "ruvo-shop",
     "userInterfaceStyle": "automatic",
-    "android": { "package": "com.ruvo.shop" },
-    "plugins": ["expo-font"]
+    "android": {
+      "package": "com.ruvo.shop",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#173F35"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.ruvo.shop"
+    },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F8F3"
+    },
+    "extra": {
+      "apiBaseUrl": "https://api.ruvo.in"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-secure-store",
+      "expo-splash-screen"
+    ]
   }
 }

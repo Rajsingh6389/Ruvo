@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { RootStackParamList } from '../../types/navigation';
 import { getPendingShops, approveShop, rejectShop, Shop } from '../../services/shopService';
+import { API_BASE_URL } from '../../config/api';
 
 export const AdminDashboardScreen = () => {
   const { colors } = useTheme();
@@ -26,9 +27,11 @@ export const AdminDashboardScreen = () => {
   const { token } = useAuth();
   
   const [shops, setShops] = useState<Shop[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'shops' | 'partners'>('shops');
 
   const fetchPendingShops = useCallback(async () => {
     if (!token) return;
@@ -44,13 +47,101 @@ export const AdminDashboardScreen = () => {
     }
   }, [token]);
 
+  const fetchPendingPartners = useCallback(async () => {
+    if (!token) return;
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/partners/pending`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPartners(Array.isArray(data) ? data : (data.data || []));
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load pending partners.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
   useEffect(() => {
-    fetchPendingShops();
-  }, [fetchPendingShops]);
+    if (activeTab === 'shops') {
+      fetchPendingShops();
+    } else {
+      fetchPendingPartners();
+    }
+  }, [activeTab, fetchPendingShops, fetchPendingPartners]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchPendingShops();
+    if (activeTab === 'shops') {
+      fetchPendingShops();
+    } else {
+      fetchPendingPartners();
+    }
+  };
+
+  const handleApprovePartner = async (partner: any) => {
+    Alert.alert('Approve Partner', `Are you sure you want to approve ${partner.name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve',
+        style: 'default',
+        onPress: async () => {
+          if (!token) return;
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/partners/${partner.partnerId}/approve`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (res.ok) {
+              Alert.alert('Success', `${partner.name} has been approved.`);
+              setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
+            } else {
+              Alert.alert('Error', 'Failed to approve partner.');
+            }
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to approve partner.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleRejectPartner = async (partner: any) => {
+    Alert.alert('Reject Partner', `Are you sure you want to reject ${partner.name}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          if (!token) return;
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/admin/partners/${partner.partnerId}/reject`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ reason: 'Rejected by admin' })
+            });
+            if (res.ok) {
+              Alert.alert('Rejected', `${partner.name} has been rejected.`);
+              setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
+            } else {
+              Alert.alert('Error', 'Failed to reject partner.');
+            }
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to reject partner.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleApprove = async (shop: Shop) => {
@@ -104,7 +195,7 @@ export const AdminDashboardScreen = () => {
         </View>
         {item.logoUrl ? (
           <Image
-            source={{ uri: item.logoUrl.startsWith('http') ? item.logoUrl : `http://192.168.1.9:8080/${item.logoUrl.replace(/\\/g, '/')}` }}
+            source={{ uri: item.logoUrl.startsWith('http') ? item.logoUrl : `${API_BASE_URL}/${item.logoUrl.replace(/\\/g, '/')}` }}
             style={styles.logo}
           />
         ) : (
@@ -144,6 +235,54 @@ export const AdminDashboardScreen = () => {
     </View>
   );
 
+  const renderPartner = ({ item }: { item: any }) => (
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={styles.cardHeader}>
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.shopName, { color: colors.textPrimary }]}>{item.name || `Partner #${item.partnerId}`}</Text>
+          <View style={[styles.badge, { backgroundColor: '#FFA50022' }]}>
+            <Text style={[styles.badgeText, { color: '#FFA500' }]}>KYC Pending</Text>
+          </View>
+        </View>
+        <View style={[styles.logoPlaceholder, { backgroundColor: colors.border }]}>
+          <Ionicons name="person-circle" size={24} color={colors.textSecondary} />
+        </View>
+      </View>
+
+      <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+        <Ionicons name="call-outline" size={14} /> {item.mobileNumber || 'N/A'}
+      </Text>
+      {item.vehicle && (
+        <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+          <Ionicons name="bicycle-outline" size={14} /> {item.vehicle.vehicleType} - {item.vehicle.vehicleNumber}
+        </Text>
+      )}
+      {item.kyc && (
+        <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+          <Ionicons name="document-text-outline" size={14} /> {item.kyc.fullName}
+        </Text>
+      )}
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.rejectBtn]}
+          onPress={() => handleRejectPartner(item)}
+        >
+          <Ionicons name="close-circle-outline" size={18} color="#E53935" />
+          <Text style={[styles.actionBtnText, { color: '#E53935' }]}>Reject</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.approveBtn]}
+          onPress={() => handleApprovePartner(item)}
+        >
+          <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+          <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Approve</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -155,9 +294,22 @@ export const AdminDashboardScreen = () => {
       </View>
 
       <View style={styles.tabContainer}>
-        <View style={styles.tabActive}>
-          <Text style={styles.tabActiveText}>Pending Approvals</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'shops' && styles.tabActive]}
+          onPress={() => setActiveTab('shops')}
+        >
+          <Text style={[styles.tabText, activeTab === 'shops' && styles.tabActiveText]}>
+            Pending Shops ({shops.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'partners' && styles.tabActive]}
+          onPress={() => setActiveTab('partners')}
+        >
+          <Text style={[styles.tabText, activeTab === 'partners' && styles.tabActiveText]}>
+            Pending Partners ({partners.length})
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -178,9 +330,9 @@ export const AdminDashboardScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={shops}
-          keyExtractor={item => item.id.toString()}
-          renderItem={renderShop}
+          data={(activeTab === 'shops' ? shops : partners) as any[]}
+          keyExtractor={(item: any) => (activeTab === 'shops' ? item.id.toString() : item.partnerId.toString())}
+          renderItem={activeTab === 'shops' ? renderShop : renderPartner}
           contentContainerStyle={styles.list}
           refreshControl={
             <RefreshControl
@@ -193,7 +345,11 @@ export const AdminDashboardScreen = () => {
             <View style={styles.center}>
               <Ionicons name="checkmark-done-circle-outline" size={64} color={colors.primary} />
               <Text style={[styles.emptyText, { color: colors.textPrimary }]}>All caught up!</Text>
-              <Text style={[styles.centerText, { color: colors.textSecondary }]}>There are no pending shop registrations.</Text>
+              <Text style={[styles.centerText, { color: colors.textSecondary }]}>
+                {activeTab === 'shops' 
+                  ? 'There are no pending shop registrations.'
+                  : 'There are no pending partner approvals.'}
+              </Text>
             </View>
           }
         />
@@ -216,20 +372,29 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   headerTitle: { fontSize: 20, fontWeight: '700' },
   tabContainer: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    gap: 8,
   },
-  tabActive: {
+  tab: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#F5F5F5',
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 16,
   },
+  tabActive: {
+    backgroundColor: '#E8F5E9',
+  },
+  tabText: {
+    color: '#666666',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   tabActiveText: {
     color: '#2E7D32',
     fontWeight: '700',
-    fontSize: 14,
   },
   list: { padding: 16, paddingBottom: 40 },
   card: {
