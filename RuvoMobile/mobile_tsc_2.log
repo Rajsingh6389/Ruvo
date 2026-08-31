@@ -1,0 +1,37 @@
+__tests__/App.test.tsx(6,31): error TS2307: Cannot find module 'react-test-renderer' or its corresponding type declarations.
+src/components/design-system/LoadingState.tsx(39,7): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ width: string | number; height: number; borderRadius: number; }' is not assignable to type 'StyleProp<ViewStyle>'.
+      Types of property 'width' are incompatible.
+        Type 'string | number' is not assignable to type 'DimensionValue | undefined'.
+          Type 'string' is not assignable to type 'DimensionValue | undefined'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ width: string | number; height: number; borderRadius: number; }' is not assignable to type 'StyleProp<ViewStyle>'.
+      Types of property 'width' are incompatible.
+        Type 'string | number' is not assignable to type 'DimensionValue | undefined'.
+          Type 'string' is not assignable to type 'DimensionValue | undefined'.
+src/screens/marketplace/CheckoutScreen.tsx(172,34): error TS2339: Property 'email' does not exist on type 'User'.
+src/screens/marketplace/NearbyShopsScreen.tsx(108,23): error TS2339: Property 'rating' does not exist on type 'Product'.
+src/screens/marketplace/NearbyShopsScreen.tsx(109,28): error TS2339: Property 'reviewCount' does not exist on type 'Product'.
+src/screens/marketplace/PaymentFailureScreen.tsx(19,33): error TS2339: Property 'orderId' does not exist on type 'never'.
+src/screens/marketplace/PaymentFailureScreen.tsx(20,32): error TS2339: Property 'reason' does not exist on type 'never'.
+src/screens/marketplace/PaymentFailureScreen.tsx(57,64): error TS2345: Argument of type '{ screen: "Home"; }' is not assignable to parameter of type 'undefined'.
+src/screens/marketplace/ShopDetailsScreen.tsx(127,11): error TS2322: Type '{ title: string; subtitle: string; icon: string; }' is not assignable to type 'IntrinsicAttributes & LoadingStateProps'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & LoadingStateProps'.
+src/screens/marketplace/ShopDetailsScreen.tsx(142,11): error TS2322: Type '{ title: string; subtitle: string; onRetry: () => void; }' is not assignable to type 'IntrinsicAttributes & ErrorStateProps'.
+  Property 'subtitle' does not exist on type 'IntrinsicAttributes & ErrorStateProps'.
+src/screens/marketplace/ShopDetailsScreen.tsx(190,13): error TS2741: Property 'price' is missing in type 'import("C:/Users/rm273/Downloads/RuVo/RuvoMobile/src/services/productService").Product' but required in type 'import("C:/Users/rm273/Downloads/RuVo/RuvoMobile/src/types/product").Product'.
+src/screens/marketplace/ShopDetailsScreen.tsx(192,13): error TS2322: Type '(qty: any) => void' is not assignable to type '() => void'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/screens/marketplace/ShopDetailsScreen.tsx(192,27): error TS7006: Parameter 'qty' implicitly has an 'any' type.
+src/screens/marketplace/ShopDetailsScreen.tsx(193,32): error TS7006: Parameter 'qty' implicitly has an 'any' type.
+src/screens/marketplace/ShopDetailsScreen.tsx(328,23): error TS2339: Property 'description' does not exist on type 'Shop'.
+src/screens/marketplace/ShopDetailsScreen.tsx(330,27): error TS2339: Property 'description' does not exist on type 'Shop'.
+src/screens/marketplace/ShopDetailsScreen.tsx(351,23): error TS2339: Property 'deliveryTime' does not exist on type 'Shop'.
+src/screens/marketplace/ShopDetailsScreen.tsx(356,31): error TS2339: Property 'deliveryTime' does not exist on type 'Shop'.
+src/screens/marketplace/ShopDetailsScreen.tsx(365,23): error TS2339: Property 'minOrderAmount' does not exist on type 'Shop'.
+src/screens/marketplace/ShopDetailsScreen.tsx(369,32): error TS2339: Property 'minOrderAmount' does not exist on type 'Shop'.
+src/screens/profile/EditProfileScreen.tsx(35,124): error TS2353: Object literal may only specify known properties, and 'bio' does not exist in type 'UpdateProfileInput'.
+src/screens/profile/EditProfileScreen.tsx(150,65): error TS2551: Property 'bgSecondary' does not exist on type '{ background: string; surface: string; card: string; border: string; divider: string; placeholder: string; disabled: string; disabledText: string; textPrimary: string; textSecondary: string; ... 27 more ...; tintClay: string; } & { ...; }'. Did you mean 'secondary'?
+src/screens/search/SearchScreen.tsx(83,42): error TS2345: Argument of type '[never, never]' is not assignable to parameter of type 'never'.
+src/screens/search/SearchScreen.tsx(116,42): error TS2345: Argument of type '[never, never]' is not assignable to parameter of type 'never'.

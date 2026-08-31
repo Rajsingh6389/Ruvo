@@ -2,516 +2,486 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
-  TouchableOpacity,
+  Pressable,
   View,
-  Platform,
   StatusBar,
-  Dimensions,
+  StyleSheet,
+  TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ROUTES } from '../../constants/routes';
-import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
-import { useAuth } from '../../context/AuthContext';
 import { getNearbyShops, getShops } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
-import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
-import { formatDistance, getDistanceInKm } from '../../utils/distanceUtils';
+import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
+import { CATEGORIES, PRODUCT_IMAGES, SHOP_IMAGES, getCategoryImage } from '../../assets/cloudinary';
+import { LoadingState, EmptyState, ErrorState } from '../../components/design-system';
+import { resolveImageUrl } from '../../utils/imageUrl';
 
 type NearbyShopsRouteProp = RouteProp<RootStackParamList, 'NearbyShops'>;
-import { SHOP_IMAGES, CATEGORY_IMAGES, PRODUCT_IMAGES, GROCERY_IMAGES, getCategoryImage } from '../../assets/cloudinary';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+type NearbyProduct = {
+  id: number;
+  name: string;
+  unit?: string;
+  sellingPrice: number;
+  actualPrice: number;
+  shopId: number;
+  category: string;
+  imageUrl?: string;
+  image?: string;
+  price: number;
+  originalPrice: number;
+  variant: string;
+  isAvailable: boolean;
+};
 
-// ── Default Mock Shops with 3D Assets for Demonstration ────
+const normalize = (value?: string | null) => (value || '').trim().toLowerCase();
+const matchesCategory = (shop: Shop, category?: string) => {
+  if (!category) return true;
+  const wanted = normalize(category);
+  const actual = normalize(shop.category);
+  return actual === wanted || actual.includes(wanted) || wanted.includes(actual);
+};
 
+const shopImage = (shop: Shop) =>
+  resolveImageUrl(shop.logoUrl || shop.bannerUrl || shop.image) ||
+  getCategoryImage(shop.category) ||
+  SHOP_IMAGES.superStore;
+
+const productImage = (product: NearbyProduct) =>
+  resolveImageUrl(product.imageUrl || product.image) || PRODUCT_IMAGES.milk;
 
 export const NearbyShopsScreen = () => {
-  const { colors, theme, toggleTheme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<NearbyShopsRouteProp>();
   const categoryFilter = (route.params as any)?.category as string | undefined;
-  const { location: userLocation, refreshFromGps } = useDeliveryLocation();
+  const { location: userLocation } = useDeliveryLocation();
   const { cartItems, addToCart, cartTotal } = useCart();
+  const { width: screenWidth } = useWindowDimensions();
 
-  const [shops, setShops] = useState<any[]>([]);
-  const [selectedShopId, setSelectedShopId] = useState<number | string | null>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
+  const [products, setProducts] = useState<NearbyProduct[]>([]);
+  const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(false);
   const [shopsLoading, setShopsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const horizontalPadding = screenWidth < 360 ? 12 : 16;
+  const gridGap = screenWidth < 360 ? 10 : 14;
+  const productCardWidth = Math.floor((screenWidth - horizontalPadding * 2 - gridGap) / 2);
+  const shopTileWidth = Math.min(214, Math.max(172, screenWidth * 0.58));
+  const heroImageSize = screenWidth < 360 ? 76 : 96;
 
-  // Load shops from backend, optionally filtered by category
-  const loadData = useCallback(async () => {
+  const loadShops = useCallback(async () => {
     setShopsLoading(true);
+    setError(null);
     try {
       const data = userLocation
         ? await getNearbyShops(userLocation.latitude, userLocation.longitude, 5)
         : await getShops();
-      let all: any[] = Array.isArray(data) ? data : [];
 
-      const merged = all.map((s, idx) => {
-        const validBanner = s.bannerUrl && typeof s.bannerUrl === 'string' && s.bannerUrl.trim().length > 0 ? s.bannerUrl : null;
-        const validLogo = s.logoUrl && typeof s.logoUrl === 'string' && s.logoUrl.trim().length > 0 ? s.logoUrl : null;
-        const catImg = getCategoryImage(s.category || '');
-        const fallbackImg = SHOP_IMAGES.freshMart;
+      const allShops = Array.isArray(data) ? data : [];
+      const filtered = categoryFilter
+        ? allShops.filter(shop => matchesCategory(shop, categoryFilter))
+        : allShops;
+      const visible = categoryFilter ? filtered : allShops;
 
-        return {
-          ...s,
-          tag: s.category || 'Store',
-          subtitle: s.address || 'Groceries & Daily Essentials',
-          rating: s.rating ?? 4.5,
-          eta: '20-25 mins',
-          dist: s.distanceKm ? `${s.distanceKm} km` : '0.5 km',
-          image: validBanner || validLogo || catImg || fallbackImg,
-        };
-      });
-
-      // Filter by category if provided; fall back to all if none match
-      let displayed = merged;
-      if (categoryFilter) {
-        const filtered = merged.filter(s =>
-          s.category?.toLowerCase().includes(categoryFilter.toLowerCase()) ||
-          s.tag?.toLowerCase().includes(categoryFilter.toLowerCase())
-        );
-        displayed = filtered.length > 0 ? filtered : merged;
-      }
-
-      setShops(displayed);
-      if (displayed.length > 0) setSelectedShopId(displayed[0].id);
+      setShops(visible);
+      setSelectedShopId(visible[0]?.id ?? null);
+      setActiveCategory('All');
     } catch {
+      setError('Failed to load shops. Please try again.');
       setShops([]);
+      setSelectedShopId(null);
     } finally {
       setShopsLoading(false);
     }
-  }, [userLocation, categoryFilter]);
+  }, [categoryFilter, userLocation]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData])
-  );
+  useFocusEffect(useCallback(() => {
+    loadShops();
+  }, [loadShops]));
 
-  // Fetch shop products when selected shop changes
   useEffect(() => {
-    if (!selectedShopId) return;
+    if (!selectedShopId) {
+      setProducts([]);
+      return;
+    }
+
     setLoading(true);
-    getProductsByShop(Number(selectedShopId))
+    getProductsByShop(selectedShopId)
       .then(prods => {
-        if (Array.isArray(prods) && prods.length > 0) {
-          setProducts(prods.map(p => ({
-            id: p.id,
-            name: p.name,
-            unit: p.unit || '1 unit',
-            price: p.sellingPrice || p.actualPrice,
-            category: p.category || 'All',
-            image: (p.imageUrl && typeof p.imageUrl === 'string' && p.imageUrl.trim().length > 0) ? p.imageUrl : PRODUCT_IMAGES.milk,
-          })));
-        } else {
-          setProducts(MOCK_PRODUCTS);
-        }
+        const mapped = Array.isArray(prods)
+          ? prods
+              .filter(p => p.isAvailable !== false && typeof p.id === 'number')
+              .map(p => {
+                const sellingPrice = Number(p.sellingPrice || p.actualPrice || 0);
+                const actualPrice = Number(p.actualPrice || sellingPrice);
+                return {
+                  ...p,
+                  id: p.id as number,
+                  shopId: Number(p.shopId || selectedShopId),
+                  sellingPrice,
+                  actualPrice,
+                  category: p.category || 'All',
+                  imageUrl: resolveImageUrl(p.imageUrl),
+                  image: resolveImageUrl(p.imageUrl) || PRODUCT_IMAGES.milk,
+                  price: sellingPrice,
+                  originalPrice: actualPrice,
+                  variant: p.unit || '1 unit',
+                  isAvailable: p.isAvailable !== false,
+                };
+              })
+          : [];
+        setProducts(mapped);
       })
-      .catch(() => setProducts(MOCK_PRODUCTS))
+      .catch(() => setProducts([]))
       .finally(() => setLoading(false));
   }, [selectedShopId]);
 
   const selectedShop = useMemo(
-    () => shops.find(s => String(s.id) === String(selectedShopId)) || shops[0] || null,
-    [shops, selectedShopId]
+    () => shops.find(s => s.id === selectedShopId) || shops[0] || null,
+    [shops, selectedShopId],
   );
 
-  const filteredProducts = useMemo(() => {
-    if (activeCategory === 'All') return products;
-    return products.filter(p => p.category === activeCategory);
-  }, [products, activeCategory]);
+  const productCategories = useMemo(() => {
+    const values = products.map(p => p.category).filter(Boolean);
+    return ['All', ...Array.from(new Set(values))];
+  }, [products]);
 
-  if (shopsLoading) {
+  const filteredProducts = useMemo(() => {
+    const query = normalize(searchText);
+    return products.filter(product => {
+      const categoryMatch = activeCategory === 'All' || product.category === activeCategory;
+      const searchMatch = !query || normalize(product.name).includes(query);
+      return categoryMatch && searchMatch;
+    });
+  }, [activeCategory, products, searchText]);
+
+  if (shopsLoading) return <LoadingState message="Finding shops near you..." />;
+
+  if (error) {
+    return <ErrorState title="Couldn't load shops" message={error} onRetry={loadShops} />;
+  }
+
+  if (shops.length === 0) {
     return (
-      <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC', justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#EAB308" />
-        <Text style={{ color: theme === 'dark' ? '#F8FAFC' : '#0F172A', marginTop: 12, fontWeight: '600' }}>Finding shops near you...</Text>
-      </View>
+      <EmptyState
+        icon="storefront"
+        title={categoryFilter ? `No ${categoryFilter} shops found` : 'No shops found'}
+        subtitle="Try another category or browse all nearby shops."
+        action={{
+          label: categoryFilter ? 'View all shops' : 'Go Home',
+          onPress: () =>
+            categoryFilter
+              ? (navigation as any).setParams({ category: undefined })
+              : (navigation.navigate as any)(ROUTES.HOME),
+        }}
+      />
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F8FAFC' }]}>
-      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+    <View className="flex-1 bg-ruvo-bg">
+      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
-      {/* ── Top Header ────────────────────────────────────────────── */}
-      <View style={[styles.header, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF', borderBottomColor: theme === 'dark' ? '#334155' : '#E2E8F0' }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : (navigation.navigate as any)(ROUTES.HOME))} style={styles.iconBtn}>
-            <Ionicons name="menu-outline" size={24} color={theme === 'dark' ? '#F8FAFC' : '#1E293B'} />
-          </TouchableOpacity>
+      <View className="bg-white px-4 pt-3 pb-4 border-b border-warm-200">
+        <View className="flex-row items-center justify-between mb-4">
+          <Pressable
+            onPress={() => navigation.canGoBack() ? navigation.goBack() : (navigation.navigate as any)(ROUTES.HOME)}
+            className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center"
+          >
+            <Ionicons name="chevron-back" size={24} color="#111827" />
+          </Pressable>
 
-          <Text style={styles.logoRuvo}>
-            ru<Text style={styles.logoVo}>vo</Text>
-          </Text>
-
-          <TouchableOpacity style={styles.locationPill} onPress={refreshFromGps}>
-            <Ionicons name="location-sharp" size={14} color="#EAB308" />
-            <Text style={[styles.locationText, { color: theme === 'dark' ? '#E2E8F0' : '#334155' }]} numberOfLines={1}>
-              {getDeliveryLocationLabel(userLocation) || 'Connaught Place, Delhi'}
+          <View className="items-center flex-1">
+            <Text className="text-lg font-black text-ruvo-ink">
+              {categoryFilter || 'Nearby Shops'}
             </Text>
-            <Ionicons name="chevron-down" size={12} color={theme === 'dark' ? '#94A3B8' : '#64748B'} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.headerRight}>
-          {/* Theme Toggle Button */}
-          <TouchableOpacity onPress={toggleTheme} style={styles.iconBtn}>
-            <Ionicons name={theme === 'dark' ? 'sunny-outline' : 'moon-outline'} size={22} color={theme === 'dark' ? '#FACC15' : '#475569'} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate(ROUTES.CART)}>
-            <Ionicons name="cart-outline" size={24} color={theme === 'dark' ? '#F8FAFC' : '#1E293B'} />
-            {cartItems.length > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ── Search Bar ───────────────────────────────────────────── */}
-      <View style={[styles.searchWrap, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
-        <View style={[styles.searchBar, { backgroundColor: theme === 'dark' ? '#0F172A' : '#F1F5F9' }]}>
-          <Ionicons name="search-outline" size={18} color="#94A3B8" />
-          <Text style={styles.searchPlaceholder}>Search for shops or products...</Text>
-          <Ionicons name="mic-outline" size={18} color="#94A3B8" />
-        </View>
-      </View>
-
-      {/* ── Category filter header if coming from category tap ──── */}
-      {categoryFilter && (
-        <View style={[styles.catFilterBanner, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FEFCE8' }]}>
-          <Ionicons name="filter-outline" size={14} color="#EAB308" />
-          <Text style={styles.catFilterText}>Showing shops for: <Text style={{ color: '#EAB308', fontWeight: '800' }}>{categoryFilter}</Text></Text>
-          <TouchableOpacity onPress={() => (navigation as any).setParams({ category: undefined })}>
-            <Ionicons name="close-circle" size={16} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ── 2-Panel Split Body ───────────────────────────────────── */}
-      <View style={styles.splitBody}>
-        {/* ── Left Panel: Shops List ────────────────────────────── */}
-        <View style={[styles.leftPanel, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF', borderRightColor: theme === 'dark' ? '#334155' : '#E2E8F0' }]}>
-          <View style={styles.panelHeader}>
-            <Text style={[styles.panelTitle, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>Shops Near You</Text>
-            <Text style={styles.panelSubtitle}>Discover top shops around you</Text>
+            <Text className="text-xs text-warm-600">
+              {shops.length} shops around you
+            </Text>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-            {shops.map(shop => {
-              const isSelected = String(shop.id) === String(selectedShopId);
-              return (
-                <TouchableOpacity
-                  key={String(shop.id)}
-                  activeOpacity={0.8}
-                  onPress={() => setSelectedShopId(shop.id)}
-                  style={[
-                    styles.shopItemCard,
-                    {
-                      backgroundColor: isSelected
-                        ? theme === 'dark' ? '#334155' : '#FEFCE8'
-                        : theme === 'dark' ? '#1E293B' : '#FFFFFF',
-                      borderColor: isSelected ? '#EAB308' : theme === 'dark' ? '#334155' : '#F1F5F9',
-                    },
-                  ]}
-                >
-                  <Image source={{ uri: shop.image }} style={styles.shopItemImg} resizeMode="contain" />
-                  <View style={styles.shopItemInfo}>
-                    <View style={styles.shopTitleRow}>
-                      <Text style={[styles.shopItemName, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]} numberOfLines={1}>
-                        {shop.name}
-                      </Text>
-                    </View>
-
-                    <View style={styles.tagBadge}>
-                      <Text style={styles.tagBadgeText}>{shop.tag || 'Store'}</Text>
-                    </View>
-
-                    <Text style={styles.shopItemSub} numberOfLines={1}>{shop.subtitle || 'Groceries & Essentials'}</Text>
-
-                    <View style={styles.metaRow}>
-                      <Ionicons name="star" size={11} color="#EAB308" />
-                      <Text style={styles.metaText}>{shop.rating || 4.5} • {shop.eta || '25 mins'}</Text>
-                    </View>
-                    <Text style={styles.distText}>{shop.dist || '0.3 km'}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity style={styles.viewAllBtn} onPress={() => navigation.navigate(ROUTES.GROCERIES)}>
-              <Text style={styles.viewAllBtnText}>View all shops</Text>
-              <Ionicons name="chevron-forward" size={14} color="#0F172A" />
-            </TouchableOpacity>
-          </ScrollView>
+          <Pressable
+            onPress={() => (navigation.navigate as any)(ROUTES.CART)}
+            className="w-10 h-10 rounded-full bg-white border border-warm-200 items-center justify-center relative"
+          >
+            <Ionicons name="bag-outline" size={22} color="#111827" />
+            {cartItems.length > 0 && (
+              <View className="absolute -top-1 -right-1 bg-ruvo-yellow rounded-full min-w-5 h-5 px-1 items-center justify-center">
+                <Text className="text-xs font-black text-ruvo-ink">{cartItems.length}</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
 
-        {/* ── Right Panel: Selected Shop & Product Grid ─────────── */}
-        <View style={styles.rightPanel}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-            {/* Selected Shop Header Card */}
-            <View style={[styles.shopHeaderCard, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
-              <TouchableOpacity style={styles.backCircle}>
-                <Ionicons name="chevron-back" size={18} color="#0F172A" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.shareCircle}>
-                <Ionicons name="share-outline" size={18} color="#0F172A" />
-              </TouchableOpacity>
-
-              <Image source={{ uri: selectedShop?.image || SHOP_IMAGES.freshMart }} style={styles.heroShopImg} resizeMode="contain" />
-
-              <View style={styles.heroShopDetails}>
-                <View style={styles.heroTitleRow}>
-                  <Text style={[styles.heroShopName, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>{selectedShop?.name || 'Local Shop'}</Text>
-                  <View style={styles.superBadge}>
-                    <Text style={styles.superBadgeText}>{selectedShop?.tag || 'Super Store'}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.heroShopSub}>{selectedShop?.subtitle || 'Groceries & Daily Essentials'}</Text>
-
-                <View style={styles.heroMetaRow}>
-                  <Ionicons name="star" size={13} color="#EAB308" />
-                  <Text style={styles.heroMetaText}>
-                    {selectedShop?.rating || 4.6} • {selectedShop?.eta || '25 mins'} • {selectedShop?.dist || '0.3 km'}
-                  </Text>
-                </View>
-
-                <View style={styles.freeDelPill}>
-                  <Ionicons name="leaf-outline" size={12} color="#16A34A" />
-                  <Text style={styles.freeDelText}>Free delivery on orders above ₹199</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Category Filter Pills */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryBar} contentContainerStyle={{ gap: 8, paddingHorizontal: 12 }}>
-              {['All', 'Staples', 'Snacks', 'More'].map(cat => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setActiveCategory(cat)}
-                  style={[
-                    styles.catPill,
-                    {
-                      backgroundColor: activeCategory === cat ? '#EAB308' : theme === 'dark' ? '#1E293B' : '#FFFFFF',
-                      borderColor: activeCategory === cat ? '#EAB308' : '#E2E8F0',
-                    },
-                  ]}
-                >
-                  <Text style={[styles.catPillText, { color: activeCategory === cat ? '#FFFFFF' : theme === 'dark' ? '#F8FAFC' : '#334155' }]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* 2-Column Product Grid */}
-            <View style={styles.productGrid}>
-              {filteredProducts.map(prod => (
-                <View key={String(prod.id)} style={[styles.prodCard, { backgroundColor: theme === 'dark' ? '#1E293B' : '#FFFFFF' }]}>
-                  <Image source={{ uri: prod.image || PRODUCT_IMAGES.milk }} style={styles.prodImg} resizeMode="contain" />
-                  <Text style={[styles.prodTitle, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]} numberOfLines={1}>{prod.name}</Text>
-                  <Text style={styles.prodUnit}>{prod.unit}</Text>
-
-                  <View style={styles.prodBottomRow}>
-                    <Text style={[styles.prodPrice, { color: theme === 'dark' ? '#F8FAFC' : '#0F172A' }]}>₹{prod.price}</Text>
-                    <TouchableOpacity
-                      style={styles.addYellowBtn}
-                      onPress={() => addToCart(prod as any)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.addYellowText}>+ Add</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-
-          {/* Sticky Cart Footer Bar */}
-          {cartItems.length > 0 && (
-            <View style={styles.stickyCartBar}>
-              <View style={styles.cartBarLeft}>
-                <Ionicons name="bag-handle" size={22} color="#EAB308" />
-                <View>
-                  <Text style={styles.cartBarTitle}>{cartItems.length} Items</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate(ROUTES.CART)}>
-                    <Text style={styles.cartBarSub}>View Cart ›</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={styles.checkoutYellowBtn}
-                onPress={() => navigation.navigate(ROUTES.CHECKOUT, { fromCart: true })}
-              >
-                <Text style={styles.checkoutYellowText}>Checkout ₹{cartTotal}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <View className="flex-row items-center bg-warm-100 rounded-2xl px-4 h-12 gap-2">
+          <Ionicons name="search-outline" size={20} color="#6B7280" />
+          <TextInput
+            className="flex-1 text-base text-ruvo-ink"
+            placeholder="Search products in this shop..."
+            placeholderTextColor="#8B8B94"
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+          {searchText ? (
+            <Pressable onPress={() => setSearchText('')}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </Pressable>
+          ) : null}
         </View>
       </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 112 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="py-3"
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 8 }}
+        >
+          <Pressable
+            onPress={() => (navigation as any).setParams({ category: undefined })}
+            className={`px-4 h-10 rounded-full border flex-row items-center gap-2 ${
+              !categoryFilter ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
+            }`}
+          >
+            <Ionicons name="grid-outline" size={16} color="#111827" />
+            <Text className="font-bold text-ruvo-ink">All</Text>
+          </Pressable>
+          {CATEGORIES.map(category => {
+            const active = category.label === categoryFilter;
+            return (
+              <Pressable
+                key={category.id}
+                onPress={() => (navigation as any).setParams({ category: category.label })}
+                className={`px-4 h-10 rounded-full border flex-row items-center gap-2 ${
+                  active ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
+                }`}
+              >
+                <Image source={{ uri: category.image }} className="w-5 h-5 rounded-full" />
+                <Text className="font-bold text-ruvo-ink">{category.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <View className="px-4">
+          <Text className="text-xl font-black text-ruvo-ink mb-2">Shops Near You</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {shops.map(shop => {
+              const active = shop.id === selectedShop?.id;
+              return (
+                <Pressable
+                  key={shop.id}
+                  onPress={() => setSelectedShopId(shop.id)}
+                  style={[styles.shopTile, { width: shopTileWidth }, active && styles.shopTileActive]}
+                >
+                  <Image source={{ uri: shopImage(shop) }} style={styles.shopTileImage} resizeMode="cover" />
+                  <View className="flex-1">
+                    <Text className="font-black text-ruvo-ink" numberOfLines={1}>{shop.name}</Text>
+                    <Text className="text-xs text-warm-600 mt-1" numberOfLines={2}>
+                      {shop.description || shop.category || 'Daily essentials'}
+                    </Text>
+                    <View className="flex-row items-center gap-1 mt-2">
+                      <Ionicons name="star" size={13} color="#F5B700" />
+                      <Text className="text-xs font-bold text-ruvo-ink">{Number(shop.rating || 4.5).toFixed(1)}</Text>
+                      <Text className="text-xs text-warm-600">• {shop.deliveryTime || 25} mins</Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {selectedShop && (
+          <View className="mx-4 mt-4 bg-white rounded-2xl border border-warm-200 p-4 shadow-sm">
+            <View className="flex-row items-center gap-4">
+              <Image
+                source={{ uri: shopImage(selectedShop) }}
+                style={[styles.heroShopImage, { width: heroImageSize, height: heroImageSize }]}
+                resizeMode="cover"
+              />
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-2xl font-black text-ruvo-ink flex-1" numberOfLines={1}>
+                    {selectedShop.name}
+                  </Text>
+                  <View className="bg-ruvo-yellow-soft rounded-full px-3 py-1">
+                    <Text className="text-xs font-black text-ruvo-ink">{selectedShop.category || 'Store'}</Text>
+                  </View>
+                </View>
+                <Text className="text-base text-warm-700 mt-1" numberOfLines={2}>
+                  {selectedShop.description || 'Groceries and daily essentials'}
+                </Text>
+                <View className="flex-row items-center gap-2 mt-2">
+                  <Ionicons name="star" size={15} color="#F5B700" />
+                  <Text className="font-bold text-warm-700">{Number(selectedShop.rating || 4.6).toFixed(1)}</Text>
+                  <Text className="text-warm-600">•</Text>
+                  <Text className="font-semibold text-warm-700">{selectedShop.deliveryTime || 25} mins</Text>
+                </View>
+              </View>
+            </View>
+            <View className="mt-4 bg-ruvo-accent-soft rounded-xl px-3 py-2 flex-row items-center gap-2">
+              <Ionicons name="bicycle-outline" size={16} color="#15803D" />
+              <Text className="text-sm font-bold text-ruvo-accent">Free delivery on orders above Rs 199</Text>
+            </View>
+          </View>
+        )}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-4"
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 10 }}
+        >
+          {productCategories.map(category => {
+            const active = category === activeCategory;
+            return (
+              <Pressable
+                key={category}
+                onPress={() => setActiveCategory(category)}
+                className={`px-4 h-11 rounded-xl border flex-row items-center justify-center ${
+                  active ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
+                }`}
+              >
+                <Text className="font-black text-ruvo-ink">{category}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        {loading ? (
+          <View className="py-10 items-center">
+            <ActivityIndicator size="small" color="#F5B700" />
+            <Text className="text-warm-600 mt-2">Loading products...</Text>
+          </View>
+        ) : filteredProducts.length === 0 ? (
+          <EmptyState
+            icon="search"
+            title="No products found"
+            subtitle={searchText ? `No products match "${searchText}"` : 'This shop has no products available.'}
+          />
+        ) : (
+          <View style={[styles.productGrid, { paddingHorizontal: horizontalPadding, gap: gridGap }]}>
+            {filteredProducts.map(product => (
+              <Pressable
+                key={product.id}
+                style={[styles.productCard, { width: productCardWidth }]}
+                onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product })}
+              >
+                <Image source={{ uri: productImage(product) }} style={styles.productImage} resizeMode="contain" />
+                <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
+                <Text style={styles.productUnit} numberOfLines={1}>{product.variant}</Text>
+                <View className="flex-row items-center justify-between mt-3">
+                  <Text style={styles.productPrice}>Rs {product.price.toFixed(0)}</Text>
+                  <Pressable
+                    onPress={() => addToCart(product as any)}
+                    className="bg-ruvo-yellow rounded-lg px-3 h-9 flex-row items-center justify-center"
+                  >
+                    <Ionicons name="add" size={16} color="#111827" />
+                    <Text className="font-black text-ruvo-ink ml-1">Add</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {cartItems.length > 0 && (
+        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-warm-200 px-4 py-3 flex-row items-center justify-between shadow-lg">
+          <Pressable className="flex-row items-center gap-3" onPress={() => (navigation.navigate as any)(ROUTES.CART)}>
+            <View className="w-10 h-10 rounded-xl bg-ruvo-yellow-soft items-center justify-center">
+              <Ionicons name="bag-handle" size={20} color="#B77900" />
+            </View>
+            <View>
+              <Text className="font-black text-ruvo-ink">{cartItems.length} Items</Text>
+              <Text className="text-xs font-semibold text-warm-600">View Cart</Text>
+            </View>
+          </Pressable>
+          <Pressable
+            onPress={() => (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true })}
+            className="bg-ruvo-yellow rounded-xl px-4 h-12 items-center justify-center"
+          >
+            <Text className="font-black text-ruvo-ink">Checkout Rs {cartTotal}</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
+  shopTile: {
+    minHeight: 122,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 6 : 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  iconBtn: { padding: 4 },
-  logoRuvo: { fontSize: 22, fontWeight: '900', color: '#EAB308', letterSpacing: -0.5 },
-  logoVo: { color: '#CA8A04' },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    maxWidth: 160,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
-  },
-  locationText: { fontSize: 12, fontWeight: '600' },
-  cartBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: '#EF4444',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartBadgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
-
-  searchWrap: { paddingHorizontal: 12, paddingVertical: 8 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 8,
-  },
-  searchPlaceholder: { flex: 1, color: '#94A3B8', fontSize: 13 },
-
-  splitBody: { flex: 1, flexDirection: 'row' },
-  leftPanel: { width: '22%', borderRightWidth: 1, padding: 6 },
-  rightPanel: { flex: 1, padding: 8 },
-  catFilterBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#FEF08A' },
-  catFilterText: { flex: 1, fontSize: 11, color: '#64748B', fontWeight: '600' },
-
-  panelHeader: { marginBottom: 8, paddingHorizontal: 4 },
-  panelTitle: { fontSize: 14, fontWeight: '800' },
-  panelSubtitle: { fontSize: 10, color: '#64748B', marginTop: 1 },
-
-  shopItemCard: {
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    marginBottom: 8,
-    flexDirection: 'column',
-    alignItems: 'center',
-  },
-  shopItemImg: { width: 56, height: 56, marginBottom: 4 },
-  shopItemInfo: { alignItems: 'center', width: '100%' },
-  shopTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  shopItemName: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
-  tagBadge: { backgroundColor: '#FEF08A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginVertical: 2 },
-  tagBadgeText: { fontSize: 9, fontWeight: '800', color: '#854D0E' },
-  shopItemSub: { fontSize: 9, color: '#64748B', textAlign: 'center' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
-  metaText: { fontSize: 9, color: '#475569', fontWeight: '600' },
-  distText: { fontSize: 9, color: '#94A3B8', marginTop: 1 },
-
-  viewAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
+    gap: 12,
+    padding: 12,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    marginTop: 6,
-    gap: 4,
+    borderColor: '#EEE7DA',
+    backgroundColor: '#FFFFFF',
   },
-  viewAllBtnText: { fontSize: 11, fontWeight: '700', color: '#0F172A' },
-
-  shopHeaderCard: { padding: 12, borderRadius: 14, marginBottom: 10, position: 'relative', alignItems: 'center' },
-  backCircle: { position: 'absolute', top: 8, left: 8, padding: 6, backgroundColor: '#F1F5F9', borderRadius: 12 },
-  shareCircle: { position: 'absolute', top: 8, right: 8, padding: 6, backgroundColor: '#F1F5F9', borderRadius: 12 },
-  heroShopImg: { width: 70, height: 70, marginTop: 10 },
-  heroShopDetails: { alignItems: 'center', marginTop: 6 },
-  heroTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroShopName: { fontSize: 15, fontWeight: '900' },
-  superBadge: { backgroundColor: '#FEF08A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  superBadgeText: { fontSize: 9, fontWeight: '800', color: '#854D0E' },
-  heroShopSub: { fontSize: 10, color: '#64748B', marginTop: 2 },
-  heroMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  heroMetaText: { fontSize: 10, color: '#475569', fontWeight: '600' },
-  freeDelPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
-  freeDelText: { fontSize: 9, fontWeight: '700', color: '#15803D' },
-
-  categoryBar: { marginBottom: 10 },
-  catPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  catPillText: { fontSize: 11, fontWeight: '700' },
-
-  productGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  prodCard: { width: '48%', padding: 8, borderRadius: 12, borderWidth: 1, borderColor: '#F1F5F9' },
-  prodImg: { width: '100%', height: 65, marginBottom: 4 },
-  prodTitle: { fontSize: 11, fontWeight: '700' },
-  prodUnit: { fontSize: 9, color: '#94A3B8', marginTop: 1 },
-  prodBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
-  prodPrice: { fontSize: 12, fontWeight: '800' },
-  addYellowBtn: { backgroundColor: '#FACC15', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  addYellowText: { fontSize: 10, fontWeight: '800', color: '#713F12' },
-
-  stickyCartBar: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    backgroundColor: '#0F172A',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  shopTileActive: {
+    borderColor: '#F5B700',
+    backgroundColor: '#FFFBEA',
+  },
+  shopTileImage: {
+    width: 78,
+    height: 78,
+    borderRadius: 14,
+    backgroundColor: '#F3F0EA',
+  },
+  heroShopImage: {
+    borderRadius: 18,
+    backgroundColor: '#F3F0EA',
+  },
+  productGrid: {
+    paddingTop: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 6,
+    flexWrap: 'wrap',
   },
-  cartBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cartBarTitle: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-  cartBarSub: { color: '#EAB308', fontSize: 10, fontWeight: '700' },
-  checkoutYellowBtn: { backgroundColor: '#FACC15', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
-  checkoutYellowText: { color: '#713F12', fontSize: 11, fontWeight: '800' },
+  productCard: {
+    minHeight: 232,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEE7DA',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+  },
+  productImage: {
+    width: '100%',
+    height: 108,
+    marginBottom: 10,
+  },
+  productName: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  productUnit: {
+    color: '#6B7280',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  productPrice: {
+    color: '#111827',
+    fontSize: 17,
+    fontWeight: '900',
+  },
 });
 
 export default NearbyShopsScreen;

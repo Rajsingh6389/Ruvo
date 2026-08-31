@@ -9,7 +9,7 @@ import React, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { getUserProfile, User } from '../services/userService';
-import { checkHasShop } from '../services/shopService';
+import { checkShopApprovalStatus } from '../services/shopService';
 
 
 // ── Onboarding status values ─────────────────────────────────────────────────
@@ -136,12 +136,13 @@ export const AuthProvider = ({
 
     let resolvedStatus: OnboardingStatus;
     if (storedStatus && storedStatus !== 'APPROVED') {
-      // User was mid-onboarding (e.g. AADHAAR_PENDING) — resume from where they left off.
+      // User was mid-onboarding (e.g. AADHAAR_PENDING) or has PENDING_APPROVAL
+      // stored — resume exactly from where they left off.
       resolvedStatus = storedStatus;
     } else {
-      // Check backend: does this user already own a shop?
-      const hasShop = await checkHasShop(newUserId, newToken);
-      resolvedStatus = hasShop ? 'APPROVED' : 'NEW';
+      // Check backend: does this user already own a shop, and is it approved?
+      // Returns 'APPROVED', 'PENDING_APPROVAL', or 'NEW'.
+      resolvedStatus = await checkShopApprovalStatus(newUserId, newToken);
       await AsyncStorage.setItem('shopOnboardingStatus', resolvedStatus);
     }
 

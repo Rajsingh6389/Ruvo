@@ -24,6 +24,7 @@ export const Colors = {
 
   // ─── Light Theme — Clean, Modern ──────────────────────────────────────────
   light: {
+    onPrimary: '#FFFFFF',
     background: '#F9FAFB',
     surface: '#FFFFFF',
     card: '#FFFFFF',
@@ -60,6 +61,7 @@ export const Colors = {
 
   // ─── Dark Theme — Deep, Sophisticated ─────────────────────────────────────
   dark: {
+    onPrimary: '#FFFFFF',
     background: '#0F172A',
     surface: '#1E293B',
     card: '#1E293B',

@@ -250,6 +250,8 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     let cancelled = false;
 
     const loadSavedLocation = async () => {
+      let shouldRefreshCurrentLocation = true;
+
       try {
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved) {
@@ -257,14 +259,19 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
           if (!parsed.details) {
             parsed.details = emptyDetails();
           }
+          shouldRefreshCurrentLocation = !parsed.isCustomAddress;
           if (!cancelled) {
             setLocation(parsed);
             setIsLoading(false);
           }
         } else {
-          await refreshFromGps();
+          shouldRefreshCurrentLocation = true;
         }
       } catch {
+        shouldRefreshCurrentLocation = true;
+      }
+
+      if (!cancelled && shouldRefreshCurrentLocation) {
         await refreshFromGps();
       }
 

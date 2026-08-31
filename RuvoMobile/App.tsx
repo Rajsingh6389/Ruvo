@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import './global.css';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { LightTheme } from './src/theme/theme';
 import { ThemeProvider } from './src/context/ThemeContext';

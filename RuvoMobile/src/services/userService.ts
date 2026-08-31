@@ -4,6 +4,7 @@ export interface User {
   id: number;
   name: string;
   mobileNumber: string;
+  email?: string;
   role: string;
   status: string;
   walletBalance: number;
@@ -25,6 +26,7 @@ export interface UpdateProfileInput {
   city?: string;
   state?: string;
   gender?: string;
+  bio?: string;
 }
 
 export async function updateUserProfile(token: string, updates: UpdateProfileInput): Promise<User> {

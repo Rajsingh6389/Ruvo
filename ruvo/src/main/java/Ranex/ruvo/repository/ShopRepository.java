@@ -25,8 +25,11 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     @Query("SELECT s FROM Shop s WHERE s.category = :category AND (s.approved IS NULL OR s.approved = true) AND (s.active IS NULL OR s.active = true)")
     List<Shop> findByCategoryAndApprovedTrue(@Param("category") String category);
 
-    // Shops still waiting on admin review (for an admin dashboard)
-    List<Shop> findByApprovedFalse();
+    // Shops still waiting on admin review (for an admin dashboard).
+    // NULL-safe so older rows created before the approved column default existed
+    // still appear for approval instead of disappearing from admin.
+    @Query("SELECT s FROM Shop s WHERE s.approved IS NULL OR s.approved = false")
+    List<Shop> findPendingApproval();
 
     // Haversine formula to find approved shops within X kilometers, nearest first.
     // Treats approved/active IS NULL as true too, in case any legacy rows predate the columns.

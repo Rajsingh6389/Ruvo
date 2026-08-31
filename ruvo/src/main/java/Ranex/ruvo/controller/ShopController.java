@@ -152,7 +152,7 @@ public class ShopController {
     ) {
 
         List<Shop> shops =
-                shopRepository.findByApprovedFalse();
+                shopRepository.findPendingApproval();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -506,6 +506,49 @@ public class ShopController {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body("Shop not found with id: " + id);
+    }
+
+
+    // =========================================================
+    // 9.5 Re-request admin approval
+    //     Lets a shop owner recover when onboarding reached the pending screen
+    //     but the approval queue needs to be refreshed.
+    // =========================================================
+
+    @PostMapping("/{id}/request-approval")
+    public ResponseEntity<?> requestApprovalAgain(
+            @PathVariable Long id,
+            @RequestParam String ownerId
+    ) {
+
+        java.util.Optional<Shop> shopOpt =
+                shopRepository.findById(id);
+
+        if (shopOpt.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Shop not found with id: " + id);
+        }
+
+        Shop shop = shopOpt.get();
+
+        if (shop.getOwnerId() == null ||
+                !shop.getOwnerId().equals(ownerId)) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("You can only request approval for your own shop.");
+        }
+
+        if (Boolean.TRUE.equals(shop.getApproved())) {
+            return ResponseEntity.ok(shop);
+        }
+
+        shop.setApproved(false);
+        shop.setActive(true);
+
+        return ResponseEntity.ok(
+                shopRepository.save(shop)
+        );
     }
 
 

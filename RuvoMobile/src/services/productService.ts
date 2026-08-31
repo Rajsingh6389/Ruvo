@@ -17,6 +17,8 @@ export interface Product {
   unit?: string;
   imageUrl?: string;
   isAvailable?: boolean;
+  rating?: number;
+  reviewCount?: number;
 }
 
 // ──────────────────────────────────────────────────────────

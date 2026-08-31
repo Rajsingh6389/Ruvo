@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -14,14 +13,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import { ROUTES } from '../../constants/routes';
-
-const GREEN = '#2E7D32';
-const LIGHT_GREEN = '#E8F5E9';
-const BG = '#F7F8FA';
-const TEXT = '#1A1A1A';
-const MUTED = '#6B7280';
-const BORDER = '#E5E7EB';
-const WHITE = '#FFFFFF';
 
 type Product = {
   id?: number;
@@ -52,17 +43,17 @@ const Benefit = ({
   title: string;
   subtitle: string;
 }) => (
-  <View style={styles.benefit}>
+  <View className="flex-1 flex-row items-center justify-center gap-2">
     <Ionicons
       name={icon}
       size={22}
-      color={GREEN}
+      color="#2E7D32"
     />
     <View>
-      <Text style={styles.benefitTitle}>
+      <Text className="text-xs font-bold text-ruvo-ink">
         {title}
       </Text>
-      <Text style={styles.benefitSubtitle}>
+      <Text className="text-xs text-gray-600 mt-0.5">
         {subtitle}
       </Text>
     </View>
@@ -78,19 +69,19 @@ const Spec = ({
   title: string;
   value: string;
 }) => (
-  <View style={styles.spec}>
-    <View style={styles.specIcon}>
+  <View className="flex-1 items-center">
+    <View className="w-9 h-9 rounded-lg bg-ruvo-accent-soft flex items-center justify-center mb-1.5">
       <Ionicons
         name={icon}
         size={17}
-        color={GREEN}
+        color="#2E7D32"
       />
     </View>
-    <Text style={styles.specTitle}>
+    <Text className="text-xs text-gray-600">
       {title}
     </Text>
     <Text
-      style={styles.specValue}
+      className="text-xs font-bold text-ruvo-ink mt-0.5 text-center"
       numberOfLines={1}
     >
       {value}
@@ -110,20 +101,14 @@ const ProductDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  /*
-   * Expected navigation:
-   *
-   * navigation.navigate(ROUTES.PRODUCT_DETAILS, {
-   *   product: item,
-   * });
-   */
-
+  // Expected navigation: navigation.navigate(ROUTES.PRODUCT_DETAILS, { product: item })
   const product: Product | undefined = route.params?.product;
 
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // BUSINESS LOGIC: Authentication and cart management
   const { isAuthenticated, userId, token, user } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
@@ -174,22 +159,22 @@ const ProductDetailsScreen = () => {
 
   if (!product) {
     return (
-      <View style={styles.emptyContainer}>
+      <View className="flex-1 bg-ruvo-bg items-center justify-center px-6">
         <Ionicons
           name="alert-circle-outline"
           size={50}
-          color={GREEN}
+          color="#2E7D32"
         />
 
-        <Text style={styles.emptyTitle}>
+        <Text className="text-lg font-bold text-ruvo-ink mt-3">
           Product not found
         </Text>
 
         <TouchableOpacity
-          style={styles.backButtonLarge}
+          className="bg-ruvo-yellow px-6 py-3 rounded-lg mt-5"
           onPress={() => navigation.goBack()}
         >
-          <Text style={styles.backButtonText}>
+          <Text className="text-white font-bold text-center">
             Go Back
           </Text>
         </TouchableOpacity>
@@ -214,191 +199,166 @@ const ProductDetailsScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-ruvo-bg">
 
       {/* HEADER */}
-
-      <View style={styles.header}>
+      <View className="h-14 px-3 bg-white flex-row items-center justify-between">
         <TouchableOpacity
-          style={styles.headerButton}
+          className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
           activeOpacity={0.75}
           onPress={() => navigation.goBack()}
         >
           <Ionicons
             name="arrow-back"
             size={22}
-            color={TEXT}
+            color="#1A1A1A"
           />
         </TouchableOpacity>
 
-        <View style={styles.headerRight}>
-
+        <View className="flex-row gap-2">
           <TouchableOpacity
-            style={styles.headerButton}
+            className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
             activeOpacity={0.75}
             onPress={() => setFavorite(prev => !prev)}
           >
             <Ionicons
               name={favorite ? 'heart' : 'heart-outline'}
               size={23}
-              color={favorite ? '#D32F2F' : TEXT}
+              color={favorite ? '#D32F2F' : '#1A1A1A'}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.headerButton}
+            className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
             activeOpacity={0.75}
           >
             <Ionicons
               name="share-social-outline"
               size={22}
-              color={TEXT}
+              color="#1A1A1A"
             />
           </TouchableOpacity>
-
         </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5 }}
       >
-
         {/* PRODUCT IMAGE */}
-
-        <View style={styles.imageContainer}>
-
+        <View className="h-80 bg-white rounded-2xl overflow-hidden border border-gray-200 relative items-center justify-center">
           {product.imageUrl ? (
             <Image
               source={{ uri: product.imageUrl }}
-              style={styles.productImage}
+              className="w-11/12 h-11/12"
               resizeMode="contain"
             />
           ) : (
-            <View style={styles.noImage}>
+            <View className="items-center justify-center">
               <Ionicons
                 name="image-outline"
                 size={65}
                 color="#BFC7C0"
               />
-
-              <Text style={styles.noImageText}>
+              <Text className="text-xs text-gray-500 mt-2">
                 No product image
               </Text>
             </View>
           )}
 
           {discount > 0 && (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>
+            <View className="absolute left-3 bottom-3 bg-ruvo-accent px-3 py-2 rounded-lg">
+              <Text className="text-white text-xs font-black">
                 {discount}% OFF
               </Text>
             </View>
           )}
 
-          <View style={styles.imageCounter}>
-            <Text style={styles.imageCounterText}>
+          <View className="absolute right-3 bottom-3 bg-white px-3 py-1.5 rounded-2xl">
+            <Text className="text-ruvo-ink text-xs font-bold">
               1 / 1
             </Text>
           </View>
-
         </View>
 
         {/* PRODUCT INFO */}
-
-        <View style={styles.productInfoCard}>
-
-          <View style={styles.titleRow}>
-
-            <View style={styles.titleContainer}>
-              <Text style={styles.productName}>
+        <View className="bg-white rounded-lg p-4 mt-2.5 border border-gray-200">
+          <View className="flex-row items-start justify-between mb-3">
+            <View className="flex-1 pr-2">
+              <Text className="text-2xl font-black text-ruvo-ink">
                 {product.name}
               </Text>
 
               {product.unit && (
-                <Text style={styles.unit}>
+                <Text className="text-sm text-gray-600 mt-0.5">
                   {product.unit}
                 </Text>
               )}
             </View>
 
             <View
-              style={[
-                styles.stockBadge,
-                {
-                  backgroundColor: available
-                    ? LIGHT_GREEN
-                    : '#FDECEC',
-                },
-              ]}
+              className={`px-2 py-1.5 rounded-lg border ${
+                available
+                  ? 'bg-ruvo-accent-soft border-ruvo-accent'
+                  : 'bg-red-50 border-red-300'
+              }`}
             >
               <Text
-                style={[
-                  styles.stockText,
-                  {
-                    color: available
-                      ? GREEN
-                      : '#D32F2F',
-                  },
-                ]}
+                className={`text-xs font-black ${
+                  available
+                    ? 'text-ruvo-accent'
+                    : 'text-red-600'
+                }`}
               >
                 {available
                   ? 'In Stock'
                   : 'Out of Stock'}
               </Text>
             </View>
-
           </View>
 
           {/* RATING */}
-
-          <View style={styles.ratingRow}>
-
-            <View style={styles.starBox}>
+          <View className="flex-row items-center mb-3">
+            <View className="bg-ruvo-accent px-2 py-1 rounded flex-row items-center gap-1">
               <Ionicons
                 name="star"
                 size={15}
                 color="#FFFFFF"
               />
-
-              <Text style={styles.ratingText}>
+              <Text className="text-white text-xs font-black">
                 4.6
               </Text>
             </View>
 
-            <Text style={styles.reviewText}>
+            <Text className="text-gray-600 text-xs ml-2">
               128 reviews
             </Text>
-
           </View>
 
           {/* PRICE */}
-
-          <View style={styles.priceRow}>
-
-            <Text style={styles.sellingPrice}>
+          <View className="flex-row items-center mb-3">
+            <Text className="text-3xl font-black text-ruvo-accent">
               ₹{product.sellingPrice}
             </Text>
 
             {product.actualPrice >
               product.sellingPrice && (
-              <Text style={styles.actualPrice}>
+              <Text className="text-gray-500 text-sm ml-2 line-through">
                 ₹{product.actualPrice}
               </Text>
             )}
 
             {discount > 0 && (
-              <View style={styles.smallDiscount}>
-                <Text style={styles.smallDiscountText}>
+              <View className="bg-ruvo-accent-soft px-2 py-1 rounded ml-2">
+                <Text className="text-ruvo-accent text-xs font-black">
                   {discount}% OFF
                 </Text>
               </View>
             )}
-
           </View>
 
           {product.unit && (
-            <Text style={styles.pricePerUnit}>
+            <Text className="text-gray-600 text-xs">
               ₹
               {(
                 product.sellingPrice /
@@ -409,16 +369,14 @@ const ProductDetailsScreen = () => {
           )}
 
           {/* BENEFITS */}
-
-          <View style={styles.benefitsCard}>
-
+          <View className="bg-green-50 rounded-lg mt-3 px-2 py-3 flex-row items-center">
             <Benefit
               icon="shield-checkmark-outline"
               title="100%"
               subtitle="Original"
             />
 
-            <View style={styles.benefitDivider} />
+            <View className="w-px h-8 bg-green-200 mx-1" />
 
             <Benefit
               icon="ribbon-outline"
@@ -426,47 +384,43 @@ const ProductDetailsScreen = () => {
               subtitle="Guaranteed"
             />
 
-            <View style={styles.benefitDivider} />
+            <View className="w-px h-8 bg-green-200 mx-1" />
 
             <Benefit
               icon="bicycle-outline"
               title="Fast"
               subtitle="Delivery"
             />
-
           </View>
-
         </View>
 
         {/* SHOP */}
-
-        <View style={styles.sectionCard}>
-
-          <View style={styles.shopIcon}>
+        <View className="bg-white rounded-lg p-3 mt-2.5 border border-gray-200 flex-row items-center">
+          <View className="w-14 h-14 rounded-xl bg-ruvo-accent-soft items-center justify-center mr-3">
             <Ionicons
               name="storefront"
               size={25}
-              color={GREEN}
+              color="#2E7D32"
             />
           </View>
 
-          <View style={styles.shopInfo}>
-            <Text style={styles.soldBy}>
+          <View className="flex-1">
+            <Text className="text-gray-600 text-xs">
               Sold by
             </Text>
 
-            <Text style={styles.shopName}>
+            <Text className="text-ruvo-ink text-base font-black mt-0.5">
               Local RuVo Shop
             </Text>
 
-            <View style={styles.distanceRow}>
+            <View className="flex-row items-center mt-0.5">
               <Ionicons
                 name="location-outline"
                 size={14}
-                color={GREEN}
+                color="#2E7D32"
               />
 
-              <Text style={styles.distance}>
+              <Text className="text-gray-600 text-xs ml-0.5">
                 Nearby shop
               </Text>
             </View>
@@ -474,7 +428,7 @@ const ProductDetailsScreen = () => {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            style={styles.viewShopButton}
+            className="border border-ruvo-accent px-2.5 py-2 rounded-lg"
             onPress={() => {
               if (product.shopId) {
                 navigation.navigate('ShopDetails', {
@@ -483,35 +437,31 @@ const ProductDetailsScreen = () => {
               }
             }}
           >
-            <Text style={styles.viewShopText}>
+            <Text className="text-ruvo-accent text-xs font-black">
               View Shop
             </Text>
           </TouchableOpacity>
-
         </View>
 
         {/* PRODUCT DETAILS */}
-
-        <View style={styles.detailsCard}>
-
-          <Text style={styles.sectionTitle}>
+        <View className="bg-white rounded-lg p-3.5 mt-2.5 border border-gray-200">
+          <Text className="text-base font-black text-ruvo-ink mb-2">
             Product Details
           </Text>
 
-          <Text style={styles.description}>
+          <Text className="text-gray-600 text-sm leading-5 mb-3">
             {product.description ||
               'Quality product available from your nearby local shop on RuVo.'}
           </Text>
 
-          <View style={styles.specsRow}>
-
+          <View className="flex-row items-stretch">
             <Spec
               icon="pricetag-outline"
               title="Brand"
               value={product.brandName || 'N/A'}
             />
 
-            <View style={styles.specDivider} />
+            <View className="w-px bg-gray-200 mx-0.5" />
 
             <Spec
               icon="cube-outline"
@@ -519,86 +469,78 @@ const ProductDetailsScreen = () => {
               value={product.category || 'General'}
             />
 
-            <View style={styles.specDivider} />
+            <View className="w-px bg-gray-200 mx-0.5" />
 
             <Spec
               icon="layers-outline"
               title="Stock"
               value={`${product.stockQuantity}`}
             />
-
           </View>
-
         </View>
 
         {/* QUANTITY */}
-
         {available && (
-          <View style={styles.quantityCard}>
-
-            <Text style={styles.quantityTitle}>
+          <View className="bg-white rounded-lg p-3.5 mt-2.5 border border-gray-200 flex-row items-center justify-between">
+            <Text className="text-ruvo-ink font-black">
               Quantity
             </Text>
 
-            <View style={styles.quantityControls}>
-
+            <View className="flex-row items-center border border-gray-200 rounded overflow-hidden">
               <TouchableOpacity
                 activeOpacity={0.7}
-                style={styles.quantityButton}
+                className="w-10 h-10 items-center justify-center bg-gray-50"
                 onPress={decreaseQuantity}
               >
                 <Ionicons
                   name="remove"
                   size={19}
-                  color={GREEN}
+                  color="#2E7D32"
                 />
               </TouchableOpacity>
 
-              <Text style={styles.quantityValue}>
+              <Text className="w-10 text-center text-ruvo-ink font-bold">
                 {quantity}
               </Text>
 
               <TouchableOpacity
                 activeOpacity={0.7}
-                style={styles.quantityButton}
+                className="w-10 h-10 items-center justify-center bg-gray-50"
                 onPress={increaseQuantity}
               >
                 <Ionicons
                   name="add"
                   size={19}
-                  color={GREEN}
+                  color="#2E7D32"
                 />
               </TouchableOpacity>
-
             </View>
-
           </View>
         )}
 
-        <View style={{ height: 110 }} />
-
+        <View className="h-28" />
       </ScrollView>
 
       {/* BOTTOM ACTIONS */}
-
-      <View style={styles.bottomBar}>
+      <View className="absolute left-0 right-0 bottom-0 bg-white border-t border-gray-200 px-3 pt-2.5 pb-3.5 flex-row gap-2.5">
 
         <TouchableOpacity
           activeOpacity={0.82}
           disabled={!available}
-          style={[
-            styles.addCartButton,
-            !available && styles.disabledButton,
-          ]}
+          className={`flex-1 h-14 rounded-lg flex-row items-center justify-center gap-2 ${
+            available
+              ? 'bg-ruvo-accent'
+              : 'bg-gray-400'
+          }`}
           onPress={handleAddToCart}
         >
           <Ionicons
             name="cart-outline"
             size={21}
-            color={WHITE}
+            color="#FFFFFF"
           />
 
-          <Text style={styles.addCartText}>
+          <Text className="text-white font-black">
             Add to Cart
           </Text>
         </TouchableOpacity>
@@ -606,558 +548,30 @@ const ProductDetailsScreen = () => {
         <TouchableOpacity
           activeOpacity={0.82}
           disabled={!available || submitting}
-          style={[
-            styles.buyButton,
-            (!available || submitting) && styles.disabledOutlineButton,
-          ]}
+          className={`flex-1 h-14 rounded-lg border-2 items-center justify-center ${
+            !available || submitting
+              ? 'border-gray-400'
+              : 'border-ruvo-accent'
+          }`}
           onPress={handleBuyNow}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color={GREEN} />
+            <ActivityIndicator size="small" color="#2E7D32" />
           ) : (
             <Text
-              style={[
-                styles.buyText,
-                !available && styles.disabledText,
-              ]}
+              className={`font-black ${
+                !available
+                  ? 'text-gray-600'
+                  : 'text-ruvo-accent'
+              }`}
             >
               Buy Now
             </Text>
           )}
         </TouchableOpacity>
-
       </View>
-
     </View>
   );
 };
-
-
-
-/* -------------------------------------------------- */
-/* STYLES */
-/* -------------------------------------------------- */
-
-const styles = StyleSheet.create({
-
-  container: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-
-  scrollContent: {
-    paddingHorizontal: 12,
-    paddingTop: 5,
-  },
-
-  /* HEADER */
-
-  header: {
-    height: 58,
-    paddingHorizontal: 13,
-    backgroundColor: WHITE,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  headerRight: {
-    flexDirection: 'row',
-    gap: 7,
-  },
-
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  /* IMAGE */
-
-  imageContainer: {
-    height: 340,
-    backgroundColor: WHITE,
-    borderRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  productImage: {
-    width: '90%',
-    height: '90%',
-  },
-
-  noImage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  noImageText: {
-    marginTop: 8,
-    color: MUTED,
-    fontSize: 12,
-  },
-
-  discountBadge: {
-    position: 'absolute',
-    left: 15,
-    bottom: 15,
-    backgroundColor: GREEN,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-
-  discountText: {
-    color: WHITE,
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  imageCounter: {
-    position: 'absolute',
-    right: 15,
-    bottom: 15,
-    backgroundColor: WHITE,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
-  },
-
-  imageCounterText: {
-    color: TEXT,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
-  /* PRODUCT INFO */
-
-  productInfoCard: {
-    backgroundColor: WHITE,
-    borderRadius: 19,
-    padding: 16,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-
-  titleContainer: {
-    flex: 1,
-    paddingRight: 8,
-  },
-
-  productName: {
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '900',
-    color: TEXT,
-  },
-
-  unit: {
-    fontSize: 14,
-    color: MUTED,
-    marginTop: 3,
-  },
-
-  stockBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 9,
-    borderWidth: 1,
-    borderColor: '#B7DDBB',
-  },
-
-  stockText: {
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 11,
-  },
-
-  starBox: {
-    backgroundColor: GREEN,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  ratingText: {
-    color: WHITE,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  reviewText: {
-    color: MUTED,
-    fontSize: 12,
-    marginLeft: 8,
-  },
-
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 13,
-  },
-
-  sellingPrice: {
-    color: GREEN,
-    fontSize: 31,
-    fontWeight: '900',
-  },
-
-  actualPrice: {
-    color: '#8B8F92',
-    fontSize: 16,
-    marginLeft: 10,
-    textDecorationLine: 'line-through',
-  },
-
-  smallDiscount: {
-    backgroundColor: LIGHT_GREEN,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 9,
-  },
-
-  smallDiscountText: {
-    color: GREEN,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-
-  pricePerUnit: {
-    color: MUTED,
-    fontSize: 11,
-    marginTop: 3,
-  },
-
-  /* BENEFITS */
-
-  benefitsCard: {
-    minHeight: 67,
-    backgroundColor: '#F2FAF2',
-    borderRadius: 13,
-    marginTop: 15,
-    paddingHorizontal: 9,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  benefit: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 7,
-  },
-
-  benefitTitle: {
-    color: TEXT,
-    fontSize: 10.5,
-    fontWeight: '900',
-  },
-
-  benefitSubtitle: {
-    color: MUTED,
-    fontSize: 9.5,
-    marginTop: 1,
-  },
-
-  benefitDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#CFE2D0',
-  },
-
-  /* SHOP */
-
-  sectionCard: {
-    backgroundColor: WHITE,
-    borderRadius: 18,
-    padding: 13,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  shopIcon: {
-    width: 55,
-    height: 55,
-    borderRadius: 18,
-    backgroundColor: LIGHT_GREEN,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 11,
-  },
-
-  shopInfo: {
-    flex: 1,
-  },
-
-  soldBy: {
-    color: MUTED,
-    fontSize: 10,
-  },
-
-  shopName: {
-    color: TEXT,
-    fontSize: 16,
-    fontWeight: '900',
-    marginTop: 2,
-  },
-
-  distanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 3,
-  },
-
-  distance: {
-    color: MUTED,
-    fontSize: 10,
-    marginLeft: 3,
-  },
-
-  viewShopButton: {
-    borderWidth: 1,
-    borderColor: GREEN,
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-
-  viewShopText: {
-    color: GREEN,
-    fontSize: 10.5,
-    fontWeight: '900',
-  },
-
-  /* DETAILS */
-
-  detailsCard: {
-    backgroundColor: WHITE,
-    borderRadius: 18,
-    padding: 15,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-
-  sectionTitle: {
-    color: TEXT,
-    fontSize: 17,
-    fontWeight: '900',
-  },
-
-  description: {
-    color: MUTED,
-    fontSize: 12.5,
-    lineHeight: 19,
-    marginTop: 7,
-  },
-
-  specsRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginTop: 15,
-  },
-
-  spec: {
-    flex: 1,
-    alignItems: 'center',
-    minWidth: 0,
-  },
-
-  specIcon: {
-    width: 35,
-    height: 35,
-    borderRadius: 11,
-    backgroundColor: LIGHT_GREEN,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-
-  specTitle: {
-    color: MUTED,
-    fontSize: 9,
-  },
-
-  specValue: {
-    color: TEXT,
-    fontSize: 10.5,
-    fontWeight: '800',
-    marginTop: 2,
-    maxWidth: '90%',
-  },
-
-  specDivider: {
-    width: 1,
-    backgroundColor: BORDER,
-    marginVertical: 2,
-  },
-
-  /* QUANTITY */
-
-  quantityCard: {
-    backgroundColor: WHITE,
-    borderRadius: 17,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: BORDER,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  quantityTitle: {
-    color: TEXT,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  quantityControls: {
-    height: 40,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: BORDER,
-    flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-
-  quantityButton: {
-    width: 39,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FAFBFA',
-  },
-
-  quantityValue: {
-    minWidth: 40,
-    textAlign: 'center',
-    color: TEXT,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
-  /* BOTTOM */
-
-  bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: WHITE,
-    borderTopWidth: 1,
-    borderTopColor: BORDER,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 13,
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  addCartButton: {
-    flex: 1,
-    height: 53,
-    borderRadius: 14,
-    backgroundColor: GREEN,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-
-  addCartText: {
-    color: WHITE,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  buyButton: {
-    flex: 1,
-    height: 53,
-    borderRadius: 14,
-    backgroundColor: WHITE,
-    borderWidth: 1.5,
-    borderColor: GREEN,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  buyText: {
-    color: GREEN,
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  disabledButton: {
-    backgroundColor: '#AEB5AF',
-  },
-
-  disabledOutlineButton: {
-    borderColor: '#AEB5AF',
-  },
-
-  disabledText: {
-    color: '#8B918C',
-  },
-
-  /* EMPTY */
-
-  emptyContainer: {
-    flex: 1,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 25,
-  },
-
-  emptyTitle: {
-    color: TEXT,
-    fontSize: 19,
-    fontWeight: '900',
-    marginTop: 12,
-  },
-
-  backButtonLarge: {
-    backgroundColor: GREEN,
-    paddingHorizontal: 25,
-    paddingVertical: 13,
-    borderRadius: 12,
-    marginTop: 18,
-  },
-
-  backButtonText: {
-    color: WHITE,
-    fontWeight: '800',
-  },
-});
 
 export default ProductDetailsScreen;

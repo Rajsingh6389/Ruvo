@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RuVo Brand Utilities */
+@layer components {
+  .ruvo-container {
+    @apply flex-1 bg-ruvo-bg px-md pt-md pb-lg;
+  }
+
+  .ruvo-header {
+    @apply flex-row items-center justify-between px-md py-sm bg-ruvo-surface border-b border-warm-300;
+  }
+
+  .ruvo-header-title {
+    @apply text-2xl font-bold text-ruvo-ink flex-1 text-center;
+  }
+
+  .ruvo-card {
+    @apply bg-ruvo-surface rounded-lg p-md shadow-md;
+  }
+
+  .ruvo-button {
+    @apply bg-ruvo-yellow rounded-xl px-lg py-md flex-row items-center justify-center;
+  }
+
+  .ruvo-button-text {
+    @apply text-ruvo-ink font-bold text-base;
+  }
+
+  .ruvo-button-secondary {
+    @apply bg-warm-100 rounded-xl px-lg py-md flex-row items-center justify-center border border-warm-300;
+  }
+
+  .ruvo-button-secondary-text {
+    @apply text-ruvo-ink font-semibold text-base;
+  }
+
+  .ruvo-input {
+    @apply bg-ruvo-surface border border-warm-300 rounded-lg px-md py-sm text-ruvo-ink;
+  }
+
+  .ruvo-label {
+    @apply text-sm font-semibold text-ruvo-ink mb-xs;
+  }
+
+  .ruvo-text-primary {
+    @apply text-ruvo-ink;
+  }
+
+  .ruvo-text-secondary {
+    @apply text-warm-600;
+  }
+
+  .ruvo-text-muted {
+    @apply text-warm-500;
+  }
+
+  .ruvo-badge-success {
+    @apply bg-ruvo-accent-soft px-sm py-xs rounded-md;
+  }
+
+  .ruvo-badge-success-text {
+    @apply text-ruvo-accent font-semibold text-xs;
+  }
+
+  .ruvo-badge-warning {
+    @apply bg-yellow-100 px-sm py-xs rounded-md;
+  }
+
+  .ruvo-badge-warning-text {
+    @apply text-ruvo-warning font-semibold text-xs;
+  }
+
+  .ruvo-badge-error {
+    @apply bg-red-100 px-sm py-xs rounded-md;
+  }
+
+  .ruvo-badge-error-text {
+    @apply text-ruvo-error font-semibold text-xs;
+  }
+
+  .ruvo-divider {
+    @apply h-px bg-warm-300 my-md;
+  }
+
+  .ruvo-shadow-sm {
+    @apply shadow-sm;
+  }
+
+  .ruvo-shadow-md {
+    @apply shadow-md;
+  }
+
+  .ruvo-shadow-lg {
+    @apply shadow-lg;
+  }
+}

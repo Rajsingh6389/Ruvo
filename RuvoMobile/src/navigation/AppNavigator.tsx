@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Platform } from 'react-native';
 import { NavigationContainer, Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -44,8 +45,10 @@ type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 const MainTabs = () => {
   const { cartItems } = useCart();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const isDark = theme === 'dark';
+  const tabHeight = 66 + Math.max(insets.bottom, 8);
 
   return (
     <Tab.Navigator
@@ -53,20 +56,38 @@ const MainTabs = () => {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-          borderTopColor: isDark ? '#334155' : '#E2E8F0',
-          borderTopWidth: 1,
-          height: 62,
-          paddingBottom: 8,
-          paddingTop: 6,
-          elevation: 10,
+          borderColor: isDark ? '#334155' : '#EDE7DA',
+          borderWidth: 1,
+          height: tabHeight,
+          marginHorizontal: 12,
+          marginBottom: Math.max(insets.bottom, 8),
+          paddingBottom: Math.max(insets.bottom - 2, 8),
+          paddingTop: 8,
+          borderRadius: 26,
+          position: 'absolute',
+          overflow: Platform.OS === 'android' ? 'hidden' : 'visible',
+          elevation: 16,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.14,
+          shadowRadius: 18,
+        },
+        tabBarItemStyle: {
+          borderRadius: 18,
+          marginHorizontal: 2,
         },
         tabBarActiveTintColor: '#EAB308',
         tabBarInactiveTintColor: isDark ? '#475569' : '#9E9E9E',
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 1 },
+        tabBarBadgeStyle: {
+          backgroundColor: '#FACC15',
+          color: '#231C10',
+          fontSize: 10,
+          fontWeight: '900',
+          minWidth: 18,
+          height: 18,
+          borderRadius: 9,
+        },
         tabBarIcon: ({ focused, color, size }) => {
           const iconMap: Record<string, { on: IoniconName; off: IoniconName }> = {
             Home:       { on: 'home',          off: 'home-outline' },
@@ -76,7 +97,20 @@ const MainTabs = () => {
             Profile:    { on: 'person-circle', off: 'person-circle-outline' },
           };
           const icons = iconMap[route.name];
-          return <Ionicons name={icons ? (focused ? icons.on : icons.off) : 'help-outline'} size={size} color={color} />;
+          return (
+            <View
+              style={{
+                width: 34,
+                height: 28,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: focused ? 'rgba(250, 204, 21, 0.18)' : 'transparent',
+              }}
+            >
+              <Ionicons name={icons ? (focused ? icons.on : icons.off) : 'help-outline'} size={size} color={color} />
+            </View>
+          );
         },
       })}
     >

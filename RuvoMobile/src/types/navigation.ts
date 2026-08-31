@@ -14,7 +14,7 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   // Tabs root
-  MainTabs: undefined;
+  MainTabs: { screen?: string } | undefined;
   // Tab screens (also navigable as stack for deep links)
   Home: undefined;
   NearbyShops: { category?: string } | undefined;
@@ -28,13 +28,13 @@ export type RootStackParamList = {
   Nearbycafe: undefined;
   ShopDetails: { shopId: number };
   ProductDetails: { product: any };
-  Checkout: { product?: any; quantity?: number; fromCart?: boolean };
+  Checkout: { product?: any; quantity?: number; fromCart?: boolean; couponCode?: string };
   OrderHistory: undefined;
   RegisterShop: undefined;
   AdminDashboard: undefined;
   EditProfile: undefined;
   OrderSuccess: { orderId: number };
   CustomerTracking: { orderId: number };
-  PaymentFailure: undefined;
+  PaymentFailure: { orderId?: number; reason?: string } | undefined;
   Market: undefined;
 };

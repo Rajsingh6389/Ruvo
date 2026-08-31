@@ -77,7 +77,25 @@ export const ShopNavigator = () => {
              status to AADHAAR_PENDING, navigator re-renders; if Step 2 is
              not registered it throws "screen not found". Keeping all steps
              registered resolves this.                                      */
+        ) : onboardingStatus === 'PENDING_APPROVAL' ? (
+          /* ── Already submitted, awaiting admin approval ────────────
+               Render Step4_Success first so the user lands directly on
+               the approval-waiting screen.  All other steps are also
+               registered so mid-flow navigation (e.g. "edit & resubmit")
+               still works.                                               */
+          <>
+            <Stack.Screen name="Step4_Success" component={Step4_Success} />
+            <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
+            <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
+            <Stack.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+          </>
+
         ) : onboardingStatus !== 'APPROVED' ? (
+          /* ── Any other onboarding state → register all steps ─────────
+               All steps MUST be registered at all times. When Step 1 sets
+               status to AADHAAR_PENDING, navigator re-renders; if Step 2 is
+               not registered it throws "screen not found". Keeping all steps
+               registered resolves this.                                      */
           <>
             <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
             <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />

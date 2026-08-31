@@ -24,6 +24,20 @@ export const SHADOWS = {
     shadowRadius: 10,
     elevation: 3,
   },
+  brand: {
+    shadowColor: SHADOW_TINT,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  raised: {
+    shadowColor: SHADOW_TINT,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
+  },
   /** Raised cards, hero surfaces, sticky bars. */
   lg: {
     shadowColor: SHADOW_TINT,

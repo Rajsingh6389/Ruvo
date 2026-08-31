@@ -175,18 +175,20 @@ export const Step1_ShopDetails = () => {
     setLoading(true);
     try {
       const ownerIdentifier = userId || (user as any)?.phone || phone.replace(/\D/g, '') || 'owner_default';
+      const shopPayload = {
+        name: shopName.trim(),
+        category,
+        phone: '+91' + phone.replace(/\D/g, ''),
+        address: `${address.trim()}, ${city.trim()}, ${stateName.trim()} - ${pincode.trim()}`,
+        ownerId: ownerIdentifier,
+        gstin: gstin.trim() || null,
+        approved: false,
+      };
+      let createdShop: any = null;
 
       if (logo?.uri) {
         // Use multipart upload endpoint /api/shops/upload
         const formData = new FormData();
-        const shopPayload = {
-          name: shopName.trim(),
-          category,
-          phone: '+91' + phone.replace(/\D/g, ''),
-          address: `${address.trim()}, ${city.trim()}, ${stateName.trim()} - ${pincode.trim()}`,
-          ownerId: ownerIdentifier,
-          gstin: gstin.trim() || null,
-        };
         formData.append('shop', JSON.stringify(shopPayload));
 
         formData.append('logo', {
@@ -223,8 +225,9 @@ export const Step1_ShopDetails = () => {
 
           if (res.ok) {
             uploaded = true;
+            createdShop = await res.json().catch(() => null);
           } else {
-            const errData = await res.json().catch(() => null);
+            const errData = await res.text().catch(() => '');
             console.warn('Multipart upload fallback:', res.status, errData);
           }
         } catch (e: any) {
@@ -233,21 +236,20 @@ export const Step1_ShopDetails = () => {
 
         // Fallback to standard JSON endpoint if multipart upload failed or logo was empty
         if (!uploaded) {
-          await fetch(`${API_BASE_URL}/api/shops`, {
+          const fallbackRes = await fetch(`${API_BASE_URL}/api/shops`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({
-              name: shopName.trim(),
-              category,
-              phone: '+91' + phone.replace(/\D/g, ''),
-              address: `${address.trim()}, ${city.trim()}, ${stateName.trim()} - ${pincode.trim()}`,
-              ownerId: ownerIdentifier,
-              approved: false,
-            }),
-          }).catch(() => null);
+            body: JSON.stringify(shopPayload),
+          });
+
+          if (!fallbackRes.ok) {
+            const message = await fallbackRes.text().catch(() => '');
+            throw new Error(message || `Shop registration failed (${fallbackRes.status})`);
+          }
+          createdShop = await fallbackRes.json().catch(() => null);
         }
       } else {
         // Standard JSON register endpoint /api/shops
@@ -257,28 +259,26 @@ export const Step1_ShopDetails = () => {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({
-            name: shopName.trim(),
-            category,
-            phone: '+91' + phone.replace(/\D/g, ''),
-            address: `${address.trim()}, ${city.trim()}, ${stateName.trim()} - ${pincode.trim()}`,
-            ownerId: ownerIdentifier,
-            approved: false,
-          }),
+          body: JSON.stringify(shopPayload),
         });
 
         if (!res.ok) {
-          const errData = await res.json().catch(() => null);
+          const errData = await res.text().catch(() => '');
           console.warn('Shop create response:', res.status, errData);
+          throw new Error(errData || `Shop registration failed (${res.status})`);
         }
+        createdShop = await res.json().catch(() => null);
+      }
+
+      if (!createdShop?.id) {
+        throw new Error('Shop registration did not return a shop ID. Please try again.');
       }
 
       await setOnboardingStatus('AADHAAR_PENDING');
       navigation.navigate('Step2_Aadhaar');
     } catch (e: any) {
       console.warn('Shop creation catch:', e?.message);
-      await setOnboardingStatus('AADHAAR_PENDING');
-      navigation.navigate('Step2_Aadhaar');
+      setError(e?.message || 'Could not submit your shop for review. Please try again.');
     } finally { setLoading(false); }
   };
 

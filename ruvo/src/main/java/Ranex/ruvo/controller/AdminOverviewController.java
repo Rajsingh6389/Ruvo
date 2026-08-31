@@ -58,9 +58,7 @@ public class AdminOverviewController {
         long totalOrders = orderRepository.count();
         long totalProducts = productRepository.count();
 
-        long pendingShops = shopRepository.findAll().stream()
-                .filter(s -> Boolean.FALSE.equals(s.getApproved()))
-                .count();
+        long pendingShops = shopRepository.findPendingApproval().size();
 
         long pendingPartners = partnerProfileRepository.findByVerificationStatus(VerificationStatus.UNDER_REVIEW).size();
 

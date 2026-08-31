@@ -110,16 +110,39 @@ export async function getMyShops(ownerId: string, token: string): Promise<Shop[]
   return parseOrThrow(res);
 }
 
-/** Returns true if the user already owns at least one shop.
+/** Returns true if the user already owns at least one APPROVED shop.
  *  Used by AuthContext.login() to skip onboarding for returning users. */
 export async function checkHasShop(ownerId: string, token: string): Promise<boolean> {
   try {
     const shops = await getMyShops(ownerId, token);
-    return Array.isArray(shops) && shops.length > 0;
+    return Array.isArray(shops) && shops.some(s => (s as any).approved === true || (s as any).isApproved === true || (s as any).status === 'APPROVED');
   } catch {
     // If the request fails (network error, cold-start), assume no shop so
     // onboarding can be shown — safer than accidentally sending new users to main app.
     return false;
+  }
+}
+
+
+/**
+ * Determines the correct OnboardingStatus from the backend on login.
+ * - APPROVED         → user has an approved shop, go straight to main app
+ * - PENDING_APPROVAL → user has a shop awaiting admin review
+ * - NEW              → no shop found, start onboarding from Step 1
+ */
+export async function checkShopApprovalStatus(
+  ownerId: string,
+  token: string,
+): Promise<'APPROVED' | 'PENDING_APPROVAL' | 'NEW'> {
+  try {
+    const shops = await getMyShops(ownerId, token);
+    if (!Array.isArray(shops) || shops.length === 0) return 'NEW';
+    const hasApproved = shops.some(
+      s => (s as any).approved === true || (s as any).isApproved === true || (s as any).status === 'APPROVED',
+    );
+    return hasApproved ? 'APPROVED' : 'PENDING_APPROVAL';
+  } catch {
+    return 'NEW';
   }
 }
 

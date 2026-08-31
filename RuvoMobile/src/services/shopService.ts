@@ -5,6 +5,7 @@ export interface Shop {
   id: number;
   name: string;
   category: string;
+  description?: string;
   bannerUrl?: string;
   logoUrl?: string;
   imageUrl?: string;
@@ -14,6 +15,8 @@ export interface Shop {
   phone: string;
   rating?: number;
   deliveryAvailable?: boolean;
+  deliveryTime?: string;
+  minOrderAmount?: number;
   latitude?: number;
   longitude?: number;
   openingTime?: string;

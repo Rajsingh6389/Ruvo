@@ -147,7 +147,7 @@ const Field: React.FC<FieldProps & React.ComponentProps<typeof TextInput>> = ({
             borderRadius: radius.input,
             color: colors.textPrimary,
           },
-          props.editable === false && { backgroundColor: colors.bgSecondary, color: colors.textSecondary },
+          props.editable === false && { backgroundColor: colors.surface, color: colors.textSecondary },
           style,
         ]}
         placeholderTextColor={colors.placeholder}

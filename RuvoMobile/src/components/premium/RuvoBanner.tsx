@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, Image, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TouchableOpacity, Image, Animated, useWindowDimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useResponsive } from '../../utils/responsive';
 import { getHeroBanners } from '../../assets/cloudinary/banners';
 import { DURATIONS, EASINGS } from '../../theme/motion';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { resolveImageUrl } from '../../utils/imageUrl';
 
 interface RuvoBannerProps {
   onPress?: (banner: any) => void;
@@ -20,14 +19,19 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
 }) => {
   const { colors, typography, radius, shadows } = useTheme();
   const { sf, sw, sh } = useResponsive();
+  const { width: screenWidth } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const banners = getHeroBanners();
+  const bannerGap = 12;
+  const horizontalPadding = sw(16);
+  const bannerWidth = Math.min(screenWidth - horizontalPadding * 2, 430);
+  const bannerHeight = Math.max(138, Math.min(sh(180), 190));
 
   const dotScale = React.useRef(new Animated.Value(1)).current;
 
   const handleScroll = (event: any) => {
-    const index = Math.round(event.nativeEvent.contentOffset.x / (SCREEN_WIDTH * 0.9));
+    const index = Math.round(event.nativeEvent.contentOffset.x / (bannerWidth + bannerGap));
     if (index !== activeIndex) {
       setActiveIndex(index);
       Animated.sequence([
@@ -47,7 +51,7 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
 
   const scrollToIndex = (index: number) => {
     scrollRef.current?.scrollTo({
-      x: index * (SCREEN_WIDTH * 0.9 + 12),
+      x: index * (bannerWidth + bannerGap),
       animated: true,
     });
   };
@@ -73,9 +77,9 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScroll}
-        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: sw(18) }]}
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding, gap: bannerGap }]}
         decelerationRate="fast"
-        snapToInterval={SCREEN_WIDTH * 0.9 + 12}
+        snapToInterval={bannerWidth + bannerGap}
       >
         {banners.map((banner, index) => (
           <TouchableOpacity
@@ -85,8 +89,8 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
             style={[
               styles.banner,
               {
-                width: SCREEN_WIDTH * 0.9,
-                height: sh(180),
+                width: bannerWidth,
+                height: bannerHeight,
                 borderRadius: radius.hero,
                 overflow: 'hidden',
               },
@@ -94,7 +98,7 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
             ]}
           >
             <Image
-              source={{ uri: banner.image }}
+              source={{ uri: resolveImageUrl(banner.image) || banner.image }}
               style={styles.bannerImage}
               resizeMode="cover"
             />

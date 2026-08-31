@@ -39,6 +39,19 @@ export const TYPOGRAPHY = {
     fontWeight: '400' as const,
     lineHeight: 20,
   },
+  bodyStrong: {
+    fontFamily,
+    fontSize: 14,
+    fontWeight: '600' as const,
+    lineHeight: 20,
+  },
+  overline: {
+    fontFamily,
+    fontSize: 10,
+    fontWeight: '700' as const,
+    lineHeight: 14,
+    textTransform: 'uppercase' as const,
+  },
   caption: {
     fontFamily,
     fontSize: 12,

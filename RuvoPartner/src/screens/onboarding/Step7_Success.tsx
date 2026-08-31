@@ -362,66 +362,6 @@ const s = StyleSheet.create({
     paddingBottom: 24,
     flexGrow: 1,
   },
-  iconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  iconBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  statusGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 28,
-  },
-  statusCard: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-  },
-  nextStepsSection: {
-    marginBottom: 20,
-  },
-  nextStepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  stepIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  ctaSection: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.05)',
-  },
-});
-
-
-const s = StyleSheet.create({
-  safe: { flex: 1 },
-  scroll: {
-    paddingTop: 24,
-    paddingBottom: 24,
-    flexGrow: 1,
-  },
   iconCentre: {
     alignItems: 'center',
     justifyContent: 'center',

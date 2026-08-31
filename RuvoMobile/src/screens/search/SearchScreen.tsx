@@ -80,7 +80,7 @@ export const SearchScreen = () => {
   const renderProduct = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.productCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => navigation.navigate('ProductDetails' as never, { product: item } as never)}
+      onPress={() => (navigation.navigate as any)('ProductDetails', { product: item })}
     >
       {item.imageUrl ? (
         <Image source={{ uri: item.imageUrl }} style={styles.productImage} />
@@ -113,7 +113,7 @@ export const SearchScreen = () => {
   const renderShop = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.shopCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => navigation.navigate('ShopDetails' as never, { shopId: item.id } as never)}
+      onPress={() => (navigation.navigate as any)('ShopDetails', { shopId: item.id })}
     >
       {item.logoUrl ? (
         <Image source={{ uri: item.logoUrl }} style={styles.shopLogo} />

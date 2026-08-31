@@ -32,6 +32,9 @@ export const Step4_Success = () => {
   const shopName = route.params?.shopName || (user as any)?.shopName || 'Your Shop';
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [checking, setChecking] = useState(false);
+  const [requestingReview, setRequestingReview] = useState(false);
+  const [ownedShops, setOwnedShops] = useState<any[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -57,6 +60,7 @@ export const Step4_Success = () => {
 
   const checkApproval = useCallback(async () => {
     setChecking(true);
+    setStatusMessage(null);
     const ownerIdParam = userId || (user as any)?.phone || 'owner_default';
     try {
       const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerIdParam)}`, {
@@ -64,9 +68,14 @@ export const Step4_Success = () => {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const message = await res.text().catch(() => '');
+        setStatusMessage(message || 'Could not check approval status.');
+        return;
+      }
       const data = await res.json();
-      const shops: any[] = Array.isArray(data) ? data : [data];
+      const shops: any[] = (Array.isArray(data) ? data : [data]).filter(Boolean);
+      setOwnedShops(shops);
       const approved = shops.find(s => s.approved === true || s.isApproved === true || s.status === 'APPROVED');
       const rejected = shops.find(s => s.status === 'REJECTED');
       if (approved) {
@@ -74,8 +83,14 @@ export const Step4_Success = () => {
         await setOnboardingStatus('APPROVED');
       } else if (rejected) {
         setApprovalStatus('rejected');
+      } else if (shops.length === 0) {
+        setStatusMessage('No shop request found for this account. Please submit your shop details again.');
+      } else {
+        setStatusMessage('Your shop request is still waiting for admin approval.');
       }
-    } catch { /* silently ignore network errors */ }
+    } catch {
+      setStatusMessage('Network error while checking approval status.');
+    }
     finally { setChecking(false); }
   }, [token, userId, user, setOnboardingStatus]);
 
@@ -87,6 +102,55 @@ export const Step4_Success = () => {
 
   const handleGoToDashboard = () => {
     navigation.reset({ index: 0, routes: [{ name: 'MyShops' }] });
+  };
+
+  const latestShop = ownedShops[0];
+
+  const requestAdminReviewAgain = async () => {
+    if (!latestShop?.id) {
+      setStatusMessage('No shop request found. Please edit and submit your shop details again.');
+      return;
+    }
+
+    setRequestingReview(true);
+    setStatusMessage(null);
+    const ownerIdParam = userId || (user as any)?.phone || 'owner_default';
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/shops/${latestShop.id}/request-approval?ownerId=${encodeURIComponent(ownerIdParam)}`,
+        {
+          method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        },
+      );
+
+      if (!res.ok) {
+        const message = await res.text().catch(() => '');
+        throw new Error(message || 'Could not request admin review again.');
+      }
+
+      const updatedShop = await res.json().catch(() => latestShop);
+      setOwnedShops(prev => prev.length > 0 ? [updatedShop, ...prev.slice(1)] : [updatedShop]);
+      setApprovalStatus(updatedShop?.approved ? 'approved' : 'pending');
+      setStatusMessage(
+        updatedShop?.approved
+          ? 'Your shop is already approved.'
+          : 'Admin review requested again. Ask admin to refresh approvals.',
+      );
+      await setOnboardingStatus(updatedShop?.approved ? 'APPROVED' : 'PENDING_APPROVAL');
+    } catch (e: any) {
+      setStatusMessage(e?.message || 'Could not request admin review again.');
+    } finally {
+      setRequestingReview(false);
+    }
+  };
+
+  const editAndSubmitAgain = async () => {
+    await setOnboardingStatus('NEW');
+    navigation.navigate('Step1_ShopDetails');
   };
 
   const STEPS = [
@@ -175,6 +239,14 @@ export const Step4_Success = () => {
             <InfoBox
               text="We check for approval automatically every 10 seconds. You may close this screen — your application is saved."
               variant="info"
+              colors={colors}
+              typography={typography}
+            />
+          )}
+          {statusMessage && (
+            <InfoBox
+              text={statusMessage}
+              variant={statusMessage.toLowerCase().includes('could not') || statusMessage.toLowerCase().includes('error') ? 'warning' : 'info'}
               colors={colors}
               typography={typography}
             />
