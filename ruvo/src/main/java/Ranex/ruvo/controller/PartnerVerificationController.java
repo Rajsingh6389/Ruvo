@@ -8,11 +8,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/partner")
+@Transactional
 public class PartnerVerificationController {
 
     private final UserRepository users;
@@ -194,15 +196,15 @@ public class PartnerVerificationController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Unauthorized", null));
         }
 
-        String type = request.get("vehicleType");
-        String num = request.get("vehicleNumber");
-        String model = request.get("vehicleModel");
-        String capacity = request.get("vehicleCapacity");
-        String fuel = request.get("fuelType");
-
-        if (type == null || num == null || model == null || capacity == null || fuel == null) {
-            return ResponseEntity.badRequest().body(ApiResponse.ok("All vehicle fields are required", null));
-        }
+        String type = request.getOrDefault("vehicleType", "Bike");
+        String num = request.getOrDefault("vehicleNumber", "NOT_REQUIRED");
+        if (num.isBlank()) num = "NOT_REQUIRED";
+        String model = request.getOrDefault("vehicleModel", "Standard");
+        if (model.isBlank()) model = "Standard";
+        String capacity = request.getOrDefault("vehicleCapacity", "50");
+        if (capacity.isBlank()) capacity = "50";
+        String fuel = request.getOrDefault("fuelType", "Petrol");
+        if (fuel.isBlank()) fuel = "Petrol";
 
         PartnerProfile profile = profiles.findByUser(user)
                 .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));

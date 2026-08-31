@@ -13,15 +13,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import { Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
 import { API_BASE_URL } from '../../config/api';
+import { MapLocationPicker, LocationResult } from '../../components/MapLocationPicker';
 import {
   StepBar, ScreenHeader, SectionCard, FieldLabel,
   StyledInput, CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
+
+const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+
+async function googleReverseGeocode(lat: number, lng: number) {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (json.status !== 'OK' || !json.results?.length) return null;
+    const best = json.results[0];
+    const comps: Record<string, string> = {};
+    for (const c of best.address_components ?? []) {
+      for (const t of c.types) comps[t] = c.long_name;
+    }
+    const streetParts = [
+      comps['street_number'],
+      comps['route'],
+      comps['sublocality_level_2'],
+      comps['sublocality_level_1'] || comps['sublocality'],
+      comps['neighborhood'],
+    ].filter(Boolean);
+    return {
+      address : streetParts.join(', ') || comps['premise'] || '',
+      city    : comps['locality'] || comps['administrative_area_level_2'] || '',
+      state   : comps['administrative_area_level_1'] || '',
+      pincode : comps['postal_code'] || '',
+    };
+  } catch { return null; }
+}
 
 export const Step1_BasicDetails = () => {
   const navigation = useNavigation<any>();
@@ -35,10 +66,12 @@ export const Step1_BasicDetails = () => {
   const [stateName,setStateName]  = useState('');
   const [pincode,  setPincode]    = useState('');
   const [showDate, setShowDate]   = useState(false);
-  const [locating, setLocating]   = useState(false);
-  const [loading,  setLoading]    = useState(false);
-  const [error,    setError]      = useState<string | null>(null);
-  const [focused,  setFocused]    = useState<string | null>(null);
+  const [locating,  setLocating]  = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState<string | null>(null);
+  const [focused,   setFocused]   = useState<string | null>(null);
+  const [mapOpen,   setMapOpen]   = useState(false);
+  const [mapRegion, setMapRegion] = useState<Region | undefined>(undefined);
 
   const fld = (name: string) => ({
     focused: focused === name,
@@ -54,17 +87,42 @@ export const Step1_BasicDetails = () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { Alert.alert('Permission denied', 'Allow location access or enter manually.'); return; }
-      const pos    = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const places = await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      const p = places[0];
-      if (!p) { Alert.alert('Not found', 'Could not resolve address. Enter manually.'); return; }
-      setAddress([p.name, p.street, p.district].filter(Boolean).join(', ') || '');
-      setCity(p.city || p.subregion || '');
-      setStateName(p.region || '');
-      setPincode(p.postalCode || '');
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const { latitude, longitude } = pos.coords;
+
+      // Try Google Geocoding first (accurate), fall back to expo
+      const gResult = await googleReverseGeocode(latitude, longitude);
+      if (gResult) {
+        setAddress(gResult.address);
+        setCity(gResult.city);
+        setStateName(gResult.state);
+        setPincode(gResult.pincode);
+      } else {
+        const places = await Location.reverseGeocodeAsync({ latitude, longitude });
+        const p = places[0];
+        if (!p) { Alert.alert('Not found', 'Could not resolve address. Enter manually.'); return; }
+        const parts = [p.streetNumber, p.street, p.subregion !== p.city ? p.subregion : null, p.district].filter(Boolean);
+        setAddress(parts.join(', ') || p.name || '');
+        setCity(p.city || p.subregion || '');
+        setStateName(p.region || '');
+        setPincode(p.postalCode || '');
+      }
+
+      // Pre-position map region for the modal
+      setMapRegion({ latitude, longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 });
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Location error');
     } finally { setLocating(false); }
+  };
+
+  const handleMapConfirm = (result: LocationResult) => {
+    setAddress(result.address);
+    setCity(result.city);
+    setStateName(result.state);
+    setPincode(result.pincode);
+    setMapRegion({ latitude: result.latitude, longitude: result.longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 });
+    setMapOpen(false);
+    setError(null);
   };
 
   const handleNext = async () => {
@@ -154,18 +212,29 @@ export const Step1_BasicDetails = () => {
               <Ionicons name="location-outline" size={18} color={colors.primary} />
               <Text style={[typography.headingS, { color: colors.textPrimary, marginLeft: 8 }]}>Address</Text>
             </View>
-            <TouchableOpacity
-              style={[s.locBtn, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}
-              onPress={useGPS} disabled={locating}
-            >
-              {locating
-                ? <ActivityIndicator color={colors.primary} size="small" />
-                : <Ionicons name="locate-outline" size={16} color={colors.primary} />
-              }
-              <Text style={[typography.body, { color: colors.primary, fontWeight: '700', marginLeft: 6 }]}>
-                {locating ? 'Fetching location…' : 'Use GPS to fill address'}
-              </Text>
-            </TouchableOpacity>
+            <View style={s.locationBtnRow}>
+              <TouchableOpacity
+                style={[s.locBtn, s.locBtnHalf, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}
+                onPress={useGPS} disabled={locating}
+              >
+                {locating
+                  ? <ActivityIndicator color={colors.primary} size="small" />
+                  : <Ionicons name="locate-outline" size={16} color={colors.primary} />
+                }
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                  {locating ? 'Locating…' : 'GPS Fill'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.locBtn, s.locBtnHalf, { backgroundColor: colors.surfaceSunken, borderColor: colors.primary, borderWidth: 1.5, borderRadius: RADIUS.sm }]}
+                onPress={() => setMapOpen(true)}
+              >
+                <Ionicons name="map-outline" size={16} color={colors.primary} />
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                  Pick on Map
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <FieldLabel text="Street / Locality" required colors={colors} typography={typography} />
             <StyledInput {...fld('addr')} iconLeft="home-outline" placeholder="House No, Road, Area" value={address} onChangeText={t => { setAddress(t); setError(null); }} style={{ marginBottom: 12 }} />
@@ -190,6 +259,16 @@ export const Step1_BasicDetails = () => {
           <View style={{ height: 32 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <MapLocationPicker
+        visible={mapOpen}
+        onClose={() => setMapOpen(false)}
+        onConfirm={handleMapConfirm}
+        initialRegion={mapRegion}
+        title="Pick Your Address"
+        colors={colors}
+        typography={typography}
+      />
     </SafeAreaView>
   );
 };
@@ -198,7 +277,9 @@ const s = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingBottom: 32 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  locBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14 },
+  locationBtnRow : { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  locBtn         : { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 12 },
+  locBtnHalf     : { flex: 1 },
   dateBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: RADIUS.input, height: 50, paddingHorizontal: 14, gap: 10, marginBottom: 12 },
   row: { flexDirection: 'row' },
 });

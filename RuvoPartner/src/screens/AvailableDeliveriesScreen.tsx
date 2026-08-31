@@ -1,30 +1,50 @@
+/**
+ * AvailableDeliveriesScreen - RuvoPartner (Redesigned with Premium UI/UX)
+ * 
+ * Features:
+ * - Real-time list of available delivery runs
+ * - Location-based matching with visual route display
+ * - Accept delivery flow with loading states
+ * - Empty state with helpful messaging
+ * - Pull-to-refresh
+ * - Error handling with retry
+ * - Smooth animations
+ * - Responsive layout
+ */
+
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { Delivery } from '../services/partnerService';
 import { OfflineBar } from '../components/OfflineBar';
-import { OrderSkeleton } from '../components/OrderSkeleton';
 import { NotificationPopup } from '../components/NotificationPopup';
 import { useNewDeliverySound } from '../hooks/useNotificationSound';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Skeleton } from '../components/ui/Skeleton';
 
 export const AvailableDeliveriesScreen = () => {
   const { token } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
   const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [runs, setRuns] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,10 +85,9 @@ export const AvailableDeliveriesScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       <OfflineBar />
 
-      {/* New delivery notification popup */}
       <NotificationPopup
         visible={showPopup}
         message={popupMessage}
@@ -76,46 +95,41 @@ export const AvailableDeliveriesScreen = () => {
         onDismiss={dismissPopup}
       />
 
-      {/* ── HEADER ─────────────────────────────────────────────── */}
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.headingL, { color: colors.textPrimary }]}>
-            Available Deliveries
-          </Text>
-          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
+      {/* Header */}
+      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+        <View className="flex-1">
+          <Text className="text-xl font-extrabold text-ruvo-ink">Available Deliveries</Text>
+          <Text className="text-xs text-warm-600 font-medium mt-xs">
             Real-time runs matching your location
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.refreshBtn, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}
           onPress={() => load(true)}
+          className="w-10 h-10 bg-green-100 rounded-full items-center justify-center"
         >
-          <Ionicons name="refresh" size={20} color={colors.primary} />
+          <Ionicons name="refresh" size={20} color="#16A34A" />
         </TouchableOpacity>
       </View>
 
-      {/* ── CONTENT ────────────────────────────────────────────── */}
+      {/* Content */}
       {loading ? (
-        <View style={{ padding: spacing.gutter }}>
-          <OrderSkeleton count={3} />
+        <View className="px-lg pt-lg">
+          <Skeleton height={180} className="mb-md" />
+          <Skeleton height={180} className="mb-md" />
+          <Skeleton height={180} />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <View style={[styles.emptyIcon, { backgroundColor: colors.errorSoft, borderRadius: 48 }]}>
-            <Ionicons name="cloud-offline-outline" size={44} color={colors.error} />
-          </View>
-          <Text style={[typography.headingS, { color: colors.textPrimary, marginTop: 20 }]}>
-            Connection Error
-          </Text>
-          <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 6 }]}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            style={[styles.retryBtn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
-            onPress={() => load()}
-          >
-            <Text style={[typography.button, { color: colors.onPrimary }]}>Retry</Text>
-          </TouchableOpacity>
+        <View className="flex-1 items-center justify-center px-xl">
+          <Animated.View entering={FadeIn.duration(300)} className="items-center">
+            <View className="w-24 h-24 bg-red-100 rounded-3xl items-center justify-center mb-lg">
+              <Ionicons name="cloud-offline-outline" size={44} color="#DC2626" />
+            </View>
+            <Text className="text-xl font-extrabold text-ruvo-ink mb-sm">Connection Error</Text>
+            <Text className="text-sm text-warm-600 text-center mb-xl leading-5">{error}</Text>
+            <Button variant="primary" onPress={() => load()} icon="refresh">
+              Retry
+            </Button>
+          </Animated.View>
         </View>
       ) : (
         <FlatList
@@ -125,135 +139,81 @@ export const AvailableDeliveriesScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => load(true)}
-              tintColor={colors.primary}
+              tintColor="#16A34A"
+              colors={['#16A34A']}
             />
           }
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingHorizontal: spacing.gutter },
-            runs.length === 0 && styles.emptyList,
-          ]}
+          contentContainerClassName={`px-lg pt-lg pb-2xl ${runs.length === 0 ? 'flex-grow' : ''}`}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft, borderRadius: 48 }]}>
-                <Ionicons name="bicycle" size={44} color={colors.primary} />
-              </View>
-              <Text style={[typography.headingM, { color: colors.textPrimary, marginTop: 20, textAlign: 'center' }]}>
-                No Active Deliveries
-              </Text>
-              <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 20 }]}>
-                Stay online and keep this tab active to receive automated server orders.
-              </Text>
-            </View>
+            <EmptyState
+              icon="bicycle"
+              title="No Active Deliveries"
+              description="Stay online and keep this tab active to receive automated delivery orders."
+            />
           }
-          renderItem={({ item }) => (
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.md]}>
-              {/* Card header */}
-              <View style={styles.cardHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={[typography.headingS, { color: colors.textPrimary }]}>
-                    Order #{item.orderId}
-                  </Text>
-                  <View style={[styles.statusPill, { backgroundColor: colors.surfaceSunken, borderRadius: radius.xs }]}>
-                    <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '700', fontSize: 10 }]}>
+          ItemSeparatorComponent={() => <View className="h-md" />}
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(index * 100).duration(400)}>
+              <Card>
+                {/* Header */}
+                <View className="flex-row items-center justify-between mb-md">
+                  <View className="flex-row items-center gap-sm">
+                    <Text className="text-lg font-extrabold text-ruvo-ink">
+                      Order #{item.orderId}
+                    </Text>
+                    <Badge variant="info" size="sm">
                       {item.status.replaceAll('_', ' ')}
+                    </Badge>
+                  </View>
+                  <Text className="text-xl font-extrabold text-ruvo-accent">
+                    +₹{item.deliveryFee}
+                  </Text>
+                </View>
+
+                {/* Route Section */}
+                <View className="bg-warm-100 rounded-lg p-md mb-md">
+                  {/* Pickup */}
+                  <View className="flex-row items-center gap-md mb-xs">
+                    <View className="w-2 h-2 bg-ruvo-accent rounded-full" />
+                    <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
+                      Pickup
+                    </Text>
+                    <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
+                      {item.pickupLocation}
+                    </Text>
+                  </View>
+
+                  {/* Connector */}
+                  <View className="w-px h-3 bg-warm-300 ml-1" />
+
+                  {/* Drop */}
+                  <View className="flex-row items-center gap-md">
+                    <View className="w-2 h-2 bg-orange-500 rounded-full" />
+                    <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
+                      Drop
+                    </Text>
+                    <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
+                      {item.deliveryLocation}
                     </Text>
                   </View>
                 </View>
-                <Text style={[typography.headingS, { color: colors.success, fontWeight: '900' }]}>
-                  +₹{item.deliveryFee}
-                </Text>
-              </View>
 
-              {/* Location section */}
-              <View style={[styles.locationSection, { backgroundColor: colors.surfaceSunken, borderRadius: radius.md }]}>
-                <View style={styles.locRow}>
-                  <View style={[styles.locDot, { backgroundColor: colors.primary }]} />
-                  <Text style={[typography.caption, { color: colors.textHint, width: 46, fontWeight: '700' }]}>
-                    Pickup
-                  </Text>
-                  <Text style={[typography.bodyStrong, { flex: 1, color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
-                    {item.pickupLocation}
-                  </Text>
-                </View>
-
-                {/* Connector line */}
-                <View style={[styles.connectorLine, { backgroundColor: colors.border }]} />
-
-                <View style={styles.locRow}>
-                  <View style={[styles.locDot, { backgroundColor: '#F97316' }]} />
-                  <Text style={[typography.caption, { color: colors.textHint, width: 46, fontWeight: '700' }]}>
-                    Drop
-                  </Text>
-                  <Text style={[typography.bodyStrong, { flex: 1, color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
-                    {item.deliveryLocation}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Accept button */}
-              <TouchableOpacity
-                disabled={busy === item.id}
-                onPress={() => accept(item)}
-                style={[
-                  styles.acceptBtn,
-                  { backgroundColor: colors.primary, borderRadius: radius.button },
-                  shadows.brand,
-                  busy === item.id && { opacity: 0.7 },
-                ]}
-                activeOpacity={0.88}
-              >
-                {busy === item.id ? (
-                  <ActivityIndicator color={colors.onPrimary} />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle-outline" size={20} color={colors.onPrimary} />
-                    <Text style={[typography.button, { color: colors.onPrimary, letterSpacing: 0.3 }]}>
-                      Accept Delivery Run
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
+                {/* Accept Button */}
+                <Button
+                  variant="primary"
+                  onPress={() => accept(item)}
+                  loading={busy === item.id}
+                  disabled={busy === item.id}
+                  icon="checkmark-circle-outline"
+                >
+                  Accept Delivery Run
+                </Button>
+              </Card>
+            </Animated.View>
           )}
         />
       )}
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1,
-  },
-  refreshBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-
-  center: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28,
-  },
-  retryBtn: { paddingHorizontal: 28, paddingVertical: 12, marginTop: 20 },
-
-  listContent: { paddingTop: 16, paddingBottom: 40, gap: 12 },
-  emptyList: { flexGrow: 1 },
-  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
-  emptyIcon: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
-
-  card: { borderWidth: 1, padding: 16 },
-  cardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14,
-  },
-  statusPill: { paddingHorizontal: 8, paddingVertical: 3 },
-
-  locationSection: { padding: 12, marginBottom: 14, gap: 4 },
-  locRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 },
-  locDot: { width: 8, height: 8, borderRadius: 4 },
-  connectorLine: { width: 1, height: 10, marginLeft: 3 },
-
-  acceptBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 14, gap: 8,
-  },
-});

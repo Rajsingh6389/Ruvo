@@ -4,7 +4,6 @@ import Ranex.ruvo.dto.ApiResponse;
 import Ranex.ruvo.model.*;
 import Ranex.ruvo.repository.*;
 import Ranex.ruvo.security.JwtService;
-import jakarta.transaction.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,8 +14,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/api/partner/auth")
+@Transactional
 public class PartnerAuthController {
 
     private final UserRepository users;
@@ -154,7 +156,7 @@ public class PartnerAuthController {
 
         // Partner identities are deliberately isolated from customer users. A customer
         // can therefore use the same mobile number in the Customer and Partner apps.
-        Optional<PartnerAccount> optAccount = partnerAccounts.findByMobileNumber(mobile);
+        Optional<PartnerAccount> optAccount = partnerAccounts.findByMobileNumberFlexible(mobile);
         User user;
         PartnerAccount partnerAccount;
         boolean isNew = false;
@@ -180,21 +182,25 @@ public class PartnerAuthController {
                         .build();
                 user = users.save(user);
             }
-            partnerAccount = partnerAccounts.save(PartnerAccount.builder()
-                    .mobileNumber(mobile)
-                    .securityUser(user)
-                    .build());
+            final User secUser = user;
+            partnerAccount = partnerAccounts.findBySecurityUser(secUser).orElseGet(() ->
+                    partnerAccounts.save(PartnerAccount.builder()
+                            .mobileNumber(mobile)
+                            .securityUser(secUser)
+                            .build()));
         }
 
         // Keep the existing assignment engine in sync with partner authentication.
         final User partnerUser = user;
-        DeliveryPartner dpRecord = deliveryPartners.findByPhone(mobile).orElseGet(() ->
-                deliveryPartners.save(DeliveryPartner.builder()
-                        .userId(partnerUser.getMobileNumber())
-                        .name(partnerUser.getName())
-                        .phone(mobile)
-                        .active(true).available(false).approved(true)
-                        .build()));
+        DeliveryPartner dpRecord = deliveryPartners.findByPhoneFlexible(mobile)
+                .or(() -> deliveryPartners.findByUserIdFlexible(partnerUser.getMobileNumber()))
+                .orElseGet(() ->
+                        deliveryPartners.save(DeliveryPartner.builder()
+                                .userId(partnerUser.getMobileNumber())
+                                .name(partnerUser.getName())
+                                .phone(mobile)
+                                .active(true).available(false).approved(true)
+                                .build()));
 
         // If DeliveryPartner's name is still "New Partner", check if user has a real name or KYC fullName
         if ("New Partner".equalsIgnoreCase(dpRecord.getName())) {

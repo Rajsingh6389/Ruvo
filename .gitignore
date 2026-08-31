@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Java / Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# JavaScript build outputs
+dist/
+build/
+.expo/
+.expo-shared/
+
+# Logs and diagnostics
+*.log
+*.tmp
+*.temp
+*.trace
+crash*.txt
+*_tsc*.txt
+ts_errors.txt
+tsc_errors.txt
+tsc_output.txt
+
+# Local IDE files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Manual backup files
+*.old.tsx
+*.backup
+*.original

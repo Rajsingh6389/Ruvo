@@ -136,7 +136,7 @@ public class AuthenticationController {
         otps.save(verification);
 
         // Find or create User
-        Optional<User> optUser = users.findByMobileNumber(mobile);
+        Optional<User> optUser = users.findByMobileNumberFlexible(mobile);
         User u;
         if (optUser.isPresent()) {
             u = optUser.get();
@@ -193,7 +193,7 @@ public class AuthenticationController {
     @PostMapping("/login")
     ResponseEntity<ApiResponse<AuthToken>> login(@Valid @RequestBody LoginRequest r) {
         String mobile = formatMobile(r.mobileNumber());
-        User u = users.findByMobileNumber(mobile)
+        User u = users.findByMobileNumberFlexible(mobile)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
         if (u.getStatus() != AccountStatus.APPROVED) { u.setStatus(AccountStatus.APPROVED); users.save(u); }
         auth.authenticate(new UsernamePasswordAuthenticationToken(u.getMobileNumber(), r.password()));

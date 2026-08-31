@@ -31,11 +31,6 @@ export const VehicleDetailsScreen = () => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmitVehicle = async () => {
-    if (!vehicleNumber || !vehicleModel || !vehicleCapacity) {
-      Alert.alert('Error', 'Please fill in all vehicle details.');
-      return;
-    }
-
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/partner/vehicle`, {
@@ -46,9 +41,9 @@ export const VehicleDetailsScreen = () => {
         },
         body: JSON.stringify({
           vehicleType,
-          vehicleNumber: vehicleNumber.trim().toUpperCase(),
-          vehicleModel: vehicleModel.trim(),
-          vehicleCapacity: vehicleCapacity.trim(),
+          vehicleNumber: 'NOT_REQUIRED',
+          vehicleModel: 'Standard',
+          vehicleCapacity: '50',
           fuelType,
         }),
       });
@@ -82,7 +77,7 @@ export const VehicleDetailsScreen = () => {
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Vehicle Details</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Vehicle Type</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -92,7 +87,7 @@ export const VehicleDetailsScreen = () => {
       >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Register the vehicle you will use for deliveries
+          Select the vehicle type you will use for deliveries
         </Text>
 
         <View style={styles.form}>
@@ -110,54 +105,6 @@ export const VehicleDetailsScreen = () => {
               >
                 <Text style={[vehicleType === type ? { color: '#FFFFFF', fontWeight: 'bold' } : { color: colors.textPrimary }, { fontSize: 13 }]}>
                   {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Vehicle Registration Number</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="DL 3C AB 1234"
-            placeholderTextColor={colors.textSecondary}
-            value={vehicleNumber}
-            onChangeText={setVehicleNumber}
-            autoCapitalize="characters"
-          />
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Vehicle Model / Name</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="Hero Splendor / Honda Activa"
-            placeholderTextColor={colors.textSecondary}
-            value={vehicleModel}
-            onChangeText={setVehicleModel}
-          />
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Carrying Capacity (kg)</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="e.g. 50"
-            placeholderTextColor={colors.textSecondary}
-            value={vehicleCapacity}
-            onChangeText={setVehicleCapacity}
-            keyboardType="numeric"
-          />
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Fuel Type</Text>
-          <View style={styles.pickerRow}>
-            {['Petrol', 'Diesel', 'EV'].map((fuel) => (
-              <TouchableOpacity
-                key={fuel}
-                style={[
-                  styles.pickerBtn,
-                  { borderColor: colors.border },
-                  fuelType === fuel && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => setFuelType(fuel)}
-              >
-                <Text style={[fuelType === fuel ? { color: '#FFFFFF', fontWeight: 'bold' } : { color: colors.textPrimary }]}>
-                  {fuel}
                 </Text>
               </TouchableOpacity>
             ))}

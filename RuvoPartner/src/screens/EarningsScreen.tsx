@@ -1,23 +1,41 @@
+/**
+ * EarningsScreen - RuvoPartner (Redesigned with Premium UI/UX)
+ * 
+ * Features:
+ * - Hero banner with today's earnings
+ * - Wallet balance and all-time total
+ * - Delivery history list with earnings
+ * - Pull-to-refresh
+ * - Empty state for no completed runs
+ * - Smooth animations
+ * - Responsive layout
+ */
+
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { Delivery, Earnings, partnerService } from '../services/partnerService';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
 
 export const EarningsScreen = () => {
   const { token } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [history, setHistory] = useState<Delivery[]>([]);
@@ -43,185 +61,135 @@ export const EarningsScreen = () => {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* ── HEADER ─────────────────────────────────────────────── */}
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={[typography.headingL, { color: colors.textPrimary }]}>Earnings & Payouts</Text>
-          <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
+    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+      {/* Header */}
+      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+        <View className="flex-1">
+          <Text className="text-xl font-extrabold text-ruvo-ink">Earnings & Payouts</Text>
+          <Text className="text-xs text-warm-600 font-medium mt-xs">
             Track daily income, wallet, and delivery payouts
           </Text>
         </View>
         <TouchableOpacity
-          style={[styles.refreshBtn, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}
           onPress={() => load(true)}
+          className="w-10 h-10 bg-green-100 rounded-full items-center justify-center"
         >
-          <Ionicons name="refresh" size={20} color={colors.primary} />
+          <Ionicons name="refresh" size={20} color="#16A34A" />
         </TouchableOpacity>
       </View>
 
-      {/* ── HERO BANNER ────────────────────────────────────────── */}
-      <View style={[styles.heroBanner, { backgroundColor: colors.primary, borderRadius: radius.card }, shadows.raised]}>
-        {/* Decorative inner circle */}
-        <View style={styles.heroBg} />
-
-        <Text style={[typography.label, { color: colors.primarySoft, letterSpacing: 1, fontSize: 11 }]}>
-          TODAY'S TOTAL EARNINGS
-        </Text>
-        <Text style={[typography.headingXL, { color: colors.onPrimary, fontSize: 38, fontWeight: '900', marginVertical: 4 }]}>
-          ₹{earnings?.todayEarnings ?? 0}
-        </Text>
-
-        <View style={styles.heroMetaRow}>
-          <View style={styles.heroMeta}>
-            <Ionicons name="wallet-outline" size={14} color={colors.primarySoft} />
-            <Text style={[typography.caption, { color: colors.primarySoft, marginLeft: 5 }]}>
-              Wallet Balance
-            </Text>
-            <Text style={[typography.bodyStrong, { color: colors.onPrimary, marginLeft: 6 }]}>
-              ₹{earnings?.walletBalance ?? 0}
-            </Text>
-          </View>
-          <View style={[styles.heroDivider, { backgroundColor: colors.onPrimary + '30' }]} />
-          <View style={styles.heroMeta}>
-            <Ionicons name="trending-up-outline" size={14} color={colors.primarySoft} />
-            <Text style={[typography.caption, { color: colors.primarySoft, marginLeft: 5 }]}>
-              All Time
-            </Text>
-            <Text style={[typography.bodyStrong, { color: colors.onPrimary, marginLeft: 6 }]}>
-              ₹{earnings?.totalEarnings ?? 0}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ── SECTION HEADER ─────────────────────────────────────── */}
-      <View style={[styles.sectionHeader, { paddingHorizontal: spacing.gutter }]}>
-        <Text style={[typography.headingS, { color: colors.textPrimary }]}>Delivery History</Text>
-        <View style={[styles.countPill, { backgroundColor: colors.primarySoft, borderRadius: radius.pill }]}>
-          <Text style={[typography.caption, { color: colors.primaryLight, fontWeight: '700' }]}>
-            {history.length} runs
-          </Text>
-        </View>
-      </View>
-
-      {/* ── LIST ───────────────────────────────────────────────── */}
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
       ) : (
         <FlatList
           data={history}
           keyExtractor={x => String(x.id)}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => load(true)}
+              tintColor="#16A34A"
+              colors={['#16A34A']}
+            />
           }
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingHorizontal: spacing.gutter },
-            history.length === 0 && styles.emptyList,
-          ]}
+          ListHeaderComponent={
+            <>
+              {/* Hero Earnings Banner */}
+              <Animated.View entering={FadeInUp.duration(500)} className="mx-lg mt-lg">
+                <View
+                  className="bg-ruvo-accent rounded-2xl p-xl relative overflow-hidden"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 12,
+                    elevation: 6,
+                  }}
+                >
+                  {/* Decorative background circle */}
+                  <View
+                    className="absolute w-40 h-40 bg-white/10 rounded-full"
+                    style={{ top: -50, right: -40 }}
+                  />
+
+                  <Text className="text-xs font-extrabold text-green-200 uppercase tracking-wider mb-xs">
+                    TODAY'S TOTAL EARNINGS
+                  </Text>
+                  <Text className="text-5xl font-extrabold text-white mb-md">
+                    ₹{earnings?.todayEarnings ?? 0}
+                  </Text>
+
+                  {/* Meta Row */}
+                  <View className="flex-row items-center gap-md">
+                    <View className="flex-row items-center gap-xs">
+                      <Ionicons name="wallet-outline" size={16} color="#D1FAE5" />
+                      <Text className="text-xs text-green-100 font-semibold">Wallet Balance</Text>
+                      <Text className="text-sm text-white font-extrabold ml-xs">
+                        ₹{earnings?.walletBalance ?? 0}
+                      </Text>
+                    </View>
+                    <View className="w-px h-4 bg-white/30" />
+                    <View className="flex-row items-center gap-xs">
+                      <Ionicons name="trending-up-outline" size={16} color="#D1FAE5" />
+                      <Text className="text-xs text-green-100 font-semibold">All Time</Text>
+                      <Text className="text-sm text-white font-extrabold ml-xs">
+                        ₹{earnings?.totalEarnings ?? 0}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+
+              {/* Section Header */}
+              <Animated.View entering={FadeInUp.delay(100).duration(500)} className="px-lg mt-xl mb-md flex-row items-center justify-between">
+                <Text className="text-lg font-extrabold text-ruvo-ink">Delivery History</Text>
+                <Badge variant="info" size="sm">
+                  {history.length} runs
+                </Badge>
+              </Animated.View>
+            </>
+          }
+          contentContainerClassName={`px-lg pb-2xl ${history.length === 0 ? 'flex-grow' : ''}`}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft, borderRadius: 48 }]}>
-                <Ionicons name="receipt-outline" size={44} color={colors.textHint} />
-              </View>
-              <Text style={[typography.headingS, { color: colors.textPrimary, marginTop: 20 }]}>
-                No completed runs yet
-              </Text>
-              <Text style={[typography.body, { color: colors.textSecondary, textAlign: 'center', marginTop: 6, lineHeight: 20 }]}>
-                Completed delivery earnings will appear here once you start accepting runs.
-              </Text>
-            </View>
+            <EmptyState
+              icon="receipt-outline"
+              title="No completed runs yet"
+              description="Completed delivery earnings will appear here once you start accepting runs."
+            />
           }
-          renderItem={({ item }) => (
-            <View style={[styles.historyCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-              {/* Left accent */}
-              <View style={[styles.cardAccent, { backgroundColor: colors.success }]} />
+          ItemSeparatorComponent={() => <View className="h-sm" />}
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
+              <Card className="overflow-hidden">
+                {/* Top accent bar */}
+                <View className="h-1 bg-ruvo-accent w-full mb-md" />
 
-              <View style={styles.cardRow}>
-                <View style={[styles.iconCircle, { backgroundColor: colors.successSoft, borderRadius: radius.pill }]}>
-                  <Ionicons name="checkmark-done" size={20} color={colors.success} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>
-                    Order #{item.orderId}
+                <View className="flex-row items-center gap-md">
+                  <View className="w-11 h-11 bg-green-100 rounded-full items-center justify-center">
+                    <Ionicons name="checkmark-done" size={22} color="#16A34A" />
+                  </View>
+
+                  <View className="flex-1">
+                    <Text className="text-base font-extrabold text-ruvo-ink">
+                      Order #{item.orderId}
+                    </Text>
+                    <Text className="text-xs text-warm-600 font-medium mt-xs">
+                      Completed · Run #{item.id}
+                    </Text>
+                  </View>
+
+                  <Text className="text-xl font-extrabold text-ruvo-accent">
+                    +₹{item.deliveryFee}
                   </Text>
-                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                    Completed · Run #{item.id}
-                  </Text>
                 </View>
-                <Text style={[typography.headingS, { color: colors.success }]}>
-                  +₹{item.deliveryFee}
-                </Text>
-              </View>
-            </View>
+              </Card>
+            </Animated.View>
           )}
         />
       )}
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  refreshBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-
-  heroBanner: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 20,
-    overflow: 'hidden',
-  },
-  heroBg: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    top: -50,
-    right: -40,
-  },
-  heroMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 12 },
-  heroMeta: { flexDirection: 'row', alignItems: 'center' },
-  heroDivider: { width: 1, height: 16 },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  countPill: { paddingHorizontal: 10, paddingVertical: 4 },
-
-  listContent: { paddingBottom: 40, gap: 10 },
-  emptyList: { flexGrow: 1 },
-  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
-  emptyIcon: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
-
-  historyCard: {
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  cardAccent: { height: 3, width: '100%' },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-  },
-  iconCircle: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

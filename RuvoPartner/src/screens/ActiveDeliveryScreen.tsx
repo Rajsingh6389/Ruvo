@@ -1,40 +1,48 @@
+/**
+ * ActiveDeliveryScreen - RuvoPartner (Redesigned with Premium UI/UX)
+ * 
+ * Features:
+ * - Real-time delivery tracking
+ * - Status timeline progress indicator
+ * - Pickup and delivery location cards
+ * - Navigation integration (maps)
+ * - OTP verification modal
+ * - Action buttons for each stage
+ * - Earnings display
+ * - Smooth animations
+ */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  TextInput,
   Alert,
   Linking,
-  Modal,
   Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 import { Delivery, partnerService } from '../services/partnerService';
 import { OfflineBar } from '../components/OfflineBar';
-import { OrderSkeleton } from '../components/OrderSkeleton';
-
-const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT = '#ECFDF5';
-const ACCENT_ORANGE = '#F97316';
-const TEXT_DARK = '#0F172A';
-const TEXT_MUTED = '#64748B';
-const CARD_BG = '#FFFFFF';
-const BORDER_COLOR = '#E2E8F0';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const states = ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 export const ActiveDeliveryScreen = () => {
   const { token } = useAuth();
-  const { colors } = useTheme();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
 
@@ -55,7 +63,7 @@ export const ActiveDeliveryScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, deliveryId]);
+  }, [token, deliveryId, navigation]);
 
   useEffect(() => {
     load();
@@ -67,10 +75,7 @@ export const ActiveDeliveryScreen = () => {
         ? `geo:0,0?q=${encodeURIComponent(address)}`
         : `maps:0,0?q=${encodeURIComponent(address)}`
     ).catch(() =>
-      Alert.alert(
-        'Navigation Unavailable',
-        'Could not open a maps app on this device.'
-      )
+      Alert.alert('Navigation Unavailable', 'Could not open a maps app on this device.')
     );
 
   const update = async (action: 'pickup' | 'out-for-delivery') => {
@@ -89,17 +94,13 @@ export const ActiveDeliveryScreen = () => {
   };
 
   const verifyDelivery = async () => {
-    if (!token || !delivery || otp.length < 4)
-      return Alert.alert(
-        'Enter Customer OTP',
-        'Enter the OTP provided by the customer.'
-      );
+    if (!token || !delivery || otp.length < 4) {
+      return Alert.alert('Enter Customer OTP', 'Enter the OTP provided by the customer.');
+    }
     setBusy(true);
     try {
       await api(
-        `/api/delivery/orders/${delivery.orderId}/verify-otp?otp=${encodeURIComponent(
-          otp
-        )}`,
+        `/api/delivery/orders/${delivery.orderId}/verify-otp?otp=${encodeURIComponent(otp)}`,
         token,
         { method: 'PATCH' }
       );
@@ -113,129 +114,155 @@ export const ActiveDeliveryScreen = () => {
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <View style={[styles.page, { backgroundColor: '#F8FAFC', padding: 16 }]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+      <SafeAreaView className="flex-1 bg-ruvo-bg">
         <OfflineBar />
-        <OrderSkeleton count={2} />
-      </View>
+        <View className="px-lg pt-lg">
+          <Skeleton height={200} className="mb-md" />
+          <Skeleton height={150} className="mb-md" />
+          <Skeleton height={150} />
+        </View>
+      </SafeAreaView>
     );
+  }
 
   if (!delivery) return null;
 
   const index = states.indexOf(delivery.status);
   const action =
     delivery.status === 'ASSIGNED'
-      ? ['ARRIVED AT SHOP & PICKED UP', () => update('pickup')]
+      ? { label: 'ARRIVED AT SHOP & PICKED UP', handler: () => update('pickup'), color: 'bg-orange-500' }
       : delivery.status === 'PICKED_UP'
-      ? ['START DELIVERY TO CUSTOMER', () => update('out-for-delivery')]
+      ? { label: 'START DELIVERY TO CUSTOMER', handler: () => update('out-for-delivery'), color: 'bg-orange-500' }
       : delivery.status === 'OUT_FOR_DELIVERY'
-      ? ['COMPLETE DELIVERY (ENTER OTP)', () => setOtpOpen(true)]
+      ? { label: 'COMPLETE DELIVERY (ENTER OTP)', handler: () => setOtpOpen(true), color: 'bg-ruvo-accent' }
       : null;
 
   return (
-    <View style={[styles.page, { backgroundColor: '#F8FAFC' }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       <OfflineBar />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
+      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
+          <Ionicons name="arrow-back" size={20} color="#231C10" />
         </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.title}>Active Delivery</Text>
-          <Text style={styles.orderSub}>Order #{delivery.orderId}</Text>
+        <View className="flex-1">
+          <Text className="text-lg font-extrabold text-ruvo-ink">Active Delivery</Text>
+          <Text className="text-xs text-warm-600 font-medium mt-xs">Order #{delivery.orderId}</Text>
         </View>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusBadgeText}>
-            {delivery.status.replaceAll('_', ' ')}
-          </Text>
-        </View>
+        <Badge variant="warning" size="sm">
+          {delivery.status.replaceAll('_', ' ')}
+        </Badge>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" contentContainerClassName="px-lg pt-lg pb-2xl" showsVerticalScrollIndicator={false}>
         {/* Timeline Progress */}
-        <View style={styles.timelineCard}>
-          <Text style={styles.sectionTitle}>Delivery Status Timeline</Text>
-          <View style={styles.steps}>
-            {states.map((state, i) => (
-              <View key={state} style={styles.step}>
-                <View
-                  style={[
-                    styles.dot,
-                    {
-                      backgroundColor: i <= index ? PRIMARY_EMERALD : BORDER_COLOR,
-                    },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.stepText,
-                    {
-                      color: i <= index ? TEXT_DARK : TEXT_MUTED,
-                      fontWeight: i === index ? '800' : '500',
-                    },
-                  ]}
-                >
-                  {state.replaceAll('_', ' ')}
-                </Text>
+        <Animated.View entering={FadeInUp.duration(500)}>
+          <Card className="mb-lg">
+            <Text className="text-base font-extrabold text-ruvo-ink mb-md">Delivery Status Timeline</Text>
+            <View className="gap-sm">
+              {states.map((state, i) => (
+                <View key={state} className="flex-row items-center gap-md">
+                  <View className={`w-3 h-3 rounded-full ${i <= index ? 'bg-ruvo-accent' : 'bg-warm-300'}`} />
+                  <Text className={`text-sm ${i <= index ? 'text-ruvo-ink font-bold' : 'text-warm-600 font-medium'} ${i === index ? 'font-extrabold' : ''}`}>
+                    {state.replaceAll('_', ' ')}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        </Animated.View>
+
+        {/* Pickup Location Card */}
+        <Animated.View entering={FadeInDown.delay(100).duration(500)}>
+          <Card className="mb-lg">
+            <View className="flex-row items-start gap-md">
+              <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center">
+                <Ionicons name="storefront" size={24} color="#16A34A" />
               </View>
-            ))}
-          </View>
-        </View>
+              <View className="flex-1">
+                <Text className="text-xs font-extrabold text-ruvo-accent uppercase tracking-wider mb-xs">
+                  PICKUP LOCATION
+                </Text>
+                <Text className="text-sm text-ruvo-ink font-semibold mb-md leading-5">
+                  {delivery.pickupLocation}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigateTo(delivery.pickupLocation)}
+                  className="bg-green-100 px-md py-sm rounded-lg flex-row items-center gap-xs self-start"
+                >
+                  <Ionicons name="navigate-outline" size={16} color="#16A34A" />
+                  <Text className="text-xs font-bold text-ruvo-accent">Navigate to Store</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Card>
+        </Animated.View>
 
-        {/* Pickup & Drop Stops */}
-        <StopCard
-          icon="storefront"
-          label="PICKUP LOCATION"
-          address={delivery.pickupLocation}
-          action="Navigate to Store"
-          onPress={() => navigateTo(delivery.pickupLocation)}
-          accentColor={PRIMARY_EMERALD}
-        />
+        {/* Delivery Location Card */}
+        <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+          <Card className="mb-lg">
+            <View className="flex-row items-start gap-md">
+              <View className="w-12 h-12 bg-orange-100 rounded-xl items-center justify-center">
+                <Ionicons name="location" size={24} color="#F97316" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-xs font-extrabold text-orange-600 uppercase tracking-wider mb-xs">
+                  DELIVERY LOCATION
+                </Text>
+                <Text className="text-sm text-ruvo-ink font-semibold mb-md leading-5">
+                  {delivery.deliveryLocation}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => navigateTo(delivery.deliveryLocation)}
+                  className="bg-orange-100 px-md py-sm rounded-lg flex-row items-center gap-xs self-start"
+                >
+                  <Ionicons name="navigate-outline" size={16} color="#F97316" />
+                  <Text className="text-xs font-bold text-orange-600">Navigate to Customer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Card>
+        </Animated.View>
 
-        <StopCard
-          icon="location"
-          label="DELIVERY LOCATION"
-          address={delivery.deliveryLocation}
-          action="Navigate to Customer"
-          onPress={() => navigateTo(delivery.deliveryLocation)}
-          accentColor={ACCENT_ORANGE}
-        />
-
-        {/* Earnings Summary Card */}
-        <View style={styles.earningCard}>
-          <View>
-            <Text style={styles.earningLabel}>Guaranteed Delivery Fee</Text>
-            <Text style={styles.earningSub}>Added to wallet upon completion</Text>
-          </View>
-          <Text style={styles.earningFee}>+₹{delivery.deliveryFee}</Text>
-        </View>
+        {/* Earnings Card */}
+        <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+          <Card className="bg-green-50 border-green-300 flex-row items-center justify-between">
+            <View>
+              <Text className="text-sm font-extrabold text-ruvo-ink">Guaranteed Delivery Fee</Text>
+              <Text className="text-xs text-warm-600 font-medium mt-xs">
+                Added to wallet upon completion
+              </Text>
+            </View>
+            <Text className="text-2xl font-extrabold text-ruvo-accent">+₹{delivery.deliveryFee}</Text>
+          </Card>
+        </Animated.View>
       </ScrollView>
 
       {/* Action Footer */}
       {action && (
-        <View style={styles.footer}>
+        <View className="px-lg pb-lg pt-md bg-ruvo-surface border-t border-warm-300">
           <TouchableOpacity
             disabled={busy}
-            onPress={action[1] as any}
-            style={[
-              styles.primaryBtn,
-              {
-                backgroundColor:
-                  delivery.status === 'OUT_FOR_DELIVERY'
-                    ? PRIMARY_EMERALD
-                    : ACCENT_ORANGE,
-              },
-            ]}
+            onPress={action.handler}
             activeOpacity={0.85}
+            className={`${action.color} rounded-xl py-lg items-center justify-center`}
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
           >
             {busy ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.primaryBtnText}>{action[0] as string}</Text>
+              <Text className="text-base font-extrabold text-white tracking-wide">
+                {action.label}
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -243,19 +270,31 @@ export const ActiveDeliveryScreen = () => {
 
       {/* OTP Verification Modal */}
       <Modal visible={otpOpen} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Verify Customer Delivery</Text>
+        <View className="flex-1 bg-warm-900/75 justify-end">
+          <Animated.View
+            entering={FadeInUp.duration(400)}
+            className="bg-ruvo-surface rounded-t-3xl p-xl"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 10,
+            }}
+          >
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between mb-lg">
+              <Text className="text-xl font-extrabold text-ruvo-ink">Verify Customer Delivery</Text>
               <TouchableOpacity onPress={() => setOtpOpen(false)}>
-                <Ionicons name="close-circle-outline" size={24} color={TEXT_MUTED} />
+                <Ionicons name="close-circle-outline" size={28} color="#A79E92" />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.modalSub}>
+            <Text className="text-sm text-warm-600 mb-lg leading-5">
               Ask the customer for their 4-digit or 6-digit delivery OTP to complete this order.
             </Text>
 
+            {/* OTP Input */}
             <TextInput
               value={otp}
               onChangeText={setOtp}
@@ -263,129 +302,22 @@ export const ActiveDeliveryScreen = () => {
               maxLength={6}
               placeholder="0 0 0 0"
               placeholderTextColor="#94A3B8"
-              style={styles.otpInput}
+              className="bg-warm-100 border-2 border-warm-300 rounded-xl px-lg py-lg text-center text-2xl font-bold text-ruvo-ink mb-lg tracking-widest"
             />
 
-            <TouchableOpacity
-              disabled={busy}
+            {/* Verify Button */}
+            <Button
+              variant="primary"
               onPress={verifyDelivery}
-              style={[styles.primaryBtn, { backgroundColor: PRIMARY_EMERALD }]}
-              activeOpacity={0.85}
+              loading={busy}
+              disabled={busy}
+              icon="checkmark-circle"
             >
-              {busy ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.primaryBtnText}>VERIFY & COMPLETE ORDER</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+              VERIFY & COMPLETE ORDER
+            </Button>
+          </Animated.View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
-
-const StopCard = ({ icon, label, address, action, onPress, accentColor }: any) => (
-  <View style={styles.stopCard}>
-    <View style={[styles.stopIconCircle, { backgroundColor: accentColor + '15' }]}>
-      <Ionicons name={icon} size={22} color={accentColor} />
-    </View>
-    <View style={styles.stopBody}>
-      <Text style={[styles.stopLabel, { color: accentColor }]}>{label}</Text>
-      <Text style={styles.stopAddress}>{address}</Text>
-      <TouchableOpacity style={styles.navBtn} onPress={onPress} activeOpacity={0.8}>
-        <Ionicons name="navigate-outline" size={15} color={PRIMARY_EMERALD} />
-        <Text style={styles.navBtnText}>{action}</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  page: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
-
-  header: {
-    paddingTop: 52,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER_COLOR,
-  },
-  backBtn: { width: 38, height: 38, borderRadius: 10, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: TEXT_DARK },
-  orderSub: { fontSize: 12, color: TEXT_MUTED, marginTop: 1 },
-  statusBadge: { backgroundColor: EMERALD_LIGHT, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  statusBadgeText: { color: PRIMARY_EMERALD, fontSize: 10, fontWeight: '800' },
-
-  content: { padding: 16, gap: 14, paddingBottom: 32 },
-
-  timelineCard: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 16,
-    padding: 16,
-  },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 14 },
-  steps: { gap: 12 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dot: { width: 12, height: 12, borderRadius: 6 },
-  stepText: { fontSize: 14 },
-
-  stopCard: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  stopIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  stopBody: { flex: 1, gap: 4 },
-  stopLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  stopAddress: { fontSize: 15, fontWeight: '600', color: TEXT_DARK, lineHeight: 21 },
-  navBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
-  navBtnText: { color: PRIMARY_EMERALD, fontWeight: '700', fontSize: 13 },
-
-  earningCard: {
-    backgroundColor: CARD_BG,
-    borderWidth: 1,
-    borderColor: BORDER_COLOR,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  earningLabel: { fontSize: 14, fontWeight: '700', color: TEXT_DARK },
-  earningSub: { fontSize: 11, color: TEXT_MUTED, marginTop: 2 },
-  earningFee: { color: PRIMARY_EMERALD, fontSize: 22, fontWeight: '900' },
-
-  footer: { padding: 16, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: BORDER_COLOR },
-  primaryBtn: { paddingVertical: 16, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  primaryBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
-
-  modalBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modal: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 16 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: TEXT_DARK },
-  modalSub: { color: TEXT_MUTED, fontSize: 13, lineHeight: 18 },
-  otpInput: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: PRIMARY_EMERALD,
-    borderRadius: 14,
-    padding: 14,
-    textAlign: 'center',
-    fontSize: 26,
-    letterSpacing: 10,
-    fontWeight: '800',
-    color: TEXT_DARK,
-  },
-});
-

@@ -9,6 +9,7 @@ import Ranex.ruvo.service.CloudinaryService;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,35 @@ public class ShopController {
 
     @Autowired
     private CloudinaryService cloudinaryService;
+
+    private String getCurrentPrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return null;
+        Object principal = auth.getPrincipal();
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+        }
+        return principal.toString();
+    }
+
+    private boolean isAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
+    private boolean principalMatchesOwner(String ownerId, Long authIdentityId) {
+        String principal = getCurrentPrincipal();
+        if (principal == null) return false;
+        if (principal.startsWith("identity:")) {
+            String identity = principal.substring("identity:".length());
+            return identity.equals(ownerId) || (authIdentityId != null && identity.equals(String.valueOf(authIdentityId)));
+        }
+        return principal.equals(ownerId);
+    }
+
+    private boolean canManageShop(Shop shop) {
+        return isAdmin() || (shop != null && principalMatchesOwner(shop.getOwnerId(), shop.getAuthIdentityId()));
+    }
 
 
     // =========================================================
@@ -125,10 +155,14 @@ public class ShopController {
     // =========================================================
 
     @GetMapping("/mine")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<List<Shop>> getMyShops(
             @RequestParam String ownerId,
             HttpServletRequest request
     ) {
+        if (!isAdmin() && !principalMatchesOwner(ownerId, null)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         List<Shop> shops =
                 shopRepository.findByOwnerId(ownerId);
@@ -167,6 +201,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<?> addShop(
             @RequestBody Shop shop
     ) {
@@ -176,21 +211,45 @@ public class ShopController {
 
             return ResponseEntity
                     .badRequest()
-                    .body("ownerId is required");
+                .body("ownerId is required");
+        }
+
+        if (!isAdmin() && !principalMatchesOwner(shop.getOwnerId(), shop.getAuthIdentityId())) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("You can only create shops for your own account.");
+        }
+
+        // Set authIdentityId from JWT so ProductController.ownsShop() can verify ownership
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                Object principal = auth.getPrincipal();
+                String username = (principal instanceof org.springframework.security.core.userdetails.UserDetails)
+                        ? ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername()
+                        : principal.toString();
+                if (username.startsWith("identity:")) {
+                    shop.setAuthIdentityId(Long.parseLong(username.substring("identity:".length())));
+                }
+            }
+        } catch (NumberFormatException ignored) {}
+
+        if (shop.getAuthIdentityId() == null && shop.getOwnerId() != null) {
+            try {
+                shop.setAuthIdentityId(Long.parseLong(shop.getOwnerId()));
+            } catch (NumberFormatException ignored) {}
         }
 
         shop.setId(null);
-        shop.setApproved(false);
+        if (shop.getApproved() == null) shop.setApproved(false);
+        if (shop.getActive() == null) shop.setActive(true);
+        if (shop.getSettlementBlocked() == null) shop.setSettlementBlocked(false);
+        if (shop.getCodBlocked() == null) shop.setCodBlocked(false);
 
-        Shop savedShop =
-                shopRepository.save(shop);
-
+        Shop savedShop = shopRepository.save(shop);
         return ResponseEntity.ok(savedShop);
     }
 
-
-    // =========================================================
-    // 5. Nearby shops (Now computes distance & wraps response)
     // =========================================================
 
     @GetMapping("/nearby")
@@ -310,6 +369,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/upload")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<?> uploadShop(
             @RequestParam("shop") String shopJson,
             @RequestPart("logo") MultipartFile logo,
@@ -408,6 +468,12 @@ public class ShopController {
                 return ResponseEntity
                         .badRequest()
                         .body("ownerId is required");
+            }
+
+            if (!isAdmin() && !principalMatchesOwner(shop.getOwnerId(), shop.getAuthIdentityId())) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("You can only create shops for your own account.");
             }
 
 
@@ -516,6 +582,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/{id}/request-approval")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<?> requestApprovalAgain(
             @PathVariable Long id,
             @RequestParam String ownerId
@@ -533,7 +600,8 @@ public class ShopController {
         Shop shop = shopOpt.get();
 
         if (shop.getOwnerId() == null ||
-                !shop.getOwnerId().equals(ownerId)) {
+                !shop.getOwnerId().equals(ownerId) ||
+                !canManageShop(shop)) {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body("You can only request approval for your own shop.");
@@ -580,6 +648,7 @@ public class ShopController {
     // =========================================================
 
     @PatchMapping("/{id}/active")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<?> toggleActiveStatus(
             @PathVariable Long id,
             @RequestParam boolean active
@@ -588,6 +657,11 @@ public class ShopController {
 
         if (shopOpt.isPresent()) {
             Shop shop = shopOpt.get();
+            if (!canManageShop(shop)) {
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("You can only update your own shop.");
+            }
             shop.setActive(active);
             return ResponseEntity.ok(shopRepository.save(shop));
         }
@@ -670,5 +744,110 @@ public class ShopController {
         result.put("platformFee", platformFee);
         result.put("serviceable", serviceable);
         return ResponseEntity.ok(result);
+    }
+    // =========================================================
+    // Edit Shop (JSON & Multipart)
+    // =========================================================
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<?> updateShopJson(
+            @PathVariable Long id,
+            @RequestBody Shop updatedShop
+    ) {
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+        if (shopOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shop not found with id: " + id);
+        }
+
+        Shop existingShop = shopOpt.get();
+        if (!canManageShop(existingShop)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized to edit this shop.");
+        }
+
+        if (updatedShop.getName() != null && !updatedShop.getName().isBlank()) {
+            existingShop.setName(updatedShop.getName().trim());
+        }
+        if (updatedShop.getCategory() != null && !updatedShop.getCategory().isBlank()) {
+            existingShop.setCategory(updatedShop.getCategory().trim());
+        }
+        if (updatedShop.getAddress() != null && !updatedShop.getAddress().isBlank()) {
+            existingShop.setAddress(updatedShop.getAddress().trim());
+        }
+        if (updatedShop.getPhone() != null && !updatedShop.getPhone().isBlank()) {
+            existingShop.setPhone(updatedShop.getPhone().trim());
+        }
+        if (updatedShop.getUpiId() != null) existingShop.setUpiId(updatedShop.getUpiId());
+        if (updatedShop.getBankAccountNumber() != null) existingShop.setBankAccountNumber(updatedShop.getBankAccountNumber());
+        if (updatedShop.getIfscCode() != null) existingShop.setIfscCode(updatedShop.getIfscCode());
+        if (updatedShop.getDeliveryAvailable() != null) existingShop.setDeliveryAvailable(updatedShop.getDeliveryAvailable());
+        if (updatedShop.getLatitude() != null) existingShop.setLatitude(updatedShop.getLatitude());
+        if (updatedShop.getLongitude() != null) existingShop.setLongitude(updatedShop.getLongitude());
+
+        Shop savedShop = shopRepository.save(existingShop);
+        return ResponseEntity.ok(prepareShopResponse(savedShop, null));
+    }
+
+    @PutMapping("/upload/{id}")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<?> updateShopWithImages(
+            @PathVariable Long id,
+            @RequestParam("shop") String shopJson,
+            @RequestPart(value = "logo", required = false) MultipartFile logo,
+            @RequestPart(value = "banner", required = false) MultipartFile banner,
+            @RequestPart(value = "images", required = false) MultipartFile[] images,
+            HttpServletRequest request
+    ) {
+        try {
+            java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+            if (shopOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shop not found with id: " + id);
+            }
+
+            Shop existingShop = shopOpt.get();
+            if (!canManageShop(existingShop)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You are not authorized to edit this shop.");
+            }
+
+            org.springframework.boot.json.JsonParser parser =
+                    org.springframework.boot.json.JsonParserFactory.getJsonParser();
+            java.util.Map<String, Object> map = parser.parseMap(shopJson);
+
+            if (map.get("name") != null) existingShop.setName((String) map.get("name"));
+            if (map.get("category") != null) existingShop.setCategory((String) map.get("category"));
+            if (map.get("address") != null) existingShop.setAddress((String) map.get("address"));
+            if (map.get("phone") != null) existingShop.setPhone((String) map.get("phone"));
+            if (map.get("upiId") != null) existingShop.setUpiId((String) map.get("upiId"));
+            if (map.get("bankAccountNumber") != null) existingShop.setBankAccountNumber((String) map.get("bankAccountNumber"));
+            if (map.get("ifscCode") != null) existingShop.setIfscCode((String) map.get("ifscCode"));
+            if (map.get("latitude") != null) existingShop.setLatitude(Double.parseDouble(map.get("latitude").toString()));
+            if (map.get("longitude") != null) existingShop.setLongitude(Double.parseDouble(map.get("longitude").toString()));
+            if (map.get("deliveryAvailable") != null) existingShop.setDeliveryAvailable(Boolean.parseBoolean(map.get("deliveryAvailable").toString()));
+
+            if (logo != null && !logo.isEmpty()) {
+                String logoUrl = cloudinaryService.uploadImage(logo, "ruvo/shops/logos");
+                if (logoUrl != null) existingShop.setLogoUrl(logoUrl);
+            }
+
+            if (banner != null && !banner.isEmpty()) {
+                String bannerUrl = cloudinaryService.uploadImage(banner, "ruvo/shops/banners");
+                if (bannerUrl != null) existingShop.setBannerUrl(bannerUrl);
+            }
+
+            if (images != null && images.length > 0) {
+                for (MultipartFile img : images) {
+                    if (img != null && !img.isEmpty()) {
+                        String imgUrl = cloudinaryService.uploadImage(img, "ruvo/shops/gallery");
+                        if (imgUrl != null) existingShop.getImages().add(imgUrl);
+                    }
+                }
+            }
+
+            Shop savedShop = shopRepository.save(existingShop);
+            return ResponseEntity.ok(prepareShopResponse(savedShop, request));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update shop: " + e.getMessage());
+        }
     }
 }

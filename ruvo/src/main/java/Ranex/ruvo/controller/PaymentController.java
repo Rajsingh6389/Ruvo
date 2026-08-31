@@ -19,6 +19,7 @@ import Ranex.ruvo.service.PricingService;
 import Ranex.ruvo.service.WalletService;
 import Ranex.ruvo.util.DistanceUtils;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -97,33 +98,79 @@ public class PaymentController {
     }
 
     @PostMapping("/checkout")
+    @Transactional
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
+        if (request == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Request body is required."));
+        }
+        if (request.userId == null || request.userId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "userId is required."));
+        }
+        if (request.shopId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "shopId is required."));
+        }
+        String requestedPaymentMethod = request.paymentMethod != null ? request.paymentMethod.trim().toUpperCase() : "COD";
+        if (!"COD".equals(requestedPaymentMethod) && !"ONLINE".equals(requestedPaymentMethod)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "paymentMethod must be COD or ONLINE."));
+        }
+
+        Shop shop = shopRepository.findById(request.shopId).orElse(null);
+        if (shop == null || !Boolean.TRUE.equals(shop.getApproved()) || !Boolean.TRUE.equals(shop.getActive())) {
+            return ResponseEntity.status(403).body(Map.of("message", "This shop is currently unavailable."));
+        }
+        if ("COD".equals(requestedPaymentMethod) && Boolean.TRUE.equals(shop.getCodBlocked())) {
+            return ResponseEntity.status(403).body(Map.of("message", "This shop is not accepting COD orders at the moment."));
+        }
+
         BigDecimal subtotal = BigDecimal.ZERO;
         List<CartItemRequest> cartItems = new ArrayList<>();
         List<Product> productsToUpdate = new ArrayList<>();
 
         if (request.items != null && !request.items.isEmpty()) {
             for (CartItemRequest itemReq : request.items) {
+                if (itemReq.productId == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Every cart item requires productId."));
+                }
+                if (itemReq.quantity == null || itemReq.quantity <= 0) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Quantity must be greater than zero."));
+                }
                 Product p = productRepository.findById(itemReq.productId).orElse(null);
                 if (p == null) {
                     return ResponseEntity.badRequest().body(Map.of("message", "Product not found: " + itemReq.productName));
                 }
-                if (p.getStockQuantity() < itemReq.quantity) {
+                if (!request.shopId.equals(p.getShopId())) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "All cart items must belong to the selected shop."));
+                }
+                if (Boolean.FALSE.equals(p.getIsAvailable())) {
+                    return ResponseEntity.badRequest().body(Map.of("message", p.getName() + " is not available."));
+                }
+                if (p.getStockQuantity() == null || p.getStockQuantity() < itemReq.quantity) {
                     return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock for " + p.getName() + ". Only " + p.getStockQuantity() + " left."));
                 }
-                BigDecimal price = itemReq.price != null ? BigDecimal.valueOf(itemReq.price) : BigDecimal.valueOf(p.getSellingPrice());
+                BigDecimal price = BigDecimal.valueOf(p.getSellingPrice());
                 BigDecimal itemTotal = price.multiply(BigDecimal.valueOf(itemReq.quantity));
                 subtotal = subtotal.add(itemTotal);
+                itemReq.productName = p.getName();
+                itemReq.price = p.getSellingPrice();
                 cartItems.add(itemReq);
                 p.setStockQuantity(p.getStockQuantity() - itemReq.quantity);
                 productsToUpdate.add(p);
             }
         } else if (request.productId != null) {
+            if (request.quantity == null || request.quantity <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Quantity must be greater than zero."));
+            }
             Product product = productRepository.findById(request.productId).orElse(null);
             if (product == null) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Product not found."));
             }
-            if (product.getStockQuantity() < request.quantity) {
+            if (!request.shopId.equals(product.getShopId())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Product does not belong to the selected shop."));
+            }
+            if (Boolean.FALSE.equals(product.getIsAvailable())) {
+                return ResponseEntity.badRequest().body(Map.of("message", product.getName() + " is not available."));
+            }
+            if (product.getStockQuantity() == null || product.getStockQuantity() < request.quantity) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Insufficient stock available. Only " + product.getStockQuantity() + " left."));
             }
             subtotal = BigDecimal.valueOf(product.getSellingPrice()).multiply(BigDecimal.valueOf(request.quantity));
@@ -141,7 +188,6 @@ public class PaymentController {
 
         subtotal = subtotal.setScale(2, RoundingMode.HALF_UP);
 
-        Shop shop = shopRepository.findById(request.shopId).orElse(null);
         double distanceKm = 0.0;
         if (shop != null && shop.getLatitude() != null && shop.getLongitude() != null
                 && request.userLatitude != null && request.userLongitude != null) {
@@ -197,7 +243,7 @@ public class PaymentController {
         order.setDistanceKm(Math.round(distanceKm * 10.0) / 10.0);
         order.setTotalAmount(finalTotalAmount);
         order.setDeliveryAddress(request.deliveryAddress);
-        order.setPaymentMethod(request.paymentMethod != null ? request.paymentMethod : "COD");
+        order.setPaymentMethod(requestedPaymentMethod);
 
         // Deduct stock for all items
         for (Product p : productsToUpdate) {
@@ -217,7 +263,7 @@ public class PaymentController {
         order.setCustomerName(customerName);
         order.setCustomerPhone(customerPhone);
 
-        if ("COD".equalsIgnoreCase(request.paymentMethod)) {
+        if ("COD".equals(requestedPaymentMethod)) {
             order.setPaymentStatus("COD_PENDING");
             order.setOrderStatus(OrderStatus.SHOP_PENDING);
             order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
@@ -305,6 +351,10 @@ public class PaymentController {
                 savedOrder.setPaymentStatus("FAILED");
                 savedOrder.setOrderStatus("PAYMENT_FAILED");
                 orderRepository.save(savedOrder);
+                restoreReservedStock(cartItems);
+                if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
+                    walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
+                }
 
                 return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create Cashfree payment order: " + e.getMessage()));
             }
@@ -312,6 +362,7 @@ public class PaymentController {
     }
 
     @PostMapping("/fail")
+    @Transactional
     public ResponseEntity<?> failPayment(@RequestBody Map<String, Long> payload) {
         Long orderId = payload.get("orderId");
         if (orderId == null) {
@@ -321,9 +372,21 @@ public class PaymentController {
         Optional<Order> orderOpt = orderRepository.findById(orderId);
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
+            if ("SUCCESS".equalsIgnoreCase(order.getPaymentStatus()) || "DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Successful or delivered orders cannot be marked failed."));
+            }
+            boolean alreadyFailed = "FAILED".equalsIgnoreCase(order.getPaymentStatus())
+                    || "PAYMENT_FAILED".equalsIgnoreCase(order.getPaymentStatus())
+                    || "PAYMENT_FAILED".equalsIgnoreCase(order.getOrderStatus());
             order.setPaymentStatus("FAILED");
             order.setOrderStatus("PAYMENT_FAILED");
             orderRepository.save(order);
+            if (!alreadyFailed) {
+                restoreReservedStock(order.getId());
+                if (order.getWalletAmountUsed() != null && order.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0) {
+                    walletService.credit(order.getUserId(), order.getWalletAmountUsed(), "ORDER-FAILED-" + order.getId(), "Refund wallet debit after failed payment");
+                }
+            }
 
             Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());
             if (paymentOpt.isPresent()) {
@@ -334,5 +397,24 @@ public class PaymentController {
         }
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Payment marked as failed."));
+    }
+
+    private void restoreReservedStock(List<CartItemRequest> cartItems) {
+        for (CartItemRequest item : cartItems) {
+            productRepository.findById(item.productId).ifPresent(product -> {
+                product.setStockQuantity(product.getStockQuantity() + item.quantity);
+                productRepository.save(product);
+            });
+        }
+    }
+
+    private void restoreReservedStock(Long orderId) {
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        for (OrderItem item : items) {
+            productRepository.findById(item.getProductId()).ifPresent(product -> {
+                product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                productRepository.save(product);
+            });
+        }
     }
 }

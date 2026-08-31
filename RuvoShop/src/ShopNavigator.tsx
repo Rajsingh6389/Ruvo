@@ -25,6 +25,7 @@ import { AddProductScreen }                   from './screens/marketplace/AddPro
 import { EditProductScreen }                  from './screens/marketplace/EditProductScreen';
 import DeliveryPartnerAssignmentScreen        from './screens/marketplace/DeliveryPartnerAssignmentScreen';
 import { EditBankAccountScreen }              from './screens/marketplace/EditBankAccountScreen';
+import { EditShopScreen }                     from './screens/marketplace/EditShopScreen';
 
 // ── Route type map ────────────────────────────────────────────────────────────
 export type ShopStackParamList = {
@@ -38,6 +39,7 @@ export type ShopStackParamList = {
   // Main app
   MyShops: undefined;
   RegisterShop: undefined;
+  EditShop: { shop: any };
   ShopkeeperDashboard: undefined;
   ShopOrders: { shopId: string; shopName: string };
   MyProducts: { shopId: string };
@@ -107,6 +109,7 @@ export const ShopNavigator = () => {
         ) : (
           <>
             <Stack.Screen name="MyShops" component={MyShopsScreen} />
+            <Stack.Screen name="EditShop" component={EditShopScreen} />
 
             <Stack.Screen name="ShopkeeperDashboard" component={ShopkeeperDashboardScreen} />
             <Stack.Screen name="ShopOrders" component={ShopOrdersScreen} />

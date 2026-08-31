@@ -57,7 +57,10 @@ public class IdentityAuthController {
         if (otp == null || otp.getExpiryTime().isBefore(Instant.now())) return ResponseEntity.status(HttpStatus.GONE).body(ApiResponse.ok("OTP expired. Request a new OTP", null));
         if (otp.isVerified() || !code.equals(otp.getOtpCode())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("Invalid OTP", null));
         otp.setVerified(true); otps.save(otp);
-        AuthIdentity identity = identities.findByMobileNumber(mobile).orElseGet(() -> identities.save(AuthIdentity.builder().mobileNumber(mobile).build()));
+        AuthIdentity identity = identities.findByMobileNumberFlexible(mobile).orElseGet(() -> identities.save(AuthIdentity.builder().mobileNumber(mobile).build()));
+        if (!mobile.equals(identity.getMobileNumber())) {
+            identity.setMobileNumber(mobile);
+        }
         if (identity.getStatus() == AccountStatus.BLOCKED) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Account is suspended", null));
         if (roles.findByIdentityAndRole(identity, role).isEmpty()) roles.save(AuthIdentityRole.builder().identity(identity).role(role).build());
         identity.setLastLogin(Instant.now()); identities.save(identity);

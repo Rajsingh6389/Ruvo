@@ -1,51 +1,39 @@
+/**
+ * AddProductScreen - RuvoShop (Redesigned)
+ * Full NativeWind + Reanimated premium UI.
+ * All image picking, validation, and upload logic preserved.
+ */
+
 import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Switch,
-  StatusBar,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
 import { useAuth } from '../../context/AuthContext';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
 import { uploadProduct, addProduct } from '../../services/productService';
-
-const PRIMARY = '#2E7D32';
-const PRIMARY_LIGHT = '#E8F5E9';
-const BG = '#F8F1E7'; // warm ivory canvas
-const TEXT = '#1A1A1A';
-const SUBTEXT = '#6B7280';
-const BORDER = '#E0E0E0';
-const ERROR = '#E53935';
-const CARD = '#FFFFFF';
-const WHITE = '#FFFFFF';
+import { Button } from '../../components/ui/Button';
 
 const MAX_IMAGES = 8;
 
-interface ProductImage {
-  uri: string;
-  type: string;
-  fileName: string;
-}
-
+interface ProductImage { uri: string; type: string; fileName: string; }
 interface FormErrors {
-  name?: string;
-  category?: string;
-  actualPrice?: string;
-  sellingPrice?: string;
-  stockQuantity?: string;
+  name?: string; category?: string; actualPrice?: string;
+  sellingPrice?: string; stockQuantity?: string;
 }
 
 export const AddProductScreen = () => {
@@ -54,7 +42,6 @@ export const AddProductScreen = () => {
   const { token } = useAuth();
   const shopId: number = route.params?.shopId;
 
-  // ── Form State ──
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [brandName, setBrandName] = useState('');
@@ -64,16 +51,10 @@ export const AddProductScreen = () => {
   const [stockQuantity, setStockQuantity] = useState('');
   const [unit, setUnit] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
-
-  // ── Multi-image State ──
-  // images[0] is treated as the primary/cover image (sent as "image")
-  // images[1..n] are sent as "images" gallery fields
   const [images, setImages] = useState<ProductImage[]>([]);
-
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
-  // ── Auto-calculated discount ──
   const computedDiscount = useCallback((): string | null => {
     const ap = parseFloat(actualPrice);
     const sp = parseFloat(sellingPrice);
@@ -84,7 +65,6 @@ export const AddProductScreen = () => {
     return null;
   }, [actualPrice, sellingPrice]);
 
-  // ── Image Picker ──
   const pickImages = async () => {
     const remaining = MAX_IMAGES - images.length;
     if (remaining <= 0) {
@@ -98,63 +78,39 @@ export const AddProductScreen = () => {
         allowsMultipleSelection: true,
         selectionLimit: remaining,
       });
-
       if (result.canceled || !result.assets?.length) return;
-
       const newImgs: ProductImage[] = result.assets.map((asset, i) => ({
         uri: asset.uri,
         type: asset.mimeType || 'image/jpeg',
         fileName: asset.fileName || `product_${Date.now()}_${i}.jpg`,
       }));
-
       setImages(prev => [...prev, ...newImgs].slice(0, MAX_IMAGES));
-    } catch (e) {
+    } catch {
       Alert.alert('Image error', 'Could not select images.');
     }
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
+  const removeImage = (index: number) => setImages(prev => prev.filter((_, i) => i !== index));
 
-  // ── Validation ──
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
     if (!name.trim()) newErrors.name = 'Product name is required';
     if (!category) newErrors.category = 'Category is required';
-
     const ap = parseFloat(actualPrice);
     const sp = parseFloat(sellingPrice);
-
-    if (!actualPrice.trim() || isNaN(ap) || ap <= 0) {
-      newErrors.actualPrice = 'Enter a valid actual price';
-    }
-    if (!sellingPrice.trim() || isNaN(sp) || sp < 0) {
-      newErrors.sellingPrice = 'Enter a valid selling price';
-    } else if (ap && sp > ap) {
-      newErrors.sellingPrice = 'Selling price cannot be greater than actual price';
-    }
-
+    if (!actualPrice.trim() || isNaN(ap) || ap <= 0) newErrors.actualPrice = 'Enter a valid actual price';
+    if (!sellingPrice.trim() || isNaN(sp) || sp < 0) newErrors.sellingPrice = 'Enter a valid selling price';
+    else if (ap && sp > ap) newErrors.sellingPrice = 'Selling price cannot exceed actual price';
     const sq = parseInt(stockQuantity, 10);
-    if (!stockQuantity.trim() || isNaN(sq) || sq < 0) {
-      newErrors.stockQuantity = 'Enter a valid stock quantity (0 or more)';
-    }
-
+    if (!stockQuantity.trim() || isNaN(sq) || sq < 0) newErrors.stockQuantity = 'Enter a valid stock quantity';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── Submit ──
   const handleSubmit = async () => {
     if (!validate()) return;
-
-    if (!token) {
-      Alert.alert('Error', 'You are not logged in');
-      return;
-    }
-
+    if (!token) { Alert.alert('Error', 'You are not logged in'); return; }
     setLoading(true);
-
     try {
       const ap = parseFloat(actualPrice);
       const sp = parseFloat(sellingPrice);
@@ -163,62 +119,26 @@ export const AddProductScreen = () => {
 
       if (images.length > 0) {
         const formData = new FormData();
-
-        const productData = JSON.stringify({
-          shopId,
-          name: name.trim(),
-          category,
-          brandName: brandName.trim() || null,
-          description: description.trim() || null,
-          actualPrice: ap,
-          sellingPrice: sp,
-          discount: disc,
-          stockQuantity: sq,
-          unit: unit.trim() || null,
-          isAvailable,
-        });
-
-        formData.append('product', productData);
-
-        // First image → primary "image" field
-        formData.append('image', {
-          uri: images[0].uri,
-          type: images[0].type,
-          name: images[0].fileName,
-        } as any);
-
-        // Remaining images → "images" gallery array
+        formData.append('product', JSON.stringify({
+          shopId, name: name.trim(), category,
+          brandName: brandName.trim() || null, description: description.trim() || null,
+          actualPrice: ap, sellingPrice: sp, discount: disc,
+          stockQuantity: sq, unit: unit.trim() || null, isAvailable,
+        }));
+        formData.append('image', { uri: images[0].uri, type: images[0].type, name: images[0].fileName } as any);
         for (let i = 1; i < images.length; i++) {
-          formData.append('images', {
-            uri: images[i].uri,
-            type: images[i].type,
-            name: images[i].fileName,
-          } as any);
+          formData.append('images', { uri: images[i].uri, type: images[i].type, name: images[i].fileName } as any);
         }
-
         await uploadProduct(formData, token);
       } else {
-        await addProduct(
-          {
-            shopId,
-            name: name.trim(),
-            category,
-            brandName: brandName.trim() || undefined,
-            description: description.trim() || undefined,
-            actualPrice: ap,
-            sellingPrice: sp,
-            discount: disc,
-            stockQuantity: sq,
-            unit: unit.trim() || undefined,
-            isAvailable,
-          },
-          token,
-        );
+        await addProduct({
+          shopId, name: name.trim(), category,
+          brandName: brandName.trim() || undefined, description: description.trim() || undefined,
+          actualPrice: ap, sellingPrice: sp, discount: disc,
+          stockQuantity: sq, unit: unit.trim() || undefined, isAvailable,
+        }, token);
       }
-
-      Alert.alert('Success', 'Product added successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert('Success', 'Product added successfully!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to add product');
     } finally {
@@ -227,550 +147,207 @@ export const AddProductScreen = () => {
   };
 
   const discount = computedDiscount();
-  const spNum = parseFloat(sellingPrice);
-  const apNum = parseFloat(actualPrice);
-  const priceError =
-    !isNaN(spNum) && !isNaN(apNum) && spNum > apNum
-      ? 'Selling price cannot be greater than actual price'
-      : null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-
+    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={TEXT} />
+      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
+          <Ionicons name="arrow-back" size={20} color="#231C10" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add Product</Text>
-        <View style={{ width: 38 }} />
+        <Text className="flex-1 text-xl font-extrabold text-ruvo-ink">Add Product</Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerClassName="px-lg pt-lg pb-2xl"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── PRODUCT PHOTOS ── */}
-          <View style={styles.sectionCard}>
-            <View style={styles.photoSectionHeader}>
-              <Text style={styles.sectionLabel}>PRODUCT PHOTOS</Text>
-              <Text style={styles.photoCount}>{images.length}/{MAX_IMAGES}</Text>
-            </View>
-
-            {/* Primary image large preview */}
-            {images.length > 0 ? (
-              <View style={styles.primaryImageWrapper}>
-                <Image source={{ uri: images[0].uri }} style={styles.primaryImage} />
-                <View style={styles.primaryBadge}>
-                  <Text style={styles.primaryBadgeText}>Cover photo</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.primaryRemoveBtn}
-                  onPress={() => removeImage(0)}
-                  hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                >
-                  <Ionicons name="close-circle" size={22} color={ERROR} />
-                </TouchableOpacity>
+          {/* Product Photos */}
+          <Animated.View entering={FadeInUp.duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <View className="flex-row items-center justify-between mb-md">
+                <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider">Product Photos</Text>
+                <Text className="text-xs text-warm-600 font-semibold">{images.length}/{MAX_IMAGES}</Text>
               </View>
-            ) : (
-              // Empty state placeholder — tapping opens picker
+
+              {images.length > 0 && (
+                <View className="relative mb-md">
+                  <Image source={{ uri: images[0].uri }} className="w-full h-48 rounded-xl" resizeMode="cover" />
+                  <View className="absolute bottom-sm left-sm bg-ruvo-yellow px-sm py-xs rounded-md">
+                    <Text className="text-xs font-extrabold text-ruvo-ink">Cover photo</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => removeImage(0)} className="absolute top-sm right-sm w-8 h-8 bg-red-500 rounded-full items-center justify-center">
+                    <Ionicons name="close" size={16} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {images.length > 1 && (
+                <View className="flex-row flex-wrap gap-sm mb-md">
+                  {images.slice(1).map((img, idx) => (
+                    <View key={idx} className="relative w-20 h-20">
+                      <Image source={{ uri: img.uri }} className="w-20 h-20 rounded-lg" resizeMode="cover" />
+                      <TouchableOpacity onPress={() => removeImage(idx + 1)} className="absolute top-xs right-xs w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+                        <Ionicons name="close" size={10} color="#FFF" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+
               <TouchableOpacity
-                style={styles.imagePlaceholder}
                 onPress={pickImages}
-                activeOpacity={0.8}
+                className="border-2 border-dashed border-warm-400 rounded-xl py-lg items-center justify-center gap-sm flex-row"
               >
-                <Ionicons name="camera-outline" size={36} color={SUBTEXT} />
-                <Text style={styles.imagePlaceholderText}>Add Product Photos</Text>
-                <Text style={styles.imagePlaceholderSub}>
-                  Select up to {MAX_IMAGES} photos · First photo is the cover
+                <Ionicons name="camera-outline" size={22} color="#A79E92" />
+                <Text className="text-sm font-bold text-warm-600">
+                  {images.length === 0 ? 'Add product photos' : 'Add more photos'}
                 </Text>
               </TouchableOpacity>
-            )}
-
-            {/* Thumbnail strip + add tile */}
-            {images.length > 0 && (
-              <View style={styles.thumbStrip}>
-                {images.map((img, index) => (
-                  <View key={`${img.uri}-${index}`} style={styles.thumbWrapper}>
-                    <Image source={{ uri: img.uri }} style={styles.thumb} />
-                    {index === 0 && (
-                      <View style={styles.thumbCoverDot} />
-                    )}
-                    <TouchableOpacity
-                      style={styles.thumbRemoveBtn}
-                      onPress={() => removeImage(index)}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <Ionicons name="close-circle" size={18} color={ERROR} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                {images.length < MAX_IMAGES && (
-                  <TouchableOpacity
-                    style={styles.thumbAddBtn}
-                    onPress={pickImages}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="add" size={22} color={PRIMARY} />
-                    <Text style={styles.thumbAddText}>Add</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {images.length > 0 && (
-              <Text style={styles.photoHint}>
-                Tap a photo's ✕ to remove it · First photo is shown as the cover
-              </Text>
-            )}
-          </View>
-
-          {/* ── BASIC INFORMATION ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>BASIC INFORMATION</Text>
-
-            <Text style={styles.fieldLabel}>
-              Product Name <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.name ? styles.inputError : null]}
-              placeholder="e.g. Aashirvaad Atta"
-              placeholderTextColor={SUBTEXT}
-              value={name}
-              onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
-            />
-            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-
-            <CategoryDropdown
-              value={category}
-              onChange={c => { setCategory(c); setErrors(e => ({ ...e, category: undefined })); }}
-              error={errors.category}
-              required
-            />
-
-            <Text style={styles.fieldLabel}>Brand Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Aashirvaad (optional)"
-              placeholderTextColor={SUBTEXT}
-              value={brandName}
-              onChangeText={setBrandName}
-            />
-          </View>
-
-          {/* ── PRICING ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>PRICING</Text>
-
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Actual Price / MRP <Text style={styles.required}>*</Text>
-                </Text>
-                <View style={[styles.priceInput, errors.actualPrice ? styles.inputError : null]}>
-                  <Text style={styles.currencySymbol}>₹</Text>
-                  <TextInput
-                    style={styles.priceTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={SUBTEXT}
-                    keyboardType="decimal-pad"
-                    value={actualPrice}
-                    onChangeText={t => {
-                      setActualPrice(t);
-                      setErrors(e => ({ ...e, actualPrice: undefined, sellingPrice: undefined }));
-                    }}
-                  />
-                </View>
-                {errors.actualPrice ? (
-                  <Text style={styles.errorText}>{errors.actualPrice}</Text>
-                ) : null}
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Selling Price <Text style={styles.required}>*</Text>
-                </Text>
-                <View style={[styles.priceInput, (errors.sellingPrice || priceError) ? styles.inputError : null]}>
-                  <Text style={styles.currencySymbol}>₹</Text>
-                  <TextInput
-                    style={styles.priceTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={SUBTEXT}
-                    keyboardType="decimal-pad"
-                    value={sellingPrice}
-                    onChangeText={t => {
-                      setSellingPrice(t);
-                      setErrors(e => ({ ...e, sellingPrice: undefined }));
-                    }}
-                  />
-                </View>
-                {errors.sellingPrice ? (
-                  <Text style={styles.errorText}>{errors.sellingPrice}</Text>
-                ) : null}
-              </View>
             </View>
+          </Animated.View>
 
-            {priceError && !errors.sellingPrice ? (
-              <Text style={[styles.errorText, { marginTop: 4 }]}>{priceError}</Text>
-            ) : null}
+          {/* Basic Details */}
+          <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Basic Details</Text>
 
-            {discount ? (
-              <View style={styles.discountBadge}>
-                <Ionicons name="pricetag" size={14} color={PRIMARY} />
-                <Text style={styles.discountText}>{discount}</Text>
-                <Text style={styles.discountNote}>auto-calculated</Text>
-              </View>
-            ) : null}
-          </View>
+              <Text className="text-xs font-bold text-warm-700 mb-xs">Product Name *</Text>
+              <TextInput
+                value={name}
+                onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
+                placeholder="e.g. Fresh Organic Tomatoes"
+                placeholderTextColor="#A79E92"
+                className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink mb-xs ${errors.name ? 'border-red-400' : 'border-warm-300'}`}
+              />
+              {errors.name && <Text className="text-xs text-red-500 mb-sm">{errors.name}</Text>}
 
-          {/* ── INVENTORY ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>INVENTORY</Text>
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Category *</Text>
+              <CategoryDropdown
+                value={category}
+                onChange={v => { setCategory(v); setErrors(e => ({ ...e, category: undefined })); }}
+              />
+              {errors.category && <Text className="text-xs text-red-500 mt-xs">{errors.category}</Text>}
 
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Stock Quantity <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={[styles.input, errors.stockQuantity ? styles.inputError : null]}
-                  placeholder="0"
-                  placeholderTextColor={SUBTEXT}
-                  keyboardType="number-pad"
-                  value={stockQuantity}
-                  onChangeText={t => {
-                    setStockQuantity(t);
-                    setErrors(e => ({ ...e, stockQuantity: undefined }));
-                  }}
-                />
-                {errors.stockQuantity ? (
-                  <Text style={styles.errorText}>{errors.stockQuantity}</Text>
-                ) : null}
-              </View>
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Brand Name</Text>
+              <TextInput
+                value={brandName}
+                onChangeText={setBrandName}
+                placeholder="Optional"
+                placeholderTextColor="#A79E92"
+                className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink"
+              />
 
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.fieldLabel}>Unit</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. kg, piece, litre"
-                  placeholderTextColor={SUBTEXT}
-                  value={unit}
-                  onChangeText={setUnit}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* ── DESCRIPTION ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>DESCRIPTION</Text>
-            <TextInput
-              style={styles.textArea}
-              placeholder="Product description (max 500 characters)..."
-              placeholderTextColor={SUBTEXT}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-              value={description}
-              onChangeText={setDescription}
-            />
-            <Text style={styles.charCounter}>{description.length}/500</Text>
-          </View>
-
-          {/* ── AVAILABILITY ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>AVAILABILITY</Text>
-            <View style={styles.toggleRow}>
-              <View>
-                <Text style={styles.toggleLabel}>Product Availability</Text>
-                <Text style={styles.toggleSub}>
-                  {isAvailable ? '🟢 Customers can order this product' : '🔴 Product is unavailable for ordering'}
-                </Text>
-              </View>
-              <Switch
-                value={isAvailable}
-                onValueChange={setIsAvailable}
-                trackColor={{ false: '#E0E0E0', true: PRIMARY_LIGHT }}
-                thumbColor={isAvailable ? PRIMARY : '#BDBDBD'}
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Description</Text>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Optional product description"
+                placeholderTextColor="#A79E92"
+                multiline
+                numberOfLines={3}
+                className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink"
+                style={{ textAlignVertical: 'top', minHeight: 80 }}
               />
             </View>
-          </View>
+          </Animated.View>
 
-          {/* ── SUBMIT ── */}
-          <TouchableOpacity
-            style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <>
-                <Ionicons name="add-circle-outline" size={20} color="#FFF" />
-                <Text style={styles.submitBtnText}>Add Product</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Pricing */}
+          <Animated.View entering={FadeInUp.delay(200).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Pricing</Text>
+
+              <View className="flex-row gap-md">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Actual Price (₹) *</Text>
+                  <TextInput
+                    value={actualPrice}
+                    onChangeText={t => { setActualPrice(t); setErrors(e => ({ ...e, actualPrice: undefined })); }}
+                    placeholder="0.00"
+                    placeholderTextColor="#A79E92"
+                    keyboardType="decimal-pad"
+                    className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.actualPrice ? 'border-red-400' : 'border-warm-300'}`}
+                  />
+                  {errors.actualPrice && <Text className="text-xs text-red-500 mt-xs">{errors.actualPrice}</Text>}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Selling Price (₹) *</Text>
+                  <TextInput
+                    value={sellingPrice}
+                    onChangeText={t => { setSellingPrice(t); setErrors(e => ({ ...e, sellingPrice: undefined })); }}
+                    placeholder="0.00"
+                    placeholderTextColor="#A79E92"
+                    keyboardType="decimal-pad"
+                    className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.sellingPrice ? 'border-red-400' : 'border-warm-300'}`}
+                  />
+                  {errors.sellingPrice && <Text className="text-xs text-red-500 mt-xs">{errors.sellingPrice}</Text>}
+                </View>
+              </View>
+
+              {discount && (
+                <View className="mt-sm bg-ruvo-yellow/20 rounded-lg px-md py-xs flex-row items-center gap-xs">
+                  <Ionicons name="pricetag" size={14} color="#F5B700" />
+                  <Text className="text-sm font-extrabold text-ruvo-ink">{discount} discount applied</Text>
+                </View>
+              )}
+            </View>
+          </Animated.View>
+
+          {/* Inventory */}
+          <Animated.View entering={FadeInUp.delay(300).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Inventory</Text>
+
+              <View className="flex-row gap-md">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Stock Quantity *</Text>
+                  <TextInput
+                    value={stockQuantity}
+                    onChangeText={t => { setStockQuantity(t); setErrors(e => ({ ...e, stockQuantity: undefined })); }}
+                    placeholder="0"
+                    placeholderTextColor="#A79E92"
+                    keyboardType="number-pad"
+                    className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.stockQuantity ? 'border-red-400' : 'border-warm-300'}`}
+                  />
+                  {errors.stockQuantity && <Text className="text-xs text-red-500 mt-xs">{errors.stockQuantity}</Text>}
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Unit (optional)</Text>
+                  <TextInput
+                    value={unit}
+                    onChangeText={setUnit}
+                    placeholder="kg, pcs, litre..."
+                    placeholderTextColor="#A79E92"
+                    className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink"
+                  />
+                </View>
+              </View>
+
+              <View className="flex-row items-center justify-between mt-lg pt-md border-t border-warm-200">
+                <View>
+                  <Text className="text-sm font-extrabold text-ruvo-ink">Available for Sale</Text>
+                  <Text className="text-xs text-warm-600 font-medium mt-xs">Customers can buy this product</Text>
+                </View>
+                <Switch
+                  value={isAvailable}
+                  onValueChange={setIsAvailable}
+                  trackColor={{ false: '#D1C7BA', true: '#F5B700' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Submit */}
+          <Animated.View entering={FadeInUp.delay(400).duration(500)}>
+            <Button variant="primary" onPress={handleSubmit} loading={loading} icon="checkmark-circle">
+              Add Product
+            </Button>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 10,
-    backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: TEXT },
-
-  scrollContent: { padding: 16, paddingBottom: 40, backgroundColor: BG },
-
-  sectionCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: SUBTEXT,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 14,
-  },
-
-  // ── Photo section ──
-  photoSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  photoCount: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: SUBTEXT,
-  },
-
-  imagePlaceholder: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    backgroundColor: BG,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: BORDER,
-    borderStyle: 'dashed',
-  },
-  imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: TEXT, marginTop: 10 },
-  imagePlaceholderSub: { fontSize: 12, color: SUBTEXT, marginTop: 3, textAlign: 'center', paddingHorizontal: 16 },
-
-  primaryImageWrapper: {
-    borderRadius: 14,
-    overflow: 'visible',
-    marginBottom: 12,
-    position: 'relative',
-  },
-  primaryImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 14,
-  },
-  primaryBadge: {
-    position: 'absolute',
-    bottom: 10,
-    left: 10,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  primaryBadgeText: {
-    color: WHITE,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  primaryRemoveBtn: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: WHITE,
-    borderRadius: 11,
-  },
-
-  thumbStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  thumbWrapper: {
-    width: 68,
-    height: 68,
-    borderRadius: 10,
-    overflow: 'visible',
-    position: 'relative',
-  },
-  thumb: {
-    width: 68,
-    height: 68,
-    borderRadius: 10,
-  },
-  thumbCoverDot: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: PRIMARY,
-    borderWidth: 1.5,
-    borderColor: WHITE,
-  },
-  thumbRemoveBtn: {
-    position: 'absolute',
-    top: -7,
-    right: -7,
-    backgroundColor: WHITE,
-    borderRadius: 9,
-  },
-  thumbAddBtn: {
-    width: 68,
-    height: 68,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: PRIMARY,
-    borderStyle: 'dashed',
-    backgroundColor: PRIMARY_LIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  thumbAddText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: PRIMARY,
-    marginTop: 1,
-  },
-  photoHint: {
-    fontSize: 11,
-    color: SUBTEXT,
-    marginTop: 10,
-    textAlign: 'center',
-  },
-
-  // ── Form fields ──
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 6 },
-  required: { color: ERROR },
-
-  input: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: TEXT,
-    marginBottom: 14,
-  },
-  inputError: { borderColor: ERROR },
-  errorText: { fontSize: 12, color: ERROR, marginTop: -10, marginBottom: 10, marginLeft: 2 },
-
-  row: { flexDirection: 'row' },
-
-  priceInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-  },
-  currencySymbol: { fontSize: 16, fontWeight: '700', color: TEXT, marginRight: 4 },
-  priceTextInput: { flex: 1, fontSize: 15, color: TEXT, paddingVertical: 12 },
-
-  discountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: PRIMARY_LIGHT,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  discountText: { fontSize: 15, fontWeight: '800', color: PRIMARY },
-  discountNote: { fontSize: 11, color: SUBTEXT, fontStyle: 'italic' },
-
-  textArea: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
-    fontSize: 15,
-    color: TEXT,
-    textAlignVertical: 'top',
-    minHeight: 100,
-  },
-  charCounter: { fontSize: 11, color: SUBTEXT, textAlign: 'right', marginTop: 4 },
-
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleLabel: { fontSize: 15, fontWeight: '600', color: TEXT, marginBottom: 3 },
-  toggleSub: { fontSize: 12, color: SUBTEXT },
-
-  submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: PRIMARY,
-    borderRadius: 16,
-    paddingVertical: 16,
-    marginTop: 4,
-    elevation: 3,
-    shadowColor: PRIMARY,
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  submitBtnDisabled: { opacity: 0.65 },
-  submitBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: 0.3 },
-});

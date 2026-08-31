@@ -5,14 +5,15 @@
  * Only delivery requests from those shops are broadcast to this partner.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, ScrollView, StyleSheet, Text, TouchableOpacity,
-  ActivityIndicator, FlatList, RefreshControl,
+  ActivityIndicator, FlatList, RefreshControl, Modal, Platform, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -24,12 +25,32 @@ import {
   CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
 
+const { height: SCREEN_H } = Dimensions.get('window');
+const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+
 interface NearbyShop {
   id: number;
   name: string;
   address: string;
   category: string;
   distanceKm?: number;
+  latitude?: number;
+  longitude?: number;
+}
+
+// Geocodes a textual address via Google, returns lat/lng or null
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const q   = encodeURIComponent(address);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${q}&key=${MAPS_API_KEY}&language=en`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.status === 'OK' && json.results?.[0]?.geometry?.location) {
+      const loc = json.results[0].geometry.location;
+      return { lat: loc.lat, lng: loc.lng };
+    }
+    return null;
+  } catch { return null; }
 }
 
 // Mock data shown when API / GPS is unavailable in demo
@@ -52,18 +73,145 @@ const CATEGORY_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name'
   Electronics: 'hardware-chip-outline',
 };
 
+// ── Shop Map Modal ───────────────────────────────────────────────────────────
+interface ShopMapModalProps {
+  shop: NearbyShop | null;
+  visible: boolean;
+  isSelected: boolean;
+  onToggle: (id: number) => void;
+  onClose: () => void;
+  colors: any;
+  typography: any;
+}
+
+const ShopMapModal: React.FC<ShopMapModalProps> = ({
+  shop, visible, isSelected, onToggle, onClose, colors, typography,
+}) => {
+  const [loading,  setLoading]  = useState(false);
+  const [region,   setRegion]   = useState<Region | null>(null);
+  const mapRef = useRef<MapView>(null);
+
+  useEffect(() => {
+    if (!shop || !visible) return;
+    setLoading(true);
+    setRegion(null);
+
+    const resolve = async () => {
+      // Use shop coords if available, else geocode address
+      if (shop.latitude && shop.longitude) {
+        setRegion({ latitude: shop.latitude, longitude: shop.longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 });
+        setLoading(false);
+        return;
+      }
+      const coords = await geocodeAddress(`${shop.address}, India`);
+      if (coords) {
+        setRegion({ latitude: coords.lat, longitude: coords.lng, latitudeDelta: 0.008, longitudeDelta: 0.008 });
+      }
+      setLoading(false);
+    };
+    resolve();
+  }, [shop, visible]);
+
+  if (!shop) return null;
+
+  const icon = CATEGORY_ICON[shop.category] ?? 'storefront-outline';
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={false} statusBarTranslucent>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        {/* Header */}
+        <View style={[
+          mms.header,
+          { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: Platform.OS === 'android' ? 36 : 52 },
+        ]}>
+          <TouchableOpacity style={mms.closeBtn} onPress={onClose}>
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={[typography.headingS, { color: colors.textPrimary }]} numberOfLines={1}>
+              {shop.name}
+            </Text>
+            <Text style={[typography.caption, { color: colors.textSecondary }]} numberOfLines={1}>
+              {shop.category} • {shop.distanceKm != null ? `${shop.distanceKm} km` : 'Nearby'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              mms.selectBtn,
+              { backgroundColor: isSelected ? colors.success : colors.primary, borderRadius: RADIUS.sm },
+            ]}
+            onPress={() => { onToggle(shop.id); onClose(); }}
+          >
+            <Ionicons name={isSelected ? 'checkmark-circle' : 'add-circle-outline'} size={16} color="#FFF" />
+            <Text style={[typography.caption, { color: '#FFF', fontWeight: '700', marginLeft: 4 }]}>
+              {isSelected ? 'Selected' : 'Select Shop'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Map */}
+        {loading || !region ? (
+          <View style={mms.loadingBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[typography.body, { color: colors.textSecondary, marginTop: 12 }]}>Loading map…</Text>
+          </View>
+        ) : (
+          <MapView
+            ref={mapRef}
+            style={StyleSheet.absoluteFillObject}
+            provider={PROVIDER_GOOGLE}
+            region={region}
+            showsUserLocation
+          >
+            <Marker
+              coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+              title={shop.name}
+              description={shop.address}
+              pinColor={isSelected ? '#22C55E' : colors.primary}
+            />
+          </MapView>
+        )}
+
+        {/* Address info card */}
+        <View style={[mms.infoCard, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+          <View style={mms.infoRow}>
+            <View style={[mms.iconBg, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}>
+              <Ionicons name={icon} size={24} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]}>
+                {shop.name}
+              </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
+                {shop.address}
+              </Text>
+              {shop.distanceKm != null && (
+                <Text style={[typography.caption, { color: colors.warning, fontWeight: '700', marginTop: 4 }]}>
+                  📍 {shop.distanceKm} km from you
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export const Step6_ShopSelection = () => {
   const navigation = useNavigation<any>();
   const { token, setVerificationStatus } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
-  const [shops,      setShops]      = useState<NearbyShop[]>([]);
-  const [selected,   setSelected]   = useState<Set<number>>(new Set());
-  const [fetchState, setFetchState] = useState<'loading' | 'done' | 'error'>('loading');
-  const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [usingMock,  setUsingMock]  = useState(false);
+  const [shops,        setShops]        = useState<NearbyShop[]>([]);
+  const [selected,     setSelected]     = useState<Set<number>>(new Set());
+  const [fetchState,   setFetchState]   = useState<'loading' | 'done' | 'error'>('loading');
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [usingMock,    setUsingMock]    = useState(false);
+  const [mapShop,      setMapShop]      = useState<NearbyShop | null>(null);
+  const [mapVisible,   setMapVisible]   = useState(false);
 
   // 7-Day Edit Cooldown Lock
   const [isLocked,        setIsLocked]        = useState(false);
@@ -217,6 +365,7 @@ export const Step6_ShopSelection = () => {
           isSelected && shadows.sm,
         ]}
         onPress={() => toggle(item.id)}
+        onLongPress={() => { setMapShop(item); setMapVisible(true); }}
         activeOpacity={0.8}
       >
         {/* Icon */}
@@ -250,16 +399,25 @@ export const Step6_ShopSelection = () => {
           </View>
         </View>
 
-        {/* Checkbox */}
-        <View style={[
-          s.checkBox,
-          {
-            borderColor     : isSelected ? colors.primary : colors.border,
-            backgroundColor : isSelected ? colors.primary : 'transparent',
-            borderRadius    : RADIUS.pill,
-          },
-        ]}>
-          {isSelected && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
+        {/* Map icon + Checkbox */}
+        <View style={s.rightActions}>
+          <TouchableOpacity
+            style={[s.mapPeekBtn, { backgroundColor: colors.surfaceSunken, borderRadius: RADIUS.sm }]}
+            onPress={() => { setMapShop(item); setMapVisible(true); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="map-outline" size={15} color={colors.primary} />
+          </TouchableOpacity>
+          <View style={[
+            s.checkBox,
+            {
+              borderColor     : isSelected ? colors.primary : colors.border,
+              backgroundColor : isSelected ? colors.primary : 'transparent',
+              borderRadius    : RADIUS.pill,
+            },
+          ]}>
+            {isSelected && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -392,6 +550,17 @@ export const Step6_ShopSelection = () => {
         />
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* Shop Map Modal */}
+      <ShopMapModal
+        shop={mapShop}
+        visible={mapVisible}
+        isSelected={mapShop ? selected.has(mapShop.id) : false}
+        onToggle={toggle}
+        onClose={() => setMapVisible(false)}
+        colors={colors}
+        typography={typography}
+      />
     </SafeAreaView>
   );
 };
@@ -428,6 +597,8 @@ const s = StyleSheet.create({
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 5, flexWrap: 'wrap' },
   categoryTag: { paddingHorizontal: 8, paddingVertical: 3 },
   distTag:     { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3 },
+  rightActions: { flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 },
+  mapPeekBtn  : { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   checkBox: {
     width: 22, height: 22, borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -441,4 +612,19 @@ const s = StyleSheet.create({
   howNum: {
     width: 26, height: 26, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
+});
+
+// ── Shop Map Modal Styles ────────────────────────────────────────────────────
+const mms = StyleSheet.create({
+  header   : { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  closeBtn : { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  selectBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8 },
+  loadingBox: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  infoCard : {
+    borderTopWidth: 1,
+    paddingHorizontal: 16, paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+  },
+  infoRow  : { flexDirection: 'row', alignItems: 'flex-start' },
+  iconBg   : { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

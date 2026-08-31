@@ -84,6 +84,11 @@ async function requestLocationPermission(): Promise<boolean> {
 }
 
 async function getCurrentPosition(): Promise<{ latitude: number; longitude: number }> {
+  const servicesEnabled = await Location.hasServicesEnabledAsync().catch(() => false);
+  if (!servicesEnabled) {
+    throw new Error('Location services (GPS) are disabled on your device.');
+  }
+
   const pos = await Location.getCurrentPositionAsync({
     accuracy: Location.Accuracy.Balanced,
   });
@@ -109,7 +114,11 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
   const persistLocation = useCallback(async (next: DeliveryLocation) => {
     setLocation(next);
     locationRef.current = next;
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* Safe storage handling */
+    }
   }, []);
 
   const applyGps = useCallback(
@@ -130,8 +139,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         phone: previousDetails.phone,
       };
 
-      const fullAddress =
-        composeFullAddress(details) || geo.fullAddress;
+      const fullAddress = composeFullAddress(details) || geo.fullAddress;
 
       await persistLocation({
         latitude,
@@ -151,7 +159,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     try {
       const permitted = await requestLocationPermission();
       if (!permitted) {
-        setError('Location permission is needed to fill your address.');
+        setError('Location permission is required to detect your address.');
         return;
       }
 
@@ -177,9 +185,15 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
   }, []);
 
   const startTracking = useCallback(async () => {
+    // If user saved a custom recipient address, do not track device movement
+    if (locationRef.current?.isCustomAddress) {
+      stopTracking();
+      return;
+    }
+
     const permitted = await requestLocationPermission();
     if (!permitted) {
-      setError('Location permission is needed to track your position.');
+      setError('Location permission is required to track your location.');
       return;
     }
 
@@ -191,14 +205,13 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       const sub = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 12,
-          timeInterval: 4000,
+          distanceInterval: 15,
+          timeInterval: 5000,
         },
         (position: Location.LocationObject) => {
-          // The recipient's saved address is the delivery destination, not the
-          // shopper's moving device location.
           if (locationRef.current?.isCustomAddress) return;
           const { latitude, longitude } = position.coords;
+
           setLocation(prev =>
             prev
               ? { ...prev, latitude, longitude }
@@ -207,8 +220,10 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
 
           if (geocodeTimer.current) clearTimeout(geocodeTimer.current);
           geocodeTimer.current = setTimeout(() => {
-            applyGps(latitude, longitude, true).catch(() => {});
-          }, 1200);
+            if (!locationRef.current?.isCustomAddress) {
+              applyGps(latitude, longitude, true).catch(() => {});
+            }
+          }, 1500);
         },
       );
       locationSubscription.current = sub;
@@ -225,20 +240,43 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         return false;
       }
 
-      const fullAddress = composeFullAddress(details);
-      const coordinates = await geocodeAddress(fullAddress);
-      if (!coordinates) {
-        setError('We could not locate this address. Check the house, area, city and pincode, then try again.');
+      if (details.phone.trim().length < 10) {
+        setError('Please enter a valid 10-digit phone number.');
         return false;
       }
+
+      if (details.pincode.trim().length < 6) {
+        setError('Please enter a valid 6-digit pincode.');
+        return false;
+      }
+
+      const fullAddress = composeFullAddress(details);
+      const coordinates = await geocodeAddress(fullAddress);
+      
+      let finalLat: number;
+      let finalLng: number;
+
+      if (coordinates) {
+        finalLat = coordinates.latitude;
+        finalLng = coordinates.longitude;
+      } else if (locationRef.current?.latitude && locationRef.current?.longitude) {
+        // Fallback to current device coordinates if address forward-geocoding couldn't pinpoint exact building
+        finalLat = locationRef.current.latitude;
+        finalLng = locationRef.current.longitude;
+      } else {
+        setError('Could not locate this address. Please check city and pincode, then try again.');
+        return false;
+      }
+
       await persistLocation({
-        latitude: coordinates.latitude,
-        longitude: coordinates.longitude,
+        latitude: finalLat,
+        longitude: finalLng,
         shortLabel: [details.house, details.street, details.area].filter(Boolean).join(', ') || details.city,
         fullAddress,
         isCustomAddress: true,
         details,
       });
+
       stopTracking();
       setError(null);
       return true;
@@ -275,7 +313,9 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         await refreshFromGps();
       }
 
-      if (!cancelled) {
+      if (!cancelled && !shouldRefreshCurrentLocation) {
+        setIsLoading(false);
+      } else if (!cancelled) {
         startTracking();
       }
     };

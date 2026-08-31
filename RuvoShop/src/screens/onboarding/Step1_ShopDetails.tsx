@@ -13,15 +13,46 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import { Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
 import { API_BASE_URL } from '../../config/api';
+import { MapLocationPicker, LocationResult } from '../../components/MapLocationPicker';
 import {
   StepBar, SectionCard, FieldLabel,
-  StyledInput, CtaBtn, ErrorBox,
+  StyledInput, CtaBtn, ErrorBox, formatErrorMessage,
 } from './OnboardingShared';
+
+const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+
+async function googleReverseGeocode(lat: number, lng: number) {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (json.status !== 'OK' || !json.results?.length) return null;
+    const best = json.results[0];
+    const comps: Record<string, string> = {};
+    for (const c of best.address_components ?? []) {
+      for (const t of c.types) comps[t] = c.long_name;
+    }
+    const streetParts = [
+      comps['street_number'],
+      comps['route'],
+      comps['sublocality_level_2'],
+      comps['sublocality_level_1'] || comps['sublocality'],
+      comps['neighborhood'],
+    ].filter(Boolean);
+    return {
+      address : streetParts.join(', ') || comps['premise'] || '',
+      city    : comps['locality'] || comps['administrative_area_level_2'] || '',
+      state   : comps['administrative_area_level_1'] || '',
+      pincode : comps['postal_code'] || '',
+    };
+  } catch { return null; }
+}
 
 const CATEGORIES = [
   { key: 'Grocery',             icon: 'basket-outline'         as const },
@@ -56,6 +87,8 @@ export const Step1_ShopDetails = () => {
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState<string | null>(null);
   const [focused,    setFocused]    = useState<string | null>(null);
+  const [mapOpen,    setMapOpen]    = useState(false);
+  const [mapRegion,  setMapRegion]  = useState<Region | undefined>(undefined);
 
   const MAX_GALLERY = 8;
 
@@ -130,36 +163,53 @@ export const Step1_ShopDetails = () => {
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      console.log(pos)
-      let places: Location.LocationGeocodedAddress[] = [];
-      try {
-        places = await Location.reverseGeocodeAsync({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        });
-      } catch {
-        Alert.alert('Geocode failed', 'Could not resolve address. Please enter it manually.');
-        return;
+      const { latitude, longitude } = pos.coords;
+
+      // Try Google Geocoding API first (more accurate)
+      const gResult = await googleReverseGeocode(latitude, longitude);
+      if (gResult) {
+        setAddress(gResult.address);
+        setCity(gResult.city);
+        setStateName(gResult.state);
+        setPincode(gResult.pincode);
+      } else {
+        // Fall back to expo geocoder
+        let places: Location.LocationGeocodedAddress[] = [];
+        try {
+          places = await Location.reverseGeocodeAsync({ latitude, longitude });
+        } catch {
+          Alert.alert('Geocode failed', 'Could not resolve address. Please enter it manually.');
+          return;
+        }
+        const p = places[0];
+        if (!p) { Alert.alert('Not found', 'Could not resolve address. Please enter manually.'); return; }
+        const streetParts = [
+          p.streetNumber,
+          p.street,
+          p.subregion !== p.city ? p.subregion : null,
+          p.district,
+        ].filter(Boolean);
+        setAddress(streetParts.join(', ') || p.name || '');
+        setCity(p.city || '');
+        setStateName(p.region || '');
+        setPincode(p.postalCode || '');
       }
-      const p = places[0];
-      if (!p) { Alert.alert('Not found', 'Could not resolve address. Please enter manually.'); return; }
 
-      // Build precise street address: house no + street name + sublocality
-      const streetParts = [
-        p.streetNumber,
-        p.street,
-        p.subregion !== p.city ? p.subregion : null,
-        p.district,
-      ].filter(Boolean);
-      const builtStreet = streetParts.join(', ');
-
-      setAddress(builtStreet || p.name || '');
-      setCity(p.city || '');
-      setStateName(p.region || '');
-      setPincode(p.postalCode || '');
+      // Pre-position map for modal
+      setMapRegion({ latitude, longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 });
     } catch (e: any) {
       Alert.alert('Error', e?.message || 'Location error. Enter address manually.');
     } finally { setLocating(false); }
+  };
+
+  const handleMapConfirm = (result: LocationResult) => {
+    setAddress(result.address);
+    setCity(result.city);
+    setStateName(result.state);
+    setPincode(result.pincode);
+    setMapRegion({ latitude: result.latitude, longitude: result.longitude, latitudeDelta: 0.008, longitudeDelta: 0.008 });
+    setMapOpen(false);
+    setError(null);
   };
 
   const handleNext = async () => {
@@ -226,11 +276,14 @@ export const Step1_ShopDetails = () => {
           if (res.ok) {
             uploaded = true;
             createdShop = await res.json().catch(() => null);
+          } else if (res.status === 401) {
+            throw new Error('Session expired. Please log in again.');
           } else {
             const errData = await res.text().catch(() => '');
             console.warn('Multipart upload fallback:', res.status, errData);
           }
         } catch (e: any) {
+          if (e?.message?.includes('Session expired')) throw e;
           console.warn('Multipart upload network error:', e?.message);
         }
 
@@ -247,7 +300,7 @@ export const Step1_ShopDetails = () => {
 
           if (!fallbackRes.ok) {
             const message = await fallbackRes.text().catch(() => '');
-            throw new Error(message || `Shop registration failed (${fallbackRes.status})`);
+            throw new Error(formatErrorMessage(message) || `Shop registration failed (${fallbackRes.status})`);
           }
           createdShop = await fallbackRes.json().catch(() => null);
         }
@@ -265,7 +318,7 @@ export const Step1_ShopDetails = () => {
         if (!res.ok) {
           const errData = await res.text().catch(() => '');
           console.warn('Shop create response:', res.status, errData);
-          throw new Error(errData || `Shop registration failed (${res.status})`);
+          throw new Error(formatErrorMessage(errData) || `Shop registration failed (${res.status})`);
         }
         createdShop = await res.json().catch(() => null);
       }
@@ -278,7 +331,7 @@ export const Step1_ShopDetails = () => {
       navigation.navigate('Step2_Aadhaar');
     } catch (e: any) {
       console.warn('Shop creation catch:', e?.message);
-      setError(e?.message || 'Could not submit your shop for review. Please try again.');
+      setError(formatErrorMessage(e) || 'Could not submit your shop for review. Please try again.');
     } finally { setLoading(false); }
   };
 
@@ -513,19 +566,30 @@ export const Step1_ShopDetails = () => {
               <Text style={[typography.headingS, { color: colors.textPrimary, marginLeft: 8 }]}>Shop Address</Text>
             </View>
 
-            <TouchableOpacity
-              style={[s.gpsBtn, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}
-              onPress={useGPS}
-              disabled={locating}
-            >
-              {locating
-                ? <ActivityIndicator color={colors.primary} size="small" />
-                : <Ionicons name="locate-outline" size={16} color={colors.primary} />
-              }
-              <Text style={[typography.body, { color: colors.primary, fontWeight: '700', marginLeft: 6 }]}>
-                {locating ? 'Fetching location…' : 'Use GPS to fill address'}
-              </Text>
-            </TouchableOpacity>
+            <View style={s.locationBtnRow}>
+              <TouchableOpacity
+                style={[s.gpsBtn, s.locHalf, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}
+                onPress={useGPS}
+                disabled={locating}
+              >
+                {locating
+                  ? <ActivityIndicator color={colors.primary} size="small" />
+                  : <Ionicons name="locate-outline" size={16} color={colors.primary} />
+                }
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                  {locating ? 'Locating…' : 'GPS Fill'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.gpsBtn, s.locHalf, { backgroundColor: colors.surfaceSunken, borderColor: colors.primary, borderWidth: 1.5, borderRadius: RADIUS.sm }]}
+                onPress={() => setMapOpen(true)}
+              >
+                <Ionicons name="map-outline" size={16} color={colors.primary} />
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                  Pick on Map
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <FieldLabel text="Street / Locality" required colors={colors} typography={typography} />
             <StyledInput
@@ -569,6 +633,16 @@ export const Step1_ShopDetails = () => {
           <View style={{ height: 32 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <MapLocationPicker
+        visible={mapOpen}
+        onClose={() => setMapOpen(false)}
+        onConfirm={handleMapConfirm}
+        initialRegion={mapRegion}
+        title="Pick Shop Location"
+        colors={colors}
+        typography={typography}
+      />
     </SafeAreaView>
   );
 };
@@ -620,8 +694,10 @@ const s = StyleSheet.create({
   addrTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   gpsBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14,
+    paddingVertical: 10, paddingHorizontal: 12, marginBottom: 14,
   },
+  locationBtnRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  locHalf       : { flex: 1 },
   row: { flexDirection: 'row' },
   photoPickBox: {
     borderWidth: 1.5,

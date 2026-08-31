@@ -1,37 +1,53 @@
+/**
+ * DashboardScreen - RuvoPartner (Redesigned with Premium UI/UX)
+ * 
+ * Features:
+ * - Online/Offline status toggle with live location
+ * - Real-time earnings display
+ * - Active delivery status card
+ * - Incoming delivery request modal with countdown
+ * - Auto-offline at midnight with banner
+ * - Pull-to-refresh
+ * - Smooth animations
+ * - Responsive layout
+ */
+
 import React, { useCallback, useState, useEffect } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
   StatusBar,
+  RefreshControl,
+  Switch,
+  Alert,
+  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated';
 import * as Location from 'expo-location';
+
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { ApiError } from '../services/api';
 import { Delivery, DeliveryRequest, Earnings, partnerService } from '../services/partnerService';
 import { OfflineBar } from '../components/OfflineBar';
 import { NotificationPopup } from '../components/NotificationPopup';
 import { useDeliveryRequestSound } from '../hooks/useNotificationSound';
-
-const PRIMARY_EMERALD = '#059669';
-const EMERALD_LIGHT   = '#ECFDF5';
-const TEXT_DARK       = '#1C1410';
-const TEXT_MUTED      = '#5C4F42';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 
 export const DashboardScreen = () => {
-  const { user, token, verificationStatus, refreshProfile } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
+  const { user, token, refreshProfile } = useAuth();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [online, setOnline] = useState(false);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
@@ -46,7 +62,6 @@ export const DashboardScreen = () => {
   const [autoOfflineBanner, setAutoOfflineBanner] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Notification sound + popup when new delivery request arrives
   const { showPopup, popupMessage, dismissPopup } = useDeliveryRequestSound(Boolean(incomingRequest));
 
   const fetchAddressName = async (lat: number, lng: number): Promise<string> => {
@@ -57,9 +72,7 @@ export const DashboardScreen = () => {
         const parts = [item.name, item.street, item.subregion || item.district, item.city].filter(Boolean);
         if (parts.length > 0) return parts.join(', ');
       }
-    } catch {
-      // Expo reverse geocode failed, trying fallback
-    }
+    } catch {}
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
         headers: { 'User-Agent': 'RuvoPartnerApp/1.0' }
@@ -72,9 +85,7 @@ export const DashboardScreen = () => {
           .join(', ');
         return shortName || data.display_name.split(',').slice(0, 3).join(',');
       }
-    } catch {
-      // Fallback reverse geocode failed
-    }
+    } catch {}
     return `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`;
   };
 
@@ -107,17 +118,14 @@ export const DashboardScreen = () => {
         partnerService.activeDeliveries(token),
       ]);
       setEarnings(income);
-      // Show the first active delivery; the backend may return an empty list briefly
-      // after accepting a request, so we keep the existing active state if list is empty
       if (Array.isArray(deliveries)) {
         setActive(deliveries.length > 0 ? deliveries[0] : null);
       }
       await refreshProfile();
-    } catch {
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, refreshProfile]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -131,11 +139,11 @@ export const DashboardScreen = () => {
     }, [load])
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     setOnline(Boolean(user?.isAvailable));
   }, [user?.isAvailable]);
 
-  // Poll for incoming broadcast delivery requests every 3 seconds while online
+  // Poll for incoming requests
   useEffect(() => {
     let interval: any = null;
     if (online && token && !active) {
@@ -154,11 +162,8 @@ export const DashboardScreen = () => {
           } else {
             setIncomingRequest(null);
           }
-        } catch (e) {
-          // silent fail
-        }
+        } catch {}
       };
-
       checkRequests();
       interval = setInterval(checkRequests, 3000);
     } else {
@@ -169,7 +174,7 @@ export const DashboardScreen = () => {
     };
   }, [online, token, active]);
 
-  // Countdown timer for incoming request
+  // Countdown timer
   useEffect(() => {
     let timer: any = null;
     if (incomingRequest && incomingRequest.expiresAt) {
@@ -215,15 +220,13 @@ export const DashboardScreen = () => {
     setActionBusy(true);
     try {
       await partnerService.rejectRequest(token, requestId);
-    } catch (e) {
-      // ignore
-    } finally {
+    } catch {} finally {
       setIncomingRequest(null);
       setActionBusy(false);
     }
   };
 
-  // Periodic location sync every 30 seconds while online
+  // Periodic location sync
   useEffect(() => {
     let interval: any = null;
     if (online && token) {
@@ -239,27 +242,26 @@ export const DashboardScreen = () => {
     };
   }, [online, token]);
 
-  // Auto-offline at midnight: schedule a timer that fires at the next 00:00:00 local time
+  // Auto-offline at midnight
   useEffect(() => {
     if (!online) return;
     const now = new Date();
     const midnight = new Date(
       now.getFullYear(),
       now.getMonth(),
-      now.getDate() + 1, // next day
+      now.getDate() + 1,
       0, 0, 0, 0
     );
     const msUntilMidnight = midnight.getTime() - now.getTime();
 
     const timer = setTimeout(async () => {
-      if (active) return; // Don't auto-offline if there is an active delivery in progress
+      if (active) return;
       try {
         await partnerService.availability(token!, false);
         setOnline(false);
         setAutoOfflineBanner(true);
-        // Hide banner after 8 seconds
         setTimeout(() => setAutoOfflineBanner(false), 8000);
-      } catch { /* ignore — backend's midnight job will also handle it */ }
+      } catch {}
     }, msUntilMidnight);
 
     return () => clearTimeout(timer);
@@ -298,19 +300,11 @@ export const DashboardScreen = () => {
       let message = 'Availability could not be updated.';
       if (e instanceof ApiError) {
         if (e.status === 401) {
-          Alert.alert(
-            'Session Expired',
-            'Your session has expired. Please log out and log back in.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Session Expired', 'Your session has expired. Please log out and log back in.');
           return;
         }
         if (e.status === 403) {
-          Alert.alert(
-            'Permission Denied',
-            'Your account does not have partner access. Please log out and log in again with your partner mobile number.',
-            [{ text: 'OK' }]
-          );
+          Alert.alert('Permission Denied', 'Your account does not have partner access.');
           return;
         }
         message = e.message;
@@ -321,60 +315,77 @@ export const DashboardScreen = () => {
     }
   };
 
+  const phoneDigits = user?.mobileNumber?.replace(/[^0-9]/g, '').slice(-10) || '';
+
   return (
-    <ScrollView
-      style={[styles.page, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
-        />
-      }
-    >
-      {/* New Request Notification Popup */}
+    <View className="flex-1 bg-ruvo-bg">
+      <StatusBar barStyle="light-content" backgroundColor="#16A34A" translucent />
       <NotificationPopup
         visible={showPopup}
         message={popupMessage}
         subtitle="Tap to accept or decline"
         onDismiss={dismissPopup}
       />
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <OfflineBar />
 
       {/* Auto-Offline Banner */}
       {autoOfflineBanner && (
-        <View style={styles.autoOfflineBanner}>
+        <Animated.View entering={FadeIn.duration(300)} className="bg-warm-900 px-lg py-md flex-row items-center gap-sm">
           <Ionicons name="moon" size={16} color="#FFF" />
-          <Text style={styles.autoOfflineBannerText}>
+          <Text className="text-white text-sm font-bold flex-1">
             You were automatically taken offline at midnight.
           </Text>
-        </View>
+          <TouchableOpacity onPress={() => setAutoOfflineBanner(false)}>
+            <Ionicons name="close" size={18} color="#FFF" />
+          </TouchableOpacity>
+        </Animated.View>
       )}
 
-      {/* Hero Header */}
-      <View style={[styles.hero, { backgroundColor: colors.primary }]}>
-        <View>
-          <Text style={styles.hello}>Welcome back,</Text>
-          <Text style={styles.name}>{user?.name || 'Delivery Partner'}</Text>
-          <Text style={styles.vehicleSub}>
-            {user?.vehicle?.vehicleType ? `🛵 ${user.vehicle.vehicleType} • ${user.vehicle.vehicleNumber}` : 'Partner Account'}
-          </Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TouchableOpacity
-            style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 8, borderRadius: 20 }}
-            onPress={onRefresh}
-          >
-            <Ionicons name="refresh" size={18} color="#FFF" />
-          </TouchableOpacity>
-          <View style={styles.statusBox}>
-            <Text style={[styles.statusText, { color: online ? '#86EFAC' : '#CBD5E1' }]}>
-              {online ? 'ONLINE' : 'OFFLINE'}
-            </Text>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#16A34A"
+            colors={['#16A34A']}
+          />
+        }
+      >
+        {/* Hero Header */}
+        <Animated.View
+          entering={FadeInDown.duration(500)}
+          className="bg-ruvo-accent px-lg pb-2xl"
+          style={{ paddingTop: insets.top + 20 }}
+        >
+          <View className="flex-row items-center justify-between mb-lg">
+            <View className="flex-1">
+              <Text className="text-white/70 text-sm font-semibold mb-xs">Welcome back,</Text>
+              <Text className="text-white text-2xl font-extrabold">{user?.name || 'Delivery Partner'}</Text>
+              {user?.vehicle?.vehicleType && (
+                <Text className="text-white/60 text-xs font-medium mt-xs">
+                  🛵 {user.vehicle.vehicleType} • {user.vehicle.vehicleNumber}
+                </Text>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={onRefresh}
+              className="w-10 h-10 bg-white/20 rounded-full items-center justify-center"
+            >
+              <Ionicons name="refresh" size={20} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Status Toggle */}
+          <View className="flex-row items-center justify-between bg-white/10 rounded-xl px-lg py-md">
+            <View className="flex-row items-center gap-md">
+              <View className={`w-3 h-3 rounded-full ${online ? 'bg-green-300' : 'bg-warm-400'}`} />
+              <Text className={`text-base font-extrabold ${online ? 'text-green-100' : 'text-white/70'}`}>
+                {online ? 'ONLINE' : 'OFFLINE'}
+              </Text>
+            </View>
             <Switch
               value={online}
               disabled={changing}
@@ -383,517 +394,298 @@ export const DashboardScreen = () => {
               thumbColor="#FFF"
             />
           </View>
-        </View>
-      </View>
+        </Animated.View>
 
-      {/* Duty Toggle Card */}
-      <TouchableOpacity
-        disabled={changing}
-        onPress={() => changeAvailability(!online)}
-        activeOpacity={0.85}
-        style={[
-          styles.dutyBtn,
-          {
-            backgroundColor: online ? colors.primarySoft : colors.primary,
-            borderColor: online ? colors.primaryLight : colors.primary,
-            borderRadius: radius.card,
-          },
-        ]}
-      >
-        <Ionicons
-          name={online ? 'radio-button-on' : 'power'}
-          size={24}
-          color={online ? colors.primary : colors.onPrimary}
-        />
-        <Text
-          style={[
-            styles.dutyBtnText,
-            { color: online ? colors.primary : colors.onPrimary },
-          ]}
-        >
-          {online ? 'GO OFFLINE' : 'GO ONLINE'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Live Location Card */}
-      {online && (
-        <View style={[styles.locationCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }]}>
-          <Ionicons name="location" size={22} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.locationTitle}>Live Location (Reverse Geocoded)</Text>
-            <Text style={styles.locationSubtitle} numberOfLines={2}>
-              {currentLocationName || 'Fetching exact location name...'}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={getAndUpdateLiveLocation} style={styles.refreshLocBtn}>
-            <Ionicons name="refresh" size={16} color={PRIMARY_EMERALD} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {loading ? (
-        <ActivityIndicator color={PRIMARY_EMERALD} style={{ marginVertical: 32 }} />
-      ) : (
-        <>
-          {/* Active Delivery Status Card */}
-          <TouchableOpacity
-            onPress={() =>
-              active && navigation.navigate('ActiveDelivery', { deliveryId: active.id })
-            }
-            activeOpacity={0.9}
-            style={[
-              styles.activeCard,
-              {
-                backgroundColor: active ? colors.warningSoft : colors.card,
-                borderColor: active ? '#FFEDD5' : colors.border,
-                borderRadius: radius.card,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.activeIconCircle,
-                { backgroundColor: active ? '#FFEDD5' : colors.primarySoft },
-              ]}
+        <View className="px-lg" style={{ marginTop: -24 }}>
+          {/* GO ONLINE/OFFLINE Button */}
+          <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+            <TouchableOpacity
+              disabled={changing}
+              onPress={() => changeAvailability(!online)}
+              activeOpacity={0.85}
+              className={`rounded-xl py-lg px-xl flex-row items-center justify-center gap-md ${
+                online ? 'bg-ruvo-accent-soft border-2 border-ruvo-accent' : 'bg-ruvo-accent'
+              }`}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: online ? 0.08 : 0.2,
+                shadowRadius: 12,
+                elevation: online ? 2 : 6,
+              }}
             >
               <Ionicons
-                name={active ? 'bicycle' : 'checkmark-circle'}
-                size={26}
-                color={active ? '#F97316' : colors.primary}
+                name={online ? 'radio-button-on' : 'power'}
+                size={24}
+                color={online ? '#16A34A' : '#FFF'}
               />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.activeTitle}>
-                  {active ? 'Active Delivery Run' : 'Ready for Deliveries'}
-                </Text>
-                {active && (
-                  <View style={styles.liveBadge}>
-                    <Text style={styles.liveBadgeText}>IN PROGRESS</Text>
-                  </View>
-                )}
-              </View>
-
-              <Text style={styles.activeSub}>
-                {active
-                  ? `Order #${active.orderId} • ${active.status.replaceAll('_', ' ')}`
-                  : 'Stay online to receive automated customer delivery assignments.'}
+              <Text className={`text-lg font-extrabold ${online ? 'text-ruvo-accent' : 'text-white'}`}>
+                {online ? 'GO OFFLINE' : 'GO ONLINE'}
               </Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Live Location Card */}
+          {online && (
+            <Animated.View entering={FadeInUp.delay(200).duration(500)} className="mt-lg">
+              <Card className="bg-green-50 border-green-300">
+                <View className="flex-row items-center gap-md">
+                  <View className="w-10 h-10 bg-green-200 rounded-lg items-center justify-center">
+                    <Ionicons name="location" size={20} color="#16A34A" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs font-extrabold text-green-700 uppercase tracking-wider mb-xs">
+                      Live Location
+                    </Text>
+                    <Text className="text-sm text-ruvo-ink font-semibold" numberOfLines={2}>
+                      {currentLocationName || 'Fetching location...'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={getAndUpdateLiveLocation}
+                    className="w-9 h-9 bg-white rounded-lg border border-green-300 items-center justify-center"
+                  >
+                    <Ionicons name="refresh" size={16} color="#16A34A" />
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            </Animated.View>
+          )}
+
+          {loading ? (
+            <View className="py-3xl items-center">
+              <ActivityIndicator size="large" color="#16A34A" />
             </View>
+          ) : (
+            <>
+              {/* Active Delivery Card */}
+              <Animated.View entering={FadeInUp.delay(300).duration(500)} className="mt-lg">
+                <TouchableOpacity
+                  onPress={() => active && navigation.navigate('ActiveDelivery', { deliveryId: active.id })}
+                  activeOpacity={0.9}
+                >
+                  <Card className={active ? 'bg-orange-50 border-orange-300' : 'bg-ruvo-surface border-warm-300'}>
+                    <View className="flex-row items-center gap-md">
+                      <View className={`w-12 h-12 rounded-xl items-center justify-center ${
+                        active ? 'bg-orange-200' : 'bg-green-100'
+                      }`}>
+                        <Ionicons
+                          name={active ? 'bicycle' : 'checkmark-circle'}
+                          size={24}
+                          color={active ? '#F97316' : '#16A34A'}
+                        />
+                      </View>
 
-            {active && (
-              <Ionicons name="chevron-forward" size={22} color={TEXT_MUTED} />
-            )}
-          </TouchableOpacity>
+                      <View className="flex-1">
+                        <View className="flex-row items-center gap-sm mb-xs">
+                          <Text className="text-base font-extrabold text-ruvo-ink">
+                            {active ? 'Active Delivery Run' : 'Ready for Deliveries'}
+                          </Text>
+                          {active && (
+                            <Badge variant="warning" size="sm">IN PROGRESS</Badge>
+                          )}
+                        </View>
+                        <Text className="text-xs text-warm-600 font-medium leading-5">
+                          {active
+                            ? `Order #${active.orderId} • ${active.status.replaceAll('_', ' ')}`
+                            : 'Stay online to receive automated delivery assignments.'}
+                        </Text>
+                      </View>
 
-          {/* Quick Metrics Section */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Earnings & Balance</Text>
-          </View>
+                      {active && (
+                        <Ionicons name="chevron-forward" size={20} color="#A79E92" />
+                      )}
+                    </View>
+                  </Card>
+                </TouchableOpacity>
+              </Animated.View>
 
-          <View style={styles.grid}>
-            <MetricCard
-              icon="today-outline"
-              label="Today"
-              value={`₹${earnings?.todayEarnings ?? 0}`}
-              color={colors.primary}
-            />
-            <MetricCard
-              icon="wallet-outline"
-              label="Wallet"
-              value={`₹${earnings?.walletBalance ?? 0}`}
-              color={colors.info}
-            />
-            <MetricCard
-              icon="trending-up-outline"
-              label="All Time"
-              value={`₹${earnings?.totalEarnings ?? 0}`}
-              color="#8B5CF6"
-            />
-          </View>
-        </>
-      )}
+              {/* Earnings Section */}
+              <Animated.View entering={FadeInUp.delay(400).duration(500)} className="mt-xl">
+                <Text className="text-lg font-extrabold text-ruvo-ink mb-md">Today's Earnings & Balance</Text>
+                <View className={`flex-row gap-sm ${isTablet ? 'flex-wrap' : ''}`}>
+                  <View className="flex-1 min-w-[100px]">
+                    <Card className="items-start">
+                      <View className="w-9 h-9 bg-green-100 rounded-lg items-center justify-center mb-sm">
+                        <Ionicons name="today-outline" size={18} color="#16A34A" />
+                      </View>
+                      <Text className="text-2xl font-extrabold text-ruvo-ink">₹{earnings?.todayEarnings ?? 0}</Text>
+                      <Text className="text-xs text-warm-600 font-semibold mt-xs">Today</Text>
+                    </Card>
+                  </View>
 
-      {/* ─── Incoming Delivery Request Popup Modal ────────────────── */}
+                  <View className="flex-1 min-w-[100px]">
+                    <Card className="items-start">
+                      <View className="w-9 h-9 bg-blue-100 rounded-lg items-center justify-center mb-sm">
+                        <Ionicons name="wallet-outline" size={18} color="#3B82F6" />
+                      </View>
+                      <Text className="text-2xl font-extrabold text-ruvo-ink">₹{earnings?.walletBalance ?? 0}</Text>
+                      <Text className="text-xs text-warm-600 font-semibold mt-xs">Wallet</Text>
+                    </Card>
+                  </View>
+
+                  <View className="flex-1 min-w-[100px]">
+                    <Card className="items-start">
+                      <View className="w-9 h-9 bg-purple-100 rounded-lg items-center justify-center mb-sm">
+                        <Ionicons name="trending-up-outline" size={18} color="#8B5CF6" />
+                      </View>
+                      <Text className="text-2xl font-extrabold text-ruvo-ink">₹{earnings?.totalEarnings ?? 0}</Text>
+                      <Text className="text-xs text-warm-600 font-semibold mt-xs">All Time</Text>
+                    </Card>
+                  </View>
+                </View>
+              </Animated.View>
+
+              {/* Quick Actions */}
+              <Animated.View entering={FadeInUp.delay(500).duration(500)} className="mt-xl mb-xl">
+                <Text className="text-lg font-extrabold text-ruvo-ink mb-md">Quick Actions</Text>
+                <View className="flex-row gap-sm">
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('AvailableDeliveries')}
+                    className="flex-1"
+                  >
+                    <Card className="items-center py-lg">
+                      <Ionicons name="list-outline" size={24} color="#16A34A" />
+                      <Text className="text-xs font-bold text-ruvo-ink mt-sm">Available</Text>
+                    </Card>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('History')}
+                    className="flex-1"
+                  >
+                    <Card className="items-center py-lg">
+                      <Ionicons name="time-outline" size={24} color="#3B82F6" />
+                      <Text className="text-xs font-bold text-ruvo-ink mt-sm">History</Text>
+                    </Card>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Earnings')}
+                    className="flex-1"
+                  >
+                    <Card className="items-center py-lg">
+                      <Ionicons name="cash-outline" size={24} color="#F59E0B" />
+                      <Text className="text-xs font-bold text-ruvo-ink mt-sm">Earnings</Text>
+                    </Card>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Profile')}
+                    className="flex-1"
+                  >
+                    <Card className="items-center py-lg">
+                      <Ionicons name="person-outline" size={24} color="#8B5CF6" />
+                      <Text className="text-xs font-bold text-ruvo-ink mt-sm">Profile</Text>
+                    </Card>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Incoming Delivery Request Modal */}
       <Modal
         visible={Boolean(incomingRequest)}
         transparent
         animationType="slide"
         onRequestClose={() => {}}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            {/* Header Badge */}
-            <View style={styles.modalHeader}>
-              <View style={styles.modalHeaderBadge}>
-                <Ionicons name="notifications" size={18} color="#EA580C" />
-                <Text style={styles.modalHeaderBadgeText}>NEW DELIVERY REQUEST</Text>
-              </View>
-              <View style={styles.timerChip}>
-                <Ionicons name="time" size={16} color="#DC2626" />
-                <Text style={styles.timerText}>{requestSecondsLeft}s</Text>
+        <View className="flex-1 bg-warm-900/75 justify-end">
+          <Animated.View
+            entering={FadeInUp.duration(400)}
+            className="bg-ruvo-surface rounded-t-3xl p-xl"
+            style={{
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 16,
+              elevation: 10,
+            }}
+          >
+            {/* Header */}
+            <View className="flex-row items-center justify-between mb-lg">
+              <Badge variant="warning" size="lg">
+                <View className="flex-row items-center gap-xs">
+                  <Ionicons name="notifications" size={16} color="#EA580C" />
+                  <Text className="font-extrabold">NEW DELIVERY REQUEST</Text>
+                </View>
+              </Badge>
+              <View className="bg-red-100 px-md py-xs rounded-lg flex-row items-center gap-xs">
+                <Ionicons name="time" size={14} color="#DC2626" />
+                <Text className="text-red-600 font-extrabold text-sm">{requestSecondsLeft}s</Text>
               </View>
             </View>
 
-            {/* Order Summary */}
-            <Text style={styles.modalTitle}>Order #{incomingRequest?.orderId}</Text>
+            {/* Order Details */}
+            <Text className="text-2xl font-extrabold text-ruvo-ink mb-md">
+              Order #{incomingRequest?.orderId}
+            </Text>
 
             {incomingRequest?.distanceKm != null && (
-              <View style={styles.modalInfoRow}>
-                <Ionicons name="navigate" size={18} color={PRIMARY_EMERALD} />
-                <Text style={styles.modalInfoText}>
-                  Distance: {(Math.round(incomingRequest.distanceKm * 10) / 10).toFixed(1)} km to pickup
+              <View className="flex-row items-center gap-md bg-warm-100 rounded-lg p-md mb-sm">
+                <Ionicons name="navigate" size={18} color="#16A34A" />
+                <Text className="flex-1 text-sm font-semibold text-ruvo-ink">
+                  Distance: {(Math.round((incomingRequest.distanceKm ?? 0) * 10) / 10).toFixed(1)} km to pickup
                 </Text>
               </View>
             )}
 
-            {incomingRequest?.deliveryAddress ? (
-              <View style={styles.modalInfoRow}>
+            {incomingRequest?.deliveryAddress && (
+              <View className="flex-row items-center gap-md bg-warm-100 rounded-lg p-md mb-sm">
                 <Ionicons name="location" size={18} color="#3B82F6" />
-                <Text style={styles.modalInfoText} numberOfLines={2}>
+                <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={2}>
                   Drop: {incomingRequest.deliveryAddress}
                 </Text>
               </View>
-            ) : null}
+            )}
 
             {incomingRequest?.totalAmount != null && (
-              <View style={styles.modalInfoRow}>
+              <View className="flex-row items-center gap-md bg-warm-100 rounded-lg p-md mb-md">
                 <Ionicons name="cash" size={18} color="#16A34A" />
-                <Text style={styles.modalInfoText}>
+                <Text className="flex-1 text-sm font-semibold text-ruvo-ink">
                   Order Total: ₹{incomingRequest.totalAmount} ({incomingRequest.paymentMethod || 'COD'})
                 </Text>
               </View>
             )}
 
             {incomingRequest?.deliveryFee != null && (
-              <View style={styles.feeHighlightBox}>
-                <Text style={styles.feeHighlightLabel}>ESTIMATED EARNING</Text>
-                <Text style={styles.feeHighlightValue}>+₹{incomingRequest.deliveryFee}</Text>
+              <View className="bg-green-50 border-2 border-green-300 rounded-xl p-lg items-center mb-lg">
+                <Text className="text-xs font-extrabold text-green-700 uppercase tracking-wider">
+                  ESTIMATED EARNING
+                </Text>
+                <Text className="text-3xl font-extrabold text-ruvo-accent mt-xs">
+                  +₹{incomingRequest.deliveryFee}
+                </Text>
               </View>
             )}
 
             {/* Actions */}
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                disabled={actionBusy}
+            <View className="flex-row gap-md">
+              <Button
+                variant="outline"
                 onPress={() => incomingRequest && handleRejectRequest(incomingRequest.requestId)}
-                style={styles.declineBtn}
-              >
-                <Text style={styles.declineBtnText}>Decline</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 disabled={actionBusy}
-                onPress={() => incomingRequest && handleAcceptRequest(incomingRequest.requestId)}
-                style={styles.acceptBtn}
+                className="flex-1"
               >
-                {actionBusy ? (
-                  <ActivityIndicator color="#FFF" size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle" size={20} color="#FFF" />
-                    <Text style={styles.acceptBtnText}>ACCEPT RUN</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                Decline
+              </Button>
+
+              <Button
+                variant="primary"
+                onPress={() => incomingRequest && handleAcceptRequest(incomingRequest.requestId)}
+                loading={actionBusy}
+                icon="checkmark-circle"
+                className="flex-[2]"
+              >
+                ACCEPT RUN
+              </Button>
             </View>
-          </View>
+          </Animated.View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
-
-const MetricCard = ({ icon, label, value, color }: any) => (
-  <View style={styles.metricCard}>
-    <View style={[styles.metricIconCircle, { backgroundColor: color + '15' }]}>
-      <Ionicons name={icon} color={color} size={20} />
-    </View>
-    <Text style={styles.metricValue}>{value}</Text>
-    <Text style={styles.metricLabel}>{label}</Text>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  page: { flex: 1 },
-  content: { paddingBottom: 32 },
-
-  autoOfflineBanner: {
-    backgroundColor: '#1E293B',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  autoOfflineBannerText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-
-  hero: {
-    paddingTop: 54,
-    paddingBottom: 26,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  hello: { color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: '600' },
-  name: { color: '#FFFFFF', fontSize: 22, fontWeight: '800', marginTop: 2 },
-  vehicleSub: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 3, fontWeight: '500' },
-
-  statusBox: { alignItems: 'center' },
-  statusText: { fontWeight: '800', fontSize: 11, marginBottom: 4, letterSpacing: 0.5 },
-
-  dutyBtn: {
-    marginHorizontal: 16,
-    marginTop: -20,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  dutyBtnText: { fontSize: 16, fontWeight: '800', letterSpacing: 0.5 },
-
-  activeCard: {
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  activeIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeTitle: { fontSize: 15, fontWeight: '800', color: '#1C1410' },
-  activeSub: { color: '#5C4F42', fontSize: 12, marginTop: 2, lineHeight: 17 },
-  liveBadge: {
-    backgroundColor: '#FFEDD5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  liveBadgeText: { color: '#F97316', fontSize: 9, fontWeight: '800' },
-
-  sectionHeader: { marginHorizontal: 16, marginTop: 24, marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1C1410' },
-
-  grid: { paddingHorizontal: 16, flexDirection: 'row', gap: 10 },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFDF9',
-    borderWidth: 1,
-    borderColor: '#EDE4D8',
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'flex-start',
-    shadowColor: '#2E2313',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  metricIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  metricValue: { fontSize: 18, fontWeight: '800', color: '#1C1410' },
-  metricLabel: { color: '#5C4F42', fontSize: 11, marginTop: 2, fontWeight: '600' },
-
-  locationCard: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  locationTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#047857',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  locationSubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: TEXT_DARK,
-    marginTop: 2,
-  },
-  refreshLocBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-
-  /* ─── Incoming Request Modal Styles ─────────────────────────── */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalHeaderBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFEDD5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  modalHeaderBadgeText: {
-    color: '#C2410C',
-    fontWeight: '800',
-    fontSize: 11,
-    letterSpacing: 0.5,
-  },
-  timerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  timerText: {
-    color: '#DC2626',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: TEXT_DARK,
-    marginBottom: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-    backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 10,
-  },
-  modalInfoText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: TEXT_DARK,
-    flex: 1,
-  },
-  feeHighlightBox: {
-    backgroundColor: EMERALD_LIGHT,
-    borderColor: '#A7F3D0',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 14,
-    alignItems: 'center',
-    marginVertical: 14,
-  },
-  feeHighlightLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#047857',
-    letterSpacing: 0.5,
-  },
-  feeHighlightValue: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: PRIMARY_EMERALD,
-    marginTop: 2,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  declineBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  declineBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: TEXT_MUTED,
-  },
-  acceptBtn: {
-    flex: 2,
-    backgroundColor: PRIMARY_EMERALD,
-    paddingVertical: 14,
-    borderRadius: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    elevation: 3,
-  },
-  acceptBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-});
-

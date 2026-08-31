@@ -16,7 +16,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
         }
       },
       "permissions": [
@@ -30,7 +30,7 @@
     "ios": {
       "bundleIdentifier": "com.ruvo.mobile",
       "config": {
-        "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuVo uses your location to find nearby shops and fill delivery addresses.",

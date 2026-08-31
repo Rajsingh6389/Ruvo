@@ -12,10 +12,18 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#173F35"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+        }
       }
     },
     "ios": {
-      "bundleIdentifier": "com.ruvo.shop"
+      "bundleIdentifier": "com.ruvo.shop",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+      }
     },
     "splash": {
       "image": "./assets/images/splash.png",
@@ -23,12 +31,22 @@
       "backgroundColor": "#F7F8F3"
     },
     "extra": {
-      "apiBaseUrl": "https://api.ruvo.in"
+      "apiBaseUrl": "https://api.ruvo.in",
+      "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+    },
+    "web": {
+      "bundler": "metro"
     },
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow RuVo Shop to use your location to fill your shop address."
+        }
+      ]
     ]
   }
 }

@@ -53,8 +53,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Object>> conflict(DataIntegrityViolationException e) {
         log(e);
-        return body(HttpStatus.CONFLICT.value(),
-                "This mobile number is already linked to another Ruvo record. Contact support if you cannot sign in.");
+        String detailed = (e.getMessage() + " " + (e.getRootCause() != null ? e.getRootCause().getMessage() : "")).toLowerCase();
+        String userMsg;
+        
+        // ONLY treat as mobile clash if it's explicitly a duplicate entry exception
+        if (detailed.contains("duplicate entry") && (detailed.contains("mobile") || detailed.contains("phone"))) {
+            userMsg = "This mobile number is already linked to another Ruvo record. Contact support if you cannot sign in.";
+        } else {
+            // For other data issues (too long, missing non-null), bubble up the root cause gently
+            String causeInfo = e.getRootCause() != null ? e.getRootCause().getMessage() : e.getMessage();
+            userMsg = "A data conflict occurred. Please check your details. (" + causeInfo + ")";
+        }
+        return body(HttpStatus.CONFLICT.value(), userMsg);
     }
 
     @ExceptionHandler(Exception.class)

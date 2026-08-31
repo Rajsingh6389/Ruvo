@@ -1,7 +1,8 @@
 /**
- * Shared primitives used by every onboarding step in RuVo Shop.
- * Keeps individual step files lean and consistent.
- * Uses unified design system.
+ * OnboardingShared - RuvoShop (Redesigned)
+ * Premium shared primitives used by all onboarding steps.
+ * Replaces StyleSheet.create() with inline styles for consistency.
+ * All exported component signatures preserved for drop-in compatibility.
  */
 
 import React from 'react';
@@ -9,71 +10,70 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
+  TextInput,
+  TextInputProps,
+  ActivityIndicator,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RADIUS } from '../../theme/radius';
 
+// ── Constants ────────────────────────────────────────────────────────────────
+
 export const TOTAL_STEPS = 4;
 
 export const STEP_META = [
-  { icon: 'storefront-outline' as const, label: 'Details' },
-  { icon: 'card-outline' as const, label: 'Aadhaar' },
-  { icon: 'wallet-outline' as const, label: 'Bank' },
-  { icon: 'checkmark-circle-outline' as const, label: 'Done' },
+  { icon: 'storefront-outline'           as const, label: 'Details' },
+  { icon: 'card-outline'                 as const, label: 'Aadhaar' },
+  { icon: 'wallet-outline'               as const, label: 'Bank' },
+  { icon: 'checkmark-circle-outline'     as const, label: 'Done' },
 ];
 
-// ── Step Progress Bar ────────────────────────────────────────────────────────
+const ACCENT      = '#F5B700';
+const ACCENT_TEXT = '#231C10';
+const ACCENT_SOFT = '#FEF9E6';
+
+// ── Step Progress Bar ─────────────────────────────────────────────────────────
+
 interface StepBarProps {
   current: number;
   colors: any;
   typography: any;
 }
 
-export const StepBar: React.FC<StepBarProps> = ({ current, colors, typography }) => (
-  <View style={sb.wrap}>
+export const StepBar: React.FC<StepBarProps> = ({ current }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 14 }}>
     {STEP_META.map((step, i) => {
       const stepNum = i + 1;
-      const done = stepNum < current;
+      const done   = stepNum < current;
       const active = stepNum === current;
       return (
         <React.Fragment key={step.label}>
-          <View style={sb.stepCol}>
-            <View
-              style={[
-                sb.circle,
-                {
-                  backgroundColor: done || active ? colors.primary : colors.surfaceSunken,
-                  borderColor: done || active ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              {done ? (
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-              ) : (
-                <Ionicons
-                  name={step.icon}
-                  size={12}
-                  color={done || active ? '#FFFFFF' : colors.textHint}
-                />
-              )}
+          <View style={{ alignItems: 'center', flex: 1 }}>
+            <View style={{
+              width: 28, height: 28, borderRadius: 14,
+              borderWidth: 1.5,
+              backgroundColor: done ? ACCENT : active ? ACCENT : '#F0ECE7',
+              borderColor:     done ? ACCENT : active ? ACCENT : '#D1C7BA',
+              alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+            }}>
+              {done
+                ? <Ionicons name="checkmark" size={13} color={ACCENT_TEXT} />
+                : <Ionicons name={step.icon} size={12} color={active ? ACCENT_TEXT : '#A79E92'} />
+              }
             </View>
-            <Text
-              style={[
-                typography.caption,
-                sb.label,
-                {
-                  color: active ? colors.primary : done ? colors.textSecondary : colors.textHint,
-                },
-              ]}
-              numberOfLines={1}
-            >
+            <Text style={{
+              fontSize: 9, fontWeight: '600', textAlign: 'center', letterSpacing: 0.3,
+              color: active ? '#A07800' : done ? '#6B5E52' : '#A79E92',
+            }} numberOfLines={1}>
               {step.label}
             </Text>
           </View>
           {i < STEP_META.length - 1 && (
-            <View style={[sb.line, { backgroundColor: done ? colors.primary : colors.border }]} />
+            <View style={{
+              flex: 1, height: 1.5, marginTop: 13, borderRadius: 1,
+              backgroundColor: done ? ACCENT : '#E5DDD5',
+            }} />
           )}
         </React.Fragment>
       );
@@ -81,244 +81,255 @@ export const StepBar: React.FC<StepBarProps> = ({ current, colors, typography })
   </View>
 );
 
-const sb = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 12, paddingVertical: 14 },
-  stepCol: { alignItems: 'center', flex: 1 },
-  circle: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  line: { flex: 1, height: 1.5, marginTop: 13, borderRadius: 1 },
-  label: { fontSize: 9, fontWeight: '600', textAlign: 'center', letterSpacing: 0.3 },
-});
+// ── Screen Header ─────────────────────────────────────────────────────────────
 
-// ── Section Card ─────────────────────────────────────────────────────────────
+interface ScreenHeaderProps {
+  title: string;
+  subtitle?: string;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  onBack?: () => void;
+  colors?: any;
+  typography?: any;
+}
+
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, icon, onBack }) => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12 }}>
+    {onBack && (
+      <TouchableOpacity
+        onPress={onBack}
+        style={{ width: 36, height: 36, backgroundColor: '#F0ECE7', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Ionicons name="arrow-back" size={20} color="#231C10" />
+      </TouchableOpacity>
+    )}
+    {icon && (
+      <View style={{ width: 36, height: 36, backgroundColor: ACCENT_SOFT, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={18} color="#A07800" />
+      </View>
+    )}
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: '#231C10' }}>{title}</Text>
+      {subtitle && <Text style={{ fontSize: 12, color: '#6B5E52', marginTop: 2, fontWeight: '500' }}>{subtitle}</Text>}
+    </View>
+  </View>
+);
+
+// ── Section Card ──────────────────────────────────────────────────────────────
+
 interface SectionCardProps {
   children: React.ReactNode;
-  colors: any;
+  colors?: any;
   style?: any;
 }
-export const SectionCard: React.FC<SectionCardProps> = ({ children, colors, style }) => (
-  <View
-    style={[
-      sc.card,
-      { backgroundColor: colors.card, borderColor: colors.border },
-      style,
-    ]}
-  >
+
+export const SectionCard: React.FC<SectionCardProps> = ({ children, style }) => (
+  <View style={[{
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EDE4D8',
+    borderWidth: 1,
+    borderRadius: RADIUS.card,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#2E2313',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  }, style]}>
     {children}
   </View>
 );
-const sc = StyleSheet.create({
-  card: { borderRadius: RADIUS.card, borderWidth: 1, padding: 16, marginBottom: 12 },
-});
 
-// ── Field label ───────────────────────────────────────────────────────────────
+// ── Field Label ───────────────────────────────────────────────────────────────
+
 interface FieldLabelProps {
   text: string;
   required?: boolean;
-  colors: any;
-  typography: any;
+  colors?: any;
+  typography?: any;
 }
-export const FieldLabel: React.FC<FieldLabelProps> = ({ text, required, colors, typography }) => (
-  <Text style={[typography.label, fl.label, { color: colors.textSecondary }]}>
+
+export const FieldLabel: React.FC<FieldLabelProps> = ({ text, required }) => (
+  <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B5E52', marginBottom: 6, marginTop: 4, letterSpacing: 0.4 }}>
     {text}
-    {required ? <Text style={{ color: colors.error }}> *</Text> : null}
+    {required && <Text style={{ color: '#DC2626' }}> *</Text>}
   </Text>
 );
-const fl = StyleSheet.create({
-  label: { marginBottom: 6, marginTop: 4, fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
-});
 
-// ── Styled TextInput wrapper ──────────────────────────────────────────────────
-import { TextInput, TextInputProps } from 'react-native';
+// ── Styled Input ──────────────────────────────────────────────────────────────
+
 interface StyledInputProps extends TextInputProps {
   focused?: boolean;
-  colors: any;
-  typography: any;
+  colors?: any;
+  typography?: any;
   iconLeft?: React.ComponentProps<typeof Ionicons>['name'];
 }
+
 export const StyledInput: React.FC<StyledInputProps> = ({
-  focused,
-  colors,
-  typography,
-  iconLeft,
-  style,
-  ...rest
+  focused, iconLeft, style, ...rest
 }) => (
-  <View
-    style={[
-      inp.wrap,
-      {
-        backgroundColor: colors.surfaceSunken,
-        borderColor: focused ? colors.primary : colors.border,
-      },
-      focused && inp.focused,
-    ]}
-  >
+  <View style={{
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: focused ? 2 : 1.5,
+    borderRadius: RADIUS.input,
+    height: 48,
+    paddingHorizontal: 12,
+    gap: 10,
+    backgroundColor: '#FAF7F3',
+    borderColor: focused ? ACCENT : '#D1C7BA',
+  }}>
     {iconLeft && (
-      <Ionicons
-        name={iconLeft}
-        size={18}
-        color={focused ? colors.primary : colors.textHint}
-        style={inp.icon}
-      />
+      <Ionicons name={iconLeft} size={18} color={focused ? '#A07800' : '#A79E92'} />
     )}
     <TextInput
       {...rest}
-      placeholderTextColor={colors.placeholder}
-      style={[typography.body, inp.input, { color: colors.textPrimary }, style]}
+      placeholderTextColor="#C4B9B0"
+      style={[{ flex: 1, padding: 0, fontSize: 15, color: '#231C10', fontWeight: '500' }, style]}
     />
   </View>
 );
-const inp = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: RADIUS.input, height: 48, paddingHorizontal: 12, gap: 10 },
-  focused: { borderWidth: 2 },
-  icon: { flexShrink: 0 },
-  input: { flex: 1, padding: 0 },
-});
 
-// ── Primary CTA Button ────────────────────────────────────────────────────────
+// ── CTA Button ────────────────────────────────────────────────────────────────
+
 interface CtaBtnProps {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  colors: any;
-  typography: any;
+  colors?: any;
+  typography?: any;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
 }
-export const CtaBtn: React.FC<CtaBtnProps> = ({
-  label,
-  onPress,
-  loading,
-  disabled,
-  colors,
-  typography,
-  icon,
-}) => {
+
+export const CtaBtn: React.FC<CtaBtnProps> = ({ label, onPress, loading, disabled, icon }) => {
   const scale = React.useRef(new Animated.Value(1)).current;
-  const onIn = () =>
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
-  const onOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  const onIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const onOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 20 }).start();
+
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
-        style={[
-          btn.btn,
-          {
-            backgroundColor: disabled || loading ? colors.disabled : colors.primary,
-            borderRadius: RADIUS.button,
-          },
-        ]}
         onPress={onPress}
         onPressIn={onIn}
         onPressOut={onOut}
-        disabled={disabled || loading}
+        disabled={loading || disabled}
         activeOpacity={1}
+        style={{
+          backgroundColor: ACCENT,
+          borderRadius: RADIUS.button,
+          paddingVertical: 15,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          opacity: disabled ? 0.6 : 1,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 4,
+        }}
       >
         {loading ? (
-          <Ionicons name="sync" size={20} color="#FFFFFF" />
+          <ActivityIndicator color={ACCENT_TEXT} />
         ) : (
           <>
-            <Text style={[typography.button, { color: '#FFFFFF' }]}>{label}</Text>
-            {icon && <Ionicons name={icon} size={18} color="#FFFFFF" />}
+            <Text style={{ color: ACCENT_TEXT, fontSize: 16, fontWeight: '800', letterSpacing: 0.3 }}>
+              {label}
+            </Text>
+            {icon && <Ionicons name={icon} size={18} color={ACCENT_TEXT} />}
           </>
         )}
       </TouchableOpacity>
     </Animated.View>
   );
 };
-const btn = StyleSheet.create({
-  btn: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-});
 
-// ── Info banner ───────────────────────────────────────────────────────────────
-interface InfoBoxProps {
-  text: string;
-  colors: any;
-  typography: any;
-  variant?: 'info' | 'success' | 'warning';
-}
-export const InfoBox: React.FC<InfoBoxProps> = ({ text, colors, typography, variant = 'info' }) => {
-  const variants = {
-    info: { bg: colors.infoSoft, fg: colors.info, icon: 'information-circle-outline' as const },
-    success: { bg: colors.successSoft, fg: colors.success, icon: 'checkmark-circle-outline' as const },
-    warning: { bg: colors.warningSoft, fg: colors.warning, icon: 'warning-outline' as const },
-  };
-  const v = variants[variant];
-  return (
-    <View style={[ib.box, { backgroundColor: v.bg, borderRadius: RADIUS.sm }]}>
-      <Ionicons name={v.icon} size={16} color={v.fg} />
-      <Text style={[typography.caption, { color: v.fg, flex: 1, lineHeight: 18 }]}>{text}</Text>
-    </View>
-  );
+// ── Error Message Formatter ───────────────────────────────────────────────────
+
+export const formatErrorMessage = (err: any): string => {
+  if (!err) return '';
+  let str = '';
+  if (typeof err === 'string') {
+    str = err.trim();
+  } else if (err.message && typeof err.message === 'string') {
+    str = err.message.trim();
+  } else if (err.error && typeof err.error === 'string') {
+    str = err.error.trim();
+  } else {
+    try {
+      str = JSON.stringify(err);
+    } catch {
+      return 'An unexpected error occurred.';
+    }
+  }
+
+  // If str is a JSON object string like {"success":false,"message":"..."}, extract message
+  if (str.startsWith('{') && str.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(str);
+      if (parsed?.message && typeof parsed.message === 'string') {
+        return parsed.message;
+      }
+      if (parsed?.error && typeof parsed.error === 'string') {
+        return parsed.error;
+      }
+    } catch {
+      /* Fallback to raw string if JSON parsing fails */
+    }
+  }
+  return str;
 };
-const ib = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, marginBottom: 12 },
-});
 
-// ── Error box ─────────────────────────────────────────────────────────────────
+// ── Error Box ─────────────────────────────────────────────────────────────────
+
 interface ErrorBoxProps {
-  error: string | null;
-  colors: any;
-  typography: any;
+  message?: string | null;
+  error?: string | null;
+  colors?: any;
+  typography?: any;
 }
-export const ErrorBox: React.FC<ErrorBoxProps> = ({ error, colors, typography }) => {
-  if (!error) return null;
+
+export const ErrorBox: React.FC<ErrorBoxProps> = ({ message, error }) => {
+  const rawContent = message ?? error;
+  const content = formatErrorMessage(rawContent);
+  if (!content) return null;
   return (
-    <View style={[eb.box, { backgroundColor: colors.errorSoft, borderRadius: RADIUS.sm }]}>
-      <Ionicons name="alert-circle" size={15} color={colors.error} />
-      <Text style={[typography.caption, { color: colors.error, flex: 1 }]}>{error}</Text>
+    <View style={{
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+      backgroundColor: '#FEE2E2', borderRadius: 10,
+      padding: 12, marginVertical: 8,
+      borderWidth: 1, borderColor: '#FCA5A5',
+    }}>
+      <Ionicons name="alert-circle" size={16} color="#DC2626" style={{ marginTop: 1 }} />
+      <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontWeight: '600', lineHeight: 19 }}>
+        {content}
+      </Text>
     </View>
   );
 };
-const eb = StyleSheet.create({
-  box: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginBottom: 14 },
-});
 
-// ── Screen header ─────────────────────────────────────────────────────────────
-interface ScreenHeaderProps {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string;
-  subtitle: string;
-  colors: any;
-  typography: any;
-  onBack?: () => void;
+// ── Info Box ──────────────────────────────────────────────────────────────────
+
+interface InfoBoxProps {
+  message?: string;
+  text?: string;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+  variant?: 'info' | 'success' | 'warning';
+  colors?: any;
+  typography?: any;
 }
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
-  icon,
-  title,
-  subtitle,
-  colors,
-  typography,
-  onBack,
-}) => (
-  <View style={hdr.wrap}>
-    {onBack && (
-      <TouchableOpacity
-        onPress={onBack}
-        style={[hdr.backBtn, { backgroundColor: colors.surfaceSunken, borderRadius: RADIUS.sm }]}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-      </TouchableOpacity>
-    )}
-    <View style={[hdr.iconBox, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.md }]}>
-      <Ionicons name={icon} size={28} color={colors.primary} />
-    </View>
-    <Text style={[typography.headingL, hdr.title, { color: colors.textPrimary }]}>{title}</Text>
-    <Text style={[typography.body, hdr.subtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+
+export const InfoBox: React.FC<InfoBoxProps> = ({ message, text, icon = 'information-circle-outline' }) => (
+  <View style={{
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    backgroundColor: ACCENT_SOFT, borderRadius: 10,
+    padding: 12, marginVertical: 8,
+    borderWidth: 1, borderColor: '#FDE68A',
+  }}>
+    <Ionicons name={icon} size={16} color="#A07800" style={{ marginTop: 1 }} />
+    <Text style={{ flex: 1, color: '#78350F', fontSize: 13, fontWeight: '500', lineHeight: 19 }}>
+      {message ?? text}
+    </Text>
   </View>
 );
-const hdr = StyleSheet.create({
-  wrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  iconBox: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { marginBottom: 4 },
-  subtitle: { lineHeight: 20, marginBottom: 16 },
-});

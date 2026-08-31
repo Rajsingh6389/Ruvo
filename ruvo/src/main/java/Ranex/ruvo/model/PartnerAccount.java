@@ -22,7 +22,7 @@ public class PartnerAccount {
     private Long authIdentityId;
 
     /** Internal security principal used only by the partner domain. */
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "security_user_id", nullable = false, unique = true)
     private User securityUser;
 

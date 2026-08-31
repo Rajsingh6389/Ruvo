@@ -33,7 +33,7 @@ public class IdentityRoleProvisioningService {
         String mobile = identity.getMobileNumber();
 
         PartnerAccount account = accounts.findByAuthIdentityId(identity.getId())
-                .or(() -> accounts.findByMobileNumber(mobile))
+                .or(() -> accounts.findByMobileNumberFlexible(mobile))
                 .orElse(null);
 
         if (account == null) {
@@ -65,8 +65,8 @@ public class IdentityRoleProvisioningService {
         if (profile.getAuthIdentityId() == null) { profile.setAuthIdentityId(identity.getId()); profiles.save(profile); }
 
         DeliveryPartner partner = partners.findByAuthIdentityId(identity.getId())
-                .or(() -> partners.findByPhone(mobile))
-                .or(() -> partners.findByUserId(securityUser.getMobileNumber()))
+                .or(() -> partners.findByPhoneFlexible(mobile))
+                .or(() -> partners.findByUserIdFlexible(securityUser.getMobileNumber()))
                 .orElseGet(() -> partners.save(DeliveryPartner.builder()
                         .userId(securityUser.getMobileNumber()).authIdentityId(identity.getId())
                         .name(securityUser.getName()).phone(mobile)

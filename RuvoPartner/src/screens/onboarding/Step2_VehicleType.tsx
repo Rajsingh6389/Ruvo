@@ -54,9 +54,6 @@ export const Step2_VehicleType = () => {
   });
 
   const handleNext = async () => {
-    if (!vehicleNumber.trim()) { setError('Registration number is required.'); return; }
-    if (!vehicleModel.trim())  { setError('Vehicle model is required.');  return; }
-    if (!vehicleCapacity.trim()) { setError('Capacity is required.'); return; }
     if (!token) { setError('Session expired.'); return; }
     setError(null);
     setLoading(true);
@@ -66,9 +63,9 @@ export const Step2_VehicleType = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body   : JSON.stringify({
           vehicleType,
-          vehicleNumber   : vehicleNumber.trim().toUpperCase(),
-          vehicleModel    : vehicleModel.trim(),
-          vehicleCapacity : vehicleCapacity.trim(),
+          vehicleNumber   : 'NOT_REQUIRED',
+          vehicleModel    : 'Standard',
+          vehicleCapacity : '50',
           fuelType,
         }),
       });
@@ -88,15 +85,15 @@ export const Step2_VehicleType = () => {
         <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <ScreenHeader
             icon="bicycle-outline"
-            title="Vehicle Details"
-            subtitle="Register the vehicle you'll use for RuVo deliveries."
+            title="Vehicle Type"
+            subtitle="Select the vehicle type you will use for RuVo deliveries."
             colors={colors} typography={typography}
             onBack={() => navigation.goBack()}
           />
 
           {/* Vehicle type chips */}
           <SectionCard colors={colors}>
-            <Text style={[typography.headingS, { color: colors.textPrimary, marginBottom: 12 }]}>Vehicle Type</Text>
+            <Text style={[typography.headingS, { color: colors.textPrimary, marginBottom: 12 }]}>Select Vehicle</Text>
             <View style={s.typeRow}>
               {VEHICLE_OPTIONS.map(opt => {
                 const active = vehicleType === opt.type;
@@ -124,63 +121,6 @@ export const Step2_VehicleType = () => {
                         <Ionicons name="checkmark" size={9} color="#FFFFFF" />
                       </View>
                     )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </SectionCard>
-
-          {/* Vehicle details */}
-          <SectionCard colors={colors}>
-            <FieldLabel text="Registration Number" required colors={colors} typography={typography} />
-            <StyledInput
-              {...fld('reg')} iconLeft="document-text-outline"
-              placeholder="DL 3C AB 1234"
-              value={vehicleNumber}
-              onChangeText={t => { setVehicleNumber(t); setError(null); }}
-              autoCapitalize="characters"
-              style={{ marginBottom: 12 }}
-            />
-
-            <FieldLabel text="Vehicle Model / Name" required colors={colors} typography={typography} />
-            <StyledInput
-              {...fld('model')} iconLeft="car-outline"
-              placeholder="Hero Splendor / Honda Activa"
-              value={vehicleModel}
-              onChangeText={t => { setVehicleModel(t); setError(null); }}
-              style={{ marginBottom: 12 }}
-            />
-
-            <FieldLabel text="Carrying Capacity (kg)" required colors={colors} typography={typography} />
-            <StyledInput
-              {...fld('cap')} iconLeft="speedometer-outline"
-              placeholder="e.g. 50"
-              value={vehicleCapacity}
-              onChangeText={t => { setVehicleCapacity(t); setError(null); }}
-              keyboardType="numeric"
-              style={{ marginBottom: 12 }}
-            />
-
-            <FieldLabel text="Fuel Type" colors={colors} typography={typography} />
-            <View style={s.fuelRow}>
-              {FUEL_OPTIONS.map(fuel => {
-                const active = fuelType === fuel;
-                return (
-                  <TouchableOpacity
-                    key={fuel}
-                    style={[
-                      s.fuelBtn,
-                      {
-                        backgroundColor : active ? colors.primary      : colors.surfaceSunken,
-                        borderColor     : active ? colors.primary      : colors.border,
-                        borderRadius    : RADIUS.sm,
-                      },
-                    ]}
-                    onPress={() => setFuelType(fuel)}
-                  >
-                    <Text style={[typography.caption, { color: active ? '#FFFFFF' : colors.textPrimary, fontWeight: '700' }]}>
-                      {fuel}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}

@@ -1,77 +1,62 @@
 /**
- * Onboarding Step 7 — Submitted: Awaiting Admin Approval
- * Partner registration is pending admin review.
- * Polls /api/partners/me every 10s to detect approval.
+ * Step7_Success - RuvoPartner Onboarding (Redesigned)
+ * Awaiting admin approval screen with premium UI.
+ * All polling, approval check, and navigation logic preserved.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
-  ScrollView,
-  StyleSheet,
   Text,
+  ScrollView,
+  TouchableOpacity,
   Animated,
   Easing,
-  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { RADIUS } from '../../theme/radius';
 import { API_BASE_URL } from '../../config/api';
 import { CtaBtn, InfoBox } from './OnboardingShared';
+
+const STEPS_SUMMARY = [
+  { icon: 'person-outline'           as const, label: 'Basic Details Submitted' },
+  { icon: 'car-outline'              as const, label: 'Vehicle Type Selected' },
+  { icon: 'card-outline'             as const, label: 'Aadhaar Verified' },
+  { icon: 'wallet-outline'           as const, label: 'Bank Account Added' },
+  { icon: 'storefront-outline'       as const, label: 'Shops Selected' },
+  { icon: 'shield-checkmark-outline' as const, label: 'Admin Approval' },
+];
 
 export const Step7_Success = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { token, user } = useAuth();
-  const { colors, typography, spacing } = useTheme();
+  const { token } = useAuth();
 
   const selectedShopCount = route.params?.selectedShopCount || 0;
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [checking, setChecking] = useState(false);
 
-  // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const spinAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const spinAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.15,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 900,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 900, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ])
     ).start();
-
     Animated.loop(
-      Animated.timing(spinAnim, {
-        toValue: 1,
-        duration: 4000,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
+      Animated.timing(spinAnim, { toValue: 1, duration: 4000, easing: Easing.linear, useNativeDriver: true })
     ).start();
   }, []);
 
-  const spin = spinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const spin = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   const checkApproval = useCallback(async () => {
     if (!token) return;
@@ -83,16 +68,12 @@ export const Step7_Success = () => {
       if (!res.ok) return;
       const data = await res.json();
       const approved =
-        data.status === 'APPROVED' ||
-        data.approved === true ||
-        data.isApproved === true ||
-        data.verificationStatus === 'APPROVED';
+        data.status === 'APPROVED' || data.approved === true ||
+        data.isApproved === true || data.verificationStatus === 'APPROVED';
       const rejected = data.status === 'REJECTED';
       if (approved) setApprovalStatus('approved');
       else if (rejected) setApprovalStatus('rejected');
-    } catch {
-      /* silently ignore network errors */
-    } finally {
+    } catch {} finally {
       setChecking(false);
     }
   }, [token]);
@@ -104,317 +85,121 @@ export const Step7_Success = () => {
   }, [checkApproval]);
 
   const handleGoToDashboard = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   };
-
-  const STEPS = [
-    { icon: 'person-outline' as const, label: 'Basic Details Submitted', done: true },
-    {
-      icon: 'car-outline' as const,
-      label: 'Vehicle Type Selected',
-      done: true,
-    },
-    { icon: 'card-outline' as const, label: 'Aadhaar Verified', done: true },
-    {
-      icon: 'wallet-outline' as const,
-      label: 'Bank Account Added',
-      done: true,
-    },
-    { icon: 'storefront-outline' as const, label: 'Shops Selected', done: true },
-    {
-      icon: 'shield-checkmark-outline' as const,
-      label: 'Admin Approval',
-      done: approvalStatus === 'approved',
-    },
-  ];
 
   const isApproved = approvalStatus === 'approved';
   const isRejected = approvalStatus === 'rejected';
 
+  const statusColor = isApproved ? '#16A34A' : isRejected ? '#DC2626' : '#F59E0B';
+  const statusBg    = isApproved ? '#DCFCE7' : isRejected ? '#FEE2E2' : '#FEF3C7';
+  const statusIcon  = isApproved ? 'checkmark-circle' as const : isRejected ? 'close-circle' as const : 'time' as const;
+  const statusTitle = isApproved ? 'Account Approved!' : isRejected ? 'Application Rejected' : 'Awaiting Approval';
+  const statusMsg   = isApproved
+    ? 'Your delivery partner account is ready. Start accepting runs and earn!'
+    : isRejected
+    ? 'Your application was not approved. Please contact support for assistance.'
+    : 'Your registration has been submitted. Our team will review it shortly.';
+
   return (
-    <SafeAreaView
-      style={[s.safe, { backgroundColor: colors.background }]}
-      edges={['top', 'bottom']}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FBF8F2' }} edges={['top', 'bottom']}>
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={{ opacity: fadeAnim }}>
           {/* Status Icon */}
-          <View style={s.iconCentre}>
-            <Animated.View
-              style={[
-                s.pulseRing,
-                {
-                  borderColor: isApproved
-                    ? colors.success
-                    : isRejected
-                    ? colors.error
-                    : colors.warning,
-                  transform: [{ scale: pulseAnim }],
-                },
-              ]}
-            />
-            <View
-              style={[
-                s.iconBg,
-                {
-                  backgroundColor: isApproved
-                    ? colors.successSoft
-                    : isRejected
-                    ? colors.errorSoft
-                    : colors.warningSoft,
-                },
-              ]}
-            >
-              {isApproved ? (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={68}
-                  color={colors.success}
-                />
-              ) : isRejected ? (
-                <Ionicons name="close-circle" size={68} color={colors.error} />
-              ) : (
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Animated.View style={{
+              transform: [{ scale: pulseAnim }],
+              width: 96, height: 96, borderRadius: 48,
+              borderWidth: 2.5, borderColor: statusColor,
+              backgroundColor: statusBg,
+              alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}>
+              {!isApproved && !isRejected ? (
                 <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                  <Ionicons name="time-outline" size={68} color={colors.warning} />
+                  <Ionicons name="sync" size={42} color={statusColor} />
                 </Animated.View>
+              ) : (
+                <Ionicons name={statusIcon} size={48} color={statusColor} />
               )}
-            </View>
-          </View>
+            </Animated.View>
 
-          {/* Heading */}
-          <Text
-            style={[
-              typography.headingXL,
-              { color: colors.textPrimary, textAlign: 'center', marginBottom: 8 },
-            ]}
-          >
-            {isApproved
-              ? 'Profile Approved! 🎉'
-              : isRejected
-              ? 'Application Rejected'
-              : 'Submitted — Under Review'}
-          </Text>
-          <Text
-            style={[
-              typography.body,
-              {
-                color: colors.textSecondary,
-                textAlign: 'center',
-                lineHeight: 22,
-                marginBottom: 28,
-              },
-            ]}
-          >
-            {isApproved
-              ? `Your RuVo Partner profile is approved! You can now receive delivery requests from ${selectedShopCount} shop${selectedShopCount !== 1 ? 's' : ''}.`
-              : isRejected
-              ? `Your application was not approved. Contact support@ruvo.in for help.`
-              : `Your profile has been submitted. Our team reviews applications within 24 hours. You'll be notified once approved.`}
-          </Text>
-
-          {/* Progress Checklist */}
-          <View
-            style={[
-              s.progressCard,
-              { backgroundColor: colors.surfaceSunken, borderRadius: RADIUS.lg },
-            ]}
-          >
-            <Text
-              style={[
-                typography.headingS,
-                { color: colors.textPrimary, marginBottom: 12 },
-              ]}
-            >
-              Registration Progress
+            <Text style={{ fontSize: 26, fontWeight: '800', color: '#231C10', textAlign: 'center', marginBottom: 8 }}>
+              {statusTitle}
             </Text>
-            {STEPS.map((step, i) => (
-              <View
-                key={i}
-                style={[
-                  s.stepRow,
-                  i < STEPS.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    s.stepDot,
-                    {
-                      backgroundColor: step.done ? colors.successSoft : colors.surfaceSunken,
-                      borderColor: step.done ? colors.success : colors.border,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={step.done ? 'checkmark' : step.icon}
-                    size={15}
-                    color={step.done ? colors.success : colors.textHint}
-                  />
-                </View>
-                <Text
-                  style={[
-                    typography.body,
-                    {
-                      color: step.done ? colors.textPrimary : colors.textSecondary,
-                      flex: 1,
-                    },
-                  ]}
-                >
-                  {step.label}
-                </Text>
-                {i === STEPS.length - 1 && approvalStatus === 'pending' && (
-                  <View style={[s.pendingChip, { backgroundColor: colors.warningSoft }]}>
-                    <Text style={{ color: colors.warning, fontSize: 10, fontWeight: '700' }}>
-                      PENDING
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ))}
+            <Text style={{ fontSize: 15, color: '#6B5E52', textAlign: 'center', lineHeight: 22, maxWidth: 300 }}>
+              {statusMsg}
+            </Text>
           </View>
 
-          {approvalStatus === 'pending' && (
+          {/* Completion Summary */}
+          <View style={{
+            backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1,
+            borderColor: '#EDE4D8', padding: 16, marginBottom: 16,
+            shadowColor: '#2E2313', shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+          }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#A79E92', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>
+              Registration Summary
+            </Text>
+            {STEPS_SUMMARY.map((step, idx) => {
+              const isLast = idx === STEPS_SUMMARY.length - 1;
+              const stepDone = isLast ? isApproved : true;
+              return (
+                <View key={step.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: idx < STEPS_SUMMARY.length - 1 ? 12 : 0 }}>
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16,
+                    backgroundColor: stepDone ? '#DCFCE7' : '#FEF3C7',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Ionicons name={stepDone ? 'checkmark' : 'time'} size={16} color={stepDone ? '#16A34A' : '#D97706'} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#231C10' }}>{step.label}</Text>
+                  {isLast && !isApproved && checking && (
+                    <Text style={{ fontSize: 11, color: '#D97706', fontWeight: '600' }}>Checking…</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Info / Status Message */}
+          {!isApproved && !isRejected && (
             <InfoBox
-              text="We check for approval automatically every 10 seconds. You may close this screen — your application is saved."
-              variant="info"
-              colors={colors}
-              typography={typography}
+              message={`Registration submitted${selectedShopCount > 0 ? ` with ${selectedShopCount} shop(s) selected` : ''}. Auto-checking approval every 10 seconds.`}
+              icon="information-circle-outline"
             />
           )}
-          {isRejected && (
-            <InfoBox
-              text="Contact support@ruvo.in with your registered phone number to appeal or re-apply."
-              variant="warning"
-              colors={colors}
-              typography={typography}
+
+          {/* Refresh button */}
+          {!isApproved && (
+            <TouchableOpacity
+              onPress={checkApproval}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                gap: 8, paddingVertical: 12, marginBottom: 16,
+              }}
+            >
+              <Ionicons name="refresh" size={16} color="#16A34A" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#16A34A' }}>
+                {checking ? 'Checking…' : 'Check approval status'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Dashboard Button */}
+          {isApproved && (
+            <CtaBtn
+              label="Go to Dashboard"
+              onPress={handleGoToDashboard}
+              icon="arrow-forward"
             />
           )}
         </Animated.View>
-        <View style={{ height: 24 }} />
       </ScrollView>
-
-      {/* Bottom CTA */}
-      <View
-        style={[
-          s.ctaSection,
-          {
-            backgroundColor: colors.background,
-            paddingHorizontal: spacing.gutter,
-          },
-        ]}
-      >
-        {isApproved ? (
-          <CtaBtn
-            label="Go to Dashboard"
-            onPress={handleGoToDashboard}
-            colors={colors}
-            typography={typography}
-            icon="home-outline"
-          />
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[
-                s.refreshBtn,
-                { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm },
-              ]}
-              onPress={checkApproval}
-              disabled={checking}
-            >
-              <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-              <Text
-                style={[
-                  typography.body,
-                  { color: colors.primary, fontWeight: '700', marginLeft: 8 },
-                ]}
-              >
-                {checking ? 'Checking…' : 'Check Approval Status'}
-              </Text>
-            </TouchableOpacity>
-            <Text
-              style={[
-                typography.caption,
-                { color: colors.textSecondary, textAlign: 'center', marginTop: 6 },
-              ]}
-            >
-              Auto-refreshes every 10 seconds
-            </Text>
-          </>
-        )}
-        <View style={{ height: 20 }} />
-      </View>
     </SafeAreaView>
   );
 };
-
-const s = StyleSheet.create({
-  safe: { flex: 1 },
-  scroll: {
-    paddingTop: 24,
-    paddingBottom: 24,
-    flexGrow: 1,
-  },
-  iconCentre: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 2,
-    opacity: 0.35,
-  },
-  iconBg: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressCard: {
-    padding: 16,
-    marginBottom: 16,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 12,
-  },
-  stepDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  pendingChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  ctaSection: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    paddingTop: 12,
-  },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-  },
-});

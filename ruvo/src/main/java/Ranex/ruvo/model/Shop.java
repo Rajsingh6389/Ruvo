@@ -95,4 +95,12 @@ public class Shop {
     @Builder.Default
     @Column(name = "cod_blocked", nullable = false)
     private Boolean codBlocked = false;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.approved == null) this.approved = false;
+        if (this.active == null) this.active = true;
+        if (this.settlementBlocked == null) this.settlementBlocked = false;
+        if (this.codBlocked == null) this.codBlocked = false;
+    }
 }

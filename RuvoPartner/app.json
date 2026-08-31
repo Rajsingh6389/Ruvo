@@ -10,6 +10,9 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.ruvo.partner",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuvoPartner needs your location to track deliveries and update your availability.",
         "NSCameraUsageDescription": "RuvoPartner needs camera access for verification documents.",
@@ -21,11 +24,16 @@
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#173F35"
       },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+        }
+      },
       "predictiveBackGestureEnabled": false,
       "package": "com.ruvo.partner"
     },
     "web": {
-      "output": "single",
+      "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
     "splash": {
@@ -34,7 +42,8 @@
       "backgroundColor": "#F7F8F3"
     },
     "extra": {
-      "apiBaseUrl": "https://api.ruvo.in"
+      "apiBaseUrl": "https://api.ruvo.in",
+      "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
     },
     "plugins": [
       "expo-font",

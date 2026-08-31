@@ -1,43 +1,38 @@
+/**
+ * EditProductScreen - RuvoShop (Redesigned)
+ * Full NativeWind + Reanimated premium UI.
+ * All image picking, validation, and update logic preserved.
+ */
+
 import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Switch,
-  StatusBar,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
 import { useAuth } from '../../context/AuthContext';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
 import { updateProduct, updateProductWithImage, getProductById } from '../../services/productService';
 import type { Product } from '../../services/productService';
-
-const PRIMARY = '#2E7D32';
-const PRIMARY_LIGHT = '#E8F5E9';
-const BG = '#F8F1E7'; // warm ivory canvas
-const TEXT = '#1A1A1A';
-const SUBTEXT = '#6B7280';
-const BORDER = '#E0E0E0';
-const ERROR = '#E53935';
-const CARD = '#FFFFFF';
+import { Button } from '../../components/ui/Button';
 
 interface FormErrors {
-  name?: string;
-  category?: string;
-  actualPrice?: string;
-  sellingPrice?: string;
-  stockQuantity?: string;
+  name?: string; category?: string; actualPrice?: string;
+  sellingPrice?: string; stockQuantity?: string;
 }
 
 export const EditProductScreen = () => {
@@ -47,7 +42,6 @@ export const EditProductScreen = () => {
   const initialProduct: Product | undefined = route.params?.product;
   const targetProductId: number | undefined = initialProduct?.id ?? route.params?.productId;
 
-  // ── Form State (pre-filled) ──
   const [name, setName] = useState(initialProduct?.name ?? '');
   const [category, setCategory] = useState(initialProduct?.category ?? '');
   const [brandName, setBrandName] = useState(initialProduct?.brandName ?? '');
@@ -57,18 +51,14 @@ export const EditProductScreen = () => {
   const [stockQuantity, setStockQuantity] = useState(initialProduct?.stockQuantity?.toString() ?? '');
   const [unit, setUnit] = useState(initialProduct?.unit ?? '');
   const [isAvailable, setIsAvailable] = useState(initialProduct?.isAvailable ?? true);
-
-  // Image state
-  const [imageUri, setImageUri] = useState<string | null>(null); // null = no new image
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(initialProduct?.imageUrl ?? null);
   const [imageType, setImageType] = useState('image/jpeg');
   const [imageName, setImageName] = useState('product.jpg');
-
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [fetchingProduct, setFetchingProduct] = useState(!initialProduct && !!targetProductId);
 
-  // Load product if missing from route params
   React.useEffect(() => {
     if (!initialProduct && targetProductId && token) {
       setFetchingProduct(true);
@@ -87,14 +77,11 @@ export const EditProductScreen = () => {
             setExistingImageUrl(p.imageUrl ?? null);
           }
         })
-        .catch(err => {
-          Alert.alert('Error', err.message || 'Failed to load product details');
-        })
+        .catch(err => Alert.alert('Error', err.message || 'Failed to load product details'))
         .finally(() => setFetchingProduct(false));
     }
   }, [initialProduct, targetProductId, token]);
 
-  // ── Auto-calculated discount ──
   const computedDiscount = useCallback((): string | null => {
     const ap = parseFloat(actualPrice);
     const sp = parseFloat(sellingPrice);
@@ -105,7 +92,6 @@ export const EditProductScreen = () => {
     return null;
   }, [actualPrice, sellingPrice]);
 
-  // ── Image Picker ──
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -113,48 +99,33 @@ export const EditProductScreen = () => {
         quality: 0.8,
         allowsEditing: true,
       });
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets?.length > 0) {
         const asset = result.assets[0];
         setImageUri(asset.uri ?? null);
         setImageType(asset.mimeType ?? 'image/jpeg');
         setImageName(asset.fileName ?? 'product.jpg');
       }
-    } catch (e) {
-      console.warn('Image pick cancelled or failed', e);
-    }
+    } catch {}
   };
 
-  // ── Validation ──
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
     if (!name.trim()) newErrors.name = 'Product name is required';
     if (!category) newErrors.category = 'Category is required';
     const ap = parseFloat(actualPrice);
     const sp = parseFloat(sellingPrice);
-    if (!actualPrice.trim() || isNaN(ap) || ap <= 0) {
-      newErrors.actualPrice = 'Enter a valid actual price';
-    }
-    if (!sellingPrice.trim() || isNaN(sp) || sp < 0) {
-      newErrors.sellingPrice = 'Enter a valid selling price';
-    } else if (ap && sp > ap) {
-      newErrors.sellingPrice = 'Selling price cannot be greater than actual price';
-    }
+    if (!actualPrice.trim() || isNaN(ap) || ap <= 0) newErrors.actualPrice = 'Enter a valid actual price';
+    if (!sellingPrice.trim() || isNaN(sp) || sp < 0) newErrors.sellingPrice = 'Enter a valid selling price';
+    else if (ap && sp > ap) newErrors.sellingPrice = 'Selling price cannot exceed actual price';
     const sq = parseInt(stockQuantity, 10);
-    if (!stockQuantity.trim() || isNaN(sq) || sq < 0) {
-      newErrors.stockQuantity = 'Enter a valid stock quantity (0 or more)';
-    }
+    if (!stockQuantity.trim() || isNaN(sq) || sq < 0) newErrors.stockQuantity = 'Enter a valid stock quantity';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── Submit ──
   const handleSubmit = async () => {
     if (!validate()) return;
-    if (!token || !targetProductId) {
-      Alert.alert('Error', 'Product ID missing or authentication error');
-      return;
-    }
-
+    if (!token || !targetProductId) { Alert.alert('Error', 'Product ID missing or authentication error'); return; }
     setLoading(true);
     try {
       const ap = parseFloat(actualPrice);
@@ -163,50 +134,22 @@ export const EditProductScreen = () => {
       const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100 * 100) / 100 : 0;
 
       if (imageUri) {
-        // New image selected — use multipart
         const formData = new FormData();
-        const productData = JSON.stringify({
-          name: name.trim(),
-          category,
-          brandName: brandName.trim() || null,
-          description: description.trim() || null,
-          actualPrice: ap,
-          sellingPrice: sp,
-          discount: disc,
-          stockQuantity: sq,
-          unit: unit.trim() || null,
-          isAvailable,
-        });
-        formData.append('product', productData);
-        (formData as any).append('image', {
-          uri: imageUri,
-          type: imageType,
-          name: imageName,
-        });
+        formData.append('product', JSON.stringify({
+          name: name.trim(), category, brandName: brandName.trim() || null,
+          description: description.trim() || null, actualPrice: ap, sellingPrice: sp,
+          discount: disc, stockQuantity: sq, unit: unit.trim() || null, isAvailable,
+        }));
+        (formData as any).append('image', { uri: imageUri, type: imageType, name: imageName });
         await updateProductWithImage(targetProductId, formData, token);
       } else {
-        // No new image — JSON update
-        await updateProduct(
-          targetProductId,
-          {
-            name: name.trim(),
-            category,
-            brandName: brandName.trim() || undefined,
-            description: description.trim() || undefined,
-            actualPrice: ap,
-            sellingPrice: sp,
-            discount: disc,
-            stockQuantity: sq,
-            unit: unit.trim() || undefined,
-            isAvailable,
-          },
-          token,
-        );
+        await updateProduct(targetProductId, {
+          name: name.trim(), category, brandName: brandName.trim() || undefined,
+          description: description.trim() || undefined, actualPrice: ap, sellingPrice: sp,
+          discount: disc, stockQuantity: sq, unit: unit.trim() || undefined, isAvailable,
+        }, token);
       }
-
-      Alert.alert('Success', 'Product updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert('Success', 'Product updated successfully!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to update product');
     } finally {
@@ -214,384 +157,145 @@ export const EditProductScreen = () => {
     }
   };
 
-  const discount = computedDiscount();
-  const spNum = parseFloat(sellingPrice);
-  const apNum = parseFloat(actualPrice);
-  const priceError =
-    !isNaN(spNum) && !isNaN(apNum) && spNum > apNum
-      ? 'Selling price cannot be greater than actual price'
-      : null;
-
   const displayImageUri = imageUri ?? existingImageUrl;
+  const discount = computedDiscount();
+
+  if (fetchingProduct) {
+    return (
+      <SafeAreaView className="flex-1 bg-ruvo-bg items-center justify-center">
+        <ActivityIndicator size="large" color="#F5B700" />
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
-
+    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={TEXT} />
+      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
+          <Ionicons name="arrow-back" size={20} color="#231C10" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Product</Text>
-        <View style={{ width: 38 }} />
+        <Text className="flex-1 text-xl font-extrabold text-ruvo-ink">Edit Product</Text>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerClassName="px-lg pt-lg pb-2xl"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── PRODUCT IMAGE ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>PRODUCT IMAGE</Text>
-            <TouchableOpacity
-              style={styles.imagePicker}
-              onPress={pickImage}
-              activeOpacity={0.8}
-            >
-              {displayImageUri ? (
-                <View style={styles.imagePreviewWrapper}>
-                  <Image source={{ uri: displayImageUri }} style={styles.imagePreview} />
-                  <View style={styles.changeOverlay}>
-                    <Ionicons name="camera" size={20} color="#FFF" />
-                    <Text style={styles.changeText}>Change Photo</Text>
+          {/* Product Image */}
+          <Animated.View entering={FadeInUp.duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Product Image</Text>
+              <TouchableOpacity onPress={pickImage} activeOpacity={0.8}>
+                {displayImageUri ? (
+                  <View className="relative">
+                    <Image source={{ uri: displayImageUri }} className="w-full h-44 rounded-xl" resizeMode="cover" />
+                    <View className="absolute inset-0 bg-black/30 rounded-xl items-center justify-center">
+                      <View className="bg-white/80 px-md py-xs rounded-lg flex-row items-center gap-xs">
+                        <Ionicons name="camera" size={16} color="#231C10" />
+                        <Text className="text-sm font-bold text-ruvo-ink">Change Photo</Text>
+                      </View>
+                    </View>
                   </View>
+                ) : (
+                  <View className="border-2 border-dashed border-warm-400 rounded-xl py-xl items-center justify-center gap-sm">
+                    <Ionicons name="camera-outline" size={32} color="#A79E92" />
+                    <Text className="text-sm font-bold text-warm-600">Tap to add product photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          {/* Basic Details */}
+          <Animated.View entering={FadeInUp.delay(100).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Basic Details</Text>
+
+              <Text className="text-xs font-bold text-warm-700 mb-xs">Product Name *</Text>
+              <TextInput
+                value={name}
+                onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
+                placeholder="Product name"
+                placeholderTextColor="#A79E92"
+                className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink mb-xs ${errors.name ? 'border-red-400' : 'border-warm-300'}`}
+              />
+              {errors.name && <Text className="text-xs text-red-500 mb-sm">{errors.name}</Text>}
+
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Category *</Text>
+              <CategoryDropdown
+                value={category}
+                onChange={v => { setCategory(v); setErrors(e => ({ ...e, category: undefined })); }}
+              />
+              {errors.category && <Text className="text-xs text-red-500 mt-xs">{errors.category}</Text>}
+
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Brand Name</Text>
+              <TextInput value={brandName} onChangeText={setBrandName} placeholder="Optional" placeholderTextColor="#A79E92" className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink" />
+
+              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Description</Text>
+              <TextInput value={description} onChangeText={setDescription} placeholder="Optional" placeholderTextColor="#A79E92" multiline numberOfLines={3} className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink" style={{ textAlignVertical: 'top', minHeight: 80 }} />
+            </View>
+          </Animated.View>
+
+          {/* Pricing */}
+          <Animated.View entering={FadeInUp.delay(200).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Pricing</Text>
+              <View className="flex-row gap-md">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Actual Price (₹) *</Text>
+                  <TextInput value={actualPrice} onChangeText={t => { setActualPrice(t); setErrors(e => ({ ...e, actualPrice: undefined })); }} placeholder="0.00" placeholderTextColor="#A79E92" keyboardType="decimal-pad" className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.actualPrice ? 'border-red-400' : 'border-warm-300'}`} />
+                  {errors.actualPrice && <Text className="text-xs text-red-500 mt-xs">{errors.actualPrice}</Text>}
                 </View>
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera-outline" size={36} color={SUBTEXT} />
-                  <Text style={styles.imagePlaceholderText}>Add Product Photo</Text>
-                  <Text style={styles.imagePlaceholderSub}>Tap to select from gallery</Text>
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Selling Price (₹) *</Text>
+                  <TextInput value={sellingPrice} onChangeText={t => { setSellingPrice(t); setErrors(e => ({ ...e, sellingPrice: undefined })); }} placeholder="0.00" placeholderTextColor="#A79E92" keyboardType="decimal-pad" className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.sellingPrice ? 'border-red-400' : 'border-warm-300'}`} />
+                  {errors.sellingPrice && <Text className="text-xs text-red-500 mt-xs">{errors.sellingPrice}</Text>}
+                </View>
+              </View>
+              {discount && (
+                <View className="mt-sm bg-ruvo-yellow/20 rounded-lg px-md py-xs flex-row items-center gap-xs">
+                  <Ionicons name="pricetag" size={14} color="#F5B700" />
+                  <Text className="text-sm font-extrabold text-ruvo-ink">{discount} discount applied</Text>
                 </View>
               )}
-            </TouchableOpacity>
-          </View>
+            </View>
+          </Animated.View>
 
-          {/* ── BASIC INFORMATION ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>BASIC INFORMATION</Text>
-
-            <Text style={styles.fieldLabel}>
-              Product Name <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.input, errors.name ? styles.inputError : null]}
-              placeholder="e.g. Aashirvaad Atta"
-              placeholderTextColor={SUBTEXT}
-              value={name}
-              onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
-            />
-            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
-
-            <CategoryDropdown
-              value={category}
-              onChange={c => { setCategory(c); setErrors(e => ({ ...e, category: undefined })); }}
-              error={errors.category}
-              required
-            />
-
-            <Text style={styles.fieldLabel}>Brand Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Aashirvaad (optional)"
-              placeholderTextColor={SUBTEXT}
-              value={brandName}
-              onChangeText={setBrandName}
-            />
-          </View>
-
-          {/* ── PRICING ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>PRICING</Text>
-
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Actual Price / MRP <Text style={styles.required}>*</Text>
-                </Text>
-                <View style={[styles.priceInput, errors.actualPrice ? styles.inputError : null]}>
-                  <Text style={styles.currencySymbol}>₹</Text>
-                  <TextInput
-                    style={styles.priceTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={SUBTEXT}
-                    keyboardType="decimal-pad"
-                    value={actualPrice}
-                    onChangeText={t => {
-                      setActualPrice(t);
-                      setErrors(e => ({ ...e, actualPrice: undefined, sellingPrice: undefined }));
-                    }}
-                  />
+          {/* Inventory */}
+          <Animated.View entering={FadeInUp.delay(300).duration(500)}>
+            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
+              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Inventory</Text>
+              <View className="flex-row gap-md">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Stock Quantity *</Text>
+                  <TextInput value={stockQuantity} onChangeText={t => { setStockQuantity(t); setErrors(e => ({ ...e, stockQuantity: undefined })); }} placeholder="0" placeholderTextColor="#A79E92" keyboardType="number-pad" className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink ${errors.stockQuantity ? 'border-red-400' : 'border-warm-300'}`} />
+                  {errors.stockQuantity && <Text className="text-xs text-red-500 mt-xs">{errors.stockQuantity}</Text>}
                 </View>
-                {errors.actualPrice ? <Text style={styles.errorText}>{errors.actualPrice}</Text> : null}
-              </View>
-
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Selling Price <Text style={styles.required}>*</Text>
-                </Text>
-                <View
-                  style={[styles.priceInput, (errors.sellingPrice || priceError) ? styles.inputError : null]}
-                >
-                  <Text style={styles.currencySymbol}>₹</Text>
-                  <TextInput
-                    style={styles.priceTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={SUBTEXT}
-                    keyboardType="decimal-pad"
-                    value={sellingPrice}
-                    onChangeText={t => {
-                      setSellingPrice(t);
-                      setErrors(e => ({ ...e, sellingPrice: undefined }));
-                    }}
-                  />
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-warm-700 mb-xs">Unit (optional)</Text>
+                  <TextInput value={unit} onChangeText={setUnit} placeholder="kg, pcs..." placeholderTextColor="#A79E92" className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink" />
                 </View>
-                {errors.sellingPrice ? <Text style={styles.errorText}>{errors.sellingPrice}</Text> : null}
+              </View>
+              <View className="flex-row items-center justify-between mt-lg pt-md border-t border-warm-200">
+                <View>
+                  <Text className="text-sm font-extrabold text-ruvo-ink">Available for Sale</Text>
+                  <Text className="text-xs text-warm-600 font-medium mt-xs">Customers can buy this product</Text>
+                </View>
+                <Switch value={isAvailable} onValueChange={setIsAvailable} trackColor={{ false: '#D1C7BA', true: '#F5B700' }} thumbColor="#FFF" />
               </View>
             </View>
+          </Animated.View>
 
-            {priceError && !errors.sellingPrice ? (
-              <Text style={[styles.errorText, { marginTop: 4 }]}>{priceError}</Text>
-            ) : null}
-
-            {discount ? (
-              <View style={styles.discountBadge}>
-                <Ionicons name="pricetag" size={14} color={PRIMARY} />
-                <Text style={styles.discountText}>{discount}</Text>
-                <Text style={styles.discountNote}>auto-calculated</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {/* ── INVENTORY ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>INVENTORY</Text>
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <Text style={styles.fieldLabel}>
-                  Stock Quantity <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={[styles.input, errors.stockQuantity ? styles.inputError : null]}
-                  placeholder="0"
-                  placeholderTextColor={SUBTEXT}
-                  keyboardType="number-pad"
-                  value={stockQuantity}
-                  onChangeText={t => {
-                    setStockQuantity(t);
-                    setErrors(e => ({ ...e, stockQuantity: undefined }));
-                  }}
-                />
-                {errors.stockQuantity ? (
-                  <Text style={styles.errorText}>{errors.stockQuantity}</Text>
-                ) : null}
-              </View>
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.fieldLabel}>Unit</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. kg, piece, litre"
-                  placeholderTextColor={SUBTEXT}
-                  value={unit}
-                  onChangeText={setUnit}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* ── DESCRIPTION ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>DESCRIPTION</Text>
-            <TextInput
-              style={styles.textArea}
-              placeholder="Product description (max 500 characters)..."
-              placeholderTextColor={SUBTEXT}
-              multiline
-              numberOfLines={4}
-              maxLength={500}
-              value={description}
-              onChangeText={setDescription}
-            />
-            <Text style={styles.charCounter}>{description.length}/500</Text>
-          </View>
-
-          {/* ── AVAILABILITY ── */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>AVAILABILITY</Text>
-            <View style={styles.toggleRow}>
-              <View>
-                <Text style={styles.toggleLabel}>Product Availability</Text>
-                <Text style={styles.toggleSub}>
-                  {isAvailable
-                    ? '🟢 Customers can order this product'
-                    : '🔴 Product is unavailable for ordering'}
-                </Text>
-              </View>
-              <Switch
-                value={isAvailable}
-                onValueChange={setIsAvailable}
-                trackColor={{ false: '#E0E0E0', true: PRIMARY_LIGHT }}
-                thumbColor={isAvailable ? PRIMARY : '#BDBDBD'}
-              />
-            </View>
-          </View>
-
-          {/* ── SUBMIT ── */}
-          <TouchableOpacity
-            style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFF" />
-            ) : (
-              <>
-                <Ionicons name="save-outline" size={20} color="#FFF" />
-                <Text style={styles.submitBtnText}>Save Changes</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          <Animated.View entering={FadeInUp.delay(400).duration(500)}>
+            <Button variant="primary" onPress={handleSubmit} loading={loading} icon="checkmark-circle">
+              Save Changes
+            </Button>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFF' },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFF',
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 10,
-    backgroundColor: BG, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: TEXT },
-
-  scrollContent: { padding: 16, paddingBottom: 40, backgroundColor: BG },
-
-  sectionCard: {
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: SUBTEXT,
-    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 14,
-  },
-
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 6 },
-  required: { color: ERROR },
-
-  input: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: TEXT,
-    marginBottom: 14,
-  },
-  inputError: { borderColor: ERROR },
-  errorText: { fontSize: 12, color: ERROR, marginTop: -10, marginBottom: 10, marginLeft: 2 },
-
-  row: { flexDirection: 'row' },
-
-  priceInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-  },
-  currencySymbol: { fontSize: 16, fontWeight: '700', color: TEXT, marginRight: 4 },
-  priceTextInput: { flex: 1, fontSize: 15, color: TEXT, paddingVertical: 12 },
-
-  discountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: PRIMARY_LIGHT,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-    alignSelf: 'flex-start',
-  },
-  discountText: { fontSize: 15, fontWeight: '800', color: PRIMARY },
-  discountNote: { fontSize: 11, color: SUBTEXT, fontStyle: 'italic' },
-
-  textArea: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 12,
-    fontSize: 15,
-    color: TEXT,
-    textAlignVertical: 'top',
-    minHeight: 100,
-  },
-  charCounter: { fontSize: 11, color: SUBTEXT, textAlign: 'right', marginTop: 4 },
-
-  imagePicker: {
-    borderRadius: 14, overflow: 'hidden',
-    borderWidth: 2, borderColor: BORDER, borderStyle: 'dashed',
-  },
-  imagePlaceholder: { alignItems: 'center', paddingVertical: 32, backgroundColor: BG },
-  imagePlaceholderText: { fontSize: 15, fontWeight: '600', color: TEXT, marginTop: 10 },
-  imagePlaceholderSub: { fontSize: 12, color: SUBTEXT, marginTop: 3 },
-  imagePreviewWrapper: { position: 'relative' },
-  imagePreview: { width: '100%', height: 200 },
-  changeOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: 'rgba(0,0,0,0.45)', paddingVertical: 10,
-  },
-  changeText: { color: '#FFF', fontWeight: '600', fontSize: 13 },
-
-  toggleRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  toggleLabel: { fontSize: 15, fontWeight: '600', color: TEXT, marginBottom: 3 },
-  toggleSub: { fontSize: 12, color: SUBTEXT },
-
-  submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: PRIMARY, borderRadius: 16, paddingVertical: 16,
-    marginTop: 4, elevation: 3, shadowColor: PRIMARY,
-    shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
-  },
-  submitBtnDisabled: { opacity: 0.65 },
-  submitBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF', letterSpacing: 0.3 },
-});

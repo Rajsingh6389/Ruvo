@@ -56,14 +56,25 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
       setFormError(null);
       startTracking();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]); // Re-initialize ONLY when modal opens, to avoid wiping typed fields on GPS refresh
+  }, [visible]);
+
+  // When location updates from GPS (and isn't a custom saved address), keep form synced
+  useEffect(() => {
+    if (visible && location?.details && !location.isCustomAddress) {
+      setForm(prev => ({
+        ...location.details,
+        receiverName: prev.receiverName || location.details.receiverName,
+        phone: prev.phone || location.details.phone,
+      }));
+    }
+  }, [visible, location]);
 
   const update = (key: keyof AddressDetails, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
   const handleUseGps = async () => {
+    setFormError(null);
     await refreshFromGps();
   };
 
@@ -75,6 +86,8 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
       if (saved) {
         onClose();
       }
+    } catch (err: any) {
+      setFormError(err?.message || 'Failed to save delivery address.');
     } finally {
       setSaving(false);
     }
@@ -86,7 +99,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-          <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.textPrimary }]}>
               Delivery address
@@ -110,12 +123,16 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
               <Ionicons name="navigate-circle" size={22} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.trackTitle, { color: colors.textPrimary }]}>
-                  {isTracking ? 'Live location on' : 'Location paused'}
+                  {location?.isCustomAddress
+                    ? 'Custom Delivery Location'
+                    : isTracking
+                    ? 'Live GPS Location'
+                    : 'Location Detected'}
                 </Text>
                 <Text style={[styles.trackText, { color: colors.textSecondary }]}>
                   {location
                     ? `${location.shortLabel} · ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
-                    : 'Tap below to detect your current place'}
+                    : 'Tap below to detect your current location'}
                 </Text>
               </View>
             </View>
@@ -131,7 +148,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                 <Ionicons name="locate" size={18} color={colors.primary} />
               )}
               <Text style={[styles.gpsBtnText, { color: colors.primary }]}>
-                Fill from current location
+                {isLoading ? 'Detecting GPS position...' : 'Fill from current location'}
               </Text>
             </TouchableOpacity>
 
