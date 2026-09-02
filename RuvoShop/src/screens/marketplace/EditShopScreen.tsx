@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../../context/AuthContext';
@@ -51,6 +52,9 @@ export const EditShopScreen = () => {
   const [address,           setAddress]           = useState(existingShop.address || '');
   const [phone,             setPhone]             = useState(existingShop.phone || '');
   const [deliveryAvailable, setDeliveryAvailable] = useState(existingShop.deliveryAvailable ?? true);
+  const [latitude,          setLatitude]          = useState<number | undefined>(existingShop.latitude);
+  const [longitude,         setLongitude]         = useState<number | undefined>(existingShop.longitude);
+  const [locationFetching,  setLocationFetching]   = useState(false);
 
   const [logoAsset,   setLogoAsset]   = useState<any>(null);
   const [bannerAsset, setBannerAsset] = useState<any>(null);
@@ -71,6 +75,53 @@ export const EditShopScreen = () => {
       });
       if (!res.canceled && res.assets?.length) setLogoAsset(res.assets[0]);
     } catch { Alert.alert('Error', 'Failed to pick logo image'); }
+  };
+
+  const handleUpdateLocation = async () => {
+    setLocationFetching(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required to update shop location.');
+        setLocationFetching(false);
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const { latitude: newLat, longitude: newLng } = loc.coords;
+      
+      setLatitude(newLat);
+      setLongitude(newLng);
+
+      // Perform reverse geocoding
+      try {
+        const geocode = await Location.reverseGeocodeAsync({ latitude: newLat, longitude: newLng });
+        if (geocode && geocode.length > 0) {
+          const place = geocode[0];
+          const addressParts = [
+            place.name,
+            place.street,
+            place.district,
+            place.city || place.subregion,
+            place.region,
+            place.postalCode,
+            place.country
+          ].filter(Boolean); // removes null, undefined, empty strings
+          
+          if (addressParts.length > 0) {
+            setAddress(addressParts.join(', '));
+          }
+        }
+      } catch (geocodeError) {
+        console.warn("Reverse geocode failed:", geocodeError);
+      }
+
+      Alert.alert('Location Captured!', 'Your new GPS coordinates have been captured and the address was updated. Don\'t forget to click "Save Shop Details" to save it permanently.');
+    } catch (error) {
+      console.warn("Failed to get location:", error);
+      Alert.alert('Error', 'Unable to fetch your GPS coordinates. Please ensure GPS is turned on.');
+    } finally {
+      setLocationFetching(false);
+    }
   };
 
   const pickBanner = async () => {
@@ -103,7 +154,7 @@ export const EditShopScreen = () => {
     try {
       await updateShop(
         existingShop.id,
-        { name: name.trim(), category, address: address.trim(), phone: phone.trim(), deliveryAvailable },
+        { name: name.trim(), category, address: address.trim(), phone: phone.trim(), deliveryAvailable, latitude, longitude },
         logoAsset,
         bannerAsset,
         token,
@@ -241,6 +292,27 @@ export const EditShopScreen = () => {
                   trackColor={{ false: '#D1C7BA', true: '#F5B700' }}
                   thumbColor="#FFF"
                 />
+              </View>
+
+              <View className="flex-row items-center justify-between mt-md pt-md border-t border-warm-200">
+                <View className="flex-1 mr-md">
+                  <Text className="text-sm font-extrabold text-ruvo-ink">GPS Location</Text>
+                  {latitude && longitude ? (
+                    <Text className="text-xs font-bold text-green-600 mt-xs">Coordinates set: {latitude.toFixed(4)}, {longitude.toFixed(4)}</Text>
+                  ) : (
+                    <Text className="text-xs text-warm-500 mt-xs">GPS accuracy is recommended for delivery reliability</Text>
+                  )}
+                </View>
+                <TouchableOpacity 
+                  disabled={locationFetching}
+                  className={`px-md py-sm rounded-lg flex-row items-center gap-xs ${locationFetching ? 'bg-warm-200' : 'bg-ruvo-yellow-soft border border-ruvo-yellow'}`}
+                  onPress={handleUpdateLocation}
+                >
+                  <Ionicons name="navigate" size={14} color={locationFetching ? '#A79E92' : '#231C10'} />
+                  <Text className={`text-xs font-bold ${locationFetching ? 'text-warm-500' : 'text-ruvo-ink'}`}>
+                    {locationFetching ? 'Fetching...' : 'Update GPS'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Animated.View>

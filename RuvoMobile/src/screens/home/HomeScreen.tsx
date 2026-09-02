@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   useWindowDimensions,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -60,55 +61,58 @@ export const HomeScreen = () => {
   const isFetchingLocation = locationText === FETCHING_LABEL;
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadHomeData = React.useCallback(async () => {
+    // Fetch active orders
+    if (userId && token) {
+      getMyOrders(userId, token)
+        .then((orders) => {
+          const pending = orders.find(o =>
+            !['DELIVERED', 'SHOP_REJECTED', 'CANCELLED'].includes(o.orderStatus || '')
+          );
+          setActiveOrder(pending || null);
+        })
+        .catch(() => {});
+    }
+
+    setShopsLoading(true);
+    let result: Shop[] = [];
+    if (location?.latitude && location?.longitude) {
+      try {
+        result = await getNearbyShops(location.latitude, location.longitude, 50);
+      } catch (e) {}
+    }
+    if (!result || result.length === 0) {
+      try {
+        result = await getShops();
+      } catch (e) {}
+    }
+    setNearbyShops(result || []);
+    try {
+      const { getProductsByShop } = require('../../services/productService');
+      const allProducts: any[] = [];
+      for (const s of (result || []).slice(0, 6)) {
+        const prods = await getProductsByShop(s.id);
+        if (Array.isArray(prods)) {
+          allProducts.push(...prods.filter(p => p.isAvailable !== false));
+        }
+      }
+      setNearbyProducts(allProducts.slice(0, 10));
+    } catch (e) {}
+    setShopsLoading(false);
+  }, [userId, token, location?.latitude, location?.longitude]);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await loadHomeData();
+    setRefreshing(false);
+  }, [loadHomeData]);
+
   useFocusEffect(
     React.useCallback(() => {
-      // Fetch active orders
-      if (userId && token) {
-        getMyOrders(userId, token)
-          .then((orders) => {
-            const pending = orders.find(o =>
-              !['DELIVERED', 'SHOP_REJECTED', 'CANCELLED'].includes(o.orderStatus || '')
-            );
-            setActiveOrder(pending || null);
-          })
-          .catch(() => {});
-      }
-
-      // Fetch nearby shops with fallback to all approved shops if nearby is empty or location is far
-      setShopsLoading(true);
-      const fetchShopsTask = async () => {
-        let result: Shop[] = [];
-        if (location?.latitude && location?.longitude) {
-          try {
-            result = await getNearbyShops(location.latitude, location.longitude, 50); // increased radius to 50km
-          } catch (e) {}
-        }
-        if (!result || result.length === 0) {
-          try {
-            result = await getShops();
-          } catch (e) {}
-        }
-        return result || [];
-      };
-
-      fetchShopsTask()
-        .then(async shops => {
-          setNearbyShops(shops || []);
-          try {
-            const { getProductsByShop } = require('../../services/productService');
-            const allProducts: any[] = [];
-            for (const s of (shops || []).slice(0, 6)) {
-              const prods = await getProductsByShop(s.id);
-              if (Array.isArray(prods)) {
-                allProducts.push(...prods.filter(p => p.isAvailable !== false));
-              }
-            }
-            setNearbyProducts(allProducts.slice(0, 10));
-          } catch (e) {}
-        })
-        .catch(() => {})
-        .finally(() => setShopsLoading(false));
-    }, [userId, token, location?.latitude, location?.longitude])
+      loadHomeData();
+    }, [loadHomeData])
   );
 
   return (
@@ -148,6 +152,9 @@ export const HomeScreen = () => {
 
           {/* Notifications and Cart */}
           <View className="flex-row items-center gap-md">
+            <Pressable onPress={onRefresh} className="p-1">
+              <Ionicons name="refresh-outline" size={20} color="#231C10" />
+            </Pressable>
             <Pressable className="relative">
               <Ionicons name="notifications-outline" size={22} color="#231C10" />
               <View className="absolute -top-1 -right-1 bg-ruvo-error rounded-full w-5 h-5 items-center justify-center">
@@ -178,6 +185,9 @@ export const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 80 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F5B700']} />
+        }
       >
         {/* ── Active Order Tracking Widget ─────────────────── */}
         {activeOrder && (

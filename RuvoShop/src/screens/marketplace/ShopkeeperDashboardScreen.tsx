@@ -39,6 +39,7 @@ import { Card, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState, CompactEmptyState } from '../../components/ui/EmptyState';
 import { DashboardSkeleton, OrderCardSkeleton } from '../../components/ui/Skeleton';
+import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 
 import { getProductsByShop } from '../../services/productService';
 
@@ -135,6 +136,8 @@ export default function ShopkeeperDashboardScreen() {
 
   // Countdown state
   const [countdowns, setCountdowns] = useState<Record<number, string>>({});
+
+  useOrderAlerts(orders);
 
   // ── Fetch Data ───────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {

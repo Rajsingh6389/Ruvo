@@ -29,6 +29,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 
 type FilterTab = 'ALL' | 'NEW' | 'PREPARE' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
@@ -103,6 +104,8 @@ export default function ShopOrdersScreen() {
   const [broadcastCountdowns, setBroadcastCountdowns] = useState<Record<number, { text: string; progress: number }>>({});
   const [viewBroadcastId, setViewBroadcastId] = useState<number | null>(null);
   const [liveBroadcastData, setLiveBroadcastData] = useState<any>(null);
+
+  useOrderAlerts(orders);
 
   const fetchOrders = useCallback(async (showLoader = true) => {
     if (!token) { setLoading(false); return; }
@@ -416,7 +419,7 @@ export default function ShopOrdersScreen() {
                     </View>
                   </View>
 
-                  {/* Details */}
+                  {/* Details & Items Breakdown */}
                   <View className={`rounded-lg p-md gap-sm mb-sm ${
                     ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
                       ? 'bg-red-50' 
@@ -430,11 +433,35 @@ export default function ShopOrdersScreen() {
                       </Text>
                     </View>
                     <View className="h-px bg-warm-200 my-xs" />
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
-                      <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
-                    </View>
-                    <View className="flex-row justify-between items-center">
+
+                    {/* Multi-Item Breakdown */}
+                    {item.items && item.items.length > 0 ? (
+                      <View className="gap-xs my-xs">
+                        <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-xs">
+                          Order Items ({item.items.length})
+                        </Text>
+                        {item.items.map((it, idx) => (
+                          <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-warm-200">
+                            <View className="flex-1 pr-xs flex-row items-center gap-xs">
+                              <Text className="text-xs font-extrabold text-ruvo-yellow">{it.quantity}×</Text>
+                              <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                                {it.productName}
+                              </Text>
+                            </View>
+                            <Text className="text-xs font-extrabold text-ruvo-ink">
+                              ₹{it.priceAtOrder ? (it.priceAtOrder * it.quantity) : (item.subtotal || item.totalAmount)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
+                        <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
+                      </View>
+                    )}
+
+                    <View className="flex-row justify-between items-center mt-xs">
                       <Text className="text-xs text-warm-600 font-medium">Total Amount (incl. fees)</Text>
                       <Text className="text-base font-extrabold text-ruvo-yellow">₹{item.totalAmount}</Text>
                     </View>

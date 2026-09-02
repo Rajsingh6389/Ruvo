@@ -168,13 +168,20 @@ public class DeliveryService {
         List<Order> waiting = orderRepository.findByOrderStatus(OrderStatus.DELIVERY_ASSIGNMENT);
         if (waiting.isEmpty()) return;
 
+        System.out.println("🔄 [DeliveryService] Retrying " + waiting.size() + " stalled orders...");
+
         for (Order order : waiting) {
             if (order.getDeliveryPartnerId() != null) continue;
 
             boolean hasLiveOffer = deliveryRequestRepository.findByOrderId(order.getId()).stream()
                     .anyMatch(r -> "PENDING".equals(r.getStatus()) && Instant.now().isBefore(r.getExpiresAt()));
-            if (hasLiveOffer) continue;
+            
+            if (hasLiveOffer) {
+                // System.out.println("⏳ [DeliveryService] Order #" + order.getId() + " still has a PENDING offer, skipping.");
+                continue;
+            }
 
+            System.out.println("🔍 [DeliveryService] Re-searching for Order #" + order.getId() + " inside stalled assignment loop...");
             findAndAssignNextPartner(order);
         }
     }

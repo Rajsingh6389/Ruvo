@@ -87,6 +87,9 @@ public class DeliveryPartnerController {
         }
 
         partner.setAvailable(available);
+        if (partner.getActive() == null) {
+            partner.setActive(true); // Self-heal old registrations
+        }
         if (available) partner.setLastActiveAt(java.time.Instant.now());
         deliveryPartnerRepository.save(partner);
         System.out.println("🟢 [DeliveryPartnerController] Partner #" + partner.getId() + " (" + partner.getName() + ") toggled availability=" + available);

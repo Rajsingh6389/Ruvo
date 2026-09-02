@@ -1,3 +1,13 @@
+export interface OrderItem {
+  id?: number;
+  orderId?: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  priceAtOrder: number;
+  productImageUrl?: string;
+}
+
 export interface Order {
   id?: number;
   userId: string;
@@ -6,6 +16,7 @@ export interface Order {
   productName: string;
   productImageUrl?: string;
   quantity: number;
+  items?: OrderItem[];
   subtotal?: number;
   deliveryFee?: number;
   platformFee?: number;

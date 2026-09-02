@@ -75,7 +75,7 @@ export const Badge = ({
 
   return (
     <View className={`${getVariantClasses()} ${getSizeClasses()} rounded-full ${className}`}>
-      {typeof children === 'string' ? (
+      {typeof children === 'string' || typeof children === 'number' ? (
         <Text className={`${getTextSizeClasses()} ${getTextVariantClasses()} font-semibold`}>
           {children}
         </Text>

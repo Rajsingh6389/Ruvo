@@ -37,8 +37,14 @@ public class OrderItem {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Transient
+    private Double price; // Frontend passes generic "price", backend persists as "priceAtOrder"
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
+        if (priceAtOrder == null && price != null) {
+            priceAtOrder = price;
+        }
     }
 }

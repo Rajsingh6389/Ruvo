@@ -191,7 +191,7 @@ public class NotificationService {
      * Get unread notification count
      */
     public long getUnreadCount(Long userId) {
-        return notificationRepository.countByUserIdAndReadFalse(userId);
+        return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
     /**
@@ -199,7 +199,7 @@ public class NotificationService {
      */
     public void markAsRead(Long notificationId) {
         notificationRepository.findById(notificationId).ifPresent(n -> {
-            n.setRead(true);
+            n.setIsRead(true);
             n.setReadAt(Instant.now());
             notificationRepository.save(n);
         });
@@ -209,9 +209,9 @@ public class NotificationService {
      * Mark all user notifications as read
      */
     public void markAllAsRead(Long userId) {
-        List<PushNotification> unread = notificationRepository.findByUserIdAndReadFalseOrderByCreatedAtDesc(userId);
+        List<PushNotification> unread = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
         for (PushNotification n : unread) {
-            n.setRead(true);
+            n.setIsRead(true);
             n.setReadAt(Instant.now());
             notificationRepository.save(n);
         }

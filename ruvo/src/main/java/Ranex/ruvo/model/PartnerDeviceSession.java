@@ -36,4 +36,8 @@ public class PartnerDeviceSession {
     private Instant expiresAt;
 
     private boolean revoked;
+    
+    public boolean isRevoked() {
+        return this.revoked;
+    }
 }

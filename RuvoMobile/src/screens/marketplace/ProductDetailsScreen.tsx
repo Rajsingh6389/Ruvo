@@ -123,6 +123,19 @@ const ProductDetailsScreen = () => {
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [fetchedShopName, setFetchedShopName] = useState<string | null>(null);
+
+  // Fetch shop details dynamically if product has a shopId
+  React.useEffect(() => {
+    if (product?.shopId && !product?.shopName) {
+      fetch(`${API_BASE_URL}/api/shops/${product.shopId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.name) setFetchedShopName(data.name);
+        })
+        .catch(() => {});
+    }
+  }, [product?.shopId, product?.shopName]);
 
   // BUSINESS LOGIC: Authentication and cart management
   const { isAuthenticated, userId, token, user } = useAuth();
@@ -430,7 +443,7 @@ const ProductDetailsScreen = () => {
             </Text>
 
             <Text className="text-ruvo-ink text-base font-black mt-0.5">
-              {product.shopName || 'Local RuVo Shop'}
+              {product.shopName || fetchedShopName || (product.shopId ? `Shop #${product.shopId}` : 'RuVo Store')}
             </Text>
 
             <View className="flex-row items-center mt-1 opacity-70">

@@ -33,9 +33,9 @@ public class PushNotification {
     @Column(name = "reference_id")
     private Long referenceId;
 
-    @Column(name = "read", nullable = false)
+    @Column(name = "is_read", nullable = false)
     @Builder.Default
-    private Boolean read = false;
+    private Boolean isRead = false;
 
     @Column(name = "delivered", nullable = false)
     @Builder.Default

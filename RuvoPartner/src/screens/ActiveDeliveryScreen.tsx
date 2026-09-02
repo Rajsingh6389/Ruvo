@@ -175,6 +175,41 @@ export const ActiveDeliveryScreen = () => {
           </Card>
         </Animated.View>
 
+        {/* Order Items Details Card */}
+        {((delivery.items && delivery.items.length > 0) || delivery.productName) && (
+          <Animated.View entering={FadeInDown.delay(50).duration(500)}>
+            <Card className="mb-lg bg-emerald-50 border-emerald-200">
+              <View className="flex-row items-center gap-xs mb-sm">
+                <Ionicons name="basket" size={18} color="#059669" />
+                <Text className="text-base font-extrabold text-ruvo-ink">Items to Pick Up</Text>
+              </View>
+              {delivery.items && delivery.items.length > 0 ? (
+                <View className="gap-xs">
+                  {delivery.items.map((it, idx) => (
+                    <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-emerald-100">
+                      <Text className="text-xs font-bold text-ruvo-ink flex-1">
+                        <Text className="font-extrabold text-emerald-700">{it.quantity}×</Text> {it.productName}
+                      </Text>
+                      {it.priceAtOrder ? (
+                        <Text className="text-xs font-extrabold text-ruvo-ink">₹{it.priceAtOrder * it.quantity}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <View className="bg-white p-sm rounded-lg border border-emerald-100 flex-row justify-between items-center">
+                  <Text className="text-xs font-bold text-ruvo-ink">
+                    <Text className="font-extrabold text-emerald-700">{delivery.quantity || 1}×</Text> {delivery.productName}
+                  </Text>
+                  {delivery.totalAmount ? (
+                    <Text className="text-xs font-extrabold text-ruvo-ink">₹{delivery.totalAmount}</Text>
+                  ) : null}
+                </View>
+              )}
+            </Card>
+          </Animated.View>
+        )}
+
         {/* Pickup Location Card */}
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
           <Card className="mb-lg">

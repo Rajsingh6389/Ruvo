@@ -1,5 +1,6 @@
 import { Vibration, Platform } from 'react-native';
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Audio } from 'expo-av';
 
 const VIBRATION_PATTERN_NEW_REQUEST = [0, 400, 150, 400, 150, 600];
 const VIBRATION_PATTERN_NEW_ORDER = [0, 500, 200, 500, 200, 800];
@@ -22,13 +23,18 @@ export const useDeliveryRequestSound = (hasIncomingRequest: boolean) => {
     prevRef.current = hasIncomingRequest;
   }, [hasIncomingRequest]);
 
-  const triggerRequestAlert = useCallback(() => {
+  const triggerRequestAlert = useCallback(async () => {
     // Vibrate with a distinctive pattern
     if (Platform.OS === 'android') {
       Vibration.vibrate(VIBRATION_PATTERN_NEW_REQUEST, false);
     } else {
       Vibration.vibrate(800);
     }
+
+    try {
+      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+      // We will handle sound play if possible, for now initializing audio context ensures vibration + beep setup
+    } catch {}
 
     setPopupMessage('New delivery request!');
     setShowPopup(true);

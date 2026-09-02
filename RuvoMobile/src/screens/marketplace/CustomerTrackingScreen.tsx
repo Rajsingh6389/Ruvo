@@ -441,7 +441,9 @@ export default function CustomerTrackingScreen() {
             <Text style={styles.otpCode}>
               {order.deliveryOtpHash || '...'}
             </Text>
-            <Text style={styles.otpSub}>Give this 6-digit OTP code to your delivery partner when receiving your order.</Text>
+            <Text style={styles.otpSub}>
+              Give this {order.deliveryOtpHash?.length || 4}-digit OTP code to your delivery partner when receiving your order.
+            </Text>
           </View>
         )}
 

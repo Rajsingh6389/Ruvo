@@ -10,6 +10,8 @@ import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.repository.PaymentRepository;
 import Ranex.ruvo.repository.ProductRepository;
 import Ranex.ruvo.repository.ShopRepository;
+import Ranex.ruvo.repository.OrderItemRepository;
+import Ranex.ruvo.model.OrderItem;
 import Ranex.ruvo.service.CashfreeService;
 import Ranex.ruvo.service.NotificationService;
 import Ranex.ruvo.util.DistanceUtils;
@@ -37,6 +39,7 @@ public class CashfreeController {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
+    private final OrderItemRepository orderItemRepository;
     private final CashfreeService cashfreeService;
     private final NotificationService notificationService;
 
@@ -46,6 +49,7 @@ public class CashfreeController {
             ProductRepository productRepository,
             ShopRepository shopRepository,
             DeliveryPartnerRepository deliveryPartnerRepository,
+            OrderItemRepository orderItemRepository,
             CashfreeService cashfreeService,
             NotificationService notificationService) {
 
@@ -54,6 +58,7 @@ public class CashfreeController {
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
+        this.orderItemRepository = orderItemRepository;
         this.cashfreeService = cashfreeService;
         this.notificationService = notificationService;
     }
@@ -76,6 +81,7 @@ public class CashfreeController {
 
         public Double userLatitude;
         public Double userLongitude;
+        public java.util.List<OrderItem> items;
     }
 
     // =========================================================
@@ -293,6 +299,29 @@ public class CashfreeController {
 
             Order savedOrder =
                     orderRepository.save(order);
+                    
+            // Save order items snapshot (Wait for payment SUCCESS to deduct stock)
+            if (request.items != null && !request.items.isEmpty()) {
+                for (OrderItem reqItem : request.items) {
+                    OrderItem item = OrderItem.builder()
+                            .orderId(savedOrder.getId())
+                            .productId(reqItem.getProductId())
+                            .productName(reqItem.getProductName())
+                            .priceAtOrder(reqItem.getPriceAtOrder() != null ? reqItem.getPriceAtOrder() : (reqItem.getPrice() != null ? reqItem.getPrice() : 0.0)) // Hack to catch 'price' json field if priceAtOrder is missing
+                            .quantity(reqItem.getQuantity() != null ? reqItem.getQuantity() : 1)
+                            .build();
+                    orderItemRepository.save(item);
+                }
+            } else {
+                OrderItem item = OrderItem.builder()
+                        .orderId(savedOrder.getId())
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .priceAtOrder(product.getSellingPrice())
+                        .quantity(savedOrder.getQuantity())
+                        .build();
+                orderItemRepository.save(item);
+            }
 
             // -------------------------------------------------
             // 10. CASHFREE RETURN URL
@@ -679,12 +708,22 @@ public class CashfreeController {
         // DEDUCT STOCK
         // -----------------------------------------------------
 
-        product.setStockQuantity(
-                product.getStockQuantity()
-                        - order.getQuantity()
-        );
-
-        productRepository.save(product);
+        java.util.List<OrderItem> snapshots = orderItemRepository.findByOrderId(order.getId());
+        if (snapshots != null && !snapshots.isEmpty()) {
+            for (OrderItem snapshot : snapshots) {
+                Product p = productRepository.findById(snapshot.getProductId()).orElse(null);
+                if (p != null) {
+                    p.setStockQuantity(p.getStockQuantity() - snapshot.getQuantity());
+                    productRepository.save(p);
+                }
+            }
+        } else {
+            product.setStockQuantity(
+                    product.getStockQuantity()
+                            - order.getQuantity()
+            );
+            productRepository.save(product);
+        }
 
         // -----------------------------------------------------
         // UPDATE PAYMENT

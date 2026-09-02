@@ -32,11 +32,13 @@ public class PartnerController {
     private final JwtService jwt;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final ShopRepository shopRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public PartnerController(UserRepository userRepository, DeliveryRepository deliveryRepository,
                              OrderRepository orderRepository, PasswordEncoder encoder, JwtService jwt,
                              DeliveryPartnerRepository deliveryPartnerRepository,
-                             ShopRepository shopRepository) {
+                             ShopRepository shopRepository,
+                             OrderItemRepository orderItemRepository) {
         this.userRepository = userRepository;
         this.deliveryRepository = deliveryRepository;
         this.orderRepository = orderRepository;
@@ -44,6 +46,7 @@ public class PartnerController {
         this.jwt = jwt;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.shopRepository = shopRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     private DeliveryPartner resolveDeliveryPartner(org.springframework.security.core.userdetails.User principal) {
@@ -271,7 +274,41 @@ public class PartnerController {
         if (delivery == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "Delivery request not found."));
         }
-        return ResponseEntity.ok(delivery);
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", delivery.getId());
+        map.put("orderId", delivery.getOrderId());
+        map.put("partnerId", delivery.getPartnerId());
+        map.put("status", delivery.getStatus());
+        map.put("pickupLocation", delivery.getPickupLocation());
+        map.put("deliveryLocation", delivery.getDeliveryLocation());
+        map.put("deliveryFee", delivery.getDeliveryFee());
+        map.put("assignedAt", delivery.getAssignedAt() != null ? delivery.getAssignedAt().toString() : null);
+        map.put("pickedUpAt", delivery.getPickedUpAt() != null ? delivery.getPickedUpAt().toString() : null);
+        map.put("deliveredAt", delivery.getDeliveredAt() != null ? delivery.getDeliveredAt().toString() : null);
+
+        if (delivery.getOrderId() != null) {
+            orderRepository.findById(delivery.getOrderId()).ifPresent(order -> {
+                map.put("totalAmount", order.getTotalAmount());
+                map.put("paymentMethod", order.getPaymentMethod());
+                map.put("paymentStatus", order.getPaymentStatus());
+                map.put("productName", order.getProductName());
+                map.put("productImageUrl", order.getProductImageUrl());
+                map.put("quantity", order.getQuantity());
+
+                List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+                if (!items.isEmpty()) {
+                    map.put("items", items);
+                } else {
+                    map.put("items", List.of(Map.of(
+                        "productName", order.getProductName() != null ? order.getProductName() : "Product #" + order.getProductId(),
+                        "quantity", order.getQuantity() != null ? order.getQuantity() : 1,
+                        "priceAtOrder", order.getTotalAmount() != null ? order.getTotalAmount() : 0,
+                        "productImageUrl", order.getProductImageUrl() != null ? order.getProductImageUrl() : ""
+                    )));
+                }
+            });
+        }
+        return ResponseEntity.ok(map);
     }
 
     @PostMapping("/deliveries/{id}/accept")

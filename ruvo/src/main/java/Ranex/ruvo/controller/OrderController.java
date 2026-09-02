@@ -161,15 +161,38 @@ public class OrderController {
             saved = orderRepository.save(saved);
         }
 
-        // Create OrderItem snapshot
-        OrderItem item = OrderItem.builder()
-                .orderId(saved.getId())
-                .productId(product.getId())
-                .productName(product.getName())
-                .priceAtOrder(product.getSellingPrice())
-                .quantity(saved.getQuantity())
-                .build();
-        orderItemRepository.save(item);
+        // Create OrderItem snapshots
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            for (OrderItem reqItem : order.getItems()) {
+                OrderItem item = OrderItem.builder()
+                        .orderId(saved.getId())
+                        .productId(reqItem.getProductId())
+                        .productName(reqItem.getProductName())
+                        .priceAtOrder(reqItem.getPriceAtOrder() != null ? reqItem.getPriceAtOrder() : 0.0)
+                        .quantity(reqItem.getQuantity() != null ? reqItem.getQuantity() : 1)
+                        .build();
+                orderItemRepository.save(item);
+                
+                // Deduct stock for each additional cart item (primary item was already deducted)
+                if (!reqItem.getProductId().equals(product.getId())) {
+                    productRepository.findById(reqItem.getProductId()).ifPresent(extraProduct -> {
+                        if (extraProduct.getStockQuantity() >= item.getQuantity()) {
+                            extraProduct.setStockQuantity(extraProduct.getStockQuantity() - item.getQuantity());
+                            productRepository.save(extraProduct);
+                        }
+                    });
+                }
+            }
+        } else {
+            OrderItem item = OrderItem.builder()
+                    .orderId(saved.getId())
+                    .productId(product.getId())
+                    .productName(product.getName())
+                    .priceAtOrder(product.getSellingPrice())
+                    .quantity(saved.getQuantity())
+                    .build();
+            orderItemRepository.save(item);
+        }
 
         // Phase 5 - Notify shopkeeper
         notificationService.notifyShop(saved);
@@ -200,6 +223,13 @@ public class OrderController {
                     orderRepository.save(o);
                 });
             }
+            
+            // Enrich with items list
+            List<OrderItem> items = orderItemRepository.findByOrderId(o.getId());
+            if (items != null && !items.isEmpty()) {
+                o.setItems(items);
+            }
+            
             validOrders.add(o);
         }
         return ResponseEntity.ok(validOrders);
@@ -218,6 +248,13 @@ public class OrderController {
                 orderRepository.save(finalOrder);
             });
         }
+        
+        // Enrich with items list
+        List<OrderItem> items = orderItemRepository.findByOrderId(finalOrder.getId());
+        if (items != null && !items.isEmpty()) {
+            finalOrder.setItems(items);
+        }
+        
         return ResponseEntity.ok(finalOrder);
     }
 
@@ -231,6 +268,12 @@ public class OrderController {
                     o.setProductImageUrl(p.getImageUrl());
                     orderRepository.save(o);
                 });
+            }
+            
+            // Enrich with items list
+            List<OrderItem> items = orderItemRepository.findByOrderId(o.getId());
+            if (items != null && !items.isEmpty()) {
+                o.setItems(items);
             }
         }
         return ResponseEntity.ok(orders);

@@ -23,4 +23,8 @@ public class RefreshToken {
     private Instant expiryDate;
 
     private boolean revoked;
+    
+    public boolean isRevoked() {
+        return this.revoked;
+    }
 }

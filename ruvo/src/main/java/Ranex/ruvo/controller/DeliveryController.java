@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** Simple typed payload so convertAndSend doesn't get ambiguous with Map<K,V>. */
@@ -56,6 +57,8 @@ public class DeliveryController {
     private final RuvoCommissionService commissionService;
     private final CashfreeService cashfreeService;
     private final Ranex.ruvo.repository.PaymentRepository paymentRepository;
+    private final Ranex.ruvo.repository.OrderItemRepository orderItemRepository;
+    private final Ranex.ruvo.repository.ShopRepository shopRepository;
 
     public DeliveryController(DeliveryService deliveryService, 
                               DeliveryPartnerRepository deliveryPartnerRepository, 
@@ -68,7 +71,9 @@ public class DeliveryController {
                               Ranex.ruvo.repository.UserRepository userRepository,
                               RuvoCommissionService commissionService,
                               CashfreeService cashfreeService,
-                              Ranex.ruvo.repository.PaymentRepository paymentRepository) {
+                              Ranex.ruvo.repository.PaymentRepository paymentRepository,
+                              Ranex.ruvo.repository.OrderItemRepository orderItemRepository,
+                              Ranex.ruvo.repository.ShopRepository shopRepository) {
         this.deliveryService = deliveryService;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.deliveryRequestRepository = deliveryRequestRepository;
@@ -81,6 +86,8 @@ public class DeliveryController {
         this.commissionService = commissionService;
         this.cashfreeService = cashfreeService;
         this.paymentRepository = paymentRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.shopRepository = shopRepository;
     }
 
     private String getCurrentUserEmail() {
@@ -160,6 +167,28 @@ public class DeliveryController {
                     map.put("totalAmount", order.getTotalAmount());
                     map.put("paymentMethod", order.getPaymentMethod());
                     map.put("deliveryFee", order.getDeliveryFee());
+                    map.put("productName", order.getProductName());
+                    map.put("productImageUrl", order.getProductImageUrl());
+                    map.put("quantity", order.getQuantity());
+
+                    if (order.getShopId() != null) {
+                        shopRepository.findById(order.getShopId()).ifPresent(shop -> {
+                            map.put("shopName", shop.getName());
+                            map.put("shopAddress", shop.getAddress());
+                        });
+                    }
+
+                    List<Ranex.ruvo.model.OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+                    if (!items.isEmpty()) {
+                        map.put("items", items);
+                    } else {
+                        map.put("items", List.of(Map.of(
+                            "productName", order.getProductName() != null ? order.getProductName() : "Product #" + order.getProductId(),
+                            "quantity", order.getQuantity() != null ? order.getQuantity() : 1,
+                            "priceAtOrder", order.getTotalAmount() != null ? order.getTotalAmount() : 0,
+                            "productImageUrl", order.getProductImageUrl() != null ? order.getProductImageUrl() : ""
+                        )));
+                    }
                 }
                 return map;
             })

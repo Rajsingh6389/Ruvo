@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 @Data
 @Builder
@@ -154,4 +155,13 @@ public class Order {
     protected void onUpdate() {
         updatedAt = Instant.now();
     }
+
+    // ==========================================
+    // TRANSIENT FIELDS (Not persisted in this table)
+    // ==========================================
+    @Transient
+    private String customerEmail;
+
+    @Transient
+    private List<OrderItem> items;
 }

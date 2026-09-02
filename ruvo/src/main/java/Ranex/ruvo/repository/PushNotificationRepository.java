@@ -9,6 +9,6 @@ import java.util.List;
 @Repository
 public interface PushNotificationRepository extends JpaRepository<PushNotification, Long> {
     List<PushNotification> findByUserIdOrderByCreatedAtDesc(Long userId);
-    List<PushNotification> findByUserIdAndReadFalseOrderByCreatedAtDesc(Long userId);
-    long countByUserIdAndReadFalse(Long userId);
+    List<PushNotification> findByUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId);
+    long countByUserIdAndIsReadFalse(Long userId);
 }

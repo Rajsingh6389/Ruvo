@@ -15,6 +15,7 @@ public class ScheduledDeliveryTimeoutJob {
 
     @Scheduled(fixedRate = 10000) // Every 10 seconds check for 1-minute expiration
     public void timeoutDeliveryRequests() {
+        // System.out.println("⏱️ [CRON] Checking timeouts and stalled orders...");
         deliveryService.expireDeliveryRequests();
         // Also revisit orders whose search found nobody, so a partner coming online is
         // picked up within one tick instead of the order waiting indefinitely.

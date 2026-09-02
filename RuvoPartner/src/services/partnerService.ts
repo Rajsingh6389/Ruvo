@@ -6,8 +6,41 @@ export type PartnerProfile = {
   vehicle?: { vehicleType: string; vehicleNumber: string; vehicleModel?: string } | null;
   kyc?: { address?: string; city?: string; state?: string; pincode?: string } | null;
 };
-export type Delivery = { id: number; orderId: number; status: string; pickupLocation: string; deliveryLocation: string; deliveryFee: number; deliveredAt?: string };
-export type DeliveryRequest = { requestId: number; orderId: number; distanceKm: number; expiresAt: string; status: string; deliveryAddress?: string; totalAmount?: number; paymentMethod?: string; deliveryFee?: number };
+export type OrderItem = { id?: number; productName: string; quantity: number; priceAtOrder?: number; productImageUrl?: string };
+export type Delivery = { 
+  id: number; 
+  orderId: number; 
+  status: string; 
+  pickupLocation: string; 
+  deliveryLocation: string; 
+  deliveryFee: number; 
+  deliveredAt?: string;
+  totalAmount?: number;
+  paymentMethod?: string;
+  shopName?: string;
+  shopAddress?: string;
+  productName?: string;
+  productImageUrl?: string;
+  quantity?: number;
+  items?: OrderItem[];
+};
+export type DeliveryRequest = { 
+  requestId: number; 
+  orderId: number; 
+  distanceKm: number; 
+  expiresAt: string; 
+  status: string; 
+  deliveryAddress?: string; 
+  shopName?: string;
+  shopAddress?: string;
+  totalAmount?: number; 
+  paymentMethod?: string; 
+  deliveryFee?: number;
+  productName?: string;
+  productImageUrl?: string;
+  quantity?: number;
+  items?: OrderItem[];
+};
 export type Earnings = { todayEarnings: number; totalEarnings: number; walletBalance: number };
 
 export const partnerService = {

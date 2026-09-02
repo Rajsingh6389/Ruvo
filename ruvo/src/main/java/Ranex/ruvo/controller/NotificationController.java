@@ -152,7 +152,7 @@ public class NotificationController {
             "type", n.getType(),
             "referenceType", n.getReferenceType() != null ? n.getReferenceType() : "",
             "referenceId", n.getReferenceId() != null ? n.getReferenceId() : 0,
-            "isRead", n.getRead(),
+            "isRead", n.getIsRead(),
             "createdAt", n.getCreatedAt().toString(),
             "readAt", n.getReadAt() != null ? n.getReadAt().toString() : ""
         );

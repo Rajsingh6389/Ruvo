@@ -171,6 +171,23 @@ export const AvailableDeliveriesScreen = () => {
                   </Text>
                 </View>
 
+                {/* Items Summary */}
+                {item.items && item.items.length > 0 ? (
+                  <View className="bg-warm-100 rounded-lg p-sm mb-sm flex-row items-center gap-xs">
+                    <Ionicons name="basket-outline" size={16} color="#16A34A" />
+                    <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                      {item.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
+                    </Text>
+                  </View>
+                ) : item.productName ? (
+                  <View className="bg-warm-100 rounded-lg p-sm mb-sm flex-row items-center gap-xs">
+                    <Ionicons name="basket-outline" size={16} color="#16A34A" />
+                    <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                      {item.quantity ? `${item.quantity}x ` : ''}{item.productName}
+                    </Text>
+                  </View>
+                ) : null}
+
                 {/* Route Section */}
                 <View className="bg-warm-100 rounded-lg p-md mb-md">
                   {/* Pickup */}
@@ -179,9 +196,14 @@ export const AvailableDeliveriesScreen = () => {
                     <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
                       Pickup
                     </Text>
-                    <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
-                      {item.pickupLocation}
-                    </Text>
+                    <View className="flex-1">
+                      {item.shopName ? (
+                        <Text className="text-xs font-bold text-ruvo-accent">{item.shopName}</Text>
+                      ) : null}
+                      <Text className="text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
+                        {item.shopAddress || item.pickupLocation}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Connector */}
