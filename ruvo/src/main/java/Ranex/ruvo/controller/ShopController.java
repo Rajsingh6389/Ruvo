@@ -82,6 +82,11 @@ public class ShopController {
             return filePath;
         }
 
+        // If no request context (e.g. called from non-HTTP thread), return the path as-is
+        if (request == null) {
+            return filePath;
+        }
+
         String normalizedPath = filePath.replace("\\", "/");
 
         // Remove leading slash if present
@@ -753,7 +758,8 @@ public class ShopController {
     @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     public ResponseEntity<?> updateShopJson(
             @PathVariable Long id,
-            @RequestBody Shop updatedShop
+            @RequestBody Shop updatedShop,
+            HttpServletRequest request
     ) {
         java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
         if (shopOpt.isEmpty()) {
@@ -777,15 +783,12 @@ public class ShopController {
         if (updatedShop.getPhone() != null && !updatedShop.getPhone().isBlank()) {
             existingShop.setPhone(updatedShop.getPhone().trim());
         }
-        if (updatedShop.getUpiId() != null) existingShop.setUpiId(updatedShop.getUpiId());
-        if (updatedShop.getBankAccountNumber() != null) existingShop.setBankAccountNumber(updatedShop.getBankAccountNumber());
-        if (updatedShop.getIfscCode() != null) existingShop.setIfscCode(updatedShop.getIfscCode());
         if (updatedShop.getDeliveryAvailable() != null) existingShop.setDeliveryAvailable(updatedShop.getDeliveryAvailable());
         if (updatedShop.getLatitude() != null) existingShop.setLatitude(updatedShop.getLatitude());
         if (updatedShop.getLongitude() != null) existingShop.setLongitude(updatedShop.getLongitude());
 
         Shop savedShop = shopRepository.save(existingShop);
-        return ResponseEntity.ok(prepareShopResponse(savedShop, null));
+        return ResponseEntity.ok(prepareShopResponse(savedShop, request));
     }
 
     @PutMapping("/upload/{id}")

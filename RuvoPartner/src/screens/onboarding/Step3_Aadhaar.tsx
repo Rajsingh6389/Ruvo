@@ -71,7 +71,7 @@ export const Step3_Aadhaar = () => {
       stopSpinner();
       setVState('done');
       // Auto-advance after 1.5 s
-      setTimeout(() => navigation.navigate('Step5_BankAccount'), 1500);
+      setTimeout(() => navigation.navigate('Step4_OnboardingFee'), 1500);
     } catch {
       stopSpinner();
       setVState('error');

@@ -12,7 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
 
 export const VerificationStatusScreen = () => {
-  const { logout, token, verificationStatus, setVerificationStatus } = useAuth();
+  const { logout, token, verificationStatus, setVerificationStatus, startResubmit } = useAuth();
   const { colors } = useTheme();
 
   const [loading, setLoading] = useState(false);
@@ -42,8 +42,8 @@ export const VerificationStatusScreen = () => {
     checkStatus();
   }, []);
 
-  const handleResubmit = () => {
-    // Navigates back to Profile setup stack
+  const handleResubmit = async () => {
+    await startResubmit();
     setVerificationStatus('NEW');
   };
 

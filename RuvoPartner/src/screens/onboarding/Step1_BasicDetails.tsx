@@ -56,7 +56,7 @@ async function googleReverseGeocode(lat: number, lng: number) {
 
 export const Step1_BasicDetails = () => {
   const navigation = useNavigation<any>();
-  const { token, setVerificationStatus, authenticatedFetch, logout } = useAuth();
+  const { token, authenticatedFetch, logout } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [fullName, setFullName]   = useState('');
@@ -148,7 +148,6 @@ export const Step1_BasicDetails = () => {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
-      await setVerificationStatus(data?.data?.verificationStatus || 'NEW');
       navigation.navigate('Step2_VehicleType');
     } catch (e: any) {
       setError(e.message || 'Submission failed. Check your connection.');

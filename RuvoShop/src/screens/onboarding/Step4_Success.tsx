@@ -64,9 +64,15 @@ export const Step4_Success = () => {
     setStatusMessage(null);
     const ownerIdParam = userId || (user as any)?.phone || 'owner_default';
     try {
-      const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerIdParam)}`, {
-        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      });
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerIdParam)}`, { headers });
+
+      if (res.status === 401) {
+        setStatusMessage('Session expired. Please log out and log in again.');
+        return;
+      }
       if (!res.ok) {
         const message = await res.text().catch(() => '');
         setStatusMessage(message || 'Could not check approval status.');
@@ -77,7 +83,14 @@ export const Step4_Success = () => {
       setOwnedShops(shops);
       const approved = shops.find(s => s.approved === true || s.isApproved === true || s.status === 'APPROVED');
       const rejected = shops.find(s => s.status === 'REJECTED');
-      if (approved) { setApprovalStatus('approved'); await setOnboardingStatus('APPROVED'); }
+      if (approved) {
+        setApprovalStatus('approved');
+        await setOnboardingStatus('APPROVED');
+        // ✅ Force navigator to switch to the main app stack immediately
+        // navigation.reset() replaces the entire stack so the PENDING_APPROVAL
+        // branch is no longer rendered even though this screen is still mounted.
+        navigation.reset({ index: 0, routes: [{ name: 'MyShops' }] });
+      }
       else if (rejected) { setApprovalStatus('rejected'); }
       else if (shops.length === 0) { setStatusMessage('No shop request found. Please submit your shop details again.'); }
       else { setStatusMessage('Your shop request is still waiting for admin approval.'); }
@@ -86,7 +99,8 @@ export const Step4_Success = () => {
     } finally {
       setChecking(false);
     }
-  }, [token, userId, user, setOnboardingStatus]);
+  }, [token, userId, user, setOnboardingStatus, navigation]);
+
 
   useEffect(() => {
     checkApproval();

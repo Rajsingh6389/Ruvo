@@ -89,7 +89,7 @@ export const Step5_BankAccount = () => {
       await simulateVerify();
       stopSpinner();
       setVState('done');
-      setTimeout(() => navigation.navigate('Step4_OnboardingFee'), 1500);
+      setTimeout(() => navigation.navigate('Step6_ShopSelection'), 1500);
     } catch (e: any) {
       stopSpinner();
       setVState('error');
@@ -103,7 +103,7 @@ export const Step5_BankAccount = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={4} colors={colors} typography={typography} />
+      <StepBar current={5} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}

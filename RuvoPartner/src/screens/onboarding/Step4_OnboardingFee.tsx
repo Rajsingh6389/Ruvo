@@ -37,12 +37,12 @@ export const Step4_OnboardingFee = () => {
   const handleProceed = () => {
     if (!accepted) { setError('Please accept the terms to continue.'); return; }
     setError(null);
-    navigation.navigate('Step6_ShopSelection');
+    navigation.navigate('Step5_BankAccount');
   };
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={5} colors={colors} typography={typography} />
+      <StepBar current={4} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}

@@ -30,6 +30,7 @@ import { Step4_OnboardingFee } from '../screens/onboarding/Step4_OnboardingFee';
 import { Step5_BankAccount }   from '../screens/onboarding/Step5_BankAccount';
 import { Step6_ShopSelection } from '../screens/onboarding/Step6_ShopSelection';
 import { Step7_Success }       from '../screens/onboarding/Step7_Success';
+// ManageShops reuses Step6_ShopSelection in a post-approval context
 
 // ── Route types ─────────────────────────────────────────────────────────────
 export type RootStackParamList = {
@@ -48,6 +49,7 @@ export type RootStackParamList = {
   VerificationStatus: undefined;
   // Main app
   MainTabs: undefined;
+  ManageShops: undefined;
   ActiveDelivery: { deliveryId: number };
   ActiveDevices: undefined;
 };
@@ -139,6 +141,7 @@ export const AppNavigator = () => {
         ) : verificationStatus === 'APPROVED' ? (
           <>
             <Stack.Screen name="MainTabs"      component={TabNavigator}          />
+            <Stack.Screen name="ManageShops"   component={Step6_ShopSelection}  />
             <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
             <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
           </>

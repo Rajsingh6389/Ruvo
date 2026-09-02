@@ -146,7 +146,7 @@ export const EarningsScreen = () => {
               <Animated.View entering={FadeInUp.delay(100).duration(500)} className="px-lg mt-xl mb-md flex-row items-center justify-between">
                 <Text className="text-lg font-extrabold text-ruvo-ink">Delivery History</Text>
                 <Badge variant="info" size="sm">
-                  {history.length} runs
+                  {`${history.length} runs`}
                 </Badge>
               </Animated.View>
             </>

@@ -146,7 +146,18 @@
         });
         return res.data;
       } catch (error: any) {
-        throw new Error(error.response?.data || error.message || 'Shop update failed');
+        const status = error.response?.status;
+        if (status === 401 || status === 403) {
+          throw new Error('Session expired. Please log out and log in again.');
+        }
+        // Extract readable message from Spring/backend response body
+        const msg =
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          (typeof error.response?.data === 'string' ? error.response.data : null) ||
+          error.message ||
+          'Shop update failed';
+        throw new Error(msg);
       }
     } else {
       const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}`, {
@@ -157,6 +168,9 @@
         },
         body: JSON.stringify(shopInput),
       });
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Session expired. Please log out and log in again.');
+      }
       return parseOrThrow(res);
     }
   }

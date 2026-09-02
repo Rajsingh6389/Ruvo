@@ -26,6 +26,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setVerificationStatus: (status: string) => void;
+  startResubmit: () => Promise<void>;
+  clearResubmit: () => Promise<void>;
   authenticatedFetch: (url: string, options?: RequestInit) => Promise<Response>;
 }
 
@@ -39,10 +41,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [verificationStatus, setVerificationStatusState] = useState<string>('NEW');
+  const [isResubmitting, setIsResubmitting] = useState(false);
 
   const setVerificationStatus = async (status: string) => {
     setVerificationStatusState(status);
     await AsyncStorage.setItem('verificationStatus', status);
+  };
+
+  const startResubmit = async () => {
+    setIsResubmitting(true);
+    await AsyncStorage.setItem('isResubmitting', 'true');
+  };
+
+  const clearResubmit = async () => {
+    setIsResubmitting(false);
+    await AsyncStorage.removeItem('isResubmitting');
   };
 
   const fetchProfile = async (authToken: string) => {
@@ -52,8 +65,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try { isAvailable = (await partnerService.account(authToken)).isAvailable; } catch { /* Central OTP sessions do not use legacy account sessions. */ }
       setUser({ ...profile, isAvailable });
       if (profile.verificationStatus) {
-        setVerificationStatusState(profile.verificationStatus);
-        await AsyncStorage.setItem('verificationStatus', profile.verificationStatus);
+        // During re-onboarding, the backend still shows REJECTED but the user
+        // is actively going through steps — do not overwrite the client status.
+        const resubmitting = isResubmitting || (await AsyncStorage.getItem('isResubmitting')) === 'true';
+        if (!resubmitting) {
+          setVerificationStatusState(profile.verificationStatus);
+          await AsyncStorage.setItem('verificationStatus', profile.verificationStatus);
+        }
       }
     } catch { /* Retain the cached session state when offline. */ }
   };
@@ -76,6 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const storedUserId = await AsyncStorage.getItem('userId');
         const storedRole = await AsyncStorage.getItem('userRole');
         const storedStatus = await AsyncStorage.getItem('verificationStatus');
+        const storedResubmitting = await AsyncStorage.getItem('isResubmitting');
 
         if (storedToken && storedRole === 'DELIVERY_PARTNER') {
           setToken(storedToken);
@@ -83,6 +102,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUserId(storedUserId);
           if (storedStatus) {
             setVerificationStatusState(storedStatus);
+          }
+          if (storedResubmitting === 'true') {
+            setIsResubmitting(true);
           }
           setIsAuthenticated(true);
           fetchProfile(storedToken);
@@ -132,6 +154,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem('userId');
     await AsyncStorage.removeItem('userRole');
     await AsyncStorage.removeItem('verificationStatus');
+    await AsyncStorage.removeItem('isResubmitting');
 
     setToken(null);
     setRefreshTokenStr(null);
@@ -209,6 +232,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         logout,
         refreshProfile,
         setVerificationStatus,
+        startResubmit,
+        clearResubmit,
         authenticatedFetch,
       }}
     >

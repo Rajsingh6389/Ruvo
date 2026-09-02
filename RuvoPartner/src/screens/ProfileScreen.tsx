@@ -6,13 +6,15 @@
  * - Verification status badge
  * - Personal details (mobile, role)
  * - Vehicle information
+ * - My Shops section (manage shop selection after approval)
  * - Security & sessions link
  * - Sign out with confirmation
  * - Smooth animations
  * - Responsive layout
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -33,6 +35,16 @@ import { Button } from '../components/ui/Button';
 export const ProfileScreen = () => {
   const { user, logout, verificationStatus } = useAuth();
   const navigation = useNavigation<any>();
+  const [selectedShopCount, setSelectedShopCount] = useState(0);
+
+  useEffect(() => {
+    AsyncStorage.getItem('selectedShopIds').then(raw => {
+      try {
+        const ids = raw ? JSON.parse(raw) : [];
+        setSelectedShopCount(Array.isArray(ids) ? ids.length : 0);
+      } catch { setSelectedShopCount(0); }
+    });
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -140,8 +152,37 @@ export const ProfileScreen = () => {
           </Card>
         </Animated.View>
 
+        {/* My Shops Section — only shown after approval */}
+        {isApproved && (
+          <Animated.View entering={FadeInUp.delay(300).duration(500)}>
+            <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-sm ml-xs">
+              My Shops
+            </Text>
+            <Card className="mb-xl">
+              <TouchableOpacity
+                onPress={() => navigation.navigate('ManageShops')}
+                activeOpacity={0.7}
+                className="flex-row items-center gap-md"
+              >
+                <View className="w-9 h-9 bg-amber-100 rounded-lg items-center justify-center">
+                  <Ionicons name="storefront-outline" size={20} color="#D97706" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm text-ruvo-ink font-bold">Manage Shop Selection</Text>
+                  <Text className="text-xs text-warm-600 mt-xs">
+                    {selectedShopCount > 0
+                      ? `${selectedShopCount} shop${selectedShopCount > 1 ? 's' : ''} selected · tap to update`
+                      : 'No shops selected yet'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#D1C7BA" />
+              </TouchableOpacity>
+            </Card>
+          </Animated.View>
+        )}
+
         {/* Security Section */}
-        <Animated.View entering={FadeInUp.delay(300).duration(500)}>
+        <Animated.View entering={FadeInUp.delay(400).duration(500)}>
           <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-sm ml-xs">
             Security & Access
           </Text>

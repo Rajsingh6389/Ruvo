@@ -9,10 +9,12 @@ import { DarkTheme, LightTheme } from './theme/theme';
 // Auth
 import { LoginScreen } from './screens/LoginScreen';
 
-// Onboarding (4-step flow for new shop owners)
+// Onboarding (5-step flow for new shop owners)
 import { Step1_ShopDetails }     from './screens/onboarding/Step1_ShopDetails';
 import { Step2_Aadhaar }         from './screens/onboarding/Step2_Aadhaar';
 import { Step3_BankAccount }     from './screens/onboarding/Step3_BankAccount';
+import { Step4_OnboardingFee }   from './screens/onboarding/Step4_OnboardingFee';
+import { Step5_ShopSelect }      from './screens/onboarding/Step5_ShopSelect';
 import { Step4_Success }         from './screens/onboarding/Step4_Success';
 
 // Main app screens (shown only after onboardingStatus === 'APPROVED')
@@ -35,6 +37,8 @@ export type ShopStackParamList = {
   Step1_ShopDetails: undefined;
   Step2_Aadhaar: undefined;
   Step3_BankAccount: undefined;
+  Step4_OnboardingFee: undefined;
+  Step5_ShopSelect: undefined;
   Step4_Success: { shopName?: string };
   // Main app
   MyShops: undefined;
@@ -90,6 +94,8 @@ export const ShopNavigator = () => {
             <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
             <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
             <Stack.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+            <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+            <Stack.Screen name="Step5_ShopSelect" component={Step5_ShopSelect} />
           </>
 
         ) : onboardingStatus !== 'APPROVED' ? (
@@ -102,6 +108,8 @@ export const ShopNavigator = () => {
             <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
             <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
             <Stack.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+            <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+            <Stack.Screen name="Step5_ShopSelect" component={Step5_ShopSelect} />
             <Stack.Screen name="Step4_Success" component={Step4_Success} />
           </>
 

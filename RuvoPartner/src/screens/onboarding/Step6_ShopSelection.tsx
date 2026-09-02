@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
@@ -27,6 +27,7 @@ import {
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+const MAX_SHOPS = 8;
 
 interface NearbyShop {
   id: number;
@@ -200,7 +201,10 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
 
 export const Step6_ShopSelection = () => {
   const navigation = useNavigation<any>();
-  const { token, setVerificationStatus } = useAuth();
+  const route = useRoute();
+  // Detect if opened as post-approval ManageShops vs onboarding Step6
+  const isManageMode = route.name === 'ManageShops';
+  const { token, setVerificationStatus, clearResubmit } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [shops,        setShops]        = useState<NearbyShop[]>([]);
@@ -297,19 +301,35 @@ export const Step6_ShopSelection = () => {
     }
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        if (next.size >= MAX_SHOPS) {
+          setError(`You can select a maximum of ${MAX_SHOPS} shops.`);
+          return prev; // no change
+        }
+        next.add(id);
+      }
+      setError(null);
       return next;
     });
-    setError(null);
   };
 
   const selectAll  = () => {
     if (isLocked) { setError(`Shop selection is locked until ${nextAllowedDate}.`); return; }
-    setSelected(new Set(shops.map(s => s.id)));
+    if (selected.size >= MAX_SHOPS) {
+      setError(`You can select a maximum of ${MAX_SHOPS} shops.`);
+      return;
+    }
+    // Only add up to MAX_SHOPS shops
+    const capped = shops.slice(0, MAX_SHOPS).map(s => s.id);
+    setSelected(new Set(capped));
+    setError(null);
   };
   const clearAll   = () => {
     if (isLocked) { setError(`Shop selection is locked until ${nextAllowedDate}.`); return; }
     setSelected(new Set());
+    setError(null);
   };
 
   const handleSubmit = async () => {
@@ -335,16 +355,28 @@ export const Step6_ShopSelection = () => {
 
       // Accept 2xx or a 404 (endpoint not yet deployed) so the flow isn't blocked
       if (res.ok || res.status === 404 || res.status === 501) {
-        await setVerificationStatus('PENDING_APPROVAL');
-        navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
+        if (isManageMode) {
+          // Post-approval: just go back to Profile
+          navigation.goBack();
+        } else {
+          // Onboarding: proceed to success/waiting screen
+          navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
+          await clearResubmit();
+          setVerificationStatus('PENDING_APPROVAL');
+        }
       } else {
         const data = await res.json().catch(() => null);
         throw new Error(data?.message || `Error ${res.status}`);
       }
     } catch (e: any) {
       // Non-blocking: still advance so demo always works
-      await setVerificationStatus('PENDING_APPROVAL');
-      navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
+      if (isManageMode) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
+        await clearResubmit();
+        setVerificationStatus('PENDING_APPROVAL');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -425,7 +457,7 @@ export const Step6_ShopSelection = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={6} colors={colors} typography={typography} />
+      {!isManageMode && <StepBar current={6} colors={colors} typography={typography} />}
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
@@ -441,7 +473,7 @@ export const Step6_ShopSelection = () => {
         <ScreenHeader
           icon="storefront-outline"
           title="Select Your Shops"
-          subtitle="Choose nearby shops you want to deliver from. Only those shops' orders will be broadcast to you."
+          subtitle={`Choose up to ${MAX_SHOPS} nearby shops you want to deliver from. Only those shops' orders will be broadcast to you.`}
           colors={colors}
           typography={typography}
           onBack={() => navigation.goBack()}
@@ -469,17 +501,27 @@ export const Step6_ShopSelection = () => {
         {fetchState === 'done' && shops.length > 0 && (
           <View style={[s.controlBar, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: RADIUS.md }]}>
             <View style={s.countBadge}>
-              <Text style={[typography.headingS, { color: colors.primary }]}>{selected.size}</Text>
-              <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                {' '}/ {shops.length} selected
+              <Text style={[typography.headingS, { color: selected.size >= MAX_SHOPS ? colors.warning : colors.primary }]}>
+                {selected.size}
               </Text>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                {' '}/ {MAX_SHOPS} shops
+              </Text>
+              {selected.size >= MAX_SHOPS && (
+                <Text style={[typography.caption, { color: colors.warning, fontWeight: '700', marginLeft: 6 }]}>MAX</Text>
+              )}
             </View>
             <View style={s.controlBtns}>
               <TouchableOpacity
-                style={[s.ctrlBtn, { borderColor: colors.border, borderRadius: RADIUS.sm }]}
+                style={[s.ctrlBtn, {
+                  borderColor: selected.size >= MAX_SHOPS ? colors.border : colors.primary,
+                  borderRadius: RADIUS.sm,
+                  opacity: selected.size >= MAX_SHOPS ? 0.4 : 1,
+                }]}
                 onPress={selectAll}
+                disabled={selected.size >= MAX_SHOPS}
               >
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}>All</Text>
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}>Top {MAX_SHOPS}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.ctrlBtn, { borderColor: colors.border, borderRadius: RADIUS.sm }]}

@@ -36,7 +36,7 @@ const FUEL_OPTIONS: FuelType[] = ['Petrol', 'Diesel', 'EV'];
 
 export const Step2_VehicleType = () => {
   const navigation = useNavigation<any>();
-  const { token, setVerificationStatus } = useAuth();
+  const { token } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [vehicleType,     setVehicleType]     = useState<VehicleType>('Bike');
@@ -71,7 +71,6 @@ export const Step2_VehicleType = () => {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
-      await setVerificationStatus(data?.data?.verificationStatus || 'NEW');
       navigation.navigate('Step3_Aadhaar');
     } catch (e: any) {
       setError(e.message || 'Submission failed.');
