@@ -216,51 +216,46 @@ public class DeliveryService {
 
         System.out.println("🔍 [DeliveryService] Order #" + order.getId() + " — inspecting " + partners.size()
                 + " candidates (" + tierLabel + "), shop at " + round(lat) + "," + round(lng) + ":");
+
+        List<DeliveryPartner> eligible = new java.util.ArrayList<>();
         for (DeliveryPartner p : partners) {
+            String rejectReason = null;
+            if (!Boolean.TRUE.equals(p.getAvailable()) || !Boolean.TRUE.equals(p.getApproved()) || !Boolean.TRUE.equals(p.getActive())) {
+                rejectReason = "Status false (avail=" + p.getAvailable() + ", appr=" + p.getApproved() + ", active=" + p.getActive() + ")";
+            } else if (p.getLastActiveAt() != null && p.getLastActiveAt().isBefore(startOfToday)) {
+                p.setAvailable(false);
+                deliveryPartnerRepository.save(p);
+                rejectReason = "Auto-offlining stale partner - last active before today";
+            } else if (p.getPreferredShopIds() != null && !p.getPreferredShopIds().isBlank()) {
+                Long orderShopId = order.getShopId();
+                if (orderShopId != null) {
+                    java.util.Set<Long> preferredSet = java.util.Arrays.stream(p.getPreferredShopIds().split(","))
+                            .map(String::trim).filter(s -> !s.isEmpty()).map(Long::parseLong)
+                            .collect(java.util.stream.Collectors.toSet());
+                    if (!preferredSet.contains(orderShopId)) {
+                        rejectReason = "Shop ID " + orderShopId + " not in preferred shops";
+                    }
+                }
+            }
+            if (rejectReason == null) {
+                if (rejectedPartnerIds.contains(p.getId())) rejectReason = "Rejected this order before";
+                else if (pendingPartnerIds.contains(p.getId())) rejectReason = "Already has PENDING request for this order";
+                else if (busyPartnerIds.contains(p.getId())) rejectReason = "BUSY (assigned to another order or live request)";
+                else if (!withinRadius(p, lat, lng, radiusKm)) rejectReason = "Outside " + radiusKm + " km radius";
+            }
+
             System.out.println("   -> Partner #" + p.getId() + " (" + p.getName() + ", phone=" + p.getPhone() + "): "
                     + describeDistance(p, lat, lng)
-                    + ", available=" + p.getAvailable() + ", approved=" + p.getApproved() + ", active=" + p.getActive()
-                    + ", lastActiveAt=" + p.getLastActiveAt()
-                    + (busyPartnerIds.contains(p.getId()) ? " [BUSY — skipped]" : "")
-                    + (rejectedPartnerIds.contains(p.getId()) ? " [REJECTED this order]" : ""));
-        }
-
-        List<DeliveryPartner> eligible = partners.stream()
-            .filter(p -> Boolean.TRUE.equals(p.getAvailable()) && Boolean.TRUE.equals(p.getApproved()) && Boolean.TRUE.equals(p.getActive()))
-            .filter(p -> {
+                    + (rejectReason == null ? " ✅ ELIGIBLE" : " ❌ SKIPPED: " + rejectReason));
+            
+            if (rejectReason == null) {
                 if (p.getLastActiveAt() == null) {
                     p.setLastActiveAt(java.time.Instant.now());
                     deliveryPartnerRepository.save(p);
-                } else if (p.getLastActiveAt().isBefore(startOfToday)) {
-                    p.setAvailable(false);
-                    deliveryPartnerRepository.save(p);
-                    System.out.println("🌙 [DeliveryService] Auto-offlining stale partner #" + p.getId() + " (" + p.getName() + ") - last active before today.");
-                    return false;
                 }
-                return true;
-            })
-            .filter(p -> {
-                // If partner has set preferred shop IDs, verify order's shop is selected
-                if (p.getPreferredShopIds() != null && !p.getPreferredShopIds().isBlank()) {
-                    Long orderShopId = order.getShopId();
-                    if (orderShopId != null) {
-                        java.util.Set<Long> preferredSet = java.util.Arrays.stream(p.getPreferredShopIds().split(","))
-                                .map(String::trim)
-                                .filter(s -> !s.isEmpty())
-                                .map(Long::parseLong)
-                                .collect(java.util.stream.Collectors.toSet());
-                        if (!preferredSet.contains(orderShopId)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            })
-            .filter(p -> !rejectedPartnerIds.contains(p.getId()))
-            .filter(p -> !pendingPartnerIds.contains(p.getId()))
-            .filter(p -> !busyPartnerIds.contains(p.getId()))
-            .filter(p -> withinRadius(p, lat, lng, radiusKm))
-            .toList();
+                eligible.add(p);
+            }
+        }
 
         if (eligible.isEmpty()) return null;
 
@@ -288,9 +283,9 @@ public class DeliveryService {
             })).orElse(null);
     }
 
-    /** A partner who has never reported GPS cannot be distance-checked, so treat them as out of range. */
+    /** A partner who has never reported GPS cannot be distance-checked, so assume they might be in range to ensure fallback delivery assignment. */
     private static boolean withinRadius(DeliveryPartner p, double shopLat, double shopLng, double radiusKm) {
-        if (p.getLatitude() == null || p.getLongitude() == null) return false;
+        if (p.getLatitude() == null || p.getLongitude() == null) return true; // Include as fallback
         return DistanceUtils.calculateDistance(shopLat, shopLng, p.getLatitude(), p.getLongitude()) <= radiusKm;
     }
 
@@ -323,7 +318,7 @@ public class DeliveryService {
             .distanceKm(distanceKm)
             .status("PENDING")
             .sentAt(Instant.now())
-            .expiresAt(Instant.now().plus(1, ChronoUnit.MINUTES))
+            .expiresAt(Instant.now().plus(30, ChronoUnit.SECONDS))
             .build();
         
         deliveryRequestRepository.save(request);

@@ -194,29 +194,52 @@ export default function OrderHistoryScreen() {
               {item.paymentMethod === 'ONLINE' ? 'Online' : 'Cash on Delivery'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.trackBtn,
-              {
-                backgroundColor: isActive ? colors.primary : colors.surfaceSunken,
-                borderRadius: radius.button,
-              },
-              isActive && shadows.brand,
-            ]}
-            onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
-          >
-            <Ionicons
-              name={isActive ? 'navigate' : 'eye-outline'}
-              size={14}
-              color={isActive ? colors.onPrimary : colors.textSecondary}
-            />
-            <Text style={[typography.bodyStrong, {
-              color: isActive ? colors.onPrimary : colors.textSecondary,
-              fontSize: 13,
-            }]}>
-              {isActive ? 'Track Order' : 'Details'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {item.orderStatus === 'DELIVERED' && (
+              <TouchableOpacity
+                style={[
+                  styles.trackBtn,
+                  {
+                    backgroundColor: colors.card,
+                    borderRadius: radius.button,
+                    borderColor: '#FFB300',
+                    borderWidth: 1,
+                  }
+                ]}
+                onPress={() => navigation.navigate('RateOrder', { 
+                  orderId: item.id, 
+                  shopId: (item as any).shopId || 1, // Fallback if shopId is missing
+                  shopName: (item as any).shopName || 'Shop'
+                })}
+              >
+                <Ionicons name="star" size={14} color="#FFB300" />
+                <Text style={[typography.bodyStrong, { color: '#FFB300', fontSize: 13 }]}>Rate</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.trackBtn,
+                {
+                  backgroundColor: isActive ? colors.primary : colors.surfaceSunken,
+                  borderRadius: radius.button,
+                },
+                isActive && shadows.brand,
+              ]}
+              onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
+            >
+              <Ionicons
+                name={isActive ? 'navigate' : 'eye-outline'}
+                size={14}
+                color={isActive ? colors.onPrimary : colors.textSecondary}
+              />
+              <Text style={[typography.bodyStrong, {
+                color: isActive ? colors.onPrimary : colors.textSecondary,
+                fontSize: 13,
+              }]}>
+                {isActive ? 'Track Order' : 'Details'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );

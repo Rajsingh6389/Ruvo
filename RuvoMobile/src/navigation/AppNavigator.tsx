@@ -36,6 +36,11 @@ import OrderHistoryScreen     from '../screens/profile/OrderHistoryScreen';
 import EditProfileScreen      from '../screens/profile/EditProfileScreen';
 import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScreen';
 
+// ─── Search, Reviews & Help Screens ────────────────────────
+import { SearchScreen }       from '../screens/search/SearchScreen';
+import { HelpScreen }         from '../screens/help/HelpScreen';
+import { RateOrderScreen }    from '../screens/reviews/RateOrderScreen';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator();
 
@@ -174,6 +179,9 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
             <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
             <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
             <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
+            <Stack.Screen name={ROUTES.SEARCH}          component={SearchScreen} />
+            <Stack.Screen name={ROUTES.HELP}            component={HelpScreen} />
+            <Stack.Screen name={ROUTES.RATE_ORDER}      component={RateOrderScreen} />
             <Stack.Screen name={ROUTES.JOBS}            component={ComingSoonScreen} />
           </>
         )}

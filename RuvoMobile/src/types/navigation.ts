@@ -37,4 +37,7 @@ export type RootStackParamList = {
   CustomerTracking: { orderId: number };
   PaymentFailure: { orderId?: number; reason?: string } | undefined;
   Market: undefined;
+  Search: undefined;
+  Help: undefined;
+  RateOrder: { orderId: number; shopId: number; shopName: string };
 };

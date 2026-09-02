@@ -115,7 +115,11 @@ export const Button = ({
             {icon && iconPosition === 'left' && (
               <Ionicons name={icon} size={getIconSize()} color={variant === 'danger' ? '#FFF' : '#231C10'} />
             )}
-            {typeof children === 'string' ? (
+            {typeof children === 'string' || typeof children === 'number' ? (
+              <Text className={getTextClasses()}>{children}</Text>
+            ) : Array.isArray(children) && children.length > 0 && typeof children[0] === 'string' ? (
+              <Text className={getTextClasses()}>{children}</Text>
+            ) : Array.isArray(children) && children.every(c => ['string', 'number'].includes(typeof c)) ? (
               <Text className={getTextClasses()}>{children}</Text>
             ) : (
               children

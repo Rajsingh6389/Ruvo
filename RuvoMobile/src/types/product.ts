@@ -10,4 +10,5 @@ export interface Product {
   category?: string;
   inStock?: boolean;
   shopId?: number;
+  shopName?: string;
 }

@@ -13,20 +13,34 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import { ROUTES } from '../../constants/routes';
+import { API_BASE_URL } from '../../config/api';
+
+const formatImageUrl = (url?: string) => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
 
 type Product = {
   id?: number;
   shopId?: number;
+  shopName?: string;
+  rating?: number;
+  reviewsCount?: number;
   name: string;
   category?: string;
   brandName?: string;
   description?: string;
   actualPrice: number;
+  originalPrice?: number;
   sellingPrice: number;
+  price?: number;
   discount?: number;
   stockQuantity: number;
   unit?: string;
   imageUrl?: string;
+  image?: string;
   isAvailable?: boolean;
 };
 
@@ -44,16 +58,18 @@ const Benefit = ({
   subtitle: string;
 }) => (
   <View className="flex-1 flex-row items-center justify-center gap-2">
-    <Ionicons
-      name={icon}
-      size={22}
-      color="#2E7D32"
-    />
+    <View className="w-8 h-8 rounded-full bg-ruvo-yellow/20 items-center justify-center">
+      <Ionicons
+        name={icon}
+        size={16}
+        color="#F5B700"
+      />
+    </View>
     <View>
       <Text className="text-xs font-bold text-ruvo-ink">
         {title}
       </Text>
-      <Text className="text-xs text-gray-600 mt-0.5">
+      <Text className="text-[10px] text-gray-500 mt-0.5">
         {subtitle}
       </Text>
     </View>
@@ -70,11 +86,11 @@ const Spec = ({
   value: string;
 }) => (
   <View className="flex-1 items-center">
-    <View className="w-9 h-9 rounded-lg bg-ruvo-accent-soft flex items-center justify-center mb-1.5">
+    <View className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center mb-2 border border-orange-100">
       <Ionicons
         name={icon}
-        size={17}
-        color="#2E7D32"
+        size={18}
+        color="#EA580C"
       />
     </View>
     <Text className="text-xs text-gray-600">
@@ -163,7 +179,7 @@ const ProductDetailsScreen = () => {
         <Ionicons
           name="alert-circle-outline"
           size={50}
-          color="#2E7D32"
+          color="#F5B700"
         />
 
         <Text className="text-lg font-bold text-ruvo-ink mt-3">
@@ -246,11 +262,11 @@ const ProductDetailsScreen = () => {
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5 }}
       >
         {/* PRODUCT IMAGE */}
-        <View className="h-80 bg-white rounded-2xl overflow-hidden border border-gray-200 relative items-center justify-center">
-          {product.imageUrl ? (
+        <View className="h-80 bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm relative items-center justify-center mb-2">
+          {(product.imageUrl || product.image) ? (
             <Image
-              source={{ uri: product.imageUrl }}
-              className="w-11/12 h-11/12"
+              source={{ uri: formatImageUrl(product.imageUrl || product.image)! }}
+              className="w-full h-full"
               resizeMode="contain"
             />
           ) : (
@@ -258,31 +274,31 @@ const ProductDetailsScreen = () => {
               <Ionicons
                 name="image-outline"
                 size={65}
-                color="#BFC7C0"
+                color="#E5E7EB"
               />
-              <Text className="text-xs text-gray-500 mt-2">
+              <Text className="text-xs text-gray-400 mt-2 font-medium">
                 No product image
               </Text>
             </View>
           )}
 
           {discount > 0 && (
-            <View className="absolute left-3 bottom-3 bg-ruvo-accent px-3 py-2 rounded-lg">
+            <View className="absolute left-4 top-4 bg-red-500 px-3 py-1.5 rounded-full shadow-sm">
               <Text className="text-white text-xs font-black">
                 {discount}% OFF
               </Text>
             </View>
           )}
 
-          <View className="absolute right-3 bottom-3 bg-white px-3 py-1.5 rounded-2xl">
-            <Text className="text-ruvo-ink text-xs font-bold">
+          <View className="absolute right-4 bottom-4 bg-black/60 px-3 py-1 rounded-full">
+            <Text className="text-white text-xs font-bold tracking-widest">
               1 / 1
             </Text>
           </View>
         </View>
 
         {/* PRODUCT INFO */}
-        <View className="bg-white rounded-lg p-4 mt-2.5 border border-gray-200">
+        <View className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <View className="flex-row items-start justify-between mb-3">
             <View className="flex-1 pr-2">
               <Text className="text-2xl font-black text-ruvo-ink">
@@ -297,17 +313,17 @@ const ProductDetailsScreen = () => {
             </View>
 
             <View
-              className={`px-2 py-1.5 rounded-lg border ${
+              className={`px-3 py-1.5 rounded-full border ${
                 available
-                  ? 'bg-ruvo-accent-soft border-ruvo-accent'
-                  : 'bg-red-50 border-red-300'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
               }`}
             >
               <Text
-                className={`text-xs font-black ${
+                className={`text-[10px] uppercase tracking-widest font-black ${
                   available
-                    ? 'text-ruvo-accent'
-                    : 'text-red-600'
+                    ? 'text-green-700'
+                    : 'text-red-700'
                 }`}
               >
                 {available
@@ -318,65 +334,69 @@ const ProductDetailsScreen = () => {
           </View>
 
           {/* RATING */}
-          <View className="flex-row items-center mb-3">
-            <View className="bg-ruvo-accent px-2 py-1 rounded flex-row items-center gap-1">
-              <Ionicons
-                name="star"
-                size={15}
-                color="#FFFFFF"
-              />
-              <Text className="text-white text-xs font-black">
-                4.6
+          {product.rating ? (
+            <View className="flex-row items-center mb-4">
+              <View className="bg-ruvo-yellow px-2 py-1 rounded-md flex-row items-center gap-1 shadow-sm">
+                <Ionicons
+                  name="star"
+                  size={12}
+                  color="#FFFFFF"
+                />
+                <Text className="text-white text-xs font-black">
+                  {product.rating}
+                </Text>
+              </View>
+
+              <Text className="text-gray-600 text-xs ml-2">
+                {product.reviewsCount || 0} reviews
               </Text>
             </View>
-
-            <Text className="text-gray-600 text-xs ml-2">
-              128 reviews
-            </Text>
-          </View>
+          ) : (
+            <View className="mb-2" />
+          )}
 
           {/* PRICE */}
-          <View className="flex-row items-center mb-3">
-            <Text className="text-3xl font-black text-ruvo-accent">
-              ₹{product.sellingPrice}
+          <View className="flex-row items-end mb-3 gap-2">
+            <Text className="text-3xl font-black text-ruvo-ink tracking-tight">
+              ₹{product.sellingPrice || product.price || 0}
             </Text>
 
-            {product.actualPrice >
-              product.sellingPrice && (
-              <Text className="text-gray-500 text-sm ml-2 line-through">
-                ₹{product.actualPrice}
+            {(product.actualPrice || product.originalPrice || 0) >
+              (product.sellingPrice || product.price || 0) && (
+              <Text className="text-gray-400 text-base font-semibold mb-1 line-through">
+                ₹{product.actualPrice || product.originalPrice}
               </Text>
             )}
 
             {discount > 0 && (
-              <View className="bg-ruvo-accent-soft px-2 py-1 rounded ml-2">
-                <Text className="text-ruvo-accent text-xs font-black">
-                  {discount}% OFF
+              <View className="bg-red-50 px-2 py-1 rounded border border-red-100 mb-1.5">
+                <Text className="text-red-600 text-[10px] font-black uppercase">
+                  Save {discount}%
                 </Text>
               </View>
             )}
           </View>
 
-          {product.unit && (
+          {product.unit && (product.sellingPrice || product.price) ? (
             <Text className="text-gray-600 text-xs">
               ₹
               {(
-                product.sellingPrice /
+                (product.sellingPrice || product.price || 0) /
                 parseUnit(product.unit)
               ).toFixed(2)}{' '}
               per unit
             </Text>
-          )}
+          ) : null}
 
           {/* BENEFITS */}
-          <View className="bg-green-50 rounded-lg mt-3 px-2 py-3 flex-row items-center">
+          <View className="bg-gray-50 border border-gray-100 rounded-xl mt-4 px-2 py-3.5 flex-row items-center shadow-sm">
             <Benefit
               icon="shield-checkmark-outline"
               title="100%"
               subtitle="Original"
             />
 
-            <View className="w-px h-8 bg-green-200 mx-1" />
+            <View className="w-px h-8 bg-gray-200 mx-1" />
 
             <Benefit
               icon="ribbon-outline"
@@ -384,10 +404,10 @@ const ProductDetailsScreen = () => {
               subtitle="Guaranteed"
             />
 
-            <View className="w-px h-8 bg-green-200 mx-1" />
+            <View className="w-px h-8 bg-gray-200 mx-1" />
 
             <Benefit
-              icon="bicycle-outline"
+              icon="flash-outline"
               title="Fast"
               subtitle="Delivery"
             />
@@ -395,40 +415,41 @@ const ProductDetailsScreen = () => {
         </View>
 
         {/* SHOP */}
-        <View className="bg-white rounded-lg p-3 mt-2.5 border border-gray-200 flex-row items-center">
-          <View className="w-14 h-14 rounded-xl bg-ruvo-accent-soft items-center justify-center mr-3">
+        <View className="bg-white rounded-2xl p-4 mt-3 border border-gray-100 shadow-sm flex-row items-center">
+          <View className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 items-center justify-center mr-3">
             <Ionicons
               name="storefront"
-              size={25}
-              color="#2E7D32"
+              size={20}
+              color="#3B82F6"
             />
           </View>
 
           <View className="flex-1">
-            <Text className="text-gray-600 text-xs">
+            <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
               Sold by
             </Text>
 
             <Text className="text-ruvo-ink text-base font-black mt-0.5">
-              Local RuVo Shop
+              {product.shopName || 'Local RuVo Shop'}
             </Text>
 
-            <View className="flex-row items-center mt-0.5">
+            <View className="flex-row items-center mt-1 opacity-70">
               <Ionicons
-                name="location-outline"
-                size={14}
-                color="#2E7D32"
+                name="location"
+                size={12}
+                color="#6B7280"
               />
 
-              <Text className="text-gray-600 text-xs ml-0.5">
+              <Text className="text-gray-600 text-xs ml-1 font-medium">
                 Nearby shop
               </Text>
             </View>
           </View>
 
+
           <TouchableOpacity
             activeOpacity={0.8}
-            className="border border-ruvo-accent px-2.5 py-2 rounded-lg"
+            className="bg-gray-100 px-4 py-2 rounded-full"
             onPress={() => {
               if (product.shopId) {
                 navigation.navigate('ShopDetails', {
@@ -437,31 +458,31 @@ const ProductDetailsScreen = () => {
               }
             }}
           >
-            <Text className="text-ruvo-accent text-xs font-black">
-              View Shop
+            <Text className="text-ruvo-ink text-xs font-black">
+              Visit
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* PRODUCT DETAILS */}
-        <View className="bg-white rounded-lg p-3.5 mt-2.5 border border-gray-200">
-          <Text className="text-base font-black text-ruvo-ink mb-2">
+        <View className="bg-white rounded-2xl p-5 mt-3 border border-gray-100 shadow-sm">
+          <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider mb-2">
             Product Details
           </Text>
 
-          <Text className="text-gray-600 text-sm leading-5 mb-3">
+          <Text className="text-gray-600 text-sm leading-6 mb-4">
             {product.description ||
-              'Quality product available from your nearby local shop on RuVo.'}
+              'Quality product available from your nearby local shop on RuVo. Guaranteed authentic.'}
           </Text>
 
-          <View className="flex-row items-stretch">
+          <View className="flex-row items-stretch pt-2 border-t border-gray-100">
             <Spec
               icon="pricetag-outline"
               title="Brand"
               value={product.brandName || 'N/A'}
             />
 
-            <View className="w-px bg-gray-200 mx-0.5" />
+            <View className="w-[1px] bg-gray-100 rounded-full mx-2" />
 
             <Spec
               icon="cube-outline"
@@ -469,7 +490,7 @@ const ProductDetailsScreen = () => {
               value={product.category || 'General'}
             />
 
-            <View className="w-px bg-gray-200 mx-0.5" />
+            <View className="w-[1px] bg-gray-100 rounded-full mx-2" />
 
             <Spec
               icon="layers-outline"
@@ -481,21 +502,21 @@ const ProductDetailsScreen = () => {
 
         {/* QUANTITY */}
         {available && (
-          <View className="bg-white rounded-lg p-3.5 mt-2.5 border border-gray-200 flex-row items-center justify-between">
-            <Text className="text-ruvo-ink font-black">
+          <View className="bg-white rounded-2xl p-4 mt-3 mb-6 border border-gray-100 shadow-sm flex-row items-center justify-between">
+            <Text className="text-ruvo-ink font-black text-sm uppercase tracking-wide">
               Quantity
             </Text>
 
-            <View className="flex-row items-center border border-gray-200 rounded overflow-hidden">
+            <View className="flex-row items-center bg-gray-50 rounded-full border border-gray-200 p-1">
               <TouchableOpacity
                 activeOpacity={0.7}
-                className="w-10 h-10 items-center justify-center bg-gray-50"
+                className="w-8 h-8 rounded-full bg-white items-center justify-center shadow-sm"
                 onPress={decreaseQuantity}
               >
                 <Ionicons
                   name="remove"
-                  size={19}
-                  color="#2E7D32"
+                  size={18}
+                  color="#1A1A1A"
                 />
               </TouchableOpacity>
 
@@ -505,13 +526,13 @@ const ProductDetailsScreen = () => {
 
               <TouchableOpacity
                 activeOpacity={0.7}
-                className="w-10 h-10 items-center justify-center bg-gray-50"
+                className="w-8 h-8 rounded-full bg-ruvo-yellow items-center justify-center shadow-sm"
                 onPress={increaseQuantity}
               >
                 <Ionicons
                   name="add"
-                  size={19}
-                  color="#2E7D32"
+                  size={18}
+                  color="#1A1A1A"
                 />
               </TouchableOpacity>
             </View>
@@ -522,53 +543,56 @@ const ProductDetailsScreen = () => {
       </ScrollView>
 
       {/* BOTTOM ACTIONS */}
-      <View className="absolute left-0 right-0 bottom-0 bg-white border-t border-gray-200 px-3 pt-2.5 pb-3.5 flex-row gap-2.5">
-
-        <TouchableOpacity
-          activeOpacity={0.82}
-          disabled={!available}
-          className={`flex-1 h-14 rounded-lg flex-row items-center justify-center gap-2 ${
-            available
-              ? 'bg-ruvo-accent'
-              : 'bg-gray-400'
-          }`}
-          onPress={handleAddToCart}
-        >
-          <Ionicons
-            name="cart-outline"
-            size={21}
-            color="#FFFFFF"
-          />
-
-          <Text className="text-white font-black">
-            Add to Cart
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          activeOpacity={0.82}
-          disabled={!available || submitting}
-          className={`flex-1 h-14 rounded-lg border-2 items-center justify-center ${
-            !available || submitting
-              ? 'border-gray-400'
-              : 'border-ruvo-accent'
-          }`}
-          onPress={handleBuyNow}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color="#2E7D32" />
-          ) : (
-            <Text
-              className={`font-black ${
-                !available
-                  ? 'text-gray-600'
-                  : 'text-ruvo-accent'
-              }`}
-            >
-              Buy Now
+      <View className="absolute left-0 right-0 bottom-0 bg-white border-t border-gray-100 px-4 pt-3 pb-safe items-center shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
+        <View className="flex-row w-full gap-3 pb-2">
+          <TouchableOpacity
+            activeOpacity={0.82}
+            disabled={!available}
+            className={`flex-1 h-14 rounded-xl flex-row items-center justify-center gap-2 ${
+              available
+                ? 'bg-gray-100'
+                : 'bg-gray-100 opacity-60'
+            }`}
+            onPress={handleAddToCart}
+          >
+            <Ionicons
+              name="cart"
+              size={20}
+              color={available ? "#1A1A1A" : "#9CA3AF"}
+            />
+            <Text className={`font-black tracking-wide ${available ? 'text-ruvo-ink' : 'text-gray-400'}`}>
+              Add to Cart
             </Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.82}
+            disabled={!available || submitting}
+            className={`flex-1 h-14 rounded-xl flex-row items-center justify-center shadow-sm ${
+              !available || submitting
+                ? 'bg-gray-300'
+                : 'bg-ruvo-yellow'
+            }`}
+            onPress={handleBuyNow}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#1A1A1A" />
+            ) : (
+              <>
+                <Ionicons name="flash" size={18} color={available ? "#1A1A1A" : "#9CA3AF"} />
+                <Text
+                  className={`font-black tracking-wide ml-1 ${
+                    !available
+                      ? 'text-gray-500'
+                      : 'text-ruvo-ink'
+                  }`}
+                >
+                  Buy Now
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

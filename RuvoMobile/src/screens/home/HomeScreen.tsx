@@ -162,24 +162,16 @@ export const HomeScreen = () => {
           </View>
         </View>
 
-        {/* Search Bar */}
-        <View className={`flex-row items-center bg-warm-100 rounded-lg px-md py-sm gap-sm ${searchFocused ? 'border-2 border-ruvo-yellow' : ''}`}>
+        {/* Search Bar Button */}
+        <Pressable 
+          onPress={() => (navigation.navigate as any)(ROUTES.SEARCH)}
+          className="flex-row items-center bg-warm-100 rounded-lg px-md py-sm gap-sm"
+        >
           <Ionicons name="search-outline" size={18} color="#A79E92" />
-          <TextInput
-            className="flex-1 text-base text-ruvo-ink"
-            placeholder="Search shops, products..."
-            placeholderTextColor="#A79E92"
-            value={searchText}
-            onChangeText={setSearchText}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-          />
-          {searchText && (
-            <Pressable onPress={() => setSearchText('')}>
-              <Ionicons name="close-circle" size={18} color="#A79E92" />
-            </Pressable>
-          )}
-        </View>
+          <Text className="flex-1 text-base text-[#A79E92] py-2">
+            Search shops, products...
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView

@@ -398,10 +398,19 @@ export default function ShopkeeperDashboardScreen() {
             {[
               { key: 'dashboard', label: 'Dashboard', icon: 'home-outline' },
               { key: 'orders', label: 'Orders', icon: 'receipt-outline', badge: pendingOrders.length },
+              { key: 'delivery', label: 'Riders', icon: 'bicycle-outline' },
             ].map(tab => (
               <TouchableOpacity
                 key={tab.key}
-                onPress={() => setActiveTab(tab.key as any)}
+                onPress={() => {
+                  if (tab.key === 'orders') {
+                    navigation.navigate(ROUTES.SHOP_ORDERS, { shopId });
+                  } else if (tab.key === 'delivery') {
+                    navigation.navigate('DeliveryPartnerAssignment', { shopId, viewPartnersOnly: true });
+                  } else {
+                    setActiveTab(tab.key as any);
+                  }
+                }}
                 className={`flex-row items-center gap-sm px-lg py-sm rounded-lg ${
                   activeTab === tab.key ? 'bg-ruvo-yellow' : 'bg-transparent'
                 }`}
@@ -448,7 +457,7 @@ export default function ShopkeeperDashboardScreen() {
             totalSales={totalSales}
             todaySales={todaySales}
             avgOrderValue={avgOrderValue}
-            onNavigateOrders={() => setActiveTab('orders')}
+            onNavigateOrders={() => navigation.navigate(ROUTES.SHOP_ORDERS, { shopId })}
             onNavigateProducts={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId })}
             onNavigateAddProduct={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId })}
             onNavigateEditProduct={(product: any) =>
@@ -512,9 +521,7 @@ export default function ShopkeeperDashboardScreen() {
                     />
                   )}
                 />
-                <Button onPress={() => setPartnerModalOrder(null)} variant="outline" className="mt-md">
-                  Cancel
-                </Button>
+                <Button onPress={() => setPartnerModalOrder(null)} variant="outline" className="mt-md">Cancel</Button>
               </>
             )}
           </View>
@@ -844,9 +851,7 @@ function DashboardTab({
             <Badge variant="warning">{pendingCount}</Badge>
           </View>
           <Text className="text-sm text-warm-600 mb-md">Action required on these orders</Text>
-          <Button onPress={onNavigateOrders} variant="outline">
-            View All Pending
-          </Button>
+          <Button onPress={onNavigateOrders} variant="outline">View All Pending</Button>
         </Animated.View>
       )}
     </View>

@@ -13,6 +13,7 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,17 +30,19 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 
-type FilterTab = 'ALL' | 'PENDING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+type FilterTab = 'ALL' | 'NEW' | 'PREPARE' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 type OrderStatus =
-  | 'SHOP_PENDING' | 'SHOP_ACCEPTED' | 'PREPARING' | 'READY'
+  | 'PAYMENT_PENDING' | 'ORDER_PLACED' | 'SHOP_PENDING' | 'SHOP_ACCEPTED' | 'PREPARING' | 'READY'
   | 'DELIVERY_ASSIGNMENT' | 'DELIVERY_ASSIGNED' | 'DELIVERY_BROADCASTED'
   | 'WAITING_PARTNER' | 'BROADCASTED' | 'SEARCHING_PARTNER'
   | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED'
   | 'CANCELLED' | 'SHOP_REJECTED' | 'CANCELLED_NO_PARTNER_FOUND'
-  | 'CANCELLED_BY_SHOP' | 'SHOP_TIMEOUT';
+  | 'CANCELLED_BY_SHOP' | 'CANCELLED_BY_USER' | 'SHOP_TIMEOUT';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
+  PAYMENT_PENDING:            { color: '#9CA3AF', bg: '#F3F4F6', label: 'Payment Pending' },
+  ORDER_PLACED:               { color: '#D97706', bg: '#FEF3C7', label: 'New Request' },
   SHOP_PENDING:               { color: '#D97706', bg: '#FEF3C7', label: 'Pending' },
   SHOP_ACCEPTED:              { color: '#2563EB', bg: '#DBEAFE', label: 'Accepted' },
   PREPARING:                  { color: '#2563EB', bg: '#DBEAFE', label: 'Preparing' },
@@ -57,6 +60,7 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }
   SHOP_REJECTED:              { color: '#DC2626', bg: '#FEE2E2', label: 'Rejected' },
   CANCELLED_NO_PARTNER_FOUND: { color: '#DC2626', bg: '#FEE2E2', label: 'No Partner Found' },
   CANCELLED_BY_SHOP:          { color: '#DC2626', bg: '#FEE2E2', label: 'Cancelled by Shop' },
+  CANCELLED_BY_USER:          { color: '#DC2626', bg: '#FEE2E2', label: 'Cancelled by Customer' },
   SHOP_TIMEOUT:               { color: '#DC2626', bg: '#FEE2E2', label: 'Timeout' },
 };
 
@@ -65,7 +69,8 @@ const getStatusCfg = (status?: string) =>
 
 const TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL',       label: 'All' },
-  { key: 'PENDING',   label: 'Pending' },
+  { key: 'NEW',       label: 'New' },
+  { key: 'PREPARE',   label: 'Prepare' },
   { key: 'ACTIVE',    label: 'Active' },
   { key: 'COMPLETED', label: 'Delivered' },
   { key: 'CANCELLED', label: 'Cancelled' },
@@ -73,14 +78,12 @@ const TABS: { key: FilterTab; label: string }[] = [
 
 const tabMatches = (tab: FilterTab, status?: string): boolean => {
   if (tab === 'ALL') return true;
-  if (tab === 'PENDING')   return status === 'SHOP_PENDING';
-  if (tab === 'ACTIVE')    return ['SHOP_ACCEPTED','PREPARING','READY','DELIVERY_ASSIGNMENT','DELIVERY_ASSIGNED',
-                                   'DELIVERY_BROADCASTED','WAITING_PARTNER','BROADCASTED','SEARCHING_PARTNER',
-                                   'PICKED_UP','OUT_FOR_DELIVERY'].includes(status ?? '');
+  if (tab === 'NEW') return ['SHOP_PENDING', 'ORDER_PLACED', 'PAYMENT_PENDING'].includes(status ?? '');
+  if (tab === 'PREPARE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY'].includes(status ?? '');
+  if (tab === 'ACTIVE') return ['DELIVERY_ASSIGNMENT','DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED','WAITING_PARTNER','BROADCASTED','SEARCHING_PARTNER', 'PICKED_UP','OUT_FOR_DELIVERY'].includes(status ?? '');
   if (tab === 'COMPLETED') return status === 'DELIVERED';
-  if (tab === 'CANCELLED') return ['CANCELLED','SHOP_REJECTED','CANCELLED_NO_PARTNER_FOUND',
-                                   'CANCELLED_BY_SHOP','SHOP_TIMEOUT'].includes(status ?? '');
-  return true;
+  if (tab === 'CANCELLED') return ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED','CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP','SHOP_TIMEOUT'].includes(status ?? '');
+  return false;
 };
 
 export default function ShopOrdersScreen() {
@@ -96,6 +99,10 @@ export default function ShopOrdersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [processingOrderId, setProcessingOrderId] = useState<number | null>(null);
   const [filterTab, setFilterTab] = useState<FilterTab>('ALL');
+  const [countdowns, setCountdowns] = useState<Record<number, string>>({});
+  const [broadcastCountdowns, setBroadcastCountdowns] = useState<Record<number, { text: string; progress: number }>>({});
+  const [viewBroadcastId, setViewBroadcastId] = useState<number | null>(null);
+  const [liveBroadcastData, setLiveBroadcastData] = useState<any>(null);
 
   const fetchOrders = useCallback(async (showLoader = true) => {
     if (!token) { setLoading(false); return; }
@@ -142,6 +149,70 @@ export default function ShopOrdersScreen() {
     return () => clearInterval(interval);
   }, [fetchOrders]);
 
+  // Poll live broadcast data for the currently viewed radar
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (viewBroadcastId && token) {
+      const fetchLive = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/delivery/orders/${viewBroadcastId}/current-request`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+          });
+          if (response.ok) {
+            setLiveBroadcastData(await response.json());
+          }
+        } catch (e) {}
+      };
+      fetchLive();
+      timer = setInterval(fetchLive, 3000);
+    } else {
+      setLiveBroadcastData(null);
+    }
+    return () => clearInterval(timer);
+  }, [viewBroadcastId, token]);
+
+  // Countdown timer for pending and broadcasting orders
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const newCountdowns: Record<number, string> = {};
+      const newBroadcast: Record<number, { text: string; progress: number }> = {};
+      
+      orders.forEach(o => {
+        if (o.orderStatus === 'SHOP_PENDING' && o.shopResponseDeadline) {
+          const diff = new Date(o.shopResponseDeadline).getTime() - Date.now();
+          if (diff <= 0) {
+            newCountdowns[o.id!] = 'EXPIRED';
+          } else {
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            newCountdowns[o.id!] = `${mins}:${secs.toString().padStart(2, '0')} left`;
+          }
+        }
+        
+        if (['DELIVERY_ASSIGNMENT', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'SHOP_ACCEPTED'].includes(o.orderStatus || '')) {
+          const refTime = (o as any).dispatchStartedAt || o.updatedAt || o.createdAt;
+          if (refTime) {
+            const diff = new Date(refTime).getTime() + (10 * 60000) - Date.now();
+            if (diff <= 0) {
+              newBroadcast[o.id!] = { text: '00:00', progress: 0 };
+            } else {
+              const mins = Math.floor(diff / 60000);
+              const secs = Math.floor((diff % 60000) / 1000);
+              newBroadcast[o.id!] = { 
+                text: `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`,
+                progress: Math.max(0, diff / (10 * 60000))
+              };
+            }
+          }
+        }
+      });
+      
+      setCountdowns(newCountdowns);
+      setBroadcastCountdowns(newBroadcast);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [orders]);
+
   const handleAccept = async (orderId: number) => {
     if (!token) return;
     setProcessingOrderId(orderId);
@@ -155,7 +226,7 @@ export default function ShopOrdersScreen() {
       Alert.alert(
         'Order Accepted',
         'Order accepted! Broadcasting delivery request to online partners.',
-        [{ text: 'View Assignment', onPress: () => navigation.navigate('DeliveryPartnerAssignmentScreen', { orderId, shopId }) }]
+        [{ text: 'View Assignment', onPress: () => navigation.navigate('DeliveryPartnerAssignment', { orderId, shopId }) }]
       );
     } catch {
       Alert.alert('Error', 'Failed to accept order. Please try again.');
@@ -189,6 +260,31 @@ export default function ShopOrdersScreen() {
     ]);
   };
 
+  const handleCancelAfterAccept = (orderId: number) => {
+    Alert.alert('Cancel Order', 'Cancel this order? This will stop delivery assignment.', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
+          if (!token) return;
+          setProcessingOrderId(orderId);
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            });
+            if (!response.ok) throw new Error('Failed to cancel order');
+            await fetchOrders(false);
+            Alert.alert('Order Cancelled', 'The order has been successfully cancelled.');
+          } catch {
+            Alert.alert('Error', 'Failed to cancel the order. Please try again.');
+          } finally {
+            setProcessingOrderId(null);
+          }
+        },
+      },
+    ]);
+  };
+
   const filtered = orders.filter(o => tabMatches(filterTab, o.orderStatus));
   const pendingCount = orders.filter(o => o.orderStatus === 'SHOP_PENDING').length;
 
@@ -207,9 +303,9 @@ export default function ShopOrdersScreen() {
             <Text className="text-xs text-orange-600 font-bold mt-xs">{pendingCount} pending action</Text>
           )}
         </View>
-        {shopId && (
+        {!!shopId && (
           <TouchableOpacity
-            onPress={() => navigation.navigate('DeliveryPartnerAssignmentScreen', { shopId, viewPartnersOnly: true })}
+            onPress={() => navigation.navigate('DeliveryPartnerAssignment', { shopId, viewPartnersOnly: true })}
             className="px-md py-xs bg-orange-100 rounded-lg flex-row items-center gap-xs"
           >
             <Ionicons name="bicycle" size={16} color="#EA580C" />
@@ -287,15 +383,33 @@ export default function ShopOrdersScreen() {
             const isPending = status === 'SHOP_PENDING';
             const processing = processingOrderId === item.id;
             const isCod = item.paymentMethod?.toUpperCase().includes('COD');
+            const countdown = countdowns[item.id!];
+            const broadcast = broadcastCountdowns[item.id!];
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
                 <Card>
                   {/* Order Header */}
                   <View className="flex-row items-start justify-between mb-md">
-                    <View>
-                      <Text className="text-lg font-extrabold text-ruvo-ink">Order #{item.id}</Text>
-                      <Text className="text-xs text-warm-600 font-medium mt-xs">Shop Order</Text>
+                    <View className="flex-1 pr-sm flex-row items-center gap-md">
+                      {item.productImageUrl ? (
+                        <Image 
+                          source={{ uri: item.productImageUrl.startsWith('http') ? item.productImageUrl : `${API_BASE_URL}${item.productImageUrl}` }} 
+                          className="w-12 h-12 rounded-lg bg-warm-200" 
+                        />
+                      ) : (
+                        <View className="w-12 h-12 rounded-lg bg-warm-200 items-center justify-center">
+                          <Ionicons name="cart-outline" size={24} color="#A79E92" />
+                        </View>
+                      )}
+                      <View className="flex-1">
+                        <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={2}>
+                          {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
+                        </Text>
+                        <Text className="text-xs text-warm-600 font-medium mt-xs">
+                          {item.distanceKm != null ? `${item.distanceKm} km away` : 'Address below'}
+                        </Text>
+                      </View>
                     </View>
                     <View className="px-sm py-xs rounded-lg" style={{ backgroundColor: cfg.bg }}>
                       <Text className="text-xs font-extrabold" style={{ color: cfg.color }}>{cfg.label}</Text>
@@ -303,15 +417,25 @@ export default function ShopOrdersScreen() {
                   </View>
 
                   {/* Details */}
-                  <View className="bg-warm-100 rounded-lg p-md mb-md gap-sm">
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-xs text-warm-600 font-medium">Product</Text>
-                      <Text className="text-sm text-ruvo-ink font-bold">
-                        {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
+                  <View className={`rounded-lg p-md gap-sm mb-sm ${
+                    ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
+                      ? 'bg-red-50' 
+                      : 'bg-warm-100'
+                  }`}>
+                    {/* Address section */}
+                    <View className="flex-row items-start gap-xs mb-xs">
+                      <Ionicons name="location-outline" size={16} color="#A79E92" className="mt-0.5" />
+                      <Text className="text-sm text-ruvo-ink font-bold flex-1" numberOfLines={2}>
+                        {item.deliveryAddress || 'No address provided'}
                       </Text>
                     </View>
+                    <View className="h-px bg-warm-200 my-xs" />
                     <View className="flex-row justify-between items-center">
-                      <Text className="text-xs text-warm-600 font-medium">Amount</Text>
+                      <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
+                      <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                      <Text className="text-xs text-warm-600 font-medium">Total Amount (incl. fees)</Text>
                       <Text className="text-base font-extrabold text-ruvo-yellow">₹{item.totalAmount}</Text>
                     </View>
                     <View className="flex-row justify-between items-center">
@@ -324,6 +448,28 @@ export default function ShopOrdersScreen() {
                       </View>
                     </View>
                   </View>
+
+                  {/* Cancellation Explanation */}
+                  {['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) && (
+                    <View className="flex-row items-center gap-xs mt-3 bg-red-100 p-sm rounded-lg border border-red-200">
+                      <Ionicons name="information-circle" size={16} color="#DC2626" />
+                      <Text className="text-xs text-red-700 font-bold flex-1">
+                        {status === 'SHOP_REJECTED' && 'You rejected this order before accepting.'}
+                        {status === 'CANCELLED_BY_SHOP' && 'You cancelled the delivery partner broadcast.'}
+                        {status === 'CANCELLED_NO_PARTNER_FOUND' && 'No delivery partner accepted the request.'}
+                        {status === 'SHOP_TIMEOUT' && 'You did not accept the order in time.'}
+                        {status === 'CANCELLED_BY_USER' && 'The order was cancelled by the customer.'}
+                        {status === 'CANCELLED' && 'The order was cancelled by the customer or admin.'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Countdown Timer */}
+                  {isPending && !!countdown && (
+                    <View className="bg-orange-100 px-md py-xs rounded-lg mb-sm mt-sm">
+                      <Text className="text-xs font-bold text-orange-600">⏰ {countdown}</Text>
+                    </View>
+                  )}
 
                   {/* Pending Actions */}
                   {isPending && (
@@ -349,6 +495,72 @@ export default function ShopOrdersScreen() {
                             </>
                         }
                       </TouchableOpacity>
+                    </View>
+                  )}
+                  {/* Active Order Actions */}
+                  {['DELIVERY_ASSIGNMENT', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'SHOP_ACCEPTED'].includes(status) && (
+                    <View className="mt-md gap-sm">
+                      {/* Broadcast Animation */}
+                      {broadcast && viewBroadcastId === item.id ? (
+                        <View className="bg-blue-50 py-4 px-xl rounded-xl border border-blue-200 items-center justify-center relative overflow-hidden mb-sm">
+                          <View className="absolute left-0 bottom-0 top-0 bg-blue-200/40" style={{ width: `${broadcast.progress * 100}%` }} />
+                          <Animated.View entering={FadeIn.duration(1000)} style={{ alignItems: 'center' }}>
+                            <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mb-1 border border-blue-200 shadow-sm">
+                              <Ionicons name="radio-outline" size={20} color="#2563EB" />
+                            </View>
+                            <Text className="text-xs font-black text-blue-800 uppercase tracking-widest mt-1 mb-0.5">
+                              Finding Rider
+                            </Text>
+                            <Text className="text-xl font-black text-blue-600 font-mono tracking-widest">
+                              {broadcast.text}
+                            </Text>
+                            <Text className="text-[9px] text-blue-500 font-bold mt-0.5 mb-1">
+                              Broadcasting to online partners
+                            </Text>
+                            
+                            {/* Live Active Request Info */}
+                            {liveBroadcastData && liveBroadcastData.status === 'PENDING' && (
+                              <Animated.View entering={FadeIn.duration(400)} className="bg-white px-md py-xs rounded-lg border border-blue-200 mb-2 items-center">
+                                <Text className="text-[10px] text-warm-500 font-bold mb-0.5">Currently Asking:</Text>
+                                <Text className="text-sm font-black text-ruvo-ink">{liveBroadcastData.partnerName || 'Partner'}</Text>
+                                {liveBroadcastData.distanceKm != null && (
+                                  <Text className="text-[9px] text-blue-600 font-bold mt-0.5">{liveBroadcastData.distanceKm} km away</Text>
+                                )}
+                              </Animated.View>
+                            )}
+
+                            {liveBroadcastData && liveBroadcastData.status === 'NONE' && (
+                              <View className="bg-orange-50 px-md py-xs rounded-lg border border-orange-200 mb-2 items-center">
+                                <Text className="text-[10px] font-bold text-orange-600">No partner in range</Text>
+                                <Text className="text-[9px] text-orange-500">Retrying...</Text>
+                              </View>
+                            )}
+
+                            <TouchableOpacity onPress={() => { setViewBroadcastId(null); setLiveBroadcastData(null); }} className="px-sm py-xs bg-blue-200 rounded-md">
+                              <Text className="text-[10px] font-bold text-blue-800">Hide Tracker</Text>
+                            </TouchableOpacity>
+                          </Animated.View>
+                        </View>
+                      ) : broadcast ? (
+                        <TouchableOpacity 
+                          onPress={() => setViewBroadcastId(item.id!)}
+                          className="bg-blue-50 py-md px-md rounded-xl border border-blue-200 items-center justify-center flex-row gap-xs mb-sm"
+                        >
+                          <Ionicons name="radio-outline" size={18} color="#2563EB" />
+                          <Text className="text-sm font-extrabold text-blue-700">View Live Broadcast Tracker</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                      
+                      <Button
+                        variant="danger"
+                        onPress={() => item.id && handleCancelAfterAccept(item.id)}
+                        disabled={processing}
+                      >
+                        {processing ? <ActivityIndicator color="#FFF" size="small" /> : 'Cancel Order'}
+                      </Button>
+                      <Text className="text-[10px] text-warm-500 text-center">
+                        Use only if you are unable to fulfill this order.
+                      </Text>
                     </View>
                   )}
                 </Card>

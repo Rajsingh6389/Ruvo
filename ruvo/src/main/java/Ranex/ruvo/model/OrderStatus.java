@@ -13,4 +13,5 @@ public class OrderStatus {
     public static final String OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY";
     public static final String DELIVERED = "DELIVERED";
     public static final String CANCELLED = "CANCELLED";
+    public static final String CANCELLED_BY_SHOP = "CANCELLED_BY_SHOP";
 }

@@ -429,7 +429,7 @@ export const NearbyShopsScreen = () => {
                       key={product.id}
                       style={{ width: '48%' }}
                       className="bg-white border border-warm-200 rounded-xl p-2.5 justify-between"
-                      onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product })}
+                      onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product: { ...product, shopName: selectedShop?.name } })}
                     >
                       <View className="w-full h-24 items-center justify-center bg-warm-50 rounded-lg mb-2">
                         <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />

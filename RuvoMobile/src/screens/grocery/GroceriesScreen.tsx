@@ -26,9 +26,10 @@ import type { RootStackParamList } from '../../types/navigation';
 import { sw, sh, sf } from '../../utils/responsive';
 
 // ─── Design tokens ──────────────────────────────────────────
-const PRIMARY = '#2E7D32';
-const LIGHT_GREEN = '#E8F5E9';
-const BG = '#F5F6FA';
+const PRIMARY = '#F5B700';
+const ON_PRIMARY = '#1A1A1A';
+const LIGHT_ACCENT = '#FFF9E6';
+const BG = '#FBF8F2';
 const WHITE = '#FFFFFF';
 const TEXT_DARK = '#1A1A1A';
 const TEXT_SECONDARY = '#6B7280';
@@ -68,7 +69,7 @@ const ProductCard = React.memo(({ product }: { product: Product }) => (
     </View>
     <TouchableOpacity style={prodStyles.addBtn} activeOpacity={0.8}>
       <Text style={prodStyles.addBtnText}>Add</Text>
-      <Ionicons name="add" size={14} color={PRIMARY} />
+      <Ionicons name="add" size={14} color={ON_PRIMARY} />
     </TouchableOpacity>
   </View>
 ));
@@ -111,7 +112,7 @@ const ShopSection = React.memo(({
               />
             ) : (
               <View style={secStyles.storePlaceholder}>
-                <Ionicons name="storefront-outline" size={28} color={TEXT_SECONDARY} />
+                <Ionicons name="storefront-outline" size={28} color={PRIMARY} />
               </View>
             )}
           </View>
@@ -384,13 +385,12 @@ const prodStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: sh(6),
-    borderWidth: 1.5,
-    borderColor: PRIMARY,
+    backgroundColor: PRIMARY,
     borderRadius: sw(8),
-    paddingVertical: sh(5),
+    paddingVertical: sh(6),
     gap: sw(2),
   },
-  addBtnText: { fontSize: sf(12), fontWeight: '700', color: PRIMARY },
+  addBtnText: { fontSize: sf(12), fontWeight: '800', color: ON_PRIMARY },
 });
 
 // ─── Shop section styles ─────────────────────────────────────
@@ -419,7 +419,7 @@ const secStyles = StyleSheet.create({
   storeImage: { width: '100%', height: '100%' },
   storePlaceholder: {
     flex: 1,
-    backgroundColor: LIGHT_GREEN,
+    backgroundColor: LIGHT_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -427,25 +427,26 @@ const secStyles = StyleSheet.create({
   storeNameRow: { flexDirection: 'row', alignItems: 'center', gap: sw(8), marginBottom: sh(3) },
   storeName: { fontSize: sf(16), fontWeight: '800', color: TEXT_DARK, flexShrink: 1 },
   openBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: LIGHT_ACCENT,
     paddingHorizontal: sw(7),
     paddingVertical: sh(2),
     borderRadius: sw(6),
   },
-  openText: { fontSize: sf(10), fontWeight: '800', color: PRIMARY },
+  openText: { fontSize: sf(10), fontWeight: '800', color: TEXT_DARK },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginBottom: sh(3) },
   metaText: { fontSize: sf(11.5), color: TEXT_SECONDARY, fontWeight: '500' },
   metaDot: { fontSize: sf(11), color: TEXT_SECONDARY },
   addressText: { fontSize: sf(11), color: TEXT_SECONDARY },
   viewStoreBtn: {
-    borderWidth: 1.5,
-    borderColor: PRIMARY,
-    borderRadius: sw(10),
-    paddingHorizontal: sw(12),
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: sw(20),
+    paddingHorizontal: sw(14),
     paddingVertical: sh(8),
     marginLeft: sw(8),
   },
-  viewStoreBtnText: { fontSize: sf(12), fontWeight: '700', color: PRIMARY },
+  viewStoreBtnText: { fontSize: sf(12), fontWeight: '800', color: TEXT_DARK },
   itemsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
     borderColor: PRIMARY,
   },
   chipText: { fontSize: sf(12.5), fontWeight: '600', color: TEXT_DARK },
-  chipTextActive: { color: WHITE },
+  chipTextActive: { color: ON_PRIMARY },
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -554,5 +555,5 @@ const styles = StyleSheet.create({
     paddingVertical: sh(10),
     borderRadius: sw(10),
   },
-  retryText: { fontSize: sf(13), fontWeight: '700', color: WHITE },
+  retryText: { fontSize: sf(13), fontWeight: '800', color: ON_PRIMARY },
 });

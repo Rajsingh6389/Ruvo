@@ -187,14 +187,19 @@ export const ShopDetailsScreen = () => {
           item.id?.toString() ?? Math.random().toString()
         }
         renderItem={({ item }) => {
-          const productObj: Product = {
+          const productObj: any = {
+            ...item,
             id: item.id || 0,
             name: item.name,
             price: item.sellingPrice || (item as any).price || 0,
             originalPrice: item.actualPrice,
+            sellingPrice: item.sellingPrice || (item as any).price || 0,
+            actualPrice: item.actualPrice || 0,
             image: formatImageUrl(item.imageUrl || (item as any).image) || undefined,
+            imageUrl: formatImageUrl(item.imageUrl || (item as any).image) || undefined,
             category: item.category,
             shopId: item.shopId,
+            shopName: shop.name,
           };
           return (
             <ProductCard
