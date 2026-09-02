@@ -56,4 +56,8 @@ public class CouponService {
 
         return discount.setScale(2, RoundingMode.HALF_UP);
     }
+
+    public java.util.List<Coupon> getActiveCoupons() {
+        return couponRepository.findByActiveTrue();
+    }
 }

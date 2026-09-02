@@ -96,11 +96,27 @@ public class Shop {
     @Column(name = "cod_blocked", nullable = false)
     private Boolean codBlocked = false;
 
+    @Builder.Default
+    @Column(name = "unpaid_platform_fee", precision = 10, scale = 2)
+    private java.math.BigDecimal unpaidPlatformFee = java.math.BigDecimal.ZERO;
+
+    @Column(name = "last_cod_platform_fee_settled_at")
+    private java.time.LocalDateTime lastCodPlatformFeeSettledAt;
+
+    @Column(name = "oldest_unpaid_cod_at")
+    private java.time.LocalDateTime oldestUnpaidCodAt;
+
+    @Builder.Default
+    @Column(name = "disabled_due_to_settlement", nullable = false)
+    private Boolean disabledDueToSettlement = false;
+
     @PrePersist
     public void prePersist() {
         if (this.approved == null) this.approved = false;
         if (this.active == null) this.active = true;
         if (this.settlementBlocked == null) this.settlementBlocked = false;
         if (this.codBlocked == null) this.codBlocked = false;
+        if (this.unpaidPlatformFee == null) this.unpaidPlatformFee = java.math.BigDecimal.ZERO;
+        if (this.disabledDueToSettlement == null) this.disabledDueToSettlement = false;
     }
 }

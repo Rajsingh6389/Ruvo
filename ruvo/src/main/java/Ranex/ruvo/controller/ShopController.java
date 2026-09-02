@@ -853,4 +853,55 @@ public class ShopController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update shop: " + e.getMessage());
         }
     }
+
+    // =========================================================
+    // Get delivery partners associated with shop
+    // =========================================================
+
+    @Autowired
+    private Ranex.ruvo.repository.DeliveryPartnerRepository deliveryPartnerRepository;
+
+    @GetMapping("/{id}/delivery-partners")
+    public ResponseEntity<?> getShopDeliveryPartners(@PathVariable Long id) {
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+        if (shopOpt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shop not found with id: " + id);
+        }
+
+        List<Ranex.ruvo.model.DeliveryPartner> allApproved = deliveryPartnerRepository.findByApprovedTrueAndActiveTrue();
+        
+        // Filter partners who have selected this shop ID in preferredShopIds or have no restriction
+        String shopIdStr = String.valueOf(id);
+        List<Map<String, Object>> result = allApproved.stream()
+            .filter(p -> {
+                if (p.getPreferredShopIds() == null || p.getPreferredShopIds().isBlank()) {
+                    return true; // No preference restriction set -> available to all shops
+                }
+                java.util.Set<String> preferredSet = java.util.Arrays.stream(p.getPreferredShopIds().split(","))
+                    .map(String::trim)
+                    .collect(java.util.stream.Collectors.toSet());
+                return preferredSet.contains(shopIdStr);
+            })
+            .map(p -> {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", p.getId());
+                map.put("name", p.getName());
+                map.put("phone", p.getPhone());
+                map.put("available", Boolean.TRUE.equals(p.getAvailable()));
+                map.put("lastActiveAt", p.getLastActiveAt() != null ? p.getLastActiveAt().toString() : null);
+                map.put("locationName", p.getLocationName() != null ? p.getLocationName() : "Live Location");
+                map.put("latitude", p.getLatitude());
+                map.put("longitude", p.getLongitude());
+                if (shopOpt.get().getLatitude() != null && shopOpt.get().getLongitude() != null && p.getLatitude() != null && p.getLongitude() != null) {
+                    double dist = DistanceUtils.calculateDistance(shopOpt.get().getLatitude(), shopOpt.get().getLongitude(), p.getLatitude(), p.getLongitude());
+                    map.put("distanceKm", Math.round(dist * 10.0) / 10.0);
+                } else {
+                    map.put("distanceKm", null);
+                }
+                return map;
+            })
+            .toList();
+
+        return ResponseEntity.ok(result);
+    }
 }

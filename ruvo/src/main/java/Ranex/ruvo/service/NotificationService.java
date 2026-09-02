@@ -15,6 +15,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.util.*;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NotificationService {
@@ -87,6 +89,7 @@ public class NotificationService {
     /**
      * Send push notification to a specific user
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sendToUser(Long userId, String userType, String title, String body, 
                           String type, String referenceType, Long referenceId, Map<String, Object> data) {
         // Save notification to database
@@ -124,6 +127,7 @@ public class NotificationService {
     /**
      * Send push notification to all users of a specific type
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void sendToUserType(String userType, String title, String body, Map<String, Object> data) {
         List<DeviceToken> tokens = deviceTokenRepository.findByUserTypeAndActiveTrue(userType);
         for (DeviceToken deviceToken : tokens) {
@@ -220,6 +224,7 @@ public class NotificationService {
     /**
      * Send notification to the customer who placed an order.
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notifyCustomer(Order order, String title, String body, String type) {
         try {
             Long userId = Long.parseLong(order.getUserId());
@@ -237,6 +242,7 @@ public class NotificationService {
     /**
      * Send notification to the shop that received an order.
      */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void notifyShop(Order order) {
         try {
             Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
@@ -247,7 +253,7 @@ public class NotificationService {
             }
             Long shopUserId = Long.parseLong(shop.getOwnerId());
             String title = "New Order #" + order.getId();
-            String body = "You have a new order. Total: \u20b9" + order.getTotalAmount();
+            String body = "You have a new order. Total: Rs. " + order.getTotalAmount();
             Map<String, Object> data = Map.of(
                 "type", "NEW_ORDER",
                 "orderId", order.getId()

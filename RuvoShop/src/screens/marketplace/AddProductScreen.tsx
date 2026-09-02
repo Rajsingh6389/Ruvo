@@ -115,7 +115,7 @@ export const AddProductScreen = () => {
       const ap = parseFloat(actualPrice);
       const sp = parseFloat(sellingPrice);
       const sq = parseInt(stockQuantity, 10);
-      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100 * 100) / 100 : 0;
+      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100) : 0;
 
       if (images.length > 0) {
         const formData = new FormData();
@@ -125,9 +125,9 @@ export const AddProductScreen = () => {
           actualPrice: ap, sellingPrice: sp, discount: disc,
           stockQuantity: sq, unit: unit.trim() || null, isAvailable,
         }));
-        formData.append('image', { uri: images[0].uri, type: images[0].type, name: images[0].fileName } as any);
-        for (let i = 1; i < images.length; i++) {
-          formData.append('images', { uri: images[i].uri, type: images[i].type, name: images[i].fileName } as any);
+        (formData as any).append('image', { uri: images[0].uri, type: images[0].type, name: images[0].fileName });
+        for (let i = 0; i < images.length; i++) {
+          (formData as any).append('images', { uri: images[i].uri, type: images[i].type, name: images[i].fileName });
         }
         await uploadProduct(formData, token);
       } else {

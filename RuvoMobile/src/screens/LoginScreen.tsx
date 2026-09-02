@@ -68,16 +68,22 @@ export const LoginScreen = ({ navigation }: Props) => {
     }
     setError(null);
     setLoading(true);
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/send`;
+    console.log('[LoginScreen] Sending OTP to URL:', targetUrl);
     try {
-      const res = await fetch(`${API_BASE_URL}${requiredRole === 'USER' ? '/auth/send-otp' : '/api/auth/otp/send'}`, {
+      const res = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobileNumber: formatted }),
       });
       const body = await res.json().catch(() => null);
+      console.log('[LoginScreen] Send OTP response status:', res.status, body);
       if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
       setStep(2);
-    } catch { setError('Could not reach the server. Check your connection.'); }
+    } catch (err: any) {
+      console.error('[LoginScreen] Send OTP error:', err);
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+    }
     finally { setLoading(false); }
   };
 
@@ -85,9 +91,11 @@ export const LoginScreen = ({ navigation }: Props) => {
     if (!otp.trim() || otp.trim().length !== 6) { setError('Please enter the 6-digit OTP code'); return; }
     setError(null);
     setLoading(true);
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/verify`;
+    console.log('[LoginScreen] Verifying OTP at URL:', targetUrl);
     try {
       const formatted = formatMobileNumber(mobile);
-      const res = await fetch(`${API_BASE_URL}${requiredRole === 'USER' ? '/auth/verify-otp' : '/api/auth/otp/verify'}`, {
+      const res = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -97,10 +105,14 @@ export const LoginScreen = ({ navigation }: Props) => {
         }),
       });
       const body = await res.json().catch(() => null);
+      console.log('[LoginScreen] Verify OTP response status:', res.status, body);
       if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
       const { data } = body as ApiResponse<AuthToken>;
       await login(data.accessToken, String(data.userId), data.role);
-    } catch { setError('Could not reach the server. Check your connection.'); }
+    } catch (err: any) {
+      console.error('[LoginScreen] Verify OTP error:', err);
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+    }
     finally { setLoading(false); }
   };
 

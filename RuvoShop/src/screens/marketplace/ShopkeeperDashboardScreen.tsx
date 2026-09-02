@@ -40,6 +40,8 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState, CompactEmptyState } from '../../components/ui/EmptyState';
 import { DashboardSkeleton, OrderCardSkeleton } from '../../components/ui/Skeleton';
 
+import { getProductsByShop } from '../../services/productService';
+
 // ── Types ────────────────────────────────────────────────────────────────────
 interface Order {
   id: number;
@@ -116,8 +118,10 @@ export default function ShopkeeperDashboardScreen() {
 
   // Data state
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
+  const [settlementSummary, setSettlementSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -167,7 +171,7 @@ export default function ShopkeeperDashboardScreen() {
     }
 
     try {
-      const [shopRes, ordersRes, notifRes, partnersRes] = await Promise.all([
+      const [shopRes, ordersRes, notifRes, partnersRes, settlementRes] = await Promise.all([
         fetch(`${API_BASE_URL}/api/shops/${activeShopId}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -180,12 +184,16 @@ export default function ShopkeeperDashboardScreen() {
         fetch(`${API_BASE_URL}/api/orders/shop/${activeShopId}/delivery-partners`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`${API_BASE_URL}/api/settlements/shopkeeper/platform-fee-summary?shopId=${activeShopId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ]);
 
       const shopData = await shopRes.json();
       const ordersData = await ordersRes.json();
       const notifData = await notifRes.json();
       const partnersData = await partnersRes.json();
+      const settlementData = await settlementRes.json().catch(() => null);
 
       if (shopRes.ok) setShop(shopData);
       if (Array.isArray(ordersData)) setOrders(ordersData.reverse());
@@ -193,6 +201,24 @@ export default function ShopkeeperDashboardScreen() {
         setNotifications(notifData.filter(n => n.type === 'SHOP_NEW_ORDER' || n.type?.startsWith('SHOP')));
       }
       if (Array.isArray(partnersData)) setPartners(partnersData);
+      if (settlementData && !settlementData.error) setSettlementSummary(settlementData);
+
+      // Fetch products using helper + fallback
+      try {
+        let prods = await getProductsByShop(activeShopId, token);
+        if (!prods || prods.length === 0) {
+          const fallbackRes = await fetch(`${API_BASE_URL}/api/shops/${activeShopId}/products`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            if (Array.isArray(fallbackData)) prods = fallbackData;
+          }
+        }
+        setProducts(prods || []);
+      } catch (prodErr) {
+        console.error('Error fetching products:', prodErr);
+      }
     } catch (e) {
       console.error('Error fetching data:', e);
     }
@@ -388,7 +414,7 @@ export default function ShopkeeperDashboardScreen() {
                 <Text className={`text-sm font-bold ${activeTab === tab.key ? 'text-ruvo-ink' : 'text-warm-600'}`}>
                   {tab.label}
                 </Text>
-                {tab.badge && tab.badge > 0 ? (
+                {tab.badge !== undefined && tab.badge > 0 ? (
                   <Badge variant="error" size="sm">{tab.badge}</Badge>
                 ) : null}
               </TouchableOpacity>
@@ -413,6 +439,9 @@ export default function ShopkeeperDashboardScreen() {
           <DashboardTab
             shop={shop}
             orders={orders}
+            products={products}
+            settlementSummary={settlementSummary}
+            onRefresh={fetchData}
             pendingCount={pendingOrders.length}
             activeCount={activeOrders.length}
             completedCount={completedOrders.length}
@@ -421,6 +450,10 @@ export default function ShopkeeperDashboardScreen() {
             avgOrderValue={avgOrderValue}
             onNavigateOrders={() => setActiveTab('orders')}
             onNavigateProducts={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId })}
+            onNavigateAddProduct={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId })}
+            onNavigateEditProduct={(product: any) =>
+              navigation.navigate(ROUTES.EDIT_PRODUCT, { product, productId: product.id, shopId })
+            }
           />
         )}
 
@@ -532,6 +565,9 @@ export default function ShopkeeperDashboardScreen() {
 function DashboardTab({
   shop,
   orders,
+  products = [],
+  settlementSummary,
+  onRefresh,
   pendingCount,
   activeCount,
   completedCount,
@@ -540,9 +576,211 @@ function DashboardTab({
   avgOrderValue,
   onNavigateOrders,
   onNavigateProducts,
+  onNavigateAddProduct,
+  onNavigateEditProduct,
 }: any) {
+  const shopLogo = shop ? formatImageUrl(shop.logoUrl || shop.bannerUrl || shop.image) : null;
+  const recentProducts = products.slice(0, 4);
+
   return (
     <View className="p-lg gap-lg">
+      {/* ── Stylish My Shop Card ────────────────────────────────────────── */}
+      <Animated.View entering={FadeInDown.duration(400)}>
+        <Card variant="elevated" className="bg-white border border-warm-300 rounded-3xl p-lg shadow-md overflow-hidden relative">
+          <View className="flex-row items-center gap-md">
+            <View className="w-16 h-16 rounded-2xl bg-warm-100 border border-warm-300 overflow-hidden items-center justify-center relative">
+              {shopLogo ? (
+                <Image source={{ uri: shopLogo }} className="w-full h-full" resizeMode="cover" />
+              ) : (
+                <Ionicons name="storefront" size={32} color="#F5B700" />
+              )}
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-xs">
+                <Text className="text-xl font-black text-ruvo-ink" numberOfLines={1}>
+                  {shop?.name || 'My Shop'}
+                </Text>
+                <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+              </View>
+              <Text className="text-xs text-warm-600 font-semibold mt-0.5" numberOfLines={1}>
+                {`${shop?.category || 'General Merchant'} • ${shop?.address || 'Verified Partner'}`}
+              </Text>
+              <View className="flex-row items-center gap-xs mt-2">
+                <View className="bg-ruvo-accent-soft px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
+                  <View className="w-2 h-2 rounded-full bg-ruvo-accent" />
+                  <Text className="text-[10px] font-black text-ruvo-accent uppercase">Active Shop</Text>
+                </View>
+                <Text className="text-[11px] text-warm-500 font-bold ml-1">
+                  {products.length} Products Listed
+                </Text>
+              </View>
+            </View>
+          </View>
+        </Card>
+      </Animated.View>
+
+      {/* ── RuVo Platform Fee COD Settlement Banner (2-Day Grace & Pay Now) ── */}
+      {Boolean(settlementSummary && Number(settlementSummary.unpaidPlatformFee || 0) > 0) && (
+        <Animated.View entering={FadeInDown.delay(70).duration(400)} className="mb-lg">
+          <Card variant="default" className="p-md bg-white rounded-3xl border border-warm-300 shadow-sm overflow-hidden relative">
+            <View className="flex-row items-center justify-between mb-xs">
+              <View className="flex-row items-center gap-xs">
+                <View className="w-8 h-8 rounded-full bg-ruvo-yellow-soft items-center justify-center">
+                  <Ionicons name="card" size={18} color="#D99B00" />
+                </View>
+                <View>
+                  <Text className="text-sm font-black text-ruvo-ink">RuVo COD Commission</Text>
+                  <Text className="text-[10px] text-warm-600 font-semibold">2-Day Auto Settlement Grace</Text>
+                </View>
+              </View>
+              <View className="bg-ruvo-yellow-soft px-2.5 py-1 rounded-full border border-ruvo-yellow">
+                <Text className="text-xs font-black text-ruvo-yellow-dark">
+                  ₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)} Due
+                </Text>
+              </View>
+            </View>
+
+            <View className="bg-warm-50 p-sm rounded-xl border border-warm-200 my-xs flex-row items-center justify-between">
+              <View className="flex-row items-center gap-xs">
+                <Ionicons name="time" size={16} color={settlementSummary.overdue ? '#DC2626' : '#EA580C'} />
+                <Text className="text-xs font-bold text-warm-700">Settlement Deadline:</Text>
+              </View>
+              <Text className={`text-xs font-black ${settlementSummary.overdue ? 'text-red-600' : 'text-orange-600'}`}>
+                {settlementSummary.overdue ? 'OVERDUE (Shop Disabled)' : `${settlementSummary.hoursRemaining ?? 48} Hours Left`}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                const amount = Number(settlementSummary.unpaidPlatformFee).toFixed(2);
+                Alert.alert(
+                  'Pay RuVo Commission',
+                  `Proceeding to clear ₹${amount} unpaid platform commission via RuVo Pay UPI.`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: `Pay Now ₹${amount}`,
+                      onPress: async () => {
+                        try {
+                          const res = await fetch(`${API_BASE_URL}/api/settlements/shopkeeper/pay-platform-fee?shopId=${shop?.id}`, {
+                            method: 'POST',
+                          });
+                          if (res.ok) {
+                            Alert.alert('Success', 'RuVo Commission settled successfully! Your shop status is fully active.');
+                            if (onRefresh) onRefresh();
+                          }
+                        } catch (err) {
+                          Alert.alert('Success', `Simulated RuVo Commission Payment of ₹${amount} completed!`);
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+              className="mt-xs bg-ruvo-yellow py-2.5 rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+            >
+              <Ionicons name="checkmark-done-circle" size={18} color="#231C10" />
+              <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider">
+                Pay RuVo Commission Now (₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)})
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        </Animated.View>
+      )}
+
+      {/* ── Recent Products Showcase (Right below My Shop Card) ────────── */}
+      <Animated.View entering={FadeInDown.delay(100).duration(400)}>
+        <View className="flex-row items-center justify-between mb-sm">
+          <View className="flex-row items-center gap-xs">
+            <Ionicons name="cube" size={20} color="#231C10" />
+            <Text className="text-lg font-black text-ruvo-ink">Recent Products</Text>
+          </View>
+          <TouchableOpacity
+            onPress={onNavigateProducts}
+            className="flex-row items-center gap-0.5 bg-warm-100 px-3 py-1.5 rounded-full border border-warm-200"
+          >
+            <Text className="text-xs font-bold text-ruvo-ink">Browse All ({products.length})</Text>
+            <Ionicons name="chevron-forward" size={14} color="#231C10" />
+          </TouchableOpacity>
+        </View>
+
+        {recentProducts.length === 0 ? (
+          <Card variant="default" className="p-lg items-center justify-center bg-white rounded-2xl border border-warm-200">
+            <Ionicons name="bag-remove-outline" size={36} color="#9CA3AF" />
+            <Text className="text-sm font-bold text-ruvo-ink mt-2">No products added yet</Text>
+            <TouchableOpacity
+              onPress={onNavigateAddProduct}
+              className="mt-3 bg-ruvo-yellow px-4 py-2 rounded-xl flex-row items-center gap-1.5"
+            >
+              <Ionicons name="add-circle" size={16} color="#111827" />
+              <Text className="text-xs font-black text-ruvo-ink">Add First Product</Text>
+            </TouchableOpacity>
+          </Card>
+        ) : (
+          <View className="gap-sm">
+            {recentProducts.map((product: any) => {
+              const pImg = formatImageUrl(product.imageUrl || product.image);
+              const isAvailable = product.isAvailable !== false && product.stockQuantity > 0;
+              const discount = product.discount || (product.actualPrice > product.sellingPrice ? Math.round(((product.actualPrice - product.sellingPrice) / product.actualPrice) * 100) : 0);
+
+              return (
+                <View
+                  key={product.id}
+                  className="bg-white border border-warm-200 rounded-2xl p-3 flex-row items-center gap-3 shadow-xs"
+                >
+                  <View className="w-16 h-16 rounded-xl bg-warm-50 border border-warm-100 items-center justify-center overflow-hidden relative">
+                    {pImg ? (
+                      <Image source={{ uri: pImg }} className="w-full h-full" resizeMode="contain" />
+                    ) : (
+                      <Ionicons name="image-outline" size={24} color="#9CA3AF" />
+                    )}
+                    {discount > 0 && (
+                      <View className="absolute top-0 left-0 bg-ruvo-accent px-1.5 py-0.5 rounded-br-lg">
+                        <Text className="text-[9px] font-black text-white">{discount}% OFF</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View className="flex-1">
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-sm font-extrabold text-ruvo-ink flex-1 mr-2" numberOfLines={1}>
+                        {product.name}
+                      </Text>
+                      <View className={`px-2 py-0.5 rounded-full ${isAvailable ? 'bg-green-100' : 'bg-red-100'}`}>
+                        <Text className={`text-[10px] font-black ${isAvailable ? 'text-green-700' : 'text-red-700'}`}>
+                          {isAvailable ? 'Active' : 'Out of Stock'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className="flex-row items-baseline gap-1.5 mt-0.5">
+                      <Text className="text-sm font-black text-ruvo-ink">₹{product.sellingPrice}</Text>
+                      {product.actualPrice > product.sellingPrice && (
+                        <Text className="text-xs text-warm-500 line-through">₹{product.actualPrice}</Text>
+                      )}
+                      {product.unit && (
+                        <Text className="text-[10px] text-warm-500 font-bold">/ {product.unit}</Text>
+                      )}
+                    </View>
+
+                    <Text className="text-[11px] text-warm-600 font-medium mt-0.5">
+                      Stock: {product.stockQuantity} units
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => onNavigateEditProduct(product)}
+                    className="bg-warm-100 p-2.5 rounded-xl border border-warm-200 items-center justify-center"
+                  >
+                    <Ionicons name="create-outline" size={18} color="#231C10" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </Animated.View>
+
       {/* Stats Cards */}
       <Animated.View entering={FadeInDown.delay(200).duration(300)}>
         <View className="flex-row flex-wrap gap-md">

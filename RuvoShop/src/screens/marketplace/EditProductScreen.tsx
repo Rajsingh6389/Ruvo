@@ -131,7 +131,7 @@ export const EditProductScreen = () => {
       const ap = parseFloat(actualPrice);
       const sp = parseFloat(sellingPrice);
       const sq = parseInt(stockQuantity, 10);
-      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100 * 100) / 100 : 0;
+      const disc = ap > 0 ? Math.round(((ap - sp) / ap) * 100) : 0;
 
       if (imageUri) {
         const formData = new FormData();

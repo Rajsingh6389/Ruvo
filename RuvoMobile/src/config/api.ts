@@ -21,7 +21,7 @@ const ENV_URL =
 
 /** Change this to your development machine's LAN IP when running the backend locally. */
 // const DEV_FALLBACK = 'http://10.106.130.159:8080';
-const DEV_FALLBACK = 'http://192.168.1.9:8080';
+const DEV_FALLBACK = 'http://192.168.1.6:8080';
 
 export const API_BASE_URL: string = __DEV__
   ? (ENV_URL || DEV_FALLBACK)

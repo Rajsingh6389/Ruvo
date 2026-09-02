@@ -16,6 +16,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../../context/AuthContext';
 import { getMyShops, Shop } from '../../services/shopService';
+import { getProductsByShop } from '../../services/productService';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
 import { Button, IconButton } from '../../components/ui/Button';
@@ -23,7 +24,6 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { SearchInput } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { Skeleton, ListSkeleton } from '../../components/ui/Skeleton';
 
 // ── Image resolution ────────────────────────────────────────────────────────
 function resolveImage(url?: string): string | null {
@@ -38,6 +38,7 @@ export const MyShopsScreen = () => {
   const isTablet = width >= 768;
 
   const [shops, setShops] = useState<Shop[]>([]);
+  const [shopProducts, setShopProducts] = useState<{ [shopId: number]: any[] }>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +51,33 @@ export const MyShopsScreen = () => {
     setError(null);
     if (ownerId && token) {
       try {
-        setShops(await getMyShops(String(ownerId), token));
+        const fetchedShops = await getMyShops(String(ownerId), token);
+        setShops(fetchedShops);
+
+        // Fetch products for each shop concurrently using getProductsByShop + fallback
+        const productsMap: { [shopId: number]: any[] } = {};
+        await Promise.all(
+          fetchedShops.map(async (s: Shop) => {
+            if (s.id) {
+              try {
+                let prods = await getProductsByShop(s.id, token);
+                if (!prods || prods.length === 0) {
+                  const fallbackRes = await fetch(`${API_BASE_URL}/api/shops/${s.id}/products`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  if (fallbackRes.ok) {
+                    const fallbackData = await fallbackRes.json();
+                    if (Array.isArray(fallbackData)) prods = fallbackData;
+                  }
+                }
+                productsMap[s.id] = prods || [];
+              } catch (e) {
+                console.log(`Failed to fetch products for shop ${s.id}`, e);
+              }
+            }
+          })
+        );
+        setShopProducts(productsMap);
       } catch (err: any) {
         setError(err.message || 'Failed to load your shops');
       } finally {
@@ -124,6 +151,8 @@ export const MyShopsScreen = () => {
     const thumbUri = resolveImage(
       item.logoUrl || item.bannerUrl || (item as any).imageUrl
     );
+    const productsList = shopProducts[item.id] || [];
+    const recentProducts = productsList.slice(0, 3);
 
     return (
       <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
@@ -135,113 +164,204 @@ export const MyShopsScreen = () => {
             })
           }
           variant="default"
-          className="mb-md overflow-hidden"
+          className="mb-lg overflow-hidden border border-warm-300 rounded-3xl bg-white shadow-sm"
         >
           {/* Status Stripe */}
           <View
-            className={`absolute left-0 top-0 bottom-0 w-1 ${
+            className={`absolute left-0 top-0 bottom-0 w-1.5 ${
               approved ? 'bg-ruvo-accent' : 'bg-orange-500'
             }`}
           />
 
-          <View className="flex-row items-center gap-md pl-xs">
-            {/* Shop Thumbnail */}
-            <View
-              className="w-14 h-14 bg-warm-200 rounded-lg items-center justify-center overflow-hidden"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
-            >
-              {thumbUri ? (
-                <Image
-                  source={{ uri: thumbUri }}
-                  className="w-full h-full"
-                  resizeMode="cover"
-                />
+          <View className="p-md pl-sm">
+            {/* Shop Info Header */}
+            <View className="flex-row items-center gap-md">
+              <View className="w-16 h-16 bg-warm-100 rounded-2xl border border-warm-200 items-center justify-center overflow-hidden">
+                {thumbUri ? (
+                  <Image source={{ uri: thumbUri }} className="w-full h-full" resizeMode="cover" />
+                ) : (
+                  <Ionicons name="storefront" size={30} color="#F5B700" />
+                )}
+              </View>
+
+              <View className="flex-1 gap-xs">
+                <View className="flex-row items-center justify-between">
+                  <Text className="flex-1 text-lg font-black text-ruvo-ink mr-xs" numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Badge variant={approved ? 'success' : 'warning'} size="sm">
+                    {approved ? 'Approved' : 'Pending'}
+                  </Badge>
+                </View>
+
+                {shopData.category && (
+                  <View className="flex-row items-center gap-xs">
+                    <Ionicons name="pricetag" size={12} color="#F5B700" />
+                    <Text className="text-xs font-semibold text-warm-600" numberOfLines={1}>
+                      {shopData.category}
+                    </Text>
+                  </View>
+                )}
+
+                {shopData.address && (
+                  <View className="flex-row items-center gap-xs">
+                    <Ionicons name="location" size={12} color="#A79E92" />
+                    <Text className="flex-1 text-xs text-warm-600" numberOfLines={1}>
+                      {shopData.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Ionicons name="chevron-forward" size={20} color="#D4C8B8" />
+            </View>
+
+            {/* Action Bar */}
+            <View className="flex-row flex-wrap gap-xs mt-md pt-sm border-t border-warm-200">
+              <TouchableOpacity
+                className="flex-1 flex-row items-center justify-center gap-xs bg-ruvo-yellow-soft py-sm rounded-xl"
+                onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
+              >
+                <Ionicons name="cube-outline" size={14} color="#D99B00" />
+                <Text className="text-xs font-black text-ruvo-yellow-dark">Products ({productsList.length})</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-1 flex-row items-center justify-center gap-xs bg-blue-100 py-sm rounded-xl"
+                onPress={() =>
+                  navigation.navigate(ROUTES.SHOP_ORDERS, {
+                    shopId: item.id,
+                    shopName: item.name,
+                  })
+                }
+              >
+                <Ionicons name="receipt-outline" size={14} color="#2563EB" />
+                <Text className="text-xs font-black text-blue-600">Orders</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center justify-center gap-xs bg-ruvo-accent-soft px-md py-sm rounded-xl"
+                onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
+              >
+                <Ionicons name="add-circle" size={14} color="#16A34A" />
+                <Text className="text-xs font-black text-ruvo-accent">Add</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center justify-center gap-xs bg-purple-100 px-md py-sm rounded-xl"
+                onPress={() => navigation.navigate('EditShop', { shop: item })}
+              >
+                <Ionicons name="create-outline" size={14} color="#9333EA" />
+                <Text className="text-xs font-black text-purple-600">Edit</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* ── Recent Products Showcase (Directly inside Shop Card) ── */}
+            <View className="mt-md pt-md border-t border-warm-200">
+              <View className="flex-row items-center justify-between mb-sm">
+                <View className="flex-row items-center gap-xs">
+                  <Ionicons name="cube" size={16} color="#231C10" />
+                  <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider">
+                    Recent Products
+                  </Text>
+                </View>
+                {productsList.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
+                    className="flex-row items-center gap-xs"
+                  >
+                    <Text className="text-xs font-bold text-ruvo-yellow-dark">Browse All</Text>
+                    <Ionicons name="chevron-forward" size={12} color="#D99B00" />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {recentProducts.length === 0 ? (
+                <View className="bg-warm-50 p-sm rounded-xl items-center justify-center border border-dashed border-warm-300">
+                  <Text className="text-xs font-medium text-warm-600">No products added yet</Text>
+                </View>
               ) : (
-                <Ionicons name="storefront" size={28} color="#A79E92" />
-              )}
-            </View>
+                <View className="gap-xs">
+                  {recentProducts.map((product: any) => {
+                    const pImg = resolveImage(product.imageUrl || product.image);
+                    const isAvailable = product.isAvailable !== false && product.stockQuantity > 0;
+                    const discount =
+                      product.discount ||
+                      (product.actualPrice > product.sellingPrice
+                        ? Math.round(((product.actualPrice - product.sellingPrice) / product.actualPrice) * 100)
+                        : 0);
 
-            {/* Shop Info */}
-            <View className="flex-1 gap-xs">
-              {/* Name + Status */}
-              <View className="flex-row items-center gap-sm">
-                <Text className="flex-1 text-lg font-bold text-ruvo-ink" numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Badge variant={approved ? 'success' : 'warning'} size="sm">
-                  {approved ? 'Approved' : 'Pending'}
-                </Badge>
-              </View>
+                    return (
+                      <View
+                        key={product.id}
+                        className="bg-warm-50 border border-warm-200 rounded-xl p-2.5 flex-row items-center gap-2.5"
+                      >
+                        <View className="w-12 h-12 rounded-lg bg-white border border-warm-200 items-center justify-center overflow-hidden relative">
+                          {pImg ? (
+                            <Image source={{ uri: pImg }} className="w-full h-full" resizeMode="contain" />
+                          ) : (
+                            <Ionicons name="image-outline" size={20} color="#A79E92" />
+                          )}
+                          {discount > 0 && (
+                            <View className="absolute top-0 left-0 bg-ruvo-accent px-1 rounded-br-sm">
+                              <Text className="text-[8px] font-black text-white">{discount}%</Text>
+                            </View>
+                          )}
+                        </View>
 
-              {/* Category */}
-              {shopData.category && (
-                <View className="flex-row items-center gap-xs">
-                  <Ionicons name="pricetag-outline" size={12} color="#A79E92" />
-                  <Text className="text-sm text-warm-600" numberOfLines={1}>
-                    {shopData.category}
-                  </Text>
+                        <View className="flex-1">
+                          <View className="flex-row items-center justify-between">
+                            <Text className="text-xs font-extrabold text-ruvo-ink flex-1 mr-1" numberOfLines={1}>
+                              {product.name}
+                            </Text>
+                            <View
+                              className={`px-1.5 py-0.5 rounded-full ${
+                                isAvailable ? 'bg-green-100' : 'bg-red-100'
+                              }`}
+                            >
+                              <Text
+                                className={`text-[9px] font-black ${
+                                  isAvailable ? 'text-green-700' : 'text-red-700'
+                                }`}
+                              >
+                                {isAvailable ? 'Active' : 'Stock Out'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View className="flex-row items-baseline gap-1 mt-0.5">
+                            <Text className="text-xs font-black text-ruvo-ink">₹{product.sellingPrice}</Text>
+                            {product.actualPrice > product.sellingPrice && (
+                              <Text className="text-[10px] text-warm-500 line-through">₹{product.actualPrice}</Text>
+                            )}
+                            {product.unit && (
+                              <Text className="text-[9px] text-warm-500 font-semibold">/ {product.unit}</Text>
+                            )}
+                          </View>
+
+                          <Text className="text-[10px] text-warm-600 font-medium">
+                            Stock: {product.stockQuantity} units
+                          </Text>
+                        </View>
+
+                        <TouchableOpacity
+                          onPress={() =>
+                            navigation.navigate(ROUTES.EDIT_PRODUCT, {
+                              product,
+                              productId: product.id,
+                              shopId: item.id,
+                            })
+                          }
+                          className="bg-white p-2 rounded-lg border border-warm-300 items-center justify-center"
+                        >
+                          <Ionicons name="create-outline" size={16} color="#231C10" />
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
               )}
-
-              {/* Address */}
-              {shopData.address && (
-                <View className="flex-row items-center gap-xs">
-                  <Ionicons name="location-outline" size={12} color="#A79E92" />
-                  <Text className="flex-1 text-sm text-warm-600" numberOfLines={1}>
-                    {shopData.address}
-                  </Text>
-                </View>
-              )}
-
-              {/* Quick Actions */}
-              <View className="flex-row flex-wrap gap-xs mt-xs">
-                <TouchableOpacity
-                  className="flex-row items-center gap-xs bg-ruvo-yellow-soft px-md py-xs rounded-lg"
-                  onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
-                >
-                  <Ionicons name="cube-outline" size={12} color="#D99B00" />
-                  <Text className="text-xs font-bold text-ruvo-yellow-dark">Products</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-row items-center gap-xs bg-blue-100 px-md py-xs rounded-lg"
-                  onPress={() =>
-                    navigation.navigate(ROUTES.SHOP_ORDERS, {
-                      shopId: item.id,
-                      shopName: item.name,
-                    })
-                  }
-                >
-                  <Ionicons name="receipt-outline" size={12} color="#2563EB" />
-                  <Text className="text-xs font-bold text-blue-600">Orders</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-row items-center gap-xs bg-ruvo-accent-soft px-md py-xs rounded-lg"
-                  onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
-                >
-                  <Ionicons name="add" size={12} color="#16A34A" />
-                  <Text className="text-xs font-bold text-ruvo-accent">Add</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  className="flex-row items-center gap-xs bg-purple-100 px-md py-xs rounded-lg"
-                  onPress={() => navigation.navigate('EditShop', { shop: item })}
-                >
-                  <Ionicons name="create-outline" size={12} color="#9333EA" />
-                  <Text className="text-xs font-bold text-purple-600">Edit</Text>
-                </TouchableOpacity>
-              </View>
             </View>
-
-            {/* Chevron */}
-            <Ionicons name="chevron-forward" size={20} color="#D4C8B8" />
           </View>
         </Card>
       </Animated.View>

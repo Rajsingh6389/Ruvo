@@ -85,10 +85,40 @@ export const RuvoFirstOrderPromoBanner: React.FC<RuvoFirstOrderPromoBannerProps>
     ).start();
   }, [floatAnim, opacityAnim, pulseAnim, slideAnim]);
 
-  const handleCopyCode = () => {
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [activeCoupon, setActiveCoupon] = useState<any>(null);
+
+  useEffect(() => {
+    // Fetch dynamic active coupons from backend DB
+    const fetchCoupons = async () => {
+      try {
+        const res = await fetch(`${require('../../config/api').API_BASE_URL}/api/coupons/active`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setCoupons(data);
+            setActiveCoupon(data[0]);
+          }
+        }
+      } catch (err) {
+        console.log('Error fetching active coupons:', err);
+      }
+    };
+    fetchCoupons();
+  }, []);
+
+  const couponCode = activeCoupon?.code || 'WELCOME100';
+  const couponDiscountText = activeCoupon
+    ? activeCoupon.discountType === 'PERCENTAGE'
+      ? `${activeCoupon.discountValue}% OFF`
+      : `Flat ₹${activeCoupon.discountValue} OFF`
+    : 'Flat ₹100 OFF';
+  const minOrderText = activeCoupon?.minOrderAmount ? `Min ₹${activeCoupon.minOrderAmount}` : 'Min ₹299';
+
+  const handleCopyCode = (codeToApply: string) => {
     setCopied(true);
     if (onApplyCoupon) {
-      onApplyCoupon('WELCOME100');
+      onApplyCoupon(codeToApply);
     }
     setTimeout(() => {
       setCopied(false);
@@ -121,19 +151,19 @@ export const RuvoFirstOrderPromoBanner: React.FC<RuvoFirstOrderPromoBannerProps>
         />
         <View style={styles.compactTextCol}>
           <View style={styles.compactBadgeRow}>
-            <Text style={styles.compactBadgeText}>SPECIAL PROMO</Text>
-            <Text style={styles.compactSubBadge}>1st 10 Orders</Text>
+            <Text style={styles.compactBadgeText}>AVAILABLE OFFER</Text>
+            <Text style={styles.compactSubBadge}>{minOrderText}</Text>
           </View>
-          <Text style={styles.compactTitle}>Flat ₹100 OFF (Min ₹299)</Text>
+          <Text style={styles.compactTitle}>{couponDiscountText} ({couponCode})</Text>
         </View>
 
         <TouchableOpacity
           style={[styles.copyBtnCompact, { backgroundColor: copied ? '#10B981' : '#059669' }]}
-          onPress={handleCopyCode}
+          onPress={() => handleCopyCode(couponCode)}
           activeOpacity={0.8}
         >
           <Text style={styles.copyBtnTextCompact}>
-            {copied ? 'COPIED!' : 'WELCOME100'}
+            {copied ? 'APPLIED!' : 'APPLY'}
           </Text>
         </TouchableOpacity>
       </Animated.View>
@@ -194,7 +224,7 @@ export const RuvoFirstOrderPromoBanner: React.FC<RuvoFirstOrderPromoBannerProps>
                 styles.copyButton,
                 { backgroundColor: copied ? '#059669' : '#10B981' },
               ]}
-              onPress={handleCopyCode}
+              onPress={() => handleCopyCode(couponCode)}
               activeOpacity={0.8}
             >
               <Ionicons

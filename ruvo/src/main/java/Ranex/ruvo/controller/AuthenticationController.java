@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import Ranex.ruvo.repository.AuthIdentityRepository;
 import Ranex.ruvo.service.SmsService;
 
 @RestController
@@ -30,9 +31,10 @@ public class AuthenticationController {
     private final AuthenticationManager auth;
     private final JwtService jwt;
     private final SmsService smsService;
+    private final AuthIdentityRepository identities;
 
-    public AuthenticationController(UserRepository u, OtpVerificationRepository o, PasswordEncoder e, AuthenticationManager a, JwtService j, SmsService s) {
-        this.users = u;  this.otps = o;  this.encoder = e;  this.auth = a;  this.jwt = j;  this.smsService = s;
+    public AuthenticationController(UserRepository u, OtpVerificationRepository o, PasswordEncoder e, AuthenticationManager a, JwtService j, SmsService s, AuthIdentityRepository i) {
+        this.users = u;  this.otps = o;  this.encoder = e;  this.auth = a;  this.jwt = j;  this.smsService = s; this.identities = i;
     }
 
     @PostMapping("/send-otp")
@@ -205,8 +207,8 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     ResponseEntity<ApiResponse<User>> me(@AuthenticationPrincipal org.springframework.security.core.userdetails.User p) {
-        User u = users.findByMobileNumberFlexible(p.getUsername())
-                .orElseThrow();
+        User u = resolveUser(p);
+        if (u == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("User not found", null));
         return ResponseEntity.ok(ApiResponse.ok("Current user", u));
     }
 
@@ -214,8 +216,8 @@ public class AuthenticationController {
     ResponseEntity<ApiResponse<User>> updateProfile(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User p,
             @RequestBody Map<String, String> updates) {
-        User u = users.findByMobileNumberFlexible(p.getUsername())
-                .orElseThrow();
+        User u = resolveUser(p);
+        if (u == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.ok("User not found", null));
         if (updates.containsKey("name") && !updates.get("name").isBlank()) u.setName(updates.get("name"));
         if (updates.containsKey("mobileNumber")) u.setMobileNumber(formatMobile(updates.get("mobileNumber")));
         if (updates.containsKey("address"))      u.setAddress(updates.get("address"));
@@ -229,6 +231,20 @@ public class AuthenticationController {
     @PostMapping("/logout")
     ResponseEntity<ApiResponse<Void>> logout() {
         return ResponseEntity.ok(ApiResponse.ok("Logged out. Discard the access token on the client.", null));
+    }
+
+    private User resolveUser(org.springframework.security.core.userdetails.User p) {
+        String username = p.getUsername();
+        if (username != null && username.startsWith("identity:")) {
+            try {
+                Long identityId = Long.parseLong(username.substring(9));
+                Optional<AuthIdentity> ident = identities.findById(identityId);
+                if (ident.isPresent() && ident.get().getMobileNumber() != null) {
+                    return users.findByMobileNumberFlexible(ident.get().getMobileNumber()).orElse(null);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return users.findByMobileNumberFlexible(username).orElse(null);
     }
 
     private String formatMobile(String mobile) {

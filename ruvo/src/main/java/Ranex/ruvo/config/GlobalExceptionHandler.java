@@ -70,7 +70,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> unexpected(Exception e) {
         log(e);
-        return body(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Something went wrong on Ruvo. Please try again.");
+        String causeMsg = e.getCause() != null ? e.getCause().getMessage() : "";
+        return body(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Error: " + e.getClass().getSimpleName() + " - " + e.getMessage() + " | " + causeMsg);
     }
 
     private static String message(Exception e, String fallback) {

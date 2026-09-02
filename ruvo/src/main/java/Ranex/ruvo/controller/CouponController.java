@@ -64,4 +64,16 @@ public class CouponController {
             ));
         }
     }
+
+    @GetMapping("/active")
+    public ResponseEntity<?> getActiveCoupons() {
+        try {
+            return ResponseEntity.ok(couponService.getActiveCoupons());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                "success", false,
+                "message", "Failed to fetch active coupons: " + e.getMessage()
+            ));
+        }
+    }
 }

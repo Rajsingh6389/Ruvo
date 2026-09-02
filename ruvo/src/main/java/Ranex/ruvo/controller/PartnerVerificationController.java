@@ -24,10 +24,11 @@ public class PartnerVerificationController {
     private final PartnerAccountRepository partnerAccounts;
     private final DeliveryPartnerRepository deliveryPartners;
     private final JwtService jwt;
+    private final AuthIdentityRepository identities;
 
     public PartnerVerificationController(UserRepository u, PartnerProfileRepository p, PartnerVehicleRepository v,
                                          PartnerVerificationRepository vr, PartnerAccountRepository pa,
-                                         DeliveryPartnerRepository dp, JwtService j) {
+                                         DeliveryPartnerRepository dp, JwtService j, AuthIdentityRepository id) {
         this.users = u;
         this.profiles = p;
         this.vehicles = v;
@@ -35,6 +36,7 @@ public class PartnerVerificationController {
         this.partnerAccounts = pa;
         this.deliveryPartners = dp;
         this.jwt = j;
+        this.identities = id;
     }
 
     @GetMapping("/profile")
@@ -273,12 +275,17 @@ public class PartnerVerificationController {
             if (jwt.valid(token)) {
                 Long identityId = jwt.getIdentityId(token);
                 if (identityId != null) {
-                    return partnerAccounts.findByAuthIdentityId(identityId)
+                    User user = partnerAccounts.findByAuthIdentityId(identityId)
                             .map(PartnerAccount::getSecurityUser)
                             .orElse(null);
+                    if (user != null) return user;
+                    Optional<AuthIdentity> ident = identities.findById(identityId);
+                    if (ident.isPresent() && ident.get().getMobileNumber() != null) {
+                        return users.findByMobileNumberFlexible(ident.get().getMobileNumber()).orElse(null);
+                    }
                 }
                 String subject = jwt.subject(token);
-                return users.findByMobileNumber(subject).orElse(null);
+                return users.findByMobileNumberFlexible(subject).orElse(null);
             }
         }
         return null;

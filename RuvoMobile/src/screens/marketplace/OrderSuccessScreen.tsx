@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { ROUTES } from '../../constants/routes';
@@ -28,16 +28,44 @@ const OrderSuccessScreen = () => {
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
 
+  // Animation values for success state
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (paymentState === 'success') {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.08,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [paymentState, scaleAnim, pulseAnim]);
+
   useEffect(() => {
     if (!pendingPayment || typeof orderId !== 'number') return;
 
     startTimeRef.current = Date.now();
 
     const pollStatus = async () => {
-      // Timeout after 2 minutes
       if (Date.now() - startTimeRef.current > POLL_TIMEOUT_MS) {
         stopPolling();
-        // User can check status in Order History
         return;
       }
 
@@ -52,7 +80,6 @@ const OrderSuccessScreen = () => {
         } else if (ps === 'FAILED' || order?.orderStatus === 'PAYMENT_FAILED') {
           setPaymentState('failed');
           stopPolling();
-          // Redirect to payment failure after a brief moment
           setTimeout(() => {
             navigation.replace(ROUTES.PAYMENT_FAILURE, {
               orderId,
@@ -61,7 +88,7 @@ const OrderSuccessScreen = () => {
           }, 1500);
         }
       } catch {
-        // Network error — keep polling
+        // Network error
       }
     };
 
@@ -72,24 +99,20 @@ const OrderSuccessScreen = () => {
       }
     };
 
-    // Start polling
     pollTimerRef.current = setInterval(pollStatus, POLL_INTERVAL_MS);
-    // Also check immediately
     pollStatus();
 
     return stopPolling;
   }, [pendingPayment, orderId, token, navigation]);
 
-  // Auto-navigate to home after 4 seconds (only for non-pending COD orders)
   useEffect(() => {
     if (pendingPayment) return;
     const timer = setTimeout(() => {
       navigation.navigate(ROUTES.MAIN_TABS);
-    }, 4000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [navigation, pendingPayment]);
 
-  // ─── PENDING STATE ──────────────────────────────────────────
   if (paymentState === 'pending') {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -126,19 +149,29 @@ const OrderSuccessScreen = () => {
     );
   }
 
-  // ─── SUCCESS STATE ──────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="checkmark-circle" size={80} color="#2E7D32" />
+        <Animated.View
+          style={[
+            styles.iconContainer,
+            {
+              transform: [{ scale: scaleAnim }, { scale: pulseAnim }],
+            },
+          ]}
+        >
+          <View style={styles.animatedCircle}>
+            <Ionicons name="checkmark-circle" size={100} color="#10B981" />
+          </View>
+        </Animated.View>
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Order Placed Successfully! 🎉</Text>
+        <View style={styles.badgeContainer}>
+          <Text style={styles.badgeText}>Order #{orderId}</Text>
         </View>
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Order Successful!</Text>
-        <Text style={[styles.orderNumber, { color: colors.textSecondary }]}>Order #{orderId}</Text>
         <Text style={styles.totalText}>Total: ₹{total}</Text>
 
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Your order has been placed successfully. The shop will confirm your order shortly.
+          Your order has been confirmed by RuVo! The shop is preparing your item.
         </Text>
 
         <TouchableOpacity
@@ -149,10 +182,10 @@ const OrderSuccessScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.homeButton, { backgroundColor: '#F0F9FF', marginTop: 12, borderColor: '#3B82F6', borderWidth: 1 }]}
+          style={[styles.homeButton, { backgroundColor: '#ECFDF5', marginTop: 12, borderColor: '#10B981', borderWidth: 1.5 }]}
           onPress={() => navigation.navigate(ROUTES.CUSTOMER_TRACKING as never, { orderId } as never)}
         >
-          <Text style={[styles.homeButtonText, { color: '#1D4ED8' }]}>Track Order</Text>
+          <Text style={[styles.homeButtonText, { color: '#047857' }]}>Track Order Status</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -171,33 +204,55 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginBottom: 20,
   },
+  animatedCircle: {
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
     marginBottom: 12,
+    textAlign: 'center',
   },
   orderNumber: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
   },
+  badgeContainer: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  badgeText: {
+    color: '#047857',
+    fontSize: 15,
+    fontWeight: '800',
+  },
   totalText: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#2E7D32',
-    marginBottom: 24,
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#10B981',
+    marginBottom: 20,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 40,
+    lineHeight: 22,
+    marginBottom: 36,
   },
   homeButton: {
-    backgroundColor: '#2E7D32',
+    backgroundColor: '#10B981',
     paddingVertical: 16,
     paddingHorizontal: 40,
-    borderRadius: 12,
+    borderRadius: 14,
     width: '100%',
     alignItems: 'center',
   },
@@ -205,7 +260,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
-  }
+  },
 });
 
 export default OrderSuccessScreen;

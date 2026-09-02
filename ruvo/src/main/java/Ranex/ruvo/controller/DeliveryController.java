@@ -454,4 +454,37 @@ public class DeliveryController {
             "PENDING"
         ));
     }
+
+    // ===============================================
+    // POST cancel delivery assignment / order by shopkeeper
+    // ===============================================
+
+    @PostMapping("/orders/{orderId}/cancel-by-shop")
+    public ResponseEntity<?> cancelOrderByShop(@PathVariable Long orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        // Expire all pending delivery requests for this order
+        List<Ranex.ruvo.model.DeliveryRequest> requests = deliveryRequestRepository.findByOrderId(orderId);
+        for (Ranex.ruvo.model.DeliveryRequest req : requests) {
+            if ("PENDING".equals(req.getStatus())) {
+                req.setStatus("EXPIRED");
+                deliveryRequestRepository.save(req);
+            }
+        }
+
+        // Set order status to CANCELLED_BY_SHOP
+        order.setOrderStatus(OrderStatus.CANCELLED_BY_SHOP);
+        orderRepository.save(order);
+
+        // Notify customer
+        notificationService.notifyCustomer(
+            order,
+            "Order Cancelled",
+            "The shop has cancelled this order request.",
+            "CANCELLED_BY_SHOP"
+        );
+
+        return ResponseEntity.ok("Order delivery assignment cancelled by shopkeeper.");
+    }
 }

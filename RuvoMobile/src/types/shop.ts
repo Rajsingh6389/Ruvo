@@ -11,6 +11,7 @@ export type Shop = {
   rating?: number;
   reviewCount?: number;
   image?: string;
+  imageUrl?: string;
   logoUrl?: string;
   bannerUrl?: string;
   verified?: boolean;

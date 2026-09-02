@@ -64,51 +64,61 @@ export default function CartScreen() {
     );
   }
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View className="bg-white rounded-lg p-3 mb-3 flex-row items-center gap-3 shadow-sm border border-gray-100">
-      {item.product.imageUrl ? (
-        <Image
-          source={{ uri: item.product.imageUrl }}
-          className="w-16 h-16 rounded-lg"
-        />
-      ) : (
-        <View className="w-16 h-16 rounded-lg bg-gray-100 items-center justify-center">
-          <Ionicons name="image-outline" size={22} color="#9CA3AF" />
+  const renderItem = ({ item }: { item: any }) => {
+    const p = item.product;
+    const imgUri = p.imageUrl || p.image || p.photoUrl;
+    return (
+      <View className="bg-white rounded-2xl p-3.5 mb-3 flex-row items-center gap-3 shadow-sm border border-gray-100">
+        {imgUri ? (
+          <Image
+            source={{ uri: imgUri }}
+            className="w-16 h-16 rounded-xl bg-gray-50"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="w-16 h-16 rounded-xl bg-emerald-50 items-center justify-center border border-emerald-100">
+            <Ionicons name="basket" size={26} color="#10B981" />
+          </View>
+        )}
+        <View className="flex-1 min-w-0">
+          <Text className="text-sm font-bold text-ruvo-ink mb-0.5" numberOfLines={1}>
+            {p.name}
+          </Text>
+          {p.shopName && (
+            <Text className="text-[11px] text-gray-500 font-medium mb-1" numberOfLines={1}>
+              {p.shopName}
+            </Text>
+          )}
+          <Text className="text-sm font-black text-ruvo-accent">
+            ₹{p.sellingPrice || p.price || 0}
+          </Text>
         </View>
-      )}
-      <View className="flex-1 min-w-0">
-        <Text className="text-sm font-semibold text-ruvo-ink mb-1" numberOfLines={2}>
-          {item.product.name}
-        </Text>
-        <Text className="text-sm font-bold text-ruvo-accent">
-          ₹{item.product.sellingPrice}
-        </Text>
+        <View className="flex-row items-center bg-gray-50 rounded-full px-2 py-1 border border-gray-200">
+          <TouchableOpacity
+            className="w-6 h-6 rounded-full bg-white items-center justify-center shadow-xs"
+            onPress={() => updateQuantity(p.id, item.quantity - 1)}
+          >
+            <Ionicons name="remove" size={14} color="#333" />
+          </TouchableOpacity>
+          <Text className="text-xs font-bold w-6 text-center text-ruvo-ink">
+            {item.quantity}
+          </Text>
+          <TouchableOpacity
+            className="w-6 h-6 rounded-full bg-white items-center justify-center shadow-xs"
+            onPress={() => updateQuantity(p.id, item.quantity + 1)}
+          >
+            <Ionicons name="add" size={14} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="ml-2 p-1"
+            onPress={() => removeFromCart(p.id)}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+          </TouchableOpacity>
+        </View>
       </View>
-      <View className="flex-row items-center">
-        <TouchableOpacity
-          className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
-          onPress={() => updateQuantity(item.product.id, item.quantity - 1)}
-        >
-          <Ionicons name="remove" size={16} color="#333" />
-        </TouchableOpacity>
-        <Text className="text-sm font-semibold w-7 text-center text-ruvo-ink">
-          {item.quantity}
-        </Text>
-        <TouchableOpacity
-          className="w-7 h-7 rounded-full bg-gray-100 items-center justify-center"
-          onPress={() => updateQuantity(item.product.id, item.quantity + 1)}
-        >
-          <Ionicons name="add" size={16} color="#333" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          className="ml-2 p-1.5"
-          onPress={() => removeFromCart(item.product.id)}
-        >
-          <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -137,17 +147,14 @@ export default function CartScreen() {
         data={cartItems}
         renderItem={renderItem}
         keyExtractor={item => String(item.product.id ?? item.product.name)}
-        ListHeaderComponent={
-          <RuvoFirstOrderPromoBanner compact={true} onApplyCoupon={handleApplyCoupon} />
-        }
         contentContainerStyle={{ padding: 16, paddingBottom: 200 }}
         showsVerticalScrollIndicator={false}
       />
 
       {/* FOOTER */}
-      <View className="absolute left-0 right-0 bottom-0 bg-white px-5 pt-4 pb-6 border-t border-gray-200">
+      <View className="absolute left-0 right-0 bottom-24 bg-white px-5 pt-3 pb-4 border border-gray-200 rounded-2xl mx-3 shadow-xl">
         <TouchableOpacity
-          className="border border-ruvo-accent bg-ruvo-accent-soft rounded-lg p-2.5 mb-3 flex-row items-center gap-2.5"
+          className="border border-ruvo-accent bg-ruvo-accent-soft rounded-lg p-2.5 mb-2.5 flex-row items-center gap-2.5"
           onPress={() => setLocationPickerVisible(true)}
         >
           <Ionicons name="location-outline" size={18} color="#2E7D32" />
@@ -169,15 +176,15 @@ export default function CartScreen() {
           <Ionicons name="chevron-forward" size={18} color="#6B7280" />
         </TouchableOpacity>
 
-        <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-gray-700">Subtotal</Text>
+        <View className="flex-row justify-between items-center mb-2.5">
+          <Text className="text-gray-700 font-semibold text-sm">Subtotal</Text>
           <Text className="text-2xl font-bold text-ruvo-ink">
             ₹{cartTotal}
           </Text>
         </View>
 
         <TouchableOpacity
-          className={`py-3.5 rounded-lg items-center ${
+          className={`py-3 rounded-xl items-center shadow-xs ${
             hasDeliveryLocation
               ? 'bg-ruvo-accent'
               : 'bg-gray-400'
@@ -185,7 +192,7 @@ export default function CartScreen() {
           onPress={handleCheckout}
           disabled={!hasDeliveryLocation}
         >
-          <Text className="text-white font-bold text-center">
+          <Text className="text-white font-bold text-center text-base">
             {hasDeliveryLocation
               ? 'Proceed to Checkout'
               : 'Add Location to Continue'}

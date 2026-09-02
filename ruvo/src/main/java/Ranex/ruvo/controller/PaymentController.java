@@ -252,16 +252,18 @@ public class PaymentController {
 
         String customerName = request.customerName;
         String customerPhone = request.customerPhone;
-        try {
-            Long uid = Long.parseLong(request.userId);
-            User user = userRepository.findById(uid).orElse(null);
-            if (user != null) {
-                customerName = user.getName();
-                customerPhone = user.getMobileNumber();
-            }
-        } catch (NumberFormatException ignored) {}
-        order.setCustomerName(customerName);
-        order.setCustomerPhone(customerPhone);
+        if (request.userId != null) {
+            try {
+                Long uid = Long.parseLong(request.userId.replaceAll("[^0-9]", ""));
+                User user = userRepository.findById(uid).orElse(null);
+                if (user != null) {
+                    if (customerName == null || customerName.isBlank()) customerName = user.getName();
+                    if (customerPhone == null || customerPhone.isBlank()) customerPhone = user.getMobileNumber();
+                }
+            } catch (Exception ignored) {}
+        }
+        order.setCustomerName(customerName != null ? customerName : "Customer");
+        order.setCustomerPhone(customerPhone != null ? customerPhone : "N/A");
 
         if ("COD".equals(requestedPaymentMethod)) {
             order.setPaymentStatus("COD_PENDING");
@@ -296,7 +298,11 @@ public class PaymentController {
                     .build();
             paymentRepository.save(payment);
 
-            notificationService.notifyShop(savedOrder);
+            try {
+                notificationService.notifyShop(savedOrder);
+            } catch (Exception e) {
+                System.err.println("[PaymentController] Shop notification failed: " + e.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of(
                     "success", true,

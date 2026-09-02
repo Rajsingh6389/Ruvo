@@ -134,9 +134,7 @@ export const Step4_OnboardingFee = () => {
               {accepted && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
             </View>
             <Text style={[typography.body, { color: colors.textSecondary, flex: 1, lineHeight: 20 }]}>
-              I understand the onboarding fee is currently{' '}
-              <Text style={{ color: colors.primary, fontWeight: '700' }}>₹0</Text> and agree to the{' '}
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>RuVo Shop Terms & Conditions</Text>.
+              I understand the onboarding fee is currently <Text style={{ color: colors.primary, fontWeight: '700' }}>₹0</Text> and agree to the <Text style={{ color: colors.primary, fontWeight: '600' }}>RuVo Shop Terms & Conditions</Text>.
             </Text>
           </TouchableOpacity>
 

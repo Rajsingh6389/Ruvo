@@ -615,7 +615,7 @@ export const LoginScreen = ({ navigation }: Props) => {
 
                 <View className="flex-row items-center justify-center mt-5">
                   <Text className="text-sm text-warm-600">
-                    Didn't receive the code?{' '}
+                    Didn't receive the code?
                   </Text>
 
                   <TouchableOpacity

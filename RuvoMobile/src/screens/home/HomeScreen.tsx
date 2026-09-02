@@ -74,17 +74,30 @@ export const HomeScreen = () => {
           .catch(() => {});
       }
 
-      // Fetch nearby shops and their products
+      // Fetch nearby shops with fallback to all approved shops if nearby is empty or location is far
       setShopsLoading(true);
-      (location
-        ? getNearbyShops(location.latitude, location.longitude, 5)
-        : getShops())
+      const fetchShopsTask = async () => {
+        let result: Shop[] = [];
+        if (location?.latitude && location?.longitude) {
+          try {
+            result = await getNearbyShops(location.latitude, location.longitude, 50); // increased radius to 50km
+          } catch (e) {}
+        }
+        if (!result || result.length === 0) {
+          try {
+            result = await getShops();
+          } catch (e) {}
+        }
+        return result || [];
+      };
+
+      fetchShopsTask()
         .then(async shops => {
           setNearbyShops(shops || []);
           try {
             const { getProductsByShop } = require('../../services/productService');
             const allProducts: any[] = [];
-            for (const s of (shops || []).slice(0, 4)) {
+            for (const s of (shops || []).slice(0, 6)) {
               const prods = await getProductsByShop(s.id);
               if (Array.isArray(prods)) {
                 allProducts.push(...prods.filter(p => p.isAvailable !== false));
@@ -255,15 +268,32 @@ export const HomeScreen = () => {
             showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 12 }}
           >
-            {nearbyShops.slice(0, 6).map(shop => (
-              <View key={String(shop.id)} style={{ width: shopCardWidth }}>
-                <ShopCard
-                  shop={shop}
-                  onPress={() => (navigation.navigate as any)(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })}
-                  showDistance={true}
-                />
-              </View>
-            ))}
+            {nearbyShops.slice(0, 6).map(shop => {
+              let calcDistance: number | undefined = undefined;
+              if (location?.latitude && location?.longitude && shop.latitude && shop.longitude) {
+                const R = 6371; // km
+                const dLat = (shop.latitude - location.latitude) * (Math.PI / 180);
+                const dLon = (shop.longitude - location.longitude) * (Math.PI / 180);
+                const a =
+                  Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(location.latitude * (Math.PI / 180)) *
+                    Math.cos(shop.latitude * (Math.PI / 180)) *
+                    Math.sin(dLon / 2) *
+                    Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                calcDistance = R * c;
+              }
+              return (
+                <View key={String(shop.id)} style={{ width: shopCardWidth }}>
+                  <ShopCard
+                    shop={shop}
+                    onPress={() => (navigation.navigate as any)(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })}
+                    showDistance={true}
+                    distance={calcDistance}
+                  />
+                </View>
+              );
+            })}
           </ScrollView>
         )}
 

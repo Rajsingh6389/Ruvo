@@ -130,7 +130,13 @@ export default function CheckoutScreen() {
   const itemTotal = useMemo(
     () =>
       checkoutItems.reduce(
-        (sum, item) => sum + item.quantity * item.product.sellingPrice,
+        (sum, item) => {
+          const price = Number((item.product as any).sellingPrice ?? (item.product as any).price ?? 0);
+          const qty = Number(item.quantity ?? 1);
+          const validPrice = isNaN(price) ? 0 : price;
+          const validQty = isNaN(qty) ? 1 : qty;
+          return sum + validPrice * validQty;
+        },
         0,
       ),
     [checkoutItems],
@@ -138,7 +144,9 @@ export default function CheckoutScreen() {
   const couponDiscount = appliedCoupon === WELCOME_COUPON.code
     ? Math.min(WELCOME_COUPON.discount, itemTotal)
     : 0;
-  const grandTotal = itemTotal + platformFee + deliveryFee - couponDiscount;
+  const safePlatformFee = isNaN(Number(platformFee)) ? 0 : Number(platformFee);
+  const safeDeliveryFee = isNaN(Number(deliveryFee)) ? 0 : Number(deliveryFee);
+  const grandTotal = itemTotal + safePlatformFee + safeDeliveryFee - couponDiscount;
 
   const deliveryAddress =
     location?.fullAddress ||
@@ -209,12 +217,26 @@ export default function CheckoutScreen() {
     setSubmitting(true);
 
     try {
+      const validShopId = Number(shopId);
+      if (!validShopId || isNaN(validShopId)) {
+        Alert.alert('Invalid Shop', 'Unable to resolve shop details. Please re-open the cart.');
+        setSubmitting(false);
+        return;
+      }
+
+      const formattedItems = checkoutItems.map(i => ({
+        productId: i.product.id || 0,
+        productName: i.product.name,
+        quantity: i.quantity,
+        price: (i.product as any).sellingPrice ?? (i.product as any).price ?? 0,
+      }));
+
       if (paymentMethod === 'CASHFREE') {
         const checkoutRes = await initializeCashfreeCheckout(
           {
             userId: String(userId),
-            shopId,
-            productId: primaryItem.product.id,
+            shopId: validShopId,
+            productId: primaryItem.product.id!,
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
             deliveryAddress,
@@ -237,10 +259,11 @@ export default function CheckoutScreen() {
         const result = await initializeCheckout(
           {
             userId: String(userId),
-            shopId,
-            productId: primaryItem.product.id,
+            shopId: validShopId,
+            productId: primaryItem.product.id!,
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
+            items: formattedItems,
             paymentMethod: 'COD',
             deliveryAddress,
             userLatitude: location.latitude,
@@ -260,7 +283,9 @@ export default function CheckoutScreen() {
       }
     } catch (err: any) {
       setSubmitting(false);
-      Alert.alert('Order Failed', err.message || 'Something went wrong while placing your order.');
+      const errorMsg = err?.message || err?.toString() || 'Could not place order. Please check connection or stock.';
+      console.error('[CheckoutScreen] Place Order Error:', errorMsg, err);
+      Alert.alert('Order Failed', errorMsg);
     }
   };
 
@@ -303,39 +328,49 @@ export default function CheckoutScreen() {
           <Text className="text-base font-bold text-ruvo-ink mb-3">
             Order items ({checkoutItems.length})
           </Text>
-          {checkoutItems.map(item => (
-            <View key={item.product.id} className="flex-row items-center mb-3">
-              {item.product.imageUrl ? (
-                <Image
-                  source={{ uri: item.product.imageUrl }}
-                  className="w-16 h-16 rounded-lg"
-                />
-              ) : (
-                <View className="w-16 h-16 rounded-lg bg-gray-200 items-center justify-center">
-                  <Ionicons name="image-outline" size={32} color="#9CA3AF" />
-                </View>
-              )}
-              <View className="flex-1 ml-3">
-                <Text
-                  className="text-sm font-semibold text-ruvo-ink"
-                  numberOfLines={2}
-                >
-                  {item.product.name}
-                </Text>
-                {item.product.unit ? (
-                  <Text className="text-gray-600 text-xs mt-0.5">
-                    {item.product.unit}
+          {checkoutItems.map(item => {
+            const p = item.product as any;
+            const imgUri = p.imageUrl || p.image || p.photoUrl;
+            const unitPrice = Number(p.sellingPrice ?? p.price ?? 0);
+            const validUnitPrice = isNaN(unitPrice) ? 0 : unitPrice;
+            const qty = Number(item.quantity ?? 1);
+            const lineTotal = validUnitPrice * qty;
+
+            return (
+              <View key={p.id ?? p.name} className="flex-row items-center mb-3">
+                {imgUri ? (
+                  <Image
+                    source={{ uri: imgUri }}
+                    className="w-16 h-16 rounded-lg bg-gray-50"
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View className="w-16 h-16 rounded-lg bg-emerald-50 items-center justify-center border border-emerald-100">
+                    <Ionicons name="basket" size={26} color="#10B981" />
+                  </View>
+                )}
+                <View className="flex-1 ml-3">
+                  <Text
+                    className="text-sm font-semibold text-ruvo-ink"
+                    numberOfLines={2}
+                  >
+                    {p.name}
                   </Text>
-                ) : null}
-                <Text className="text-ruvo-accent text-sm font-bold mt-1">
-                  ₹{item.product.sellingPrice} × {item.quantity}
+                  {p.unit ? (
+                    <Text className="text-gray-600 text-xs mt-0.5">
+                      {p.unit}
+                    </Text>
+                  ) : null}
+                  <Text className="text-ruvo-accent text-sm font-bold mt-1">
+                    ₹{validUnitPrice} × {qty}
+                  </Text>
+                </View>
+                <Text className="text-ruvo-ink text-sm font-bold">
+                  ₹{lineTotal}
                 </Text>
               </View>
-              <Text className="text-ruvo-ink text-sm font-bold">
-                ₹{item.product.sellingPrice * item.quantity}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* DELIVERY ADDRESS */}

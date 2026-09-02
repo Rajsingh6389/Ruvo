@@ -2,9 +2,16 @@ import { API_BASE_URL } from '../config/api';
 import { Order } from '../types/order';
 
 async function parseOrThrow(res: Response) {
-  const body = await res.json().catch(() => null);
+  const text = await res.text().catch(() => '');
+  let body: any = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
   if (!res.ok) {
-    throw new Error(body?.message || 'Request failed');
+    console.error(`[orderService] API Error ${res.status}:`, text);
+    throw new Error(body?.message || body?.error || `Server error (${res.status}): ${text || res.statusText}`);
   }
   return body;
 }
@@ -27,6 +34,7 @@ export async function initializeCheckout(checkoutData: {
   productId: number;
   productName: string;
   quantity: number;
+  items?: Array<{ productId: number; productName: string; quantity: number; price?: number }>;
   paymentMethod: 'COD' | 'ONLINE';
   deliveryAddress: string;
   userLatitude?: number;

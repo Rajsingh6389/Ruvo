@@ -36,7 +36,7 @@ const BANKS = [
 
 export const EditBankAccountScreen = () => {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
+  const { token, userId } = useAuth();
 
   const [accountHolder, setAccountHolder] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -54,26 +54,29 @@ export const EditBankAccountScreen = () => {
 
   useEffect(() => {
     const load = async () => {
-      if (!token) { setFetching(false); return; }
+      if (!token || !userId) { setFetching(false); return; }
       try {
-        const res = await fetch(`${API_BASE_URL}/api/shop/bank-details`, {
+        const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(userId)}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
-          const data = await res.json();
-          setAccountHolder(data.accountHolder ?? '');
-          setAccountNumber(data.accountNumber ?? '');
-          setConfirmAccount(data.accountNumber ?? '');
-          setIfsc(data.ifsc ?? '');
-          setBankName(data.bankName ?? '');
-          setUpiId(data.upiId ?? '');
+          const shops = await res.json();
+          if (Array.isArray(shops) && shops.length > 0) {
+            const shop = shops[0];
+            setAccountHolder(shop.accountHolder || shop.owner || '');
+            setAccountNumber(shop.bankAccountNumber || '');
+            setConfirmAccount(shop.bankAccountNumber || '');
+            setIfsc(shop.ifscCode || '');
+            setBankName(shop.bankName || '');
+            setUpiId(shop.upiId || '');
+          }
         }
       } catch {} finally {
         setFetching(false);
       }
     };
     load();
-  }, [token]);
+  }, [token, userId]);
 
   const validate = (): string | null => {
     if (!accountHolder.trim()) return 'Account holder name is required.';
@@ -91,24 +94,32 @@ export const EditBankAccountScreen = () => {
     setError(null);
     setSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/shop/bank-details`, {
+      const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(userId || '')}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Could not fetch shop details');
+      const shops = await res.json();
+      if (!Array.isArray(shops) || shops.length === 0) throw new Error('No shop found to update bank details');
+
+      const shop = shops[0];
+      const updateRes = await fetch(`${API_BASE_URL}/api/shops/${shop.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          accountHolder: accountHolder.trim(),
-          accountNumber: accountNumber.trim(),
-          ifsc: ifsc.trim().toUpperCase(),
-          bankName: bankName.trim(),
+          ...shop,
+          bankAccountNumber: accountNumber.trim(),
+          ifscCode: ifsc.trim().toUpperCase(),
           upiId: upiId.trim() || null,
         }),
       });
-      if (res.ok || res.status === 404 || res.status === 501) {
+
+      if (updateRes.ok) {
         setSaved(true);
         Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
         setTimeout(() => navigation.goBack(), 1800);
       } else {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? `Error ${res.status}`);
+        const data = await updateRes.json().catch(() => null);
+        throw new Error(data?.message ?? `Error ${updateRes.status}`);
       }
     } catch (e: any) {
       setError(e?.message ?? 'Could not save bank details. Please try again.');

@@ -152,7 +152,11 @@ export default function ShopOrdersScreen() {
       });
       if (!response.ok) throw new Error('Failed to accept order');
       await fetchOrders(false);
-      Alert.alert('Order Accepted', 'The order has been accepted and is ready for preparation.');
+      Alert.alert(
+        'Order Accepted',
+        'Order accepted! Broadcasting delivery request to online partners.',
+        [{ text: 'View Assignment', onPress: () => navigation.navigate('DeliveryPartnerAssignmentScreen', { orderId, shopId }) }]
+      );
     } catch {
       Alert.alert('Error', 'Failed to accept order. Please try again.');
     } finally {
@@ -203,6 +207,15 @@ export default function ShopOrdersScreen() {
             <Text className="text-xs text-orange-600 font-bold mt-xs">{pendingCount} pending action</Text>
           )}
         </View>
+        {shopId && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('DeliveryPartnerAssignmentScreen', { shopId, viewPartnersOnly: true })}
+            className="px-md py-xs bg-orange-100 rounded-lg flex-row items-center gap-xs"
+          >
+            <Ionicons name="bicycle" size={16} color="#EA580C" />
+            <Text className="text-xs font-extrabold text-orange-700">Riders</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={() => fetchOrders(true)} className="w-9 h-9 bg-ruvo-yellow/20 rounded-lg items-center justify-center">
           <Ionicons name="refresh" size={18} color="#F5B700" />
         </TouchableOpacity>

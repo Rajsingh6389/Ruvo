@@ -392,6 +392,86 @@ public class SettlementController {
     }
 
     /**
+     * GET /api/settlements/shopkeeper/platform-fee-summary?shopId=1
+     */
+    @GetMapping("/shopkeeper/platform-fee-summary")
+    public ResponseEntity<?> getPlatformFeeSummary(@RequestParam Long shopId) {
+        Shop shop = shopRepository.findById(shopId).orElse(null);
+        if (shop == null) return ResponseEntity.notFound().build();
+
+        // Calculate COD platform fee from DELIVERED COD orders
+        List<Order> codOrders = orderRepository.findByShopId(shopId).stream()
+            .filter(o -> "DELIVERED".equalsIgnoreCase(o.getOrderStatus()))
+            .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()))
+            .toList();
+
+        java.math.BigDecimal codUnpaidFee = codOrders.stream()
+            .map(o -> o.getPlatformFee() != null ? o.getPlatformFee() : java.math.BigDecimal.ZERO)
+            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        java.math.BigDecimal totalUnpaidFee = shop.getUnpaidPlatformFee() != null 
+            ? shop.getUnpaidPlatformFee().max(codUnpaidFee) 
+            : codUnpaidFee;
+
+        java.time.LocalDateTime oldestDate = shop.getOldestUnpaidCodAt();
+        if (oldestDate == null && !codOrders.isEmpty()) {
+            java.time.Instant firstCreated = codOrders.get(0).getCreatedAt();
+            oldestDate = firstCreated != null 
+                ? java.time.LocalDateTime.ofInstant(firstCreated, java.time.ZoneId.systemDefault()) 
+                : java.time.LocalDateTime.now();
+        }
+
+        long hoursRemaining = 48;
+        boolean overdue = false;
+        if (totalUnpaidFee.compareTo(java.math.BigDecimal.ZERO) > 0 && oldestDate != null) {
+            long hoursElapsed = java.time.Duration.between(oldestDate, java.time.LocalDateTime.now()).toHours();
+            hoursRemaining = Math.max(0, 48 - hoursElapsed);
+            if (hoursElapsed >= 48) overdue = true;
+        }
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("shopId", shopId);
+        res.put("unpaidPlatformFee", totalUnpaidFee);
+        res.put("oldestUnpaidCodAt", oldestDate);
+        res.put("hoursRemaining", hoursRemaining);
+        res.put("overdue", overdue);
+        res.put("disabledDueToSettlement", Boolean.TRUE.equals(shop.getDisabledDueToSettlement()));
+        res.put("shopActive", Boolean.TRUE.equals(shop.getActive()));
+        res.put("lastSettledAt", shop.getLastCodPlatformFeeSettledAt());
+
+        return ResponseEntity.ok(res);
+    }
+
+    /**
+     * POST /api/settlements/shopkeeper/pay-platform-fee
+     */
+    @PostMapping("/shopkeeper/pay-platform-fee")
+    public ResponseEntity<?> payPlatformFee(@RequestParam Long shopId, @RequestParam(required = false) String paymentRef) {
+        Shop shop = shopRepository.findById(shopId).orElse(null);
+        if (shop == null) return ResponseEntity.notFound().build();
+
+        java.math.BigDecimal paidAmount = shop.getUnpaidPlatformFee();
+        shop.setUnpaidPlatformFee(java.math.BigDecimal.ZERO);
+        shop.setOldestUnpaidCodAt(null);
+        shop.setLastCodPlatformFeeSettledAt(java.time.LocalDateTime.now());
+        
+        // Re-enable shop if disabled due to settlement overdue
+        if (Boolean.TRUE.equals(shop.getDisabledDueToSettlement())) {
+            shop.setDisabledDueToSettlement(false);
+            shop.setActive(true);
+        }
+
+        shopRepository.save(shop);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("success", true);
+        res.put("message", "RuVo Platform Fee COD Settlement completed successfully!");
+        res.put("paidAmount", paidAmount);
+        res.put("shopActive", shop.getActive());
+        return ResponseEntity.ok(res);
+    }
+
+    /**
      * Deprecated compatibility endpoint
      */
     @PostMapping("/partner-to-shop/initiate")

@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   Image,
   ScrollView,
   Text,
@@ -46,9 +47,10 @@ type NearbyProduct = {
 
 const normalize = (value?: string | null) => (value || '').trim().toLowerCase();
 const matchesCategory = (shop: Shop, category?: string) => {
-  if (!category) return true;
+  if (!category || category === 'All') return true;
   const wanted = normalize(category);
   const actual = normalize(shop.category);
+  if (!actual) return true;
   return actual === wanted || actual.includes(wanted) || wanted.includes(actual);
 };
 
@@ -68,6 +70,27 @@ export const NearbyShopsScreen = () => {
   const { cartItems, addToCart, cartTotal } = useCart();
   const { width: screenWidth } = useWindowDimensions();
 
+  // Animation values for cart bounce feedback
+  const cartScaleAnim = useRef(new Animated.Value(1)).current;
+  const barScaleAnim = useRef(new Animated.Value(1)).current;
+
+  const triggerCartAnimation = () => {
+    Animated.sequence([
+      Animated.timing(cartScaleAnim, { toValue: 1.35, duration: 150, useNativeDriver: true }),
+      Animated.spring(cartScaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
+    ]).start();
+
+    Animated.sequence([
+      Animated.timing(barScaleAnim, { toValue: 1.05, duration: 120, useNativeDriver: true }),
+      Animated.spring(barScaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const handleAddToCart = (product: any) => {
+    addToCart(product);
+    triggerCartAnimation();
+  };
+
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShopId, setSelectedShopId] = useState<number | null>(null);
   const [products, setProducts] = useState<NearbyProduct[]>([]);
@@ -86,18 +109,23 @@ export const NearbyShopsScreen = () => {
     setShopsLoading(true);
     setError(null);
     try {
-      const data = userLocation
-        ? await getNearbyShops(userLocation.latitude, userLocation.longitude, 5)
-        : await getShops();
+      let data: Shop[] = [];
+      if (userLocation) {
+        try {
+          data = await getNearbyShops(userLocation.latitude, userLocation.longitude, 50);
+        } catch (e) {}
+      }
+      if (!data || data.length === 0) {
+        data = await getShops();
+      }
 
       const allShops = Array.isArray(data) ? data : [];
       const filtered = categoryFilter
         ? allShops.filter(shop => matchesCategory(shop, categoryFilter))
         : allShops;
-      const visible = categoryFilter ? filtered : allShops;
 
-      setShops(visible);
-      setSelectedShopId(visible[0]?.id ?? null);
+      setShops(filtered);
+      setSelectedShopId(filtered[0]?.id ?? null);
       setActiveCategory('All');
     } catch {
       setError('Failed to load shops. Please try again.');
@@ -217,16 +245,18 @@ export const NearbyShopsScreen = () => {
             onPress={() => (navigation.navigate as any)(ROUTES.CART)}
             className="w-10 h-10 rounded-full bg-white border border-warm-200 items-center justify-center relative"
           >
-            <Ionicons name="bag-outline" size={22} color="#111827" />
-            {cartItems.length > 0 && (
-              <View className="absolute -top-1 -right-1 bg-ruvo-yellow rounded-full min-w-5 h-5 px-1 items-center justify-center">
-                <Text className="text-xs font-black text-ruvo-ink">{cartItems.length}</Text>
-              </View>
-            )}
+            <Animated.View style={{ transform: [{ scale: cartScaleAnim }] }}>
+              <Ionicons name="bag-outline" size={22} color="#111827" />
+              {cartItems.length > 0 && (
+                <View className="absolute -top-1 -right-1 bg-ruvo-yellow rounded-full min-w-5 h-5 px-1 items-center justify-center">
+                  <Text className="text-xs font-black text-ruvo-ink">{cartItems.length}</Text>
+                </View>
+              )}
+            </Animated.View>
           </Pressable>
         </View>
 
-        <View className="flex-row items-center bg-warm-100 rounded-2xl px-4 h-12 gap-2">
+        <View className="flex-row items-center bg-warm-100 rounded-2xl px-4 h-12 gap-2 mt-3">
           <Ionicons name="search-outline" size={20} color="#6B7280" />
           <TextInput
             className="flex-1 text-base text-ruvo-ink"
@@ -241,23 +271,22 @@ export const NearbyShopsScreen = () => {
             </Pressable>
           ) : null}
         </View>
-      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 112 }}>
+        {/* ── Category Selector Bar inside NearbyShops ─────────────────── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="py-3"
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 8 }}
+          className="mt-3"
+          contentContainerStyle={{ gap: 8 }}
         >
           <Pressable
             onPress={() => (navigation as any).setParams({ category: undefined })}
-            className={`px-4 h-10 rounded-full border flex-row items-center gap-2 ${
-              !categoryFilter ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
+            className={`px-3.5 h-9 rounded-full border flex-row items-center gap-1.5 ${
+              !categoryFilter ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-warm-100 border-warm-200'
             }`}
           >
-            <Ionicons name="grid-outline" size={16} color="#111827" />
-            <Text className="font-bold text-ruvo-ink">All</Text>
+            <Ionicons name="grid-outline" size={14} color="#111827" />
+            <Text className="text-xs font-bold text-ruvo-ink">All</Text>
           </Pressable>
           {CATEGORIES.map(category => {
             const active = category.label === categoryFilter;
@@ -265,143 +294,177 @@ export const NearbyShopsScreen = () => {
               <Pressable
                 key={category.id}
                 onPress={() => (navigation as any).setParams({ category: category.label })}
-                className={`px-4 h-10 rounded-full border flex-row items-center gap-2 ${
+                className={`px-3.5 h-9 rounded-full border flex-row items-center gap-1.5 ${
                   active ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
                 }`}
               >
-                <Image source={{ uri: category.image }} className="w-5 h-5 rounded-full" />
-                <Text className="font-bold text-ruvo-ink">{category.label}</Text>
+                <Image source={{ uri: category.image }} className="w-4 h-4 rounded-full" />
+                <Text className="text-xs font-bold text-ruvo-ink">{category.label}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
+      </View>
 
-        <View className="px-4">
-          <Text className="text-xl font-black text-ruvo-ink mb-2">Shops Near You</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {shops.map(shop => {
-              const active = shop.id === selectedShop?.id;
-              return (
-                <Pressable
-                  key={shop.id}
-                  onPress={() => setSelectedShopId(shop.id)}
-                  style={[styles.shopTile, { width: shopTileWidth }, active && styles.shopTileActive]}
-                >
-                  <Image source={{ uri: shopImage(shop) }} style={styles.shopTileImage} resizeMode="cover" />
-                  <View className="flex-1">
-                    <Text className="font-black text-ruvo-ink" numberOfLines={1}>{shop.name}</Text>
-                    <Text className="text-xs text-warm-600 mt-1" numberOfLines={2}>
-                      {shop.description || shop.category || 'Daily essentials'}
-                    </Text>
-                    <View className="flex-row items-center gap-1 mt-2">
-                      <Ionicons name="star" size={13} color="#F5B700" />
-                      <Text className="text-xs font-bold text-ruvo-ink">{Number(shop.rating || 4.5).toFixed(1)}</Text>
-                      <Text className="text-xs text-warm-600">• {shop.deliveryTime || 25} mins</Text>
+      {/* ── Main Split View Container ───────────────────────────────── */}
+      <View className="flex-1 flex-row">
+        {/* ── Left Sidebar: All Shops List ────────────────────────────── */}
+        <View className="w-28 bg-warm-100 border-r border-warm-200 py-2">
+          <Text className="text-[11px] font-black text-warm-600 uppercase tracking-wider text-center mb-2">
+            Shops ({shops.length})
+          </Text>
+          {shops.length === 0 ? (
+            <View className="p-2 items-center justify-center mt-6">
+              <Ionicons name="storefront-outline" size={24} color="#9CA3AF" />
+              <Text className="text-[10px] text-warm-500 text-center font-bold mt-1">0 Shops</Text>
+            </View>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 6, gap: 10, paddingBottom: 80 }}>
+              {shops.map(shop => {
+                const active = shop.id === selectedShop?.id;
+                const logo = shopImage(shop);
+                return (
+                  <Pressable
+                    key={shop.id}
+                    onPress={() => setSelectedShopId(shop.id)}
+                    className={`p-2 rounded-2xl items-center border ${
+                      active ? 'bg-white border-ruvo-yellow shadow-sm' : 'bg-transparent border-transparent'
+                    }`}
+                  >
+                    <View className="relative">
+                      <Image source={{ uri: logo }} className="w-14 h-14 rounded-2xl bg-warm-200" resizeMode="cover" />
+                      {active && (
+                        <View className="absolute -top-1 -right-1 bg-ruvo-yellow w-4 h-4 rounded-full items-center justify-center">
+                          <Ionicons name="checkmark" size={10} color="#231C10" />
+                        </View>
+                      )}
                     </View>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+                    <Text className={`text-xs font-bold text-center mt-1 leading-tight ${active ? 'text-ruvo-ink font-black' : 'text-warm-700'}`} numberOfLines={2}>
+                      {shop.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
-        {selectedShop && (
-          <View className="mx-4 mt-4 bg-white rounded-2xl border border-warm-200 p-4 shadow-sm">
-            <View className="flex-row items-center gap-4">
-              <Image
-                source={{ uri: shopImage(selectedShop) }}
-                style={[styles.heroShopImage, { width: heroImageSize, height: heroImageSize }]}
-                resizeMode="cover"
-              />
-              <View className="flex-1">
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-2xl font-black text-ruvo-ink flex-1" numberOfLines={1}>
+        {/* ── Right Main Panel: Products or Empty State ─────────────── */}
+        <View className="flex-1 bg-ruvo-bg">
+          {shops.length === 0 ? (
+            <View className="flex-1 items-center justify-center p-6 bg-white">
+              <View className="w-16 h-16 rounded-full bg-ruvo-yellow-soft items-center justify-center mb-3">
+                <Ionicons name="storefront-outline" size={32} color="#B77900" />
+              </View>
+              <Text className="text-base font-black text-ruvo-ink text-center">
+                No Shops Found for "{categoryFilter || 'Selected Category'}"
+              </Text>
+              <Text className="text-xs text-warm-600 text-center mt-1.5 px-3 leading-relaxed">
+                There are currently no registered shops in this category. Please select another category above or browse all shops.
+              </Text>
+              <Pressable
+                onPress={() => (navigation as any).setParams({ category: undefined })}
+                className="mt-4 bg-ruvo-yellow rounded-xl px-4 h-10 flex-row items-center justify-center gap-2"
+              >
+                <Ionicons name="grid-outline" size={15} color="#111827" />
+                <Text className="font-extrabold text-xs text-ruvo-ink">Show All Categories</Text>
+              </Pressable>
+            </View>
+          ) : selectedShop ? (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+              {/* Selected Shop Header */}
+              <View className="bg-white border-b border-warm-200 p-3 flex-row items-center gap-3">
+                <Image source={{ uri: shopImage(selectedShop) }} className="w-12 h-12 rounded-xl bg-warm-100" resizeMode="cover" />
+                <View className="flex-1">
+                  <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={1}>
                     {selectedShop.name}
                   </Text>
-                  <View className="bg-ruvo-yellow-soft rounded-full px-3 py-1">
-                    <Text className="text-xs font-black text-ruvo-ink">{selectedShop.category || 'Store'}</Text>
-                  </View>
-                </View>
-                <Text className="text-base text-warm-700 mt-1" numberOfLines={2}>
-                  {selectedShop.description || 'Groceries and daily essentials'}
-                </Text>
-                <View className="flex-row items-center gap-2 mt-2">
-                  <Ionicons name="star" size={15} color="#F5B700" />
-                  <Text className="font-bold text-warm-700">{Number(selectedShop.rating || 4.6).toFixed(1)}</Text>
-                  <Text className="text-warm-600">•</Text>
-                  <Text className="font-semibold text-warm-700">{selectedShop.deliveryTime || 25} mins</Text>
+                  <Text className="text-xs text-warm-600" numberOfLines={1}>
+                    {selectedShop.category || 'General Store'} • {selectedShop.deliveryTime || 25} mins
+                  </Text>
                 </View>
               </View>
-            </View>
-            <View className="mt-4 bg-ruvo-accent-soft rounded-xl px-3 py-2 flex-row items-center gap-2">
-              <Ionicons name="bicycle-outline" size={16} color="#15803D" />
-              <Text className="text-sm font-bold text-ruvo-accent">Free delivery on orders above Rs 199</Text>
-            </View>
-          </View>
-        )}
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mt-4"
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 10 }}
-        >
-          {productCategories.map(category => {
-            const active = category === activeCategory;
-            return (
-              <Pressable
-                key={category}
-                onPress={() => setActiveCategory(category)}
-                className={`px-4 h-11 rounded-xl border flex-row items-center justify-center ${
-                  active ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
-                }`}
-              >
-                <Text className="font-black text-ruvo-ink">{category}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+              {/* Product Categories Filter Pills */}
+              {productCategories.length > 1 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="py-2 bg-warm-50 border-b border-warm-200"
+                  contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}
+                >
+                  {productCategories.map(category => {
+                    const active = category === activeCategory;
+                    return (
+                      <Pressable
+                        key={category}
+                        onPress={() => setActiveCategory(category)}
+                        className={`px-3 py-1.5 rounded-full border ${
+                          active ? 'bg-ruvo-yellow border-ruvo-yellow' : 'bg-white border-warm-200'
+                        }`}
+                      >
+                        <Text className="text-xs font-bold text-ruvo-ink">{category}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              )}
 
-        {loading ? (
-          <View className="py-10 items-center">
-            <ActivityIndicator size="small" color="#F5B700" />
-            <Text className="text-warm-600 mt-2">Loading products...</Text>
-          </View>
-        ) : filteredProducts.length === 0 ? (
-          <EmptyState
-            icon="search"
-            title="No products found"
-            subtitle={searchText ? `No products match "${searchText}"` : 'This shop has no products available.'}
-          />
-        ) : (
-          <View style={[styles.productGrid, { paddingHorizontal: horizontalPadding, gap: gridGap }]}>
-            {filteredProducts.map(product => (
-              <Pressable
-                key={product.id}
-                style={[styles.productCard, { width: productCardWidth }]}
-                onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product })}
-              >
-                <Image source={{ uri: productImage(product) }} style={styles.productImage} resizeMode="contain" />
-                <Text style={styles.productName} numberOfLines={2}>{product.name}</Text>
-                <Text style={styles.productUnit} numberOfLines={1}>{product.variant}</Text>
-                <View className="flex-row items-center justify-between mt-3">
-                  <Text style={styles.productPrice}>Rs {product.price.toFixed(0)}</Text>
-                  <Pressable
-                    onPress={() => addToCart(product as any)}
-                    className="bg-ruvo-yellow rounded-lg px-3 h-9 flex-row items-center justify-center"
-                  >
-                    <Ionicons name="add" size={16} color="#111827" />
-                    <Text className="font-black text-ruvo-ink ml-1">Add</Text>
-                  </Pressable>
+              {/* Products List Grid */}
+              {loading ? (
+                <View className="py-12 items-center">
+                  <ActivityIndicator size="small" color="#F5B700" />
+                  <Text className="text-xs text-warm-600 mt-2 font-medium">Loading products...</Text>
                 </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+              ) : filteredProducts.length === 0 ? (
+                <View className="py-12 px-4 items-center">
+                  <Ionicons name="bag-remove-outline" size={40} color="#9CA3AF" />
+                  <Text className="text-sm font-bold text-ruvo-ink mt-2">No products available</Text>
+                  <Text className="text-xs text-warm-600 text-center mt-1">This shop hasn't added any products to this category yet.</Text>
+                </View>
+              ) : (
+                <View className="p-3 flex-row flex-wrap justify-between gap-y-3">
+                  {filteredProducts.map(product => (
+                    <Pressable
+                      key={product.id}
+                      style={{ width: '48%' }}
+                      className="bg-white border border-warm-200 rounded-xl p-2.5 justify-between"
+                      onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product })}
+                    >
+                      <View className="w-full h-24 items-center justify-center bg-warm-50 rounded-lg mb-2">
+                        <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
+                      </View>
+                      <Text className="text-xs font-bold text-ruvo-ink leading-tight" numberOfLines={2}>{product.name}</Text>
+                      <Text className="text-[10px] text-warm-500 mt-0.5">{product.variant}</Text>
+                      <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-warm-100">
+                        <Text className="text-sm font-black text-ruvo-ink">₹{product.price.toFixed(0)}</Text>
+                        <Pressable
+                          onPress={() => handleAddToCart(product as any)}
+                          className="bg-ruvo-yellow rounded-md px-2 py-1 flex-row items-center"
+                        >
+                          <Ionicons name="add" size={14} color="#111827" />
+                          <Text className="text-xs font-black text-ruvo-ink ml-0.5">Add</Text>
+                        </Pressable>
+                      </View>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
+            </ScrollView>
+          ) : (
+            <View className="flex-1 items-center justify-center p-4">
+              <Ionicons name="storefront-outline" size={48} color="#9CA3AF" />
+              <Text className="text-sm font-bold text-ruvo-ink mt-2">Select a shop from the left panel</Text>
+            </View>
+          )}
+        </View>
+      </View>
 
       {cartItems.length > 0 && (
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-warm-200 px-4 py-3 flex-row items-center justify-between shadow-lg">
+        <Animated.View
+          style={{ transform: [{ scale: barScaleAnim }] }}
+          className="absolute bottom-0 left-0 right-0 bg-white border-t border-warm-200 px-4 py-3 flex-row items-center justify-between shadow-lg"
+        >
           <Pressable className="flex-row items-center gap-3" onPress={() => (navigation.navigate as any)(ROUTES.CART)}>
             <View className="w-10 h-10 rounded-xl bg-ruvo-yellow-soft items-center justify-center">
               <Ionicons name="bag-handle" size={20} color="#B77900" />
@@ -417,7 +480,7 @@ export const NearbyShopsScreen = () => {
           >
             <Text className="font-black text-ruvo-ink">Checkout Rs {cartTotal}</Text>
           </Pressable>
-        </View>
+        </Animated.View>
       )}
     </View>
   );
