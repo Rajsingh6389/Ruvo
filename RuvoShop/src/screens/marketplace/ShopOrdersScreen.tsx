@@ -14,8 +14,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
@@ -30,6 +31,7 @@ import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
+import { ROUTES } from '../../constants/routes';
 
 type FilterTab = 'ALL' | 'NEW' | 'PREPARE' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
@@ -68,6 +70,15 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }
 const getStatusCfg = (status?: string) =>
   STATUS_CONFIG[status ?? ''] ?? { color: '#6B7280', bg: '#F3F4F6', label: status?.replace(/_/g, ' ') ?? 'Unknown' };
 
+const formatImgUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
+
 const TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL',       label: 'All' },
   { key: 'NEW',       label: 'New' },
@@ -91,8 +102,9 @@ export default function ShopOrdersScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { token, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
-  const routeShopId = route.params?.shopId;
+  const routeShopId = route?.params?.shopId;
   const [shopId, setShopId] = useState<number | null>(routeShopId || null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -290,60 +302,87 @@ export default function ShopOrdersScreen() {
 
   const filtered = orders.filter(o => tabMatches(filterTab, o.orderStatus));
   const pendingCount = orders.filter(o => o.orderStatus === 'SHOP_PENDING').length;
+  const todayOrdersCount = orders.filter(o => {
+    if (!o.createdAt) return false;
+    const orderDate = new Date(o.createdAt).toDateString();
+    return orderDate === new Date().toDateString();
+  }).length;
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <View className="flex-1 bg-ruvo-bg" style={{ paddingTop: insets.top }}>
       <OfflineBar />
-
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#231C10" />
-        </TouchableOpacity>
-        <View className="flex-1">
-          <Text className="text-xl font-extrabold text-ruvo-ink">Store Orders</Text>
-          {pendingCount > 0 && (
-            <Text className="text-xs text-orange-600 font-bold mt-xs">{pendingCount} pending action</Text>
-          )}
-        </View>
-        {!!shopId && (
+      <View className="bg-white border-b border-warm-200 px-lg py-sm flex-row items-center justify-between shadow-xs">
+        <View className="flex-row items-center gap-sm flex-1">
           <TouchableOpacity
-            onPress={() => navigation.navigate('DeliveryPartnerAssignment', { shopId, viewPartnersOnly: true })}
-            className="px-md py-xs bg-orange-100 rounded-lg flex-row items-center gap-xs"
+            onPress={() => navigation.goBack()}
+            className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
           >
-            <Ionicons name="bicycle" size={16} color="#EA580C" />
-            <Text className="text-xs font-extrabold text-orange-700">Riders</Text>
+            <Ionicons name="arrow-back" size={20} color="#231C10" />
           </TouchableOpacity>
-        )}
-        <TouchableOpacity onPress={() => fetchOrders(true)} className="w-9 h-9 bg-ruvo-yellow/20 rounded-lg items-center justify-center">
-          <Ionicons name="refresh" size={18} color="#F5B700" />
-        </TouchableOpacity>
+          <View className="flex-1">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-xl font-black text-ruvo-ink">Store Orders</Text>
+              <View className="bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                <Text className="text-[11px] font-black text-amber-800">Today: {todayOrdersCount}</Text>
+              </View>
+            </View>
+            {pendingCount > 0 && (
+              <Text className="text-xs text-rose-600 font-extrabold mt-0.5">⚠️ {pendingCount} pending action</Text>
+            )}
+          </View>
+        </View>
+
+        <View className="flex-row items-center gap-xs">
+          {!!shopId && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true })}
+              className="px-md py-2 bg-amber-500 rounded-2xl flex-row items-center gap-xs border border-amber-600 shadow-xs"
+            >
+              <Ionicons name="bicycle" size={16} color="#FFFFFF" />
+              <Text className="text-xs font-black text-white">Riders</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            onPress={() => fetchOrders(true)}
+            className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
+          >
+            <Ionicons name="refresh" size={18} color="#231C10" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter Tabs */}
-      <View className="flex-row px-lg pt-md pb-sm gap-xs">
-        {TABS.map(tab => {
-          const isActive = filterTab === tab.key;
-          const count = tab.key === 'ALL' ? orders.length : orders.filter(o => tabMatches(tab.key, o.orderStatus)).length;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setFilterTab(tab.key)}
-              className={`px-md py-xs rounded-full flex-row items-center gap-xs ${
-                isActive ? 'bg-ruvo-yellow' : 'bg-warm-200'
-              }`}
-            >
-              <Text className={`text-xs font-extrabold ${isActive ? 'text-ruvo-ink' : 'text-warm-700'}`}>
-                {tab.label}
-              </Text>
-              {count > 0 && (
-                <View className={`w-4 h-4 rounded-full items-center justify-center ${isActive ? 'bg-ruvo-ink/20' : 'bg-warm-400'}`}>
-                  <Text className={`text-[9px] font-extrabold ${isActive ? 'text-ruvo-ink' : 'text-white'}`}>{count}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+      <View className="bg-white border-b border-warm-200 py-xs">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
+          <View className="flex-row gap-xs py-1">
+            {TABS.map(tab => {
+              const isActive = filterTab === tab.key;
+              const count = tab.key === 'ALL' ? orders.length : orders.filter(o => tabMatches(tab.key, o.orderStatus)).length;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  activeOpacity={0.8}
+                  onPress={() => setFilterTab(tab.key)}
+                  className={`flex-row items-center gap-xs px-md py-2 rounded-2xl ${
+                    isActive ? 'bg-amber-500 border border-amber-600 shadow-sm' : 'bg-warm-100/70 border border-warm-200/50'
+                  }`}
+                >
+                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-warm-700'}`}>
+                    {tab.label}
+                  </Text>
+                  {count > 0 && (
+                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white' : 'bg-warm-300'}`}>
+                      <Text className={`text-[10px] font-black ${isActive ? 'text-amber-600' : 'text-ruvo-ink'}`}>
+                        {count}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
       </View>
 
       {/* Content */}
@@ -389,89 +428,129 @@ export default function ShopOrdersScreen() {
             const countdown = countdowns[item.id!];
             const broadcast = broadcastCountdowns[item.id!];
 
+            const mainImg = formatImgUrl(item.productImageUrl);
+
             return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
-                <Card>
+                <View className="bg-white border border-warm-300 rounded-3xl p-lg shadow-sm">
                   {/* Order Header */}
                   <View className="flex-row items-start justify-between mb-md">
                     <View className="flex-1 pr-sm flex-row items-center gap-md">
-                      {item.productImageUrl ? (
+                      {mainImg ? (
                         <Image 
-                          source={{ uri: item.productImageUrl.startsWith('http') ? item.productImageUrl : `${API_BASE_URL}${item.productImageUrl}` }} 
-                          className="w-12 h-12 rounded-lg bg-warm-200" 
+                          source={{ uri: mainImg }} 
+                          className="w-14 h-14 rounded-2xl bg-warm-100 border border-warm-200" 
                         />
                       ) : (
-                        <View className="w-12 h-12 rounded-lg bg-warm-200 items-center justify-center">
-                          <Ionicons name="cart-outline" size={24} color="#A79E92" />
+                        <View className="w-14 h-14 rounded-2xl bg-warm-100 border border-warm-200 items-center justify-center">
+                          <Ionicons name="cart-outline" size={26} color="#A79E92" />
                         </View>
                       )}
                       <View className="flex-1">
-                        <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={2}>
+                        <Text className="text-base font-black text-ruvo-ink" numberOfLines={2}>
                           {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
                         </Text>
-                        <Text className="text-xs text-warm-600 font-medium mt-xs">
-                          {item.distanceKm != null ? `${item.distanceKm} km away` : 'Address below'}
+                        <Text className="text-xs text-warm-600 font-bold mt-1">
+                          {item.distanceKm != null ? `📍 ${item.distanceKm} km away` : '📍 Store Order'}
                         </Text>
                       </View>
                     </View>
-                    <View className="px-sm py-xs rounded-lg" style={{ backgroundColor: cfg.bg }}>
-                      <Text className="text-xs font-extrabold" style={{ color: cfg.color }}>{cfg.label}</Text>
+                    <View className="px-3 py-1 rounded-full border border-warm-200" style={{ backgroundColor: cfg.bg }}>
+                      <Text className="text-[11px] font-black" style={{ color: cfg.color }}>{cfg.label}</Text>
                     </View>
                   </View>
 
-                  {/* Details & Items Breakdown */}
-                  <View className={`rounded-lg p-md gap-sm mb-sm ${
+                  {/* Customer & Address Section */}
+                  <View className={`rounded-2xl p-md gap-sm mb-sm border ${
                     ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
-                      ? 'bg-red-50' 
-                      : 'bg-warm-100'
+                      ? 'bg-rose-50/80 border-rose-200' 
+                      : 'bg-amber-50/60 border-amber-200/80'
                   }`}>
-                    {/* Address section */}
-                    <View className="flex-row items-start gap-xs mb-xs">
-                      <Ionicons name="location-outline" size={16} color="#A79E92" className="mt-0.5" />
-                      <Text className="text-sm text-ruvo-ink font-bold flex-1" numberOfLines={2}>
-                        {item.deliveryAddress || 'No address provided'}
-                      </Text>
-                    </View>
-                    <View className="h-px bg-warm-200 my-xs" />
+                    {/* Customer Info */}
+                    {item.customerName || item.customerPhone ? (
+                      <View className="flex-row items-center justify-between pb-xs border-b border-amber-200/60 mb-xs">
+                        <View className="flex-row items-center gap-1.5">
+                          <Ionicons name="person-circle" size={18} color="#231C10" />
+                          <Text className="text-sm font-black text-ruvo-ink">{item.customerName || 'Customer'}</Text>
+                        </View>
+                        {item.customerPhone ? (
+                          <TouchableOpacity className="flex-row items-center gap-1 bg-amber-500 px-3 py-1 rounded-full border border-amber-600 shadow-xs">
+                            <Ionicons name="call" size={12} color="#FFFFFF" />
+                            <Text className="text-xs font-black text-white">{item.customerPhone}</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    ) : null}
 
-                    {/* Multi-Item Breakdown */}
+                    {/* Complete Address section - Highly Legible & Bold */}
+                    <View className="flex-row items-start gap-2 mb-xs bg-white p-sm rounded-xl border border-amber-200/70">
+                      <Ionicons name="location" size={18} color="#E11D48" className="mt-0.5" />
+                      <View className="flex-1">
+                        <Text className="text-[10px] font-black text-rose-700 uppercase tracking-wider mb-0.5">Delivery Address</Text>
+                        <Text className="text-xs text-black font-black leading-5">
+                          {item.deliveryAddress || 'No delivery address provided'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Multi-Item Breakdown - Crisp Contrast */}
                     {item.items && item.items.length > 0 ? (
                       <View className="gap-xs my-xs">
-                        <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-xs">
+                        <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider mb-xs">
                           Order Items ({item.items.length})
                         </Text>
-                        {item.items.map((it, idx) => (
-                          <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-warm-200">
-                            <View className="flex-1 pr-xs flex-row items-center gap-xs">
-                              <Text className="text-xs font-extrabold text-ruvo-yellow">{it.quantity}×</Text>
-                              <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
-                                {it.productName}
+                        {item.items.map((it, idx) => {
+                          const itImg = formatImgUrl(it.productImageUrl) || mainImg;
+                          return (
+                            <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-warm-300 gap-sm shadow-xs">
+                              {itImg ? (
+                                <Image source={{ uri: itImg }} className="w-12 h-12 rounded-lg bg-warm-100 border border-warm-200" />
+                              ) : (
+                                <View className="w-12 h-12 rounded-lg bg-warm-100 border border-warm-200 items-center justify-center">
+                                  <Ionicons name="basket-outline" size={20} color="#A79E92" />
+                                </View>
+                              )}
+                              <View className="flex-1 pr-xs">
+                                <Text className="text-sm font-black text-ruvo-ink" numberOfLines={1}>
+                                  {it.productName}
+                                </Text>
+                                <View className="bg-amber-100 self-start px-2 py-0.5 rounded-md mt-1 border border-amber-300">
+                                  <Text className="text-xs font-black text-amber-900">
+                                    Qty: {it.quantity}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text className="text-base font-black text-ruvo-ink">
+                                ₹{it.priceAtOrder ? (it.priceAtOrder * it.quantity) : (item.subtotal || item.totalAmount)}
                               </Text>
                             </View>
-                            <Text className="text-xs font-extrabold text-ruvo-ink">
-                              ₹{it.priceAtOrder ? (it.priceAtOrder * it.quantity) : (item.subtotal || item.totalAmount)}
-                            </Text>
-                          </View>
-                        ))}
+                          );
+                        })}
                       </View>
                     ) : (
-                      <View className="flex-row justify-between items-center">
-                        <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
-                        <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
+                      <View className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-warm-200">
+                        <Text className="text-xs text-warm-700 font-extrabold">Item Price</Text>
+                        <Text className="text-base font-black text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
                       </View>
                     )}
 
-                    <View className="flex-row justify-between items-center mt-xs">
-                      <Text className="text-xs text-warm-600 font-medium">Total Amount (incl. fees)</Text>
-                      <Text className="text-base font-extrabold text-ruvo-yellow">₹{item.totalAmount}</Text>
-                    </View>
-                    <View className="flex-row justify-between items-center">
-                      <Text className="text-xs text-warm-600 font-medium">Payment</Text>
-                      <View className={`px-sm py-xs rounded-md flex-row items-center gap-xs ${isCod ? 'bg-orange-100' : 'bg-blue-100'}`}>
-                        <Ionicons name={isCod ? 'cash-outline' : 'card-outline'} size={12} color={isCod ? '#D97706' : '#3B82F6'} />
-                        <Text className={`text-xs font-bold ${isCod ? 'text-orange-700' : 'text-blue-700'}`}>
-                          {item.paymentMethod || 'N/A'}
-                        </Text>
+                    {/* Total & Payment Method */}
+                    <View className="flex-row justify-between items-center mt-xs bg-white p-sm rounded-xl border border-amber-300">
+                      <View>
+                        <Text className="text-[10px] font-black text-warm-600 uppercase tracking-wider">Total Amount</Text>
+                        <Text className="text-lg font-black text-emerald-700">₹{item.totalAmount}</Text>
+                      </View>
+                      
+                      <View className="items-end">
+                        <Text className="text-[10px] font-black text-warm-600 uppercase tracking-wider mb-0.5">Payment</Text>
+                        <View className={`px-3 py-1 rounded-full flex-row items-center gap-1 border ${
+                          isCod ? 'bg-amber-100 border-amber-300' : 'bg-blue-100 border-blue-300'
+                        }`}>
+                          <Ionicons name={isCod ? 'cash' : 'card'} size={14} color={isCod ? '#B45309' : '#1D4ED8'} />
+                          <Text className={`text-xs font-black uppercase ${isCod ? 'text-amber-900' : 'text-blue-900'}`}>
+                            {item.paymentMethod || 'N/A'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -590,12 +669,12 @@ export default function ShopOrdersScreen() {
                       </Text>
                     </View>
                   )}
-                </Card>
+                </View>
               </Animated.View>
             );
           }}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }

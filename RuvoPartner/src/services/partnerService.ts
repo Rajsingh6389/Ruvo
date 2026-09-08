@@ -64,7 +64,7 @@ export const partnerService = {
     }
     return api(url, token, { method: 'PUT' });
   },
-  activeDeliveries: (token: string) => api<Delivery[]>('/api/partner/deliveries', token),
+  activeDeliveries: (token: string) => api<Delivery[]>('/api/partner/deliveries/active', token).catch(() => api<Delivery[]>('/api/partner/deliveries', token)),
   delivery: (token: string, id: number) => api<Delivery>(`/api/partner/deliveries/${id}`, token),
   earnings: (token: string) => api<Earnings>('/api/partner/earnings', token),
   history: (token: string) => api<Delivery[]>('/api/partner/history', token),

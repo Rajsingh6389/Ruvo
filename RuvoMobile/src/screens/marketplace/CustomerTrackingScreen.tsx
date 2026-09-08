@@ -64,8 +64,10 @@ function isStepActive(step: string, status: string): boolean {
 function formatProductImageUrl(url?: string): string | null {
   if (!url) return null;
   const trimmed = url.trim();
-  if (trimmed.indexOf('http://') === 0 || trimmed.indexOf('https://') === 0) return trimmed;
-  return `${API_BASE_URL}${trimmed.indexOf('/') === 0 ? '' : '/'}${trimmed}`;
+  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -270,9 +272,16 @@ export default function CustomerTrackingScreen() {
 
   const isCancelled = CANCELLED_STATUSES.indexOf(order.orderStatus || '') >= 0;
   const isLive      = order.orderStatus === 'PICKED_UP' || order.orderStatus === 'OUT_FOR_DELIVERY';
-  const destination = order.deliveryLatitude && order.deliveryLongitude
-    ? { latitude: order.deliveryLatitude, longitude: order.deliveryLongitude }
-    : { latitude: 28.6139, longitude: 77.2090 };
+
+  const destLat = Number(order.deliveryLatitude);
+  const destLng = Number(order.deliveryLongitude);
+  const shopLat = Number(order.shopLatitude);
+  const shopLng = Number(order.shopLongitude);
+
+  const validDestLat = (!isNaN(destLat) && destLat !== 0) ? destLat : (!isNaN(shopLat) && shopLat !== 0) ? shopLat : 28.6139;
+  const validDestLng = (!isNaN(destLng) && destLng !== 0) ? destLng : (!isNaN(shopLng) && shopLng !== 0) ? shopLng : 77.2090;
+
+  const destination = { latitude: validDestLat, longitude: validDestLng };
 
   const productImgUri = formatProductImageUrl(order.productImageUrl);
 
@@ -340,11 +349,27 @@ export default function CustomerTrackingScreen() {
 
         {/* Map Section */}
         <View style={styles.mapContainer}>
-          {isLive ? (
+          {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
             <MapView
               style={StyleSheet.absoluteFill}
               initialRegion={{ ...destination, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
             >
+              {/* User Location Marker */}
+              <Marker coordinate={destination} title="Delivery Address" pinColor="#059669" />
+
+              {/* Shop Location Marker */}
+              {order.shopLatitude && order.shopLongitude && (
+                <Marker
+                  coordinate={{ latitude: order.shopLatitude, longitude: order.shopLongitude }}
+                  title={order.shopName || "Store"}
+                >
+                  <View style={[styles.partnerMarker, { backgroundColor: '#F5B700' }]}>
+                    <Ionicons name="storefront" size={18} color="#FFF" />
+                  </View>
+                </Marker>
+              )}
+
+              {/* Delivery Partner Marker */}
               {partnerLocation && (
                 <Marker coordinate={partnerLocation} title="Delivery Partner">
                   <View style={styles.partnerMarker}>
@@ -352,15 +377,26 @@ export default function CustomerTrackingScreen() {
                   </View>
                 </Marker>
               )}
-              <Marker coordinate={destination} title="Your Location" pinColor="#059669" />
-              {partnerLocation && (
+
+              {/* Polyline Route */}
+              {partnerLocation ? (
                 <Polyline
                   coordinates={[partnerLocation, destination]}
                   strokeColor="#059669"
-                  strokeWidth={3}
+                  strokeWidth={3.5}
                   lineDashPattern={[6, 4]}
                 />
-              )}
+              ) : (order.shopLatitude && order.shopLongitude) ? (
+                <Polyline
+                  coordinates={[
+                    { latitude: order.shopLatitude, longitude: order.shopLongitude },
+                    destination,
+                  ]}
+                  strokeColor="#F5B700"
+                  strokeWidth={3}
+                  lineDashPattern={[8, 5]}
+                />
+              ) : null}
             </MapView>
           ) : (
             <View style={[styles.mapPlaceholder, { backgroundColor: colors.card }]}>
@@ -368,7 +404,7 @@ export default function CustomerTrackingScreen() {
               <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24 }}>
                 {isCancelled
                   ? 'Order was cancelled. No delivery in progress.'
-                  : 'Live map activates when partner picks up your order.'}
+                  : 'Order delivered successfully.'}
               </Text>
             </View>
           )}
@@ -381,29 +417,79 @@ export default function CustomerTrackingScreen() {
           )}
         </View>
 
-        {/* Product Details Card */}
+        {/* Product & Shop Details Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Order Items</Text>
-          <View style={styles.productRow}>
-            {productImgUri ? (
-              <Image source={{ uri: productImgUri }} style={styles.productImg} resizeMode="cover" />
-            ) : (
-              <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
-                <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+          {/* Shop Info Header */}
+          {order.shopName ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 12, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="storefront" size={20} color="#D97706" />
               </View>
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
-                {order.productName || 'Your Order'}
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                Qty: {order.quantity}
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15, fontWeight: '800' }]}>
+                  {order.shopName}
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                  RuVo Partner Store
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>
+            Order Items ({order.items && order.items.length > 0 ? order.items.length : order.quantity || 1})
+          </Text>
+
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item, index) => {
+              const itemImg = formatProductImageUrl(item.productImageUrl) || productImgUri;
+              const itemPrice = item.price ?? Math.round(order.totalAmount / order.items!.length);
+
+              return (
+                <View key={item.id || item.productId || index} style={[styles.productRow, { marginBottom: index === order.items!.length - 1 ? 0 : 12 }]}>
+                  {itemImg ? (
+                    <Image source={{ uri: itemImg }} style={styles.productImg} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
+                      <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
+                      {item.productName}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                      ₹{itemPrice} × {item.quantity}
+                    </Text>
+                  </View>
+                  <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
+                    ₹{itemPrice * item.quantity}
+                  </Text>
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.productRow}>
+              {productImgUri ? (
+                <Image source={{ uri: productImgUri }} style={styles.productImg} resizeMode="cover" />
+              ) : (
+                <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
+                  <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
+                  {order.productName || 'Your Order'}
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                  Qty: {order.quantity}
+                </Text>
+              </View>
+              <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
+                ₹{order.subtotal || order.totalAmount}
               </Text>
             </View>
-            <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.primary }]}>
-              ₹{order.totalAmount}
-            </Text>
-          </View>
+          )}
 
           <View style={[styles.billingBox, { borderTopColor: colors.border, padding: spacing.cardPad }]}>
             {!!order.subtotal && (

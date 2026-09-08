@@ -9,21 +9,24 @@ import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { DeliveryLocationProvider } from './src/context/DeliveryLocationContext';
 import { ToastProvider } from './src/context/ToastContext';
+import { AlertProvider } from './src/context/AlertProvider';
 
 function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <ToastProvider>
+        <AlertProvider>
+          <ToastProvider>
           <DeliveryLocationProvider>
             <CartProvider>
               <SafeAreaProvider>
-                <StatusBar barStyle="dark-content" />
-                <AppNavigator theme={LightTheme} />
-              </SafeAreaProvider>
-            </CartProvider>
-          </DeliveryLocationProvider>
-        </ToastProvider>
+                  <StatusBar barStyle="dark-content" />
+                  <AppNavigator theme={LightTheme} />
+                </SafeAreaProvider>
+              </CartProvider>
+            </DeliveryLocationProvider>
+          </ToastProvider>
+        </AlertProvider>
       </ThemeProvider>
     </AuthProvider>
   );

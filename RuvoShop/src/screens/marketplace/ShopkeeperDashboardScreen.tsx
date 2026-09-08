@@ -104,7 +104,7 @@ const formatImageUrl = (url?: string) => {
 export default function ShopkeeperDashboardScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { token, user } = useAuth();
+  const { token, user, logout } = useAuth();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -366,71 +366,104 @@ export default function ShopkeeperDashboardScreen() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg">
-      {/* Header */}
-      <Animated.View entering={FadeInDown.duration(300)} className="bg-ruvo-surface border-b border-warm-300 px-lg py-md">
+      {/* Top App Bar Header */}
+      <Animated.View entering={FadeInDown.duration(300)} className="bg-white border-b border-warm-200 px-lg py-sm shadow-xs">
         <View className="flex-row items-center justify-between">
-          <View className="flex-row items-center gap-md flex-1">
-            <IconButton icon="arrow-back" onPress={() => navigation.goBack()} size="md" />
+          <View className="flex-row items-center gap-sm flex-1">
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
+            >
+              <Ionicons name="arrow-back" size={20} color="#231C10" />
+            </TouchableOpacity>
             <View className="flex-1">
-              <Text className="text-xl font-bold text-ruvo-ink">{activeTab === 'dashboard' ? 'Dashboard' : 'Orders'}</Text>
-              <TouchableOpacity className="flex-row items-center gap-xs">
-                <Text className="text-sm text-warm-600">{shopName}</Text>
-                <Ionicons name="chevron-down" size={14} color="#A79E92" />
+              <View className="flex-row items-center gap-1">
+                <Text className="text-xl font-black text-ruvo-ink">Dashboard</Text>
+                <View className="w-2 h-2 rounded-full bg-emerald-500" />
+              </View>
+              <TouchableOpacity className="flex-row items-center gap-1 mt-0.5">
+                <Ionicons name="storefront" size={12} color="#D99B00" />
+                <Text className="text-xs font-extrabold text-amber-700" numberOfLines={1}>{shopName}</Text>
+                <Ionicons name="chevron-down" size={12} color="#D99B00" />
               </TouchableOpacity>
             </View>
           </View>
 
-          <View className="flex-row gap-sm">
-            <TouchableOpacity onPress={() => setShowNotificationsModal(true)} className="relative">
-              <IconButton icon="notifications-outline" onPress={() => setShowNotificationsModal(true)} size="md" />
+          <View className="flex-row items-center gap-xs">
+            <TouchableOpacity
+              onPress={() => setShowNotificationsModal(true)}
+              className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200 relative"
+            >
+              <Ionicons name="notifications-outline" size={20} color="#231C10" />
               {unreadNotifs > 0 && (
-                <View className="absolute -top-1 -right-1 w-5 h-5 bg-ruvo-error rounded-full items-center justify-center">
-                  <Text className="text-xs font-bold text-white">{unreadNotifs}</Text>
+                <View className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full items-center justify-center border-2 border-white">
+                  <Text className="text-[10px] font-black text-white">{unreadNotifs}</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <IconButton icon="refresh" onPress={() => { setRefreshing(true); fetchData(); }} size="md" variant="primary" />
+            
+            <TouchableOpacity
+              onPress={() => { setRefreshing(true); fetchData(); }}
+              className="w-10 h-10 rounded-full bg-ruvo-yellow items-center justify-center border border-amber-400 shadow-xs"
+            >
+              <Ionicons name="refresh" size={18} color="#231C10" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={() => Alert.alert('Sign Out', 'Are you sure you want to log out?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: logout }])}
+              className="w-10 h-10 rounded-full bg-red-50 items-center justify-center border border-red-200 shadow-xs"
+            >
+              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
 
-      {/* Tab Navigation */}
-      <Animated.View entering={FadeInDown.delay(100).duration(300)} className="bg-ruvo-surface border-b border-warm-300">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-lg">
-          <View className="flex-row gap-sm py-sm">
+      {/* Segment Tab Bar */}
+      <Animated.View entering={FadeInDown.delay(100).duration(300)} className="bg-white border-b border-warm-200 py-xs">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
+          <View className="flex-row gap-xs py-1">
             {[
-              { key: 'dashboard', label: 'Dashboard', icon: 'home-outline' },
+              { key: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
               { key: 'orders', label: 'Orders', icon: 'receipt-outline', badge: pendingOrders.length },
               { key: 'delivery', label: 'Riders', icon: 'bicycle-outline' },
-            ].map(tab => (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => {
-                  if (tab.key === 'orders') {
-                    navigation.navigate(ROUTES.SHOP_ORDERS, { shopId });
-                  } else if (tab.key === 'delivery') {
-                    navigation.navigate('DeliveryPartnerAssignment', { shopId, viewPartnersOnly: true });
-                  } else {
-                    setActiveTab(tab.key as any);
-                  }
-                }}
-                className={`flex-row items-center gap-sm px-lg py-sm rounded-lg ${
-                  activeTab === tab.key ? 'bg-ruvo-yellow' : 'bg-transparent'
-                }`}
-              >
-                <Ionicons
-                  name={tab.icon as any}
-                  size={18}
-                  color={activeTab === tab.key ? '#231C10' : '#A79E92'}
-                />
-                <Text className={`text-sm font-bold ${activeTab === tab.key ? 'text-ruvo-ink' : 'text-warm-600'}`}>
-                  {tab.label}
-                </Text>
-                {tab.badge !== undefined && tab.badge > 0 ? (
-                  <Badge variant="error" size="sm">{tab.badge}</Badge>
-                ) : null}
-              </TouchableOpacity>
-            ))}
+            ].map(tab => {
+              const isActive = activeTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (tab.key === 'orders') {
+                      navigation.navigate(ROUTES.SHOP_ORDERS, { shopId });
+                    } else if (tab.key === 'delivery') {
+                      navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true });
+                    } else {
+                      setActiveTab(tab.key as any);
+                    }
+                  }}
+                  className={`flex-row items-center gap-xs px-md py-2 rounded-2xl ${
+                    isActive ? 'bg-amber-500 border border-amber-600 shadow-sm' : 'bg-warm-100/70 border border-warm-200/50'
+                  }`}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={16}
+                    color={isActive ? '#FFFFFF' : '#6B7280'}
+                  />
+                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-warm-700'}`}>
+                    {tab.label}
+                  </Text>
+                  {tab.badge !== undefined && tab.badge > 0 ? (
+                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white' : 'bg-rose-500'}`}>
+                      <Text className={`text-[10px] font-black ${isActive ? 'text-amber-600' : 'text-white'}`}>
+                        {tab.badge}
+                      </Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       </Animated.View>
@@ -791,57 +824,80 @@ function DashboardTab({
         )}
       </Animated.View>
 
-      {/* Stats Cards */}
+      {/* ── Stats Overview Grid ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(200).duration(300)}>
-        <View className="flex-row flex-wrap gap-md">
+        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Orders Analytics</Text>
+        <View className="flex-row flex-wrap gap-xs">
           {[
-            { label: 'Pending', value: pendingCount, icon: 'time-outline', color: 'bg-orange-100', textColor: 'text-orange-600' },
-            { label: 'Active', value: activeCount, icon: 'bicycle-outline', color: 'bg-blue-100', textColor: 'text-blue-600' },
-            { label: 'Completed', value: completedCount, icon: 'checkmark-circle-outline', color: 'bg-ruvo-accent-soft', textColor: 'text-ruvo-accent' },
-            { label: 'Total Orders', value: orders.length, icon: 'receipt-outline', color: 'bg-ruvo-yellow-soft', textColor: 'text-ruvo-yellow-dark' },
+            { label: 'Pending', value: pendingCount, icon: 'time', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', iconBg: 'bg-amber-500' },
+            { label: 'Active', value: activeCount, icon: 'bicycle', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', iconBg: 'bg-blue-600' },
+            { label: 'Completed', value: completedCount, icon: 'checkmark-circle', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', iconBg: 'bg-emerald-600' },
+            { label: 'Total Orders', value: orders.length, icon: 'receipt', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', iconBg: 'bg-purple-600' },
           ].map((stat, idx) => (
-            <Card key={idx} variant="elevated" className="flex-1 min-w-[150px]">
-              <View className={`w-12 h-12 ${stat.color} rounded-xl items-center justify-center mb-md`}>
-                <Ionicons name={stat.icon as any} size={24} color={stat.textColor.replace('text-', '#')} />
+            <View
+              key={idx}
+              className={`flex-1 min-w-[45%] ${stat.bg} ${stat.border} border p-md rounded-2xl flex-row items-center justify-between shadow-xs`}
+            >
+              <View>
+                <Text className="text-2xl font-black text-ruvo-ink">{stat.value}</Text>
+                <Text className={`text-xs font-bold ${stat.text} mt-0.5`}>{stat.label}</Text>
               </View>
-              <Text className="text-3xl font-bold text-ruvo-ink mb-xs">{stat.value}</Text>
-              <Text className="text-sm text-warm-600">{stat.label}</Text>
-            </Card>
+              <View className={`w-10 h-10 ${stat.iconBg} rounded-xl items-center justify-center shadow-xs`}>
+                <Ionicons name={stat.icon as any} size={20} color="#FFFFFF" />
+              </View>
+            </View>
           ))}
         </View>
       </Animated.View>
 
-      {/* Revenue Cards */}
+      {/* ── Financial Revenue Cards ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(300).duration(300)}>
-        <View className="flex-row gap-md">
-          <Card variant="elevated" className="flex-1">
-            <View className="flex-row items-center gap-sm mb-md">
-              <Ionicons name="wallet-outline" size={20} color="#F5B700" />
-              <Text className="text-sm font-semibold text-warm-700">Total Sales</Text>
+        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Financial Overview</Text>
+        <View className="flex-row gap-xs">
+          <View className="flex-1 bg-white border border-warm-300 rounded-2xl p-md shadow-xs">
+            <View className="flex-row items-center justify-between mb-xs">
+              <Text className="text-xs font-black text-warm-600">Total Sales</Text>
+              <View className="w-7 h-7 rounded-lg bg-amber-100 items-center justify-center">
+                <Ionicons name="wallet" size={16} color="#D99B00" />
+              </View>
             </View>
-            <Text className="text-3xl font-bold text-ruvo-ink">₹{totalSales.toFixed(2)}</Text>
-          </Card>
-          <Card variant="elevated" className="flex-1">
-            <View className="flex-row items-center gap-sm mb-md">
-              <Ionicons name="trending-up-outline" size={20} color="#16A34A" />
-              <Text className="text-sm font-semibold text-warm-700">Today</Text>
+            <Text className="text-2xl font-black text-ruvo-ink">₹{totalSales.toFixed(2)}</Text>
+            <Text className="text-[10px] font-extrabold text-amber-700 mt-1">Realized Net Sales</Text>
+          </View>
+
+          <View className="flex-1 bg-emerald-500 border border-emerald-600 rounded-2xl p-md shadow-sm">
+            <View className="flex-row items-center justify-between mb-xs">
+              <Text className="text-xs font-black text-emerald-100">Today Sales</Text>
+              <View className="w-7 h-7 rounded-lg bg-emerald-400/50 items-center justify-center">
+                <Ionicons name="trending-up" size={16} color="#FFFFFF" />
+              </View>
             </View>
-            <Text className="text-3xl font-bold text-ruvo-accent">₹{todaySales.toFixed(2)}</Text>
-          </Card>
+            <Text className="text-2xl font-black text-white">₹{todaySales.toFixed(2)}</Text>
+            <Text className="text-[10px] font-black text-emerald-100 mt-1">Live Today Earnings</Text>
+          </View>
         </View>
       </Animated.View>
 
-      {/* Quick Actions */}
+      {/* ── Quick Actions Tiles ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(400).duration(300)}>
-        <Text className="text-xl font-bold text-ruvo-ink mb-md">Quick Actions</Text>
-        <View className="flex-row gap-md">
-          <TouchableOpacity onPress={onNavigateOrders} className="flex-1 bg-ruvo-yellow rounded-xl p-lg">
-            <Ionicons name="receipt-outline" size={28} color="#231C10" />
-            <Text className="text-base font-bold text-ruvo-ink mt-sm">View Orders</Text>
+        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Shop Actions</Text>
+        <View className="flex-row gap-xs">
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onNavigateOrders}
+            className="flex-1 bg-amber-500 py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-sm border border-amber-600"
+          >
+            <Ionicons name="receipt" size={20} color="#FFFFFF" />
+            <Text className="text-xs font-black text-white">View Orders</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={onNavigateProducts} className="flex-1 bg-ruvo-accent rounded-xl p-lg">
-            <Ionicons name="cube-outline" size={28} color="#FFF" />
-            <Text className="text-base font-bold text-white mt-sm">Products</Text>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onNavigateProducts}
+            className="flex-1 bg-blue-600 py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-sm border border-blue-700"
+          >
+            <Ionicons name="cube" size={20} color="#FFFFFF" />
+            <Text className="text-xs font-black text-white">Products</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

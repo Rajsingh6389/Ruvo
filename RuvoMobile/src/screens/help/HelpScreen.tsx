@@ -8,8 +8,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -118,25 +119,36 @@ export const HelpScreen = () => {
             Category <Text style={{ color: '#E53935' }}>*</Text>
           </Text>
           <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.categoryCard,
-                  { 
-                    backgroundColor: colors.surface,
-                    borderColor: category === cat.id ? cat.color : colors.border,
-                    borderWidth: category === cat.id ? 2 : 1,
-                  },
-                ]}
-                onPress={() => setCategory(cat.id)}
-              >
-                <Ionicons name={cat.icon as any} size={sf(24)} color={cat.color} />
-                <Text style={[styles.categoryLabel, { color: colors.textPrimary }]}>
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {CATEGORIES.map((cat, index) => {
+              const isActive = category === cat.id;
+              return (
+                <Animated.View 
+                  key={cat.id} 
+                  entering={FadeInDown.delay(index * 100).duration(500).springify()}
+                  style={{ width: '48%' }}
+                >
+                  <TouchableOpacity
+                    style={[
+                      styles.categoryCard,
+                      { 
+                        backgroundColor: isActive ? '#F5B700' : '#FFFFFF',
+                        borderColor: isActive ? '#D99B00' : colors.border,
+                        shadowColor: isActive ? '#D99B00' : '#1A1A1A',
+                      },
+                    ]}
+                    onPress={() => setCategory(cat.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.iconWrapper, { backgroundColor: isActive ? '#FFF' : cat.color + '15' }]}>
+                      <Ionicons name={cat.icon as any} size={22} color={isActive ? '#1A1A1A' : cat.color} />
+                    </View>
+                    <Text style={[styles.categoryLabel, { color: isActive ? '#1A1A1A' : colors.textPrimary }]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
           </View>
         </View>
 
@@ -259,28 +271,42 @@ const styles = StyleSheet.create({
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: sw(10),
+    gap: 12,
   },
   categoryCard: {
-    width: '47%',
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: sw(16),
-    borderRadius: sw(12),
-    gap: sh(8),
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: sh(12),
+    minHeight: 110,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  categoryLabel: { fontSize: sf(13), fontWeight: '600', textAlign: 'center' },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryLabel: { fontSize: sf(13), fontWeight: '800', textAlign: 'center' },
   input: {
     borderWidth: 1,
-    borderRadius: sw(12),
-    padding: sw(14),
-    fontSize: sf(14),
+    borderRadius: 16,
+    padding: sw(16),
+    fontSize: sf(15),
+    fontWeight: '500',
   },
   textArea: {
     borderWidth: 1,
-    borderRadius: sw(12),
-    padding: sw(14),
-    fontSize: sf(14),
+    borderRadius: 16,
+    padding: sw(16),
+    fontSize: sf(15),
     minHeight: sh(150),
     marginBottom: sh(8),
   },

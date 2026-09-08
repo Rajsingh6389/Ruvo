@@ -76,6 +76,7 @@ public class PaymentController {
     public static class CartItemRequest {
         public Long productId;
         public String productName;
+        public String productImageUrl;
         public Integer quantity;
         public Double price;
     }
@@ -278,10 +279,18 @@ public class PaymentController {
 
             // Save OrderItem records for multi-item cart
             for (CartItemRequest itemReq : cartItems) {
+                String itemImg = itemReq.productImageUrl;
+                if (itemImg == null || itemImg.isBlank()) {
+                    Product itemProduct = productRepository.findById(itemReq.productId).orElse(null);
+                    if (itemProduct != null) {
+                        itemImg = itemProduct.getImageUrl();
+                    }
+                }
                 OrderItem item = OrderItem.builder()
                         .orderId(savedOrder.getId())
                         .productId(itemReq.productId)
                         .productName(itemReq.productName)
+                        .productImageUrl(itemImg)
                         .priceAtOrder(itemReq.price)
                         .quantity(itemReq.quantity)
                         .build();
@@ -317,10 +326,18 @@ public class PaymentController {
 
             // Save OrderItem records for multi-item cart
             for (CartItemRequest itemReq : cartItems) {
+                String itemImg = itemReq.productImageUrl;
+                if (itemImg == null || itemImg.isBlank()) {
+                    Product itemProduct = productRepository.findById(itemReq.productId).orElse(null);
+                    if (itemProduct != null) {
+                        itemImg = itemProduct.getImageUrl();
+                    }
+                }
                 OrderItem item = OrderItem.builder()
                         .orderId(savedOrder.getId())
                         .productId(itemReq.productId)
                         .productName(itemReq.productName)
+                        .productImageUrl(itemImg)
                         .priceAtOrder(itemReq.price)
                         .quantity(itemReq.quantity)
                         .build();

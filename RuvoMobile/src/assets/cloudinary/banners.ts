@@ -7,28 +7,47 @@ export const RUVO_BANNERS = {
   freshProduce: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/freshproducebasket.jpg',
   dailyEssentials: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessoriesbasket.jpg',
   qualityGuaranteed: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/freshgrocesssory.jpg',
+  shopOnboard: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799375/ChatGPT_Image_Sep_7_2026_10_11_59_PM.png',
+  partnerOnboard: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799444/4ebac18d-5a03-4c16-bce2-4d6992e86c07.png',
+  firstOrderOffer: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799268/CouponCode100rdAbove299.png',
 } as const;
 
-// Helper function to get all hero banners with metadata
-export const getHeroBanners = () => [
+export const getOnboardBanners = () => [
+  {
+    image: RUVO_BANNERS.shopOnboard,
+   
+  },
+  {
+    image: RUVO_BANNERS.partnerOnboard,
+   
+  },
+];
+
+export const getFirstOrderBanners = () => [
+  {
+    image: RUVO_BANNERS.firstOrderOffer,
+  }
+];
+
+export const getStandardBanners = () => [
   {
     image: RUVO_BANNERS.fastDelivery,
-    title: 'Fast Delivery',
-    subtitle: 'Get groceries delivered in minutes',
+    title: 'Lightning Delivery',
+    subtitle: 'Groceries at your door in 10 minutes flat.',
   },
   {
     image: RUVO_BANNERS.freshProduce,
-    title: 'Fresh Produce',
-    subtitle: 'Farm fresh fruits & vegetables',
+    title: 'Farm Fresh Produce',
+    subtitle: 'Handpicked daily for absolute perfection.',
   },
   {
     image: RUVO_BANNERS.dailyEssentials,
-    title: 'Daily Essentials',
-    subtitle: 'Everything you need, every day',
+    title: 'Everyday Essentials',
+    subtitle: 'Restock your pantry with premium selections.',
   },
   {
     image: RUVO_BANNERS.qualityGuaranteed,
-    title: 'Quality Guaranteed',
-    subtitle: 'Best quality products selected',
+    title: 'RuVo Quality Select',
+    subtitle: '100% satisfaction guaranteed on all items.',
   },
 ];

@@ -175,24 +175,7 @@ export const ProfileScreen = () => {
         <MenuSection title="Support" items={supportItems} colors={colors} typography={typography} radius={radius} />
 
         {/* ─ ADMIN ─────────────────────────────────────────────────────── */}
-        {user?.role === 'ADMIN' && (
-          <MenuSection
-            title="Admin"
-            items={[{
-              id: 'admin',
-              title: 'Admin Dashboard',
-              subtitle: 'Manage shops and registrations',
-              icon: 'shield-checkmark',
-              tint: colors.error,
-              onPress: () => navigation.navigate(ROUTES.ADMIN_DASHBOARD as never),
-            }]}
-            colors={colors}
-            typography={typography}
-            radius={radius}
-            dangerTitle
-          />
-        )}
-
+        
         {/* ─ LOGOUT ────────────────────────────────────────────────────── */}
         <TouchableOpacity
           style={[styles.logoutBtn, { backgroundColor: colors.errorSoft, borderRadius: radius.card, borderColor: colors.error + '30', borderWidth: 1 }]}

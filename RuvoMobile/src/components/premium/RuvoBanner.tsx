@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity, Image, Animated, useWindowDimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useResponsive } from '../../utils/responsive';
-import { getHeroBanners } from '../../assets/cloudinary/banners';
+import { getStandardBanners } from '../../assets/cloudinary/banners';
 import { DURATIONS, EASINGS } from '../../theme/motion';
 import { resolveImageUrl } from '../../utils/imageUrl';
 
@@ -10,24 +10,28 @@ interface RuvoBannerProps {
   onPress?: (banner: any) => void;
   autoPlay?: boolean;
   autoPlayInterval?: number;
+  data?: any[];
 }
 
 export const RuvoBanner: React.FC<RuvoBannerProps> = ({
   onPress,
   autoPlay = true,
   autoPlayInterval = 4000,
+  data,
 }) => {
   const { colors, typography, radius, shadows } = useTheme();
   const { sf, sw, sh } = useResponsive();
   const { width: screenWidth } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
-  const banners = getHeroBanners();
+  const defaultBanners = getStandardBanners();
+  const banners = data || defaultBanners;
   const bannerGap = 12;
   const horizontalPadding = sw(16);
   const bannerWidth = Math.min(screenWidth - horizontalPadding * 2, 430);
   const bannerHeight = Math.max(138, Math.min(sh(180), 190));
 
+  const scrollX = React.useRef(new Animated.Value(0)).current;
   const dotScale = React.useRef(new Animated.Value(1)).current;
 
   const handleScroll = (event: any) => {
@@ -71,17 +75,38 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        ref={scrollRef}
+      <Animated.ScrollView
+        ref={scrollRef as any}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false } // mapping to opacity and scale, but false prevents potential width clashes in some RN versions
+        )}
         onMomentumScrollEnd={handleScroll}
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: horizontalPadding, gap: bannerGap }]}
         decelerationRate="fast"
         snapToInterval={bannerWidth + bannerGap}
       >
-        {banners.map((banner, index) => (
+        {banners.map((banner, index) => {
+          const inputRange = [
+            (index - 1) * (bannerWidth + bannerGap),
+            index * (bannerWidth + bannerGap),
+            (index + 1) * (bannerWidth + bannerGap)
+          ];
+          const scale = scrollX.interpolate({
+            inputRange,
+            outputRange: [1.2, 1, 1.2],
+            extrapolate: 'clamp',
+          });
+          const textOpacity = scrollX.interpolate({
+            inputRange,
+            outputRange: [0.4, 1, 0.4],
+            extrapolate: 'clamp',
+          });
+
+          return (
           <TouchableOpacity
             key={index}
             activeOpacity={0.9}
@@ -97,24 +122,44 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
               shadows.lg,
             ]}
           >
-            <Image
+            <Animated.Image
               source={{ uri: resolveImageUrl(banner.image) || banner.image }}
-              style={styles.bannerImage}
+              style={[styles.bannerImage, { transform: [{ scale }] }]}
               resizeMode="cover"
             />
-            <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.25)' }]}>
-              <View style={styles.content}>
-                <Text style={[typography.headingXL, styles.title, { color: '#FFFFFF', fontSize: sf(24) }]}>
-                  {banner.title}
-                </Text>
-                <Text style={[typography.body, styles.subtitle, { color: 'rgba(255,255,255,0.9)', fontSize: sf(13) }]}>
-                  {banner.subtitle}
-                </Text>
-              </View>
-            </View>
+            {(banner.title || banner.subtitle) && (
+              <Animated.View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: textOpacity }]}>
+                <View style={styles.content}>
+                  {!!banner.title && (
+                    <Text style={[typography.headingXL, styles.title, { 
+                      color: '#FFFFFF', 
+                      fontSize: sf(28),
+                      textShadowColor: 'rgba(0,0,0,0.85)',
+                      textShadowOffset: { width: 0, height: 2 },
+                      textShadowRadius: 6
+                    }]}>
+                      {banner.title}
+                    </Text>
+                  )}
+                  {!!banner.subtitle && (
+                    <Text style={[typography.body, styles.subtitle, { 
+                      color: 'rgba(255,255,255,0.98)', 
+                      fontSize: sf(15),
+                      fontWeight: '600',
+                      textShadowColor: 'rgba(0,0,0,0.75)',
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 4
+                    }]}>
+                      {banner.subtitle}
+                    </Text>
+                  )}
+                </View>
+              </Animated.View>
+            )}
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+          );
+        })}
+      </Animated.ScrollView>
 
       <View style={styles.dotsContainer}>
         {banners.map((_, index) => {

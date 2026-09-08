@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import {
   View, ScrollView, StyleSheet, TouchableOpacity,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -159,6 +159,7 @@ export const Step1_BasicDetails = () => {
       <StepBar current={1} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Image source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799444/4ebac18d-5a03-4c16-bce2-4d6992e86c07.png' }} style={{ width: '100%', height: 160, borderRadius: RADIUS.md, marginBottom: 16 }} resizeMode="cover" />
           <ScreenHeader
             icon="person-outline"
             title="Basic Details"

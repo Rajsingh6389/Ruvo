@@ -1,5 +1,4 @@
-import React from 'react';
-import { ActivityIndicator, Text, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, Text, View, StyleSheet, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from './context/AuthContext';
@@ -7,6 +6,7 @@ import { useTheme } from './context/ThemeContext';
 import { DarkTheme, LightTheme } from './theme/theme';
 
 // Auth
+import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 
 // Onboarding (5-step flow for new shop owners)
@@ -62,10 +62,7 @@ export const ShopNavigator = () => {
   if (isLoading) {
     return (
       <View style={[s.loader, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[s.loaderText, { color: colors.textSecondary }]}>
-          Loading RuVo Shop…
-        </Text>
+        <SplashScreen />
       </View>
     );
   }

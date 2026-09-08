@@ -125,7 +125,7 @@ export const RuvoFirstOrderPromoBanner: React.FC<RuvoFirstOrderPromoBannerProps>
     }, 2500);
   };
 
-  const mascotSource = require('../../assets/images/3d_mascot.png');
+  const mascotSource = { uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799268/CouponCode100rdAbove299.png' };
 
   if (compact) {
     return (

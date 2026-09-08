@@ -34,6 +34,9 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Column(name = "product_image_url")
+    private String productImageUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

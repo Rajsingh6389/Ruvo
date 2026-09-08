@@ -1,5 +1,4 @@
-import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { DarkTheme, LightTheme } from '../theme/theme';
 
 // Main app screens
+import { SplashScreen } from '../screens/SplashScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { AvailableDeliveriesScreen } from '../screens/AvailableDeliveriesScreen';
@@ -117,11 +117,8 @@ export const AppNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: 12, fontSize: 16, color: colors.textSecondary }}>
-          Loading RuVo Partner…
-        </Text>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <SplashScreen />
       </View>
     );
   }

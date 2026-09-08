@@ -7,7 +7,9 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -124,14 +126,18 @@ const ProductDetailsScreen = () => {
   const [favorite, setFavorite] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fetchedShopName, setFetchedShopName] = useState<string | null>(null);
+  const [fetchedShopLogo, setFetchedShopLogo] = useState<string | null>(null);
 
   // Fetch shop details dynamically if product has a shopId
   React.useEffect(() => {
-    if (product?.shopId && !product?.shopName) {
+    if (product?.shopId) {
       fetch(`${API_BASE_URL}/api/shops/${product.shopId}`)
         .then(res => res.json())
         .then(data => {
           if (data && data.name) setFetchedShopName(data.name);
+          if (data && (data.logoUrl || data.logo || data.image || data.imageUrl)) {
+            setFetchedShopLogo(formatImageUrl(data.logoUrl || data.logo || data.image || data.imageUrl));
+          }
         })
         .catch(() => {});
     }
@@ -274,8 +280,12 @@ const ProductDetailsScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5 }}
       >
-        {/* PRODUCT IMAGE */}
-        <View className="h-80 bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm relative items-center justify-center mb-2">
+        {/* PRODUCT IMAGE - 3D FLOATING */}
+        <Animated.View 
+          entering={FadeInDown.duration(700).springify()} 
+          className="h-[360px] bg-white rounded-[40px] overflow-hidden relative items-center justify-center mb-6 border-4 border-white"
+          style={{ shadowColor: '#F5B700', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 12, transform: [{ perspective: 1000 }, { rotateX: '2deg' }] }}
+        >
           {(product.imageUrl || product.image) ? (
             <Image
               source={{ uri: formatImageUrl(product.imageUrl || product.image)! }}
@@ -308,10 +318,14 @@ const ProductDetailsScreen = () => {
               1 / 1
             </Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* PRODUCT INFO */}
-        <View className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+        <Animated.View 
+          entering={FadeInDown.delay(100).duration(600).springify()} 
+          className="bg-white rounded-[28px] p-6 mb-4 border border-gray-50/50"
+          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+        >
           <View className="flex-row items-start justify-between mb-3">
             <View className="flex-1 pr-2">
               <Text className="text-2xl font-black text-ruvo-ink">
@@ -401,15 +415,15 @@ const ProductDetailsScreen = () => {
             </Text>
           ) : null}
 
-          {/* BENEFITS */}
-          <View className="bg-gray-50 border border-gray-100 rounded-xl mt-4 px-2 py-3.5 flex-row items-center shadow-sm">
+          {/* BENEFITS - GLASS/CHIPS */}
+          <View className="bg-gray-50/70 border border-gray-100 rounded-[20px] mt-4 px-2 py-4 flex-row items-center shadow-sm">
             <Benefit
               icon="shield-checkmark-outline"
               title="100%"
               subtitle="Original"
             />
 
-            <View className="w-px h-8 bg-gray-200 mx-1" />
+            <View className="w-px h-10 bg-gray-200/60 mx-1" />
 
             <Benefit
               icon="ribbon-outline"
@@ -417,7 +431,7 @@ const ProductDetailsScreen = () => {
               subtitle="Guaranteed"
             />
 
-            <View className="w-px h-8 bg-gray-200 mx-1" />
+            <View className="w-px h-10 bg-gray-200/60 mx-1" />
 
             <Benefit
               icon="flash-outline"
@@ -425,16 +439,26 @@ const ProductDetailsScreen = () => {
               subtitle="Delivery"
             />
           </View>
-        </View>
+        </Animated.View>
 
         {/* SHOP */}
-        <View className="bg-white rounded-2xl p-4 mt-3 border border-gray-100 shadow-sm flex-row items-center">
-          <View className="w-12 h-12 rounded-full bg-blue-50 border border-blue-100 items-center justify-center mr-3">
-            <Ionicons
-              name="storefront"
-              size={20}
-              color="#3B82F6"
-            />
+        <Animated.View 
+          entering={FadeInDown.delay(200).duration(600).springify()} 
+          className="bg-white rounded-[28px] p-5 mb-4 border border-gray-50/50 flex-row items-center"
+          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+        >
+          <View className="w-14 h-14 rounded-full bg-ruvo-bg items-center justify-center mr-4 overflow-hidden shadow-sm border border-gray-100">
+            {fetchedShopLogo ? (
+              <Image
+                source={{ uri: fetchedShopLogo }}
+                style={{ width: '100%', height: '100%', borderRadius: 999 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View className="w-14 h-14 rounded-full bg-ruvo-yellow/10 border border-ruvo-yellow/20 items-center justify-center">
+                <Ionicons name="storefront" size={22} color="#F5B700" />
+              </View>
+            )}
           </View>
 
           <View className="flex-1">
@@ -475,10 +499,14 @@ const ProductDetailsScreen = () => {
               Visit
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* PRODUCT DETAILS */}
-        <View className="bg-white rounded-2xl p-5 mt-3 border border-gray-100 shadow-sm">
+        <Animated.View 
+          entering={FadeInDown.delay(300).duration(600).springify()} 
+          className="bg-white rounded-[28px] p-6 mb-4 border border-gray-50/50"
+          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+        >
           <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider mb-2">
             Product Details
           </Text>
@@ -511,16 +539,20 @@ const ProductDetailsScreen = () => {
               value={`${product.stockQuantity}`}
             />
           </View>
-        </View>
+        </Animated.View>
 
         {/* QUANTITY */}
         {available && (
-          <View className="bg-white rounded-2xl p-4 mt-3 mb-6 border border-gray-100 shadow-sm flex-row items-center justify-between">
-            <Text className="text-ruvo-ink font-black text-sm uppercase tracking-wide">
+          <Animated.View 
+            entering={FadeInDown.delay(400).duration(600).springify()} 
+            className="bg-white rounded-[28px] p-5 mb-8 border border-gray-50/50 flex-row items-center justify-between"
+            style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          >
+            <Text className="text-ruvo-ink font-black text-base uppercase tracking-widest pl-2">
               Quantity
             </Text>
 
-            <View className="flex-row items-center bg-gray-50 rounded-full border border-gray-200 p-1">
+            <View className="flex-row items-center bg-gray-50 rounded-full border border-gray-200 p-1.5 min-w-[120px] justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
               <TouchableOpacity
                 activeOpacity={0.7}
                 className="w-8 h-8 rounded-full bg-white items-center justify-center shadow-sm"
@@ -549,19 +581,24 @@ const ProductDetailsScreen = () => {
                 />
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         )}
 
         <View className="h-28" />
       </ScrollView>
 
-      {/* BOTTOM ACTIONS */}
-      <View className="absolute left-0 right-0 bottom-0 bg-white border-t border-gray-100 px-4 pt-3 pb-safe items-center shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
-        <View className="flex-row w-full gap-3 pb-2">
+      {/* BOTTOM ACTIONS - 3D FROSTED GLASS */}
+      <Animated.View 
+        entering={FadeInDown.delay(300).duration(500).springify()}
+        className="absolute left-0 right-0 bottom-0 overflow-hidden rounded-t-[40px] border-t border-white/80"
+        style={{ shadowColor: '#000', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 20 }}
+      >
+        <BlurView intensity={80} tint="light" className="px-5 pt-5 pb-safe items-center bg-white/70">
+          <View className="flex-row w-full gap-4 pb-3">
           <TouchableOpacity
             activeOpacity={0.82}
             disabled={!available}
-            className={`flex-1 h-14 rounded-xl flex-row items-center justify-center gap-2 ${
+            className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center gap-2 ${
               available
                 ? 'bg-gray-100'
                 : 'bg-gray-100 opacity-60'
@@ -570,10 +607,10 @@ const ProductDetailsScreen = () => {
           >
             <Ionicons
               name="cart"
-              size={20}
+              size={22}
               color={available ? "#1A1A1A" : "#9CA3AF"}
             />
-            <Text className={`font-black tracking-wide ${available ? 'text-ruvo-ink' : 'text-gray-400'}`}>
+            <Text className={`text-[15px] font-black tracking-wide ${available ? 'text-ruvo-ink' : 'text-gray-400'}`}>
               Add to Cart
             </Text>
           </TouchableOpacity>
@@ -581,7 +618,7 @@ const ProductDetailsScreen = () => {
           <TouchableOpacity
             activeOpacity={0.82}
             disabled={!available || submitting}
-            className={`flex-1 h-14 rounded-xl flex-row items-center justify-center shadow-sm ${
+            className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center shadow-sm ${
               !available || submitting
                 ? 'bg-gray-300'
                 : 'bg-ruvo-yellow'
@@ -606,7 +643,8 @@ const ProductDetailsScreen = () => {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+        </BlurView>
+      </Animated.View>
     </View>
   );
 };

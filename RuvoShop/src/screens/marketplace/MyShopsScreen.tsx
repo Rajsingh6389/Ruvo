@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   Image,
   RefreshControl,
   useWindowDimensions,
+  ScrollView,
+  Animated as RNAnimated,
+  Easing,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -19,13 +23,12 @@ import { getMyShops, Shop } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
 import { API_BASE_URL } from '../../config/api';
 import { ROUTES } from '../../constants/routes';
-import { Button, IconButton } from '../../components/ui/Button';
+import { IconButton } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { SearchInput } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
 
-// ── Image resolution ────────────────────────────────────────────────────────
 function resolveImage(url?: string): string | null {
   if (!url) return null;
   return url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
@@ -43,7 +46,7 @@ export const MyShopsScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'APPROVED' | 'PENDING'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'APPROVED' | 'PENDING' | 'OVERDUE'>('ALL');
 
   const loadShops = async (isRefresh = false) => {
     const ownerId = userId || user?.id;
@@ -54,7 +57,6 @@ export const MyShopsScreen = () => {
         const fetchedShops = await getMyShops(String(ownerId), token);
         setShops(fetchedShops);
 
-        // Fetch products for each shop concurrently using getProductsByShop + fallback
         const productsMap: { [shopId: number]: any[] } = {};
         await Promise.all(
           fetchedShops.map(async (s: Shop) => {
@@ -97,6 +99,7 @@ export const MyShopsScreen = () => {
 
   const approvedCount = useMemo(() => shops.filter(s => Boolean(s.approved)).length, [shops]);
   const pendingCount = useMemo(() => shops.filter(s => !s.approved).length, [shops]);
+  const overdueCount = useMemo(() => shops.filter(s => Boolean((s as any).settlementBlocked)).length, [shops]);
 
   const filteredShops = useMemo(
     () =>
@@ -111,13 +114,14 @@ export const MyShopsScreen = () => {
             ? true
             : activeFilter === 'APPROVED'
             ? Boolean(s.approved)
-            : !s.approved;
+            : activeFilter === 'PENDING'
+            ? !s.approved
+            : Boolean((s as any).settlementBlocked);
         return matchSearch && matchFilter;
       }),
     [shops, searchQuery, activeFilter]
   );
 
-  // ── Loading State ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-ruvo-bg">
@@ -144,15 +148,36 @@ export const MyShopsScreen = () => {
     );
   }
 
-  // ── Shop Card Component ──────────────────────────────────────────────────
   const ShopCard = ({ item, index }: { item: Shop; index: number }) => {
-    const shopData = item as Shop & { category?: string; address?: string; phone?: string };
+    const shopData = item as Shop & { category?: string; address?: string; phone?: string; settlementBlocked?: boolean };
     const approved = Boolean(item.approved);
+    const isOverdue = Boolean(shopData.settlementBlocked);
     const thumbUri = resolveImage(
       item.logoUrl || item.bannerUrl || (item as any).imageUrl
     );
     const productsList = shopProducts[item.id] || [];
     const recentProducts = productsList.slice(0, 3);
+
+    // Continuous Chamakti/Light Sweep Animation
+    const shineAnim = useRef(new RNAnimated.Value(0)).current;
+
+    useEffect(() => {
+      const loop = RNAnimated.loop(
+        RNAnimated.timing(shineAnim, {
+          toValue: 1,
+          duration: 2200,
+          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
+          useNativeDriver: true,
+        })
+      );
+      loop.start();
+      return () => loop.stop();
+    }, [shineAnim]);
+
+    const translateX = shineAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-250, 450],
+    });
 
     return (
       <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
@@ -164,16 +189,55 @@ export const MyShopsScreen = () => {
             })
           }
           variant="default"
-          className="mb-lg overflow-hidden border border-warm-300 rounded-3xl bg-white shadow-sm"
+          className={`mb-lg overflow-hidden border-2 rounded-3xl bg-white relative ${
+            isOverdue ? 'border-red-400' : approved ? 'border-amber-400' : 'border-orange-400'
+          }`}
+          style={{
+            shadowColor: isOverdue ? '#EF4444' : approved ? '#F5B700' : '#F97316',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.4,
+            shadowRadius: 14,
+            elevation: 10,
+          }}
         >
-          {/* Status Stripe */}
+          {/* Continuous Glowing Light Beam (Chamaktihui Shine Overlay) */}
+          <RNAnimated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: -50,
+              bottom: -50,
+              width: 60,
+              backgroundColor: isOverdue
+                ? 'rgba(239, 68, 68, 0.25)'
+                : approved
+                ? 'rgba(255, 225, 120, 0.45)'
+                : 'rgba(249, 115, 22, 0.3)',
+              transform: [{ translateX }, { rotate: '25deg' }],
+              zIndex: 30,
+            }}
+          />
+          {/* Status Bar Indicator */}
           <View
-            className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-              approved ? 'bg-ruvo-accent' : 'bg-orange-500'
+            className={`absolute left-0 top-0 bottom-0 w-2 ${
+              isOverdue ? 'bg-red-600' : approved ? 'bg-ruvo-accent' : 'bg-amber-500'
             }`}
           />
 
-          <View className="p-md pl-sm">
+          <View className="p-md pl-md">
+            {/* Overdue Alert Banner if settlementBlocked */}
+            {isOverdue && (
+              <View className="bg-red-50 border border-red-200 rounded-xl p-sm mb-md flex-row items-center gap-xs">
+                <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                <View className="flex-1">
+                  <Text className="text-xs font-black text-red-900">Settlement Overdue Notice</Text>
+                  <Text className="text-[10px] text-red-700 font-medium">
+                    Order broadcast paused. Please clear your weekly settlement dues to resume.
+                  </Text>
+                </View>
+              </View>
+            )}
+
             {/* Shop Info Header */}
             <View className="flex-row items-center gap-md">
               <View className="w-16 h-16 bg-warm-100 rounded-2xl border border-warm-200 items-center justify-center overflow-hidden">
@@ -184,30 +248,36 @@ export const MyShopsScreen = () => {
                 )}
               </View>
 
-              <View className="flex-1 gap-xs">
+              <View className="flex-1 gap-1">
                 <View className="flex-row items-center justify-between">
-                  <Text className="flex-1 text-lg font-black text-ruvo-ink mr-xs" numberOfLines={1}>
+                  <Text className="flex-1 text-lg font-black text-ruvo-ink mr-xs" numberOfLines={2}>
                     {item.name}
                   </Text>
-                  <Badge variant={approved ? 'success' : 'warning'} size="sm">
-                    {approved ? 'Approved' : 'Pending'}
-                  </Badge>
+                  <View className="flex-row items-center gap-xs">
+                    {isOverdue ? (
+                      <Badge variant="error" size="sm">Overdue</Badge>
+                    ) : (
+                      <Badge variant={approved ? 'success' : 'warning'} size="sm">
+                        {approved ? 'Approved' : 'Pending'}
+                      </Badge>
+                    )}
+                  </View>
                 </View>
 
-                {shopData.category && (
+                {(shopData.category || (item as any).categoryName) && (
                   <View className="flex-row items-center gap-xs">
-                    <Ionicons name="pricetag" size={12} color="#F5B700" />
-                    <Text className="text-xs font-semibold text-warm-600" numberOfLines={1}>
-                      {shopData.category}
+                    <Ionicons name="pricetag" size={13} color="#D99B00" />
+                    <Text className="text-xs font-black text-amber-700" numberOfLines={1}>
+                      {shopData.category || (item as any).categoryName}
                     </Text>
                   </View>
                 )}
 
-                {shopData.address && (
-                  <View className="flex-row items-center gap-xs">
-                    <Ionicons name="location" size={12} color="#A79E92" />
-                    <Text className="flex-1 text-xs text-warm-600" numberOfLines={1}>
-                      {shopData.address}
+                {(shopData.address || (item as any).fullAddress) && (
+                  <View className="flex-row items-start gap-xs mt-0.5">
+                    <Ionicons name="location" size={13} color="#E11D48" style={{ marginTop: 2 }} />
+                    <Text className="flex-1 text-xs font-semibold text-warm-700 leading-4" numberOfLines={2}>
+                      {shopData.address || (item as any).fullAddress}
                     </Text>
                   </View>
                 )}
@@ -216,53 +286,93 @@ export const MyShopsScreen = () => {
               <Ionicons name="chevron-forward" size={20} color="#D4C8B8" />
             </View>
 
-            {/* Action Bar */}
-            <View className="flex-row flex-wrap gap-xs mt-md pt-sm border-t border-warm-200">
-              <TouchableOpacity
-                className="flex-1 flex-row items-center justify-center gap-xs bg-ruvo-yellow-soft py-sm rounded-xl"
-                onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
-              >
-                <Ionicons name="cube-outline" size={14} color="#D99B00" />
-                <Text className="text-xs font-black text-ruvo-yellow-dark">Products ({productsList.length})</Text>
-              </TouchableOpacity>
+            {/* Premium Action Grid Menu */}
+            <View className="mt-md pt-md border-t border-warm-200">
+              <View className="flex-row items-center justify-between gap-1">
+                {/* Products Tile */}
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  className="flex-1 items-center bg-amber-50 py-2 px-0.5 rounded-xl border border-amber-200 shadow-sm"
+                  style={{ shadowColor: '#D99B00', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
+                >
+                  <View className="w-8 h-8 rounded-lg bg-amber-500 items-center justify-center mb-1 shadow-sm">
+                    <Ionicons name="cube" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Products</Text>
+                  <Text className="text-[9px] font-extrabold text-amber-700 mt-0.5">{productsList.length} Items</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                className="flex-1 flex-row items-center justify-center gap-xs bg-blue-100 py-sm rounded-xl"
-                onPress={() =>
-                  navigation.navigate(ROUTES.SHOP_ORDERS, {
-                    shopId: item.id,
-                    shopName: item.name,
-                  })
-                }
-              >
-                <Ionicons name="receipt-outline" size={14} color="#2563EB" />
-                <Text className="text-xs font-black text-blue-600">Orders</Text>
-              </TouchableOpacity>
+                {/* Orders Tile */}
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  className="flex-1 items-center bg-blue-50 py-2 px-0.5 rounded-xl border border-blue-200 shadow-sm"
+                  style={{ shadowColor: '#2563EB', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  onPress={() =>
+                    navigation.navigate(ROUTES.SHOP_ORDERS, {
+                      shopId: item.id,
+                      shopName: item.name,
+                    })
+                  }
+                >
+                  <View className="w-8 h-8 rounded-lg bg-blue-600 items-center justify-center mb-1 shadow-sm">
+                    <Ionicons name="receipt" size={16} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Orders</Text>
+                  <Text className="text-[9px] font-extrabold text-blue-600 mt-0.5">Manage</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                className="flex-row items-center justify-center gap-xs bg-ruvo-accent-soft px-md py-sm rounded-xl"
-                onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
-              >
-                <Ionicons name="add-circle" size={14} color="#16A34A" />
-                <Text className="text-xs font-black text-ruvo-accent">Add</Text>
-              </TouchableOpacity>
+                {/* Add Item Tile */}
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  className="flex-1 items-center bg-emerald-50 py-2 px-0.5 rounded-xl border border-emerald-200 shadow-sm"
+                  style={{ shadowColor: '#059669', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
+                >
+                  <View className="w-8 h-8 rounded-lg bg-emerald-600 items-center justify-center mb-1 shadow-sm">
+                    <Ionicons name="add" size={18} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Add Item</Text>
+                  <Text className="text-[9px] font-extrabold text-emerald-700 mt-0.5">New</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                className="flex-row items-center justify-center gap-xs bg-purple-100 px-md py-sm rounded-xl"
-                onPress={() => navigation.navigate('EditShop', { shop: item })}
-              >
-                <Ionicons name="create-outline" size={14} color="#9333EA" />
-                <Text className="text-xs font-black text-purple-600">Edit</Text>
-              </TouchableOpacity>
+                {/* Edit Tile */}
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  className="flex-1 items-center bg-purple-50 py-2 px-0.5 rounded-xl border border-purple-200 shadow-sm"
+                  style={{ shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  onPress={() => navigation.navigate('EditShop', { shop: item })}
+                >
+                  <View className="w-8 h-8 rounded-lg bg-purple-600 items-center justify-center mb-1 shadow-sm">
+                    <Ionicons name="create" size={15} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Edit</Text>
+                  <Text className="text-[9px] font-extrabold text-purple-700 mt-0.5">Info</Text>
+                </TouchableOpacity>
+
+                {/* Dues Tile */}
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  className="flex-1 items-center bg-rose-50 py-2 px-0.5 rounded-xl border border-rose-200 shadow-sm"
+                  style={{ shadowColor: '#E11D48', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  onPress={() => navigation.navigate('ShopSettlement', { shopId: item.id })}
+                >
+                  <View className="w-8 h-8 rounded-lg bg-rose-600 items-center justify-center mb-1 shadow-sm">
+                    <Ionicons name="wallet" size={15} color="#FFFFFF" />
+                  </View>
+                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Dues</Text>
+                  <Text className="text-[9px] font-extrabold text-rose-700 mt-0.5">Pay</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* ── Recent Products Showcase (Directly inside Shop Card) ── */}
+            {/* Recent Products Showcase */}
             <View className="mt-md pt-md border-t border-warm-200">
               <View className="flex-row items-center justify-between mb-sm">
                 <View className="flex-row items-center gap-xs">
                   <Ionicons name="cube" size={16} color="#231C10" />
                   <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider">
-                    Recent Products
+                    Recent Inventory
                   </Text>
                 </View>
                 {productsList.length > 0 && (
@@ -278,7 +388,7 @@ export const MyShopsScreen = () => {
 
               {recentProducts.length === 0 ? (
                 <View className="bg-warm-50 p-sm rounded-xl items-center justify-center border border-dashed border-warm-300">
-                  <Text className="text-xs font-medium text-warm-600">No products added yet</Text>
+                  <Text className="text-xs font-medium text-warm-600">No inventory products added yet</Text>
                 </View>
               ) : (
                 <View className="gap-xs">
@@ -368,25 +478,23 @@ export const MyShopsScreen = () => {
     );
   };
 
-  // ── Empty State ──────────────────────────────────────────────────────────
   const EmptyComponent = () => (
     <EmptyState
       icon={searchQuery ? 'search-outline' : 'storefront-outline'}
-      title={searchQuery ? 'No results found' : 'No shops yet'}
+      title={searchQuery ? 'No matching shops' : 'No Shops Registered'}
       description={
         searchQuery
-          ? 'Try a different search term'
-          : 'Register your local shop on RuVo to start managing products and orders.'
+          ? 'Try searching with another shop name or location'
+          : 'Register your local store on RuVo to start managing inventory, prices, and receiving customer orders.'
       }
       actionLabel={!searchQuery ? 'Register New Shop' : undefined}
       onAction={!searchQuery ? () => navigation.navigate(ROUTES.REGISTER_SHOP) : undefined}
     />
   );
 
-  // ── Main Screen ──────────────────────────────────────────────────────────
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg">
-      {/* Header */}
+      {/* Header Bar */}
       <Animated.View
         entering={FadeInDown.duration(300)}
         className="bg-ruvo-surface border-b border-warm-300 px-lg py-md"
@@ -394,7 +502,7 @@ export const MyShopsScreen = () => {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-md flex-1">
             <View
-              className="w-10 h-10 bg-ruvo-yellow-soft rounded-lg items-center justify-center"
+              className="w-10 h-10 bg-ruvo-yellow-soft rounded-xl items-center justify-center"
               style={{
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 2 },
@@ -406,56 +514,62 @@ export const MyShopsScreen = () => {
               <Ionicons name="storefront" size={22} color="#F5B700" />
             </View>
             <View className="flex-1">
-              <Text className="text-2xl font-bold text-ruvo-ink">My Shops</Text>
-              <Text className="text-sm text-warm-600">Manage your shops</Text>
+              <Text className="text-2xl font-black text-ruvo-ink">Manage My Shops</Text>
+              <Text className="text-xs text-warm-600 font-medium">Control inventory, orders & shop status</Text>
             </View>
           </View>
 
-          <View className="flex-row gap-sm">
+          <View className="flex-row gap-xs">
+            <TouchableOpacity
+              onPress={() => navigation.navigate(ROUTES.REGISTER_SHOP)}
+              className="bg-ruvo-yellow px-3 py-2 rounded-xl flex-row items-center gap-xs shadow-xs"
+            >
+              <Ionicons name="add" size={16} color="#111827" />
+              <Text className="text-xs font-black text-ruvo-ink">Add Shop</Text>
+            </TouchableOpacity>
             <IconButton icon="refresh" onPress={() => loadShops(true)} size="md" />
-            <IconButton icon="log-out-outline" onPress={logout} size="md" variant="danger" />
+            <TouchableOpacity
+              onPress={() => Alert.alert('Sign Out', 'Are you sure you want to log out?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: logout }])}
+              className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 items-center justify-center flex-row shadow-xs"
+            >
+              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
 
-      {/* Search Bar */}
+      {/* Search Input Bar */}
       <Animated.View entering={FadeInDown.delay(100).duration(300)} className="px-lg py-md">
         <SearchInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search shops..."
+          placeholder="Search shop by name or address..."
         />
       </Animated.View>
 
-      {/* Filter Stats */}
+      {/* Filter Quick Pills */}
       <Animated.View
         entering={FadeInDown.delay(150).duration(300)}
-        className={`flex-row gap-sm px-lg mb-md ${isTablet ? 'justify-start' : ''}`}
+        className={`flex-row gap-xs px-lg mb-md ${isTablet ? 'justify-start' : ''}`}
       >
         {[
-          { key: 'ALL', label: 'Total', count: shops.length, icon: 'storefront-outline', color: 'bg-ruvo-yellow-soft', textColor: 'text-ruvo-yellow-dark' },
-          { key: 'APPROVED', label: 'Approved', count: approvedCount, icon: 'checkmark-circle-outline', color: 'bg-ruvo-accent-soft', textColor: 'text-ruvo-accent' },
-          { key: 'PENDING', label: 'Pending', count: pendingCount, icon: 'time-outline', color: 'bg-orange-100', textColor: 'text-orange-600' },
+          { key: 'ALL', label: 'All Shops', count: shops.length, icon: 'storefront-outline', color: 'bg-ruvo-yellow-soft' },
+          { key: 'APPROVED', label: 'Approved', count: approvedCount, icon: 'checkmark-circle-outline', color: 'bg-ruvo-accent-soft' },
+          { key: 'PENDING', label: 'Pending', count: pendingCount, icon: 'time-outline', color: 'bg-amber-100' },
+          { key: 'OVERDUE', label: 'Overdue', count: overdueCount, icon: 'alert-circle-outline', color: 'bg-red-100' },
         ].map(stat => (
           <TouchableOpacity
             key={stat.key}
-            className={`flex-1 ${isTablet ? 'max-w-xs' : ''} bg-ruvo-surface rounded-lg p-md border ${
-              activeFilter === stat.key ? 'border-ruvo-yellow' : 'border-warm-300'
+            className={`flex-1 ${isTablet ? 'max-w-xs' : ''} bg-ruvo-surface rounded-2xl p-sm border ${
+              activeFilter === stat.key ? 'border-ruvo-yellow shadow-xs' : 'border-warm-300'
             }`}
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.05,
-              shadowRadius: 4,
-              elevation: 2,
-            }}
             onPress={() => setActiveFilter(stat.key as any)}
           >
-            <View className={`w-8 h-8 ${stat.color} rounded-lg items-center justify-center mb-sm`}>
-              <Ionicons name={stat.icon as any} size={16} color={stat.key === 'PENDING' ? '#EA580C' : stat.key === 'APPROVED' ? '#16A34A' : '#F5B700'} />
+            <View className={`w-7 h-7 ${stat.color} rounded-lg items-center justify-center mb-xs`}>
+              <Ionicons name={stat.icon as any} size={15} color={stat.key === 'OVERDUE' ? '#DC2626' : stat.key === 'PENDING' ? '#D97706' : stat.key === 'APPROVED' ? '#16A34A' : '#F5B700'} />
             </View>
-            <Text className="text-2xl font-bold text-ruvo-ink">{stat.count}</Text>
-            <Text className="text-xs text-warm-600 mt-xs">{stat.label}</Text>
+            <Text className="text-lg font-black text-ruvo-ink">{stat.count}</Text>
+            <Text className="text-[10px] font-bold text-warm-600" numberOfLines={1}>{stat.label}</Text>
           </TouchableOpacity>
         ))}
       </Animated.View>
@@ -471,7 +585,7 @@ export const MyShopsScreen = () => {
         </Animated.View>
       )}
 
-      {/* Shops List */}
+      {/* Shops List View */}
       <FlatList
         data={filteredShops}
         keyExtractor={item => item.id?.toString() ?? Math.random().toString()}

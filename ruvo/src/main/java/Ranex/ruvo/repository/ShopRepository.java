@@ -32,17 +32,20 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findPendingApproval();
 
     // Haversine formula to find approved shops within X kilometers, nearest first.
-    // Treats approved/active IS NULL as true too, in case any legacy rows predate the columns.
+    // Includes a bounding box pre-filter for fast spatial indexing and quick execution.
     @Query(value = "SELECT * FROM shops s WHERE " +
            "(s.approved IS NULL OR s.approved = true) AND " +
            "(s.active IS NULL OR s.active = true) AND " +
            "(s.settlement_blocked IS NULL OR s.settlement_blocked = false) AND " +
-           "(6371 * acos(cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
+           "s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND " +
+           "s.latitude BETWEEN (:userLat - (:radius / 111.0)) AND (:userLat + (:radius / 111.0)) AND " +
+           "s.longitude BETWEEN (:userLng - (:radius / (111.0 * COS(RADIANS(:userLat))))) AND (:userLng + (:radius / (111.0 * COS(RADIANS(:userLat))))) AND " +
+           "(6371 * acos(LEAST(1.0, GREATEST(-1.0, cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
            "cos(radians(s.longitude) - radians(:userLng)) + " +
-           "sin(radians(:userLat)) * sin(radians(s.latitude)))) <= :radius " +
-           "ORDER BY (6371 * acos(cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
+           "sin(radians(:userLat)) * sin(radians(s.latitude)))))) <= :radius " +
+           "ORDER BY (6371 * acos(LEAST(1.0, GREATEST(-1.0, cos(radians(:userLat)) * cos(radians(s.latitude)) * " +
            "cos(radians(s.longitude) - radians(:userLng)) + " +
-           "sin(radians(:userLat)) * sin(radians(s.latitude)))) ASC",
+           "sin(radians(:userLat)) * sin(radians(s.latitude)))))) ASC",
            nativeQuery = true)
     List<Shop> findNearbyShops(
             @Param("userLat") Double userLat,

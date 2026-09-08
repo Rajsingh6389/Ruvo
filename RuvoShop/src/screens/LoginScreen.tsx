@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Keyboard,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -399,23 +400,16 @@ export const LoginScreen = ({ navigation }: Props) => {
           >
             <View className="flex-row items-center">
               <View
-                className="w-12 h-12 rounded-2xl bg-ruvo-yellow items-center justify-center"
+                className="w-12 h-12 rounded-2xl bg-ruvo-yellow items-center justify-center p-1"
                 style={{
                   shadowColor: '#000',
-                  shadowOffset: {
-                    width: 0,
-                    height: 4,
-                  },
+                  shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.12,
                   shadowRadius: 8,
                   elevation: 4,
                 }}
               >
-                <Ionicons
-                  name="storefront"
-                  size={25}
-                  color="#231C10"
-                />
+                <Image source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798727/RuvoShop.png' }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
               </View>
 
               <View className="ml-3">

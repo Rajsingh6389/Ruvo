@@ -22,6 +22,8 @@ export interface Shop {
   openingTime?: string;
   closingTime?: string;
   approved: boolean;
+  active?: boolean;
+  settlementBlocked?: boolean;
 }
 
 export interface NewShopInput {

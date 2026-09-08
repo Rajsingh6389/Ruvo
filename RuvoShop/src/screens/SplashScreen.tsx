@@ -8,19 +8,10 @@ import {
   Dimensions,
   Easing,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
-import { RootStackParamList } from '../types/navigation';
-import { ROUTES } from '../constants/routes';
 
 const { width, height } = Dimensions.get('window');
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 export const SplashScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
-
   // Main animations
   const screenOpacity = useRef(new Animated.Value(1)).current;
 
@@ -83,9 +74,10 @@ export const SplashScreen = () => {
       // Loader
       Animated.timing(loaderWidth, {
         toValue: 1,
-        duration: 2100,
+        // Loop the loader conceptually via a long duration for isLoading states
+        duration: 210000, 
         delay: 350,
-        easing: Easing.inOut(Easing.ease),
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }),
     ]).start();
@@ -123,23 +115,7 @@ export const SplashScreen = () => {
       ]),
     ).start();
 
-    // Navigate
-    const timer = setTimeout(() => {
-      Animated.timing(screenOpacity, {
-        toValue: 0,
-        duration: 450,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        navigation.replace(ROUTES.LOGIN);
-      });
-    }, 2800);
-
-    return () => {
-      clearTimeout(timer);
-    };
   }, [
-    navigation,
     screenOpacity,
     logoOpacity,
     logoScale,
@@ -171,13 +147,8 @@ export const SplashScreen = () => {
       ========================= */}
 
       <View style={styles.background}>
-        {/* Top yellow wave */}
         <View style={styles.topYellowShape} />
-
-        {/* Bottom yellow wave */}
         <View style={styles.bottomYellowShape} />
-
-        {/* Soft center glow */}
         <Animated.View
           style={[
             styles.centerGlow,
@@ -187,13 +158,10 @@ export const SplashScreen = () => {
             },
           ]}
         />
-
-        {/* Decorative circles */}
         <View style={styles.smallCircleOne} />
         <View style={styles.smallCircleTwo} />
         <View style={styles.smallCircleThree} />
 
-        {/* Decorative dots */}
         <View style={styles.dotGrid}>
           {Array.from({ length: 16 }).map((_, index) => (
             <View key={index} style={styles.dot} />
@@ -216,11 +184,11 @@ export const SplashScreen = () => {
             ],
           }}
         >
-          {/* Text-based Logo placeholder until ruvo-logo.png is added */}
-          <View style={[styles.logo, { alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ fontSize: 58, fontWeight: '900', color: '#222222', letterSpacing: 2 }}>RUVO</Text>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#D5A900', letterSpacing: 8, marginTop: 4, marginRight: -8 }}>APP</Text>
-          </View>
+          <Animated.Image
+            source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798727/RuvoShop.png' }}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         <Animated.View
@@ -237,7 +205,7 @@ export const SplashScreen = () => {
           ]}
         >
           <Text style={styles.tagline}>
-            LOCAL SOLUTIONS. CLOSER TO YOU.
+            GROW YOUR BUSINESS WITH US
           </Text>
 
           <View style={styles.taglineLine} />
@@ -251,7 +219,7 @@ export const SplashScreen = () => {
       <View style={styles.bottomContainer}>
 
         <Text style={styles.loadingText}>
-          Bringing your neighbourhood closer
+          Loading your shop...
         </Text>
 
         <View style={styles.loaderTrack}>
@@ -261,7 +229,7 @@ export const SplashScreen = () => {
               {
                 width: loaderWidth.interpolate({
                   inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
+                  outputRange: ['0%', '100000%'],
                 }),
               },
             ]}
@@ -269,7 +237,7 @@ export const SplashScreen = () => {
         </View>
 
         <Text style={styles.brandFooter}>
-          RUVO
+          RUVO SHOP
         </Text>
       </View>
     </Animated.View>
@@ -281,18 +249,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFDF7',
   },
-
   background: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
   },
-
-  /*
-   * =========================
-   * YELLOW SHAPES
-   * =========================
-   */
-
   topYellowShape: {
     position: 'absolute',
     width: width * 0.95,
@@ -303,7 +263,6 @@ const styles = StyleSheet.create({
     left: -width * 0.32,
     opacity: 0.95,
   },
-
   bottomYellowShape: {
     position: 'absolute',
     width: width * 1.15,
@@ -312,20 +271,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFD21C',
     bottom: -width * 0.48,
     right: -width * 0.38,
-    transform: [
-      {
-        rotate: '-12deg',
-      },
-    ],
+    transform: [{ rotate: '-12deg' }],
     opacity: 0.95,
   },
-
-  /*
-   * =========================
-   * CENTER GLOW
-   * =========================
-   */
-
   centerGlow: {
     position: 'absolute',
     width: width * 0.85,
@@ -335,13 +283,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     top: height * 0.25,
   },
-
-  /*
-   * =========================
-   * DECORATIVE CIRCLES
-   * =========================
-   */
-
   smallCircleOne: {
     position: 'absolute',
     width: 70,
@@ -353,7 +294,6 @@ const styles = StyleSheet.create({
     right: -25,
     opacity: 0.45,
   },
-
   smallCircleTwo: {
     position: 'absolute',
     width: 35,
@@ -364,7 +304,6 @@ const styles = StyleSheet.create({
     left: 25,
     opacity: 0.55,
   },
-
   smallCircleThree: {
     position: 'absolute',
     width: 55,
@@ -376,13 +315,6 @@ const styles = StyleSheet.create({
     left: -20,
     opacity: 0.35,
   },
-
-  /*
-   * =========================
-   * DOT GRID
-   * =========================
-   */
-
   dotGrid: {
     position: 'absolute',
     right: 28,
@@ -393,37 +325,26 @@ const styles = StyleSheet.create({
     gap: 9,
     opacity: 0.35,
   },
-
   dot: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#D5A900',
   },
-
-  /*
-   * =========================
-   * CENTER CONTENT
-   * =========================
-   */
-
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: height * 0.05,
   },
-
   logo: {
     width: width * 0.58,
     height: width * 0.58,
   },
-
   taglineContainer: {
     alignItems: 'center',
     marginTop: -25,
   },
-
   tagline: {
     fontSize: 11,
     letterSpacing: 2.8,
@@ -431,7 +352,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-
   taglineLine: {
     width: 45,
     height: 3,
@@ -439,13 +359,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFD21C',
     marginTop: 12,
   },
-
-  /*
-   * =========================
-   * BOTTOM
-   * =========================
-   */
-
   bottomContainer: {
     position: 'absolute',
     bottom: 38,
@@ -453,14 +366,12 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
   },
-
   loadingText: {
     fontSize: 12,
     color: '#777777',
     marginBottom: 12,
     letterSpacing: 0.4,
   },
-
   loaderTrack: {
     width: width * 0.42,
     height: 4,
@@ -468,13 +379,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2E6A5',
     overflow: 'hidden',
   },
-
   loaderProgress: {
     height: '100%',
     borderRadius: 4,
     backgroundColor: '#F6C800',
   },
-
   brandFooter: {
     marginTop: 16,
     fontSize: 10,

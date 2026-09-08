@@ -40,8 +40,11 @@ import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 
+import { useToast } from '../context/ToastContext';
+
 export const AvailableDeliveriesScreen = () => {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const navigation = useNavigation<any>();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
@@ -75,9 +78,18 @@ export const AvailableDeliveriesScreen = () => {
     setBusy(run.id);
     try {
       await api(`/api/partner/deliveries/${run.id}/accept`, token, { method: 'POST' });
-      navigation.navigate('ActiveDelivery', { deliveryId: run.id });
+      showToast('Delivery run accepted!', 'success');
+      
+      // Fetch the actual Active Delivery ID (since requests have different IDs than accepted deliveries)
+      const activeDeliveries = await api<Delivery[]>('/api/partner/deliveries/active', token).catch(() => api<Delivery[]>('/api/partner/deliveries', token));
+      const activeOnly = activeDeliveries.filter(d => ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(d.status));
+      if (activeOnly.length > 0) {
+        navigation.navigate('ActiveDelivery', { deliveryId: activeOnly[0].id });
+      } else {
+        navigation.navigate('Dashboard');
+      }
     } catch (e: any) {
-      Alert.alert('Run Unavailable', e.message);
+      showToast(e.message || 'Run unavailable', 'error');
       load();
     } finally {
       setBusy(null);

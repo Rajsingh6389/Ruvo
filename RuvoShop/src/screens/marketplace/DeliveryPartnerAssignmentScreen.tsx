@@ -194,6 +194,38 @@ export default function DeliveryPartnerAssignmentScreen() {
     );
   };
 
+  const handleForceAssign = (partnerId: number) => {
+    if (!orderId || !token) return;
+    Alert.alert(
+      'Force Assign Partner',
+      'Are you sure you want to bypass the broadcast queue and force-assign this delivery partner?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Force Assign',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/assign-partner?partnerId=${partnerId}`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) {
+                Alert.alert('Success', 'Partner has been forcefully assigned!');
+                setPartnersModalVisible(false);
+                fetchCurrentRequest();
+              } else {
+                throw new Error('Failed to force assign. Ensure partner is online.');
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to assign partner. They might be offline or busy.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const ringColor = secondsLeft > 30 ? '#16A34A' : secondsLeft > 10 ? '#F59E0B' : '#DC2626';
 
   if (loading && !viewPartnersOnly) {
@@ -401,10 +433,22 @@ export default function DeliveryPartnerAssignmentScreen() {
                         )}
                       </View>
                     </View>
-                    <View className={`px-sm py-xs rounded-full ${item.available ? 'bg-green-100' : 'bg-warm-200'}`}>
-                      <Text className={`text-xs font-bold ${item.available ? 'text-green-700' : 'text-warm-600'}`}>
-                        {item.available ? '● Online' : 'Offline'}
-                      </Text>
+                    <View className="items-end gap-sm">
+                      <View className={`px-sm py-xs rounded-full ${item.available ? 'bg-green-100' : 'bg-warm-200'} mb-1`}>
+                        <Text className={`text-xs font-bold ${item.available ? 'text-green-700' : 'text-warm-600'}`}>
+                          {item.available ? '● Online' : 'Offline'}
+                        </Text>
+                      </View>
+                      
+                      {!viewPartnersOnly && orderId && (
+                        <TouchableOpacity
+                          onPress={() => handleForceAssign(item.id)}
+                          className="bg-ruvo-accent px-sm py-2 rounded-lg flex-row items-center gap-xs shadow-xs"
+                        >
+                          <Ionicons name="flash" size={14} color="#FFF" />
+                          <Text className="text-xs font-black text-white">FORCE ASSIGN</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 )}

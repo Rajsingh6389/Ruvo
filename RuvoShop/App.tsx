@@ -8,6 +8,7 @@ import { ToastProvider } from './src/context/ToastContext';
 import { ShopNavigator } from './src/ShopNavigator';
 import { installNetworkMonitor } from './src/hooks/useNetworkStatus';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { AnimatedAlertProvider } from './src/components/AnimatedAlertProvider';
 
 // Wrap fetch before any provider gets the chance to fire its first request.
 installNetworkMonitor();
@@ -15,16 +16,18 @@ installNetworkMonitor();
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider requiredRole="SHOP_OWNER">
-        <ThemeProvider>
-          <ToastProvider>
-            <SafeAreaProvider>
-              <StatusBar barStyle="dark-content" />
-              <ShopNavigator />
-            </SafeAreaProvider>
-          </ToastProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <AnimatedAlertProvider>
+        <AuthProvider requiredRole="SHOP_OWNER">
+          <ThemeProvider>
+            <ToastProvider>
+              <SafeAreaProvider>
+                <StatusBar barStyle="dark-content" />
+                <ShopNavigator />
+              </SafeAreaProvider>
+            </ToastProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </AnimatedAlertProvider>
     </ErrorBoundary>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StatusBar,
@@ -9,6 +10,7 @@ import {
   TextInput,
   useWindowDimensions,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -23,8 +25,9 @@ import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/Del
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { getNearbyShops, getShops } from '../../services/shopService';
 import type { Shop } from '../../types';
-import { RuvoFirstOrderPromoBanner } from '../../components/premium/RuvoFirstOrderPromoBanner';
+
 import { RuvoBanner } from '../../components/premium/RuvoBanner';
+import { getStandardBanners, getOnboardBanners, getFirstOrderBanners } from '../../assets/cloudinary/banners';
 import { CATEGORIES, PRODUCT_IMAGES } from '../../assets/cloudinary';
 import {
   SectionHeader,
@@ -69,7 +72,7 @@ export const HomeScreen = () => {
       getMyOrders(userId, token)
         .then((orders) => {
           const pending = orders.find(o =>
-            !['DELIVERED', 'SHOP_REJECTED', 'CANCELLED'].includes(o.orderStatus || '')
+            !['DELIVERED', 'SHOP_REJECTED', 'CANCELLED', 'CANCELLED_BY_USER', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT', 'CANCELLED_SHOP_TIMEOUT', 'CANCELLED_NO_PARTNER_FOUND', 'FAILED', 'PAYMENT_FAILED'].includes(o.orderStatus || '')
           );
           setActiveOrder(pending || null);
         })
@@ -123,12 +126,26 @@ export const HomeScreen = () => {
       <View className="bg-ruvo-surface border-b border-warm-300 px-3 pt-2 pb-3">
         {/* Logo and Location Row */}
         <View className="flex-row items-center justify-between mb-sm">
-          {/* Logo */}
-          <Text className="text-2xl font-black text-ruvo-ink">
-            <Text className="text-ruvo-yellow">R</Text>
-            <Text className="text-ruvo-yellow-dark">u</Text>
-            <Text className="text-ruvo-yellow">Vo</Text>
-          </Text>
+          {/* Sketched Premium Logo Layout */}
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', paddingBottom: 2, paddingLeft: 4 }}>
+            <Text style={{ 
+              fontSize: 36, 
+              fontFamily: Platform.OS === 'ios' ? 'AvenirNext-Heavy' : 'sans-serif-black',
+              color: '#F5B700',
+              fontStyle: 'italic',
+              marginRight: 1,
+            }}>
+              R
+            </Text>
+            <Text style={{ 
+              fontSize: 26, 
+              fontFamily: Platform.OS === 'ios' ? 'AvenirNext-Heavy' : 'sans-serif-black',
+              color: '#1A1A1A', 
+              letterSpacing: 1,
+            }}>
+              uvo
+            </Text>
+          </View>
 
           {/* Location Pill */}
           <Pressable
@@ -207,20 +224,15 @@ export const HomeScreen = () => {
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </Pressable>
         )}
-
-        {/* ── Hero Banner ─────────────────────────────────── */}
-        <RuvoBanner
-          onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS)}
-        />
-
-        {/* ── 3D RuVo Mascot Coupon Banner ────────────────── */}
-        <RuvoFirstOrderPromoBanner
-          onPressBanner={() => (navigation.navigate as any)(ROUTES.GROCERIES)}
-          onApplyCoupon={() => (navigation.navigate as any)(ROUTES.GROCERIES)}
-        />
-
         {/* ── Shop by Category ──── */}
-        <SectionHeader
+      
+
+        {/* ── Growth Banners (Shop & Partner) ─────────────── */}
+        <RuvoBanner
+          data={getOnboardBanners()}
+        />
+
+          <SectionHeader
           title="Shop by Category"
           showViewAll
           onViewAllPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS)}
@@ -244,6 +256,9 @@ export const HomeScreen = () => {
             </Pressable>
           ))}
         </ScrollView>
+
+        {/* ── First Order Offer ───────────────────────────── */}
+       
 
         {/* ── Popular Stores Near You ───────────────────────── */}
         <SectionHeader
@@ -298,7 +313,10 @@ export const HomeScreen = () => {
             })}
           </ScrollView>
         )}
-
+         <RuvoBanner
+          data={getFirstOrderBanners()}
+          
+        />
         {/* ── Nearby Products ───────────────────────────────── */}
         {nearbyProducts.length > 0 && (
           <>
@@ -333,24 +351,14 @@ export const HomeScreen = () => {
           </>
         )}
 
+        {/* ── Standard Promos (Delivery / Essentials / COD) ─── */}
+        <RuvoBanner
+          data={getStandardBanners()}
+          onPress={() => (navigation.navigate as any)(ROUTES.GROCERIES)}
+        />
+
         {/* ── Why RuVo Features ───────────────────────────── */}
-        <View className="flex-row gap-md mx-md my-2xl">
-          {[
-            { icon: '💵', label: 'Cash on Delivery' },
-            { icon: '🏪', label: 'Shop Local' },
-            { icon: '🎉', label: '0% Commission' },
-          ].map(item => (
-            <View
-              key={item.label}
-              className="flex-1 items-center p-md bg-ruvo-surface rounded-lg border border-warm-200"
-            >
-              <Text className="text-2xl mb-sm">{item.icon}</Text>
-              <Text className="text-xs font-bold text-ruvo-ink text-center">
-                {item.label}
-              </Text>
-            </View>
-          ))}
-        </View>
+      
       </ScrollView>
 
       <LocationPickerModal

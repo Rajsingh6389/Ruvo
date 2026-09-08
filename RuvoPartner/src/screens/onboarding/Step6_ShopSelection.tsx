@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, ScrollView, StyleSheet, Text, TouchableOpacity,
-  ActivityIndicator, FlatList, RefreshControl, Modal, Platform, Dimensions,
+  ActivityIndicator, FlatList, RefreshControl, Modal, Platform, Dimensions, Image, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +37,12 @@ interface NearbyShop {
   distanceKm?: number;
   latitude?: number;
   longitude?: number;
+  logo?: string;
+  imageUrl?: string;
+  gallery?: string[];
+  fullAddress?: string;
+  phone?: string;
+  rating?: number;
 }
 
 // Geocodes a textual address via Google, returns lat/lng or null
@@ -54,17 +60,7 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lng: numb
   } catch { return null; }
 }
 
-// Mock data shown when API / GPS is unavailable in demo
-const MOCK_SHOPS: NearbyShop[] = [
-  { id: 1, name: 'Fresh Mart',        address: 'MG Road, Block A',      category: 'Grocery',   distanceKm: 0.4 },
-  { id: 2, name: 'Daily Needs Store', address: 'Lajpat Nagar, Sector 2',category: 'Grocery',   distanceKm: 0.8 },
-  { id: 3, name: 'Quick Bites Cafe',  address: 'Gandhi Chowk',           category: 'Food',      distanceKm: 1.1 },
-  { id: 4, name: 'Pharma Plus',       address: 'Hospital Road, Shop 5',  category: 'Pharmacy',  distanceKm: 1.3 },
-  { id: 5, name: 'Style Hub',         address: 'Mall Road, 1st Floor',   category: 'Fashion',   distanceKm: 1.6 },
-  { id: 6, name: 'Tech World',        address: 'IT Park, Gate 2',        category: 'Electronics',distanceKm: 2.0 },
-  { id: 7, name: 'Green Veggies',     address: 'Sabzi Mandi, Stall 12',  category: 'Grocery',   distanceKm: 2.2 },
-  { id: 8, name: 'Spice Garden',      address: 'Food Court, Level 2',    category: 'Food',      distanceKm: 2.5 },
-];
+
 
 const CATEGORY_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   Grocery:     'basket-outline',
@@ -173,27 +169,79 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
           </MapView>
         )}
 
-        {/* Address info card */}
-        <View style={[mms.infoCard, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        {/* Address & Gallery info card */}
+        <ScrollView style={[mms.infoCard, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
           <View style={mms.infoRow}>
-            <View style={[mms.iconBg, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}>
-              <Ionicons name={icon} size={24} color={colors.primary} />
-            </View>
+            {shop.logo ? (
+              <Image source={{ uri: shop.logo }} style={mms.shopLogoImg} />
+            ) : (
+              <View style={[mms.iconBg, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.sm }]}>
+                <Ionicons name={icon} size={24} color={colors.primary} />
+              </View>
+            )}
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]}>
-                {shop.name}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '800', fontSize: 16 }]}>
+                  {shop.name}
+                </Text>
+                {shop.rating && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <Ionicons name="star" size={12} color="#D97706" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E', marginLeft: 3 }}>{shop.rating}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4, lineHeight: 18 }]}>
+                📍 {shop.fullAddress || shop.address}
               </Text>
-              <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>
-                {shop.address}
-              </Text>
-              {shop.distanceKm != null && (
-                <Text style={[typography.caption, { color: colors.warning, fontWeight: '700', marginTop: 4 }]}>
-                  📍 {shop.distanceKm} km from you
+              {shop.phone && (
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginTop: 4 }]}>
+                  📞 {shop.phone}
                 </Text>
               )}
             </View>
           </View>
-        </View>
+
+          {/* Shop Photo Gallery */}
+          {shop.gallery && shop.gallery.length > 0 && (
+            <View style={{ marginTop: 14 }}>
+              <Text style={[typography.caption, { color: colors.textPrimary, fontWeight: '800', marginBottom: 8, letterSpacing: 0.5 }]}>
+                STORE GALLERY & PREVIEW
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {shop.gallery.map((img, i) => (
+                  <Image key={i} source={{ uri: img }} style={mms.galleryThumb} />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Location Tracing Button */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.primary,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 12,
+              borderRadius: RADIUS.sm,
+              marginTop: 16,
+              marginBottom: 20,
+              gap: 8,
+            }}
+            onPress={() => {
+              const url = shop.latitude && shop.longitude
+                ? `https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.fullAddress || shop.address)}`;
+              Linking.openURL(url).catch(() => {});
+            }}
+          >
+            <Ionicons name="navigate" size={18} color="#FFF" />
+            <Text style={[typography.body, { color: '#FFF', fontWeight: '800' }]}>
+              Open Navigation / Location Tracing
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -204,16 +252,16 @@ export const Step6_ShopSelection = () => {
   const route = useRoute();
   // Detect if opened as post-approval ManageShops vs onboarding Step6
   const isManageMode = route.name === 'ManageShops';
-  const { token, setVerificationStatus, clearResubmit } = useAuth();
+  const { user, token, setVerificationStatus, clearResubmit } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [shops,        setShops]        = useState<NearbyShop[]>([]);
+  const [myShops,      setMyShops]      = useState<NearbyShop[]>([]);
   const [selected,     setSelected]     = useState<Set<number>>(new Set());
   const [fetchState,   setFetchState]   = useState<'loading' | 'done' | 'error'>('loading');
   const [submitting,   setSubmitting]   = useState(false);
   const [error,        setError]        = useState<string | null>(null);
   const [refreshing,   setRefreshing]   = useState(false);
-  const [usingMock,    setUsingMock]    = useState(false);
   const [mapShop,      setMapShop]      = useState<NearbyShop | null>(null);
   const [mapVisible,   setMapVisible]   = useState(false);
 
@@ -257,40 +305,74 @@ export const Step6_ShopSelection = () => {
 
     await checkCooldownAndSavedSelection();
 
+    // Fast Cache Read First (Instant UI)
+    try {
+      const cachedShopsStr = await AsyncStorage.getItem('cachedNearbyShops');
+      if (cachedShopsStr) {
+        const cached = JSON.parse(cachedShopsStr);
+        if (Array.isArray(cached) && cached.length > 0) {
+          setShops(cached);
+          setFetchState('done');
+        }
+      }
+    } catch {}
+
     try {
       let lat: number | undefined;
       let lng: number | undefined;
 
-      // Try GPS
+      // Fast location check with lower accuracy for immediate response
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
         lat = pos.coords.latitude;
         lng = pos.coords.longitude;
       }
 
-      // Try API
+      // Fetch My Shops and Nearby Shops in parallel
+      const ownerId = user?.userId || user?.mobileNumber || '';
       const params = lat != null ? `?lat=${lat}&lng=${lng}&radius=5` : '';
-      const res = await fetch(`${API_BASE_URL}/api/partner/nearby-shops${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      
+      const [nearbyRes, myShopsRes] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/api/partner/nearby-shops${params}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
 
-      if (res.ok) {
-        const data = await res.json();
-        setShops(data?.data ?? []);
-        setUsingMock(false);
-      } else {
-        throw new Error(`HTTP ${res.status}`);
+      let freshNearbyShops: NearbyShop[] = [];
+      let freshMyShops: NearbyShop[] = [];
+
+      if (nearbyRes.status === 'fulfilled' && nearbyRes.value.ok) {
+        const data = await nearbyRes.value.json();
+        freshNearbyShops = data?.data ?? [];
+      } else if (nearbyRes.status === 'fulfilled' && nearbyRes.value.status === 404) {
+         // Fallback if specific partner nearby-shops is unavailable, use standard shops
+         const fallbackRes = await fetch(`${API_BASE_URL}/api/shops`, { headers: { Authorization: `Bearer ${token}` } });
+         if (fallbackRes.ok) {
+           const fbData = await fallbackRes.json();
+           freshNearbyShops = fbData?.data ?? fbData ?? [];
+         }
       }
+
+      if (myShopsRes.status === 'fulfilled' && myShopsRes.value.ok) {
+        const data = await myShopsRes.value.json();
+        freshMyShops = data?.data ?? data ?? [];
+      }
+
+      // Hide my shops from the nearby list if they overlap
+      const myShopIds = new Set(freshMyShops.map(s => s.id));
+      freshNearbyShops = freshNearbyShops.filter(s => !myShopIds.has(s.id));
+
+      setShops(freshNearbyShops);
+      setMyShops(freshMyShops);
+      AsyncStorage.setItem('cachedNearbyShops', JSON.stringify([...freshNearbyShops, ...freshMyShops])).catch(() => {});
+      
     } catch {
-      // Fall back to mock data so the onboarding flow is never blocked
-      setShops(MOCK_SHOPS);
-      setUsingMock(true);
+      setError('Could not fetch shops properly.');
     } finally {
       setFetchState('done');
       setRefreshing(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => { loadShops(); }, [loadShops]);
 
@@ -382,6 +464,9 @@ export const Step6_ShopSelection = () => {
     }
   };
 
+  const selectedShopList = shops.filter(item => selected.has(item.id));
+  const otherShopList = shops.filter(item => !selected.has(item.id));
+
   const renderShop = ({ item }: { item: NearbyShop }) => {
     const isSelected = selected.has(item.id);
     const icon = CATEGORY_ICON[item.category] ?? 'storefront-outline';
@@ -400,21 +485,33 @@ export const Step6_ShopSelection = () => {
         onLongPress={() => { setMapShop(item); setMapVisible(true); }}
         activeOpacity={0.8}
       >
-        {/* Icon */}
-        <View style={[
-          s.shopIcon,
-          { backgroundColor: isSelected ? colors.primary : colors.surfaceSunken, borderRadius: RADIUS.sm },
-        ]}>
-          <Ionicons name={icon} size={22} color={isSelected ? '#FFFFFF' : colors.textHint} />
-        </View>
+        {/* Logo or Icon */}
+        {item.logo ? (
+          <Image source={{ uri: item.logo }} style={[s.shopLogo, { borderRadius: RADIUS.sm }]} />
+        ) : (
+          <View style={[
+            s.shopIcon,
+            { backgroundColor: isSelected ? colors.primary : colors.surfaceSunken, borderRadius: RADIUS.sm },
+          ]}>
+            <Ionicons name={icon} size={22} color={isSelected ? '#FFFFFF' : colors.textHint} />
+          </View>
+        )}
 
         {/* Info */}
         <View style={{ flex: 1 }}>
-          <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]} numberOfLines={1}>
-            {item.name}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {item.rating && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                <Ionicons name="star" size={12} color="#D97706" />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>{item.rating}</Text>
+              </View>
+            )}
+          </View>
           <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={1}>
-            {item.address}
+            {item.fullAddress || item.address}
           </Text>
           <View style={s.tagRow}>
             <View style={[s.categoryTag, { backgroundColor: colors.surfaceSunken, borderRadius: RADIUS.pill }]}>
@@ -488,9 +585,9 @@ export const Step6_ShopSelection = () => {
           />
         )}
 
-        {usingMock && !isLocked && (
+        {isLocked && (
           <InfoBox
-            text="Showing sample shops (demo mode). Real nearby shops will appear once the API is live."
+            text={`🔒 Shop selection locked: You last updated your shop preferences recently. You can update your selected shops again on ${nextAllowedDate} (changes allowed once every 7 days).`}
             variant="warning"
             colors={colors}
             typography={typography}
@@ -534,14 +631,14 @@ export const Step6_ShopSelection = () => {
         )}
 
         {/* Shop list */}
-        {fetchState === 'loading' ? (
+        {fetchState === 'loading' && shops.length === 0 ? (
           <View style={s.loadingBox}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[typography.body, { color: colors.textSecondary, marginTop: 12 }]}>
-              Finding nearby shops…
+              Finding nearby shops fast…
             </Text>
           </View>
-        ) : shops.length === 0 ? (
+        ) : (shops.length === 0 && myShops.length === 0) ? (
           <View style={[s.emptyBox, { backgroundColor: colors.card, borderRadius: RADIUS.card }]}>
             <Ionicons name="storefront-outline" size={48} color={colors.textHint} />
             <Text style={[typography.headingS, { color: colors.textSecondary, marginTop: 12 }]}>
@@ -556,9 +653,50 @@ export const Step6_ShopSelection = () => {
           </View>
         ) : (
           <View style={s.shopList}>
-            {shops.map(item => (
-              <React.Fragment key={item.id}>{renderShop({ item })}</React.Fragment>
-            ))}
+            {/* ── Section 1: My Shops ── */}
+            {myShops.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <View style={[s.sectionHeaderRow, { marginBottom: 10 }]}>
+                  <Ionicons name="storefront" size={18} color="#D97706" />
+                  <Text style={[typography.headingS, { color: '#B45309', fontSize: 16 }]}>
+                    My Registered Shops
+                  </Text>
+                </View>
+                {myShops.map(item => (
+                  <React.Fragment key={`my-${item.id}`}>{renderShop({ item })}</React.Fragment>
+                ))}
+              </View>
+            )}
+
+            {/* ── Section 2: Selected Nearby Shops ── */}
+            {selectedShopList.length > 0 && (
+              <View style={{ marginBottom: 16 }}>
+                <View style={s.sectionHeaderRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  <Text style={[typography.headingS, { color: colors.textPrimary, fontSize: 15 }]}>
+                    Selected Nearby Shops ({selectedShopList.length})
+                  </Text>
+                </View>
+                {selectedShopList.map(item => (
+                  <React.Fragment key={`selected-${item.id}`}>{renderShop({ item })}</React.Fragment>
+                ))}
+              </View>
+            )}
+
+            {/* ── Section 3: Other Nearby Shops ── */}
+            {otherShopList.length > 0 && (
+              <View>
+                <View style={s.sectionHeaderRow}>
+                  <Ionicons name="location" size={18} color={colors.warning} />
+                  <Text style={[typography.headingS, { color: colors.textPrimary, fontSize: 15 }]}>
+                    Nearby Shops ({otherShopList.length})
+                  </Text>
+                </View>
+                {otherShopList.map(item => (
+                  <React.Fragment key={`other-${item.id}`}>{renderShop({ item })}</React.Fragment>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -636,6 +774,14 @@ const s = StyleSheet.create({
     width: 44, height: 44,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
+  shopLogo: {
+    width: 44, height: 44,
+    resizeMode: 'cover', flexShrink: 0,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginBottom: 8, marginTop: 4,
+  },
   tagRow: { flexDirection: 'row', gap: 6, marginTop: 5, flexWrap: 'wrap' },
   categoryTag: { paddingHorizontal: 8, paddingVertical: 3 },
   distTag:     { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3 },
@@ -669,4 +815,6 @@ const mms = StyleSheet.create({
   },
   infoRow  : { flexDirection: 'row', alignItems: 'flex-start' },
   iconBg   : { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  shopLogoImg: { width: 48, height: 48, borderRadius: 8, flexShrink: 0, resizeMode: 'cover' },
+  galleryThumb: { width: 90, height: 60, borderRadius: 8, resizeMode: 'cover' },
 });

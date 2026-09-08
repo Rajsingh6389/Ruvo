@@ -34,6 +34,8 @@ export interface Order {
   shopResponseDeadline?: string;
   pickedUpAt?: string;
   deliveredAt?: string;
+  customerName?: string;
+  customerPhone?: string;
   createdAt?: string;
   updatedAt?: string;
 }

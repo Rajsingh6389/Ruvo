@@ -1,3 +1,13 @@
+export interface OrderItem {
+  id?: number;
+  productId: number;
+  productName: string;
+  productImageUrl?: string;
+  quantity: number;
+  price?: number;
+  unit?: string;
+}
+
 export interface Order {
   id?: number;
   userId: string;
@@ -6,6 +16,7 @@ export interface Order {
   productName: string;
   productImageUrl?: string;
   quantity: number;
+  items?: OrderItem[];
   subtotal?: number;
   deliveryFee?: number;
   platformFee?: number;
@@ -23,6 +34,9 @@ export interface Order {
   shopResponseDeadline?: string;
   pickedUpAt?: string;
   deliveredAt?: string;
+  shopName?: string;
+  shopLatitude?: number;
+  shopLongitude?: number;
   createdAt?: string;
   updatedAt?: string;
 }

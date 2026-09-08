@@ -24,6 +24,7 @@ import {
   Linking,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,10 +40,13 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
 
+import { useToast } from '../context/ToastContext';
+
 const states = ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 export const ActiveDeliveryScreen = () => {
   const { token } = useAuth();
+  const { showToast } = useToast();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
 
@@ -58,12 +62,12 @@ export const ActiveDeliveryScreen = () => {
     try {
       setDelivery(await partnerService.delivery(token, deliveryId));
     } catch (e: any) {
-      Alert.alert('Delivery Unavailable', e.message);
+      showToast(e.message || 'Delivery unavailable', 'error');
       navigation.goBack();
     } finally {
       setLoading(false);
     }
-  }, [token, deliveryId, navigation]);
+  }, [token, deliveryId, navigation, showToast]);
 
   useEffect(() => {
     load();
@@ -75,7 +79,7 @@ export const ActiveDeliveryScreen = () => {
         ? `geo:0,0?q=${encodeURIComponent(address)}`
         : `maps:0,0?q=${encodeURIComponent(address)}`
     ).catch(() =>
-      Alert.alert('Navigation Unavailable', 'Could not open a maps app on this device.')
+      showToast('Could not open maps app on this device.', 'warning')
     );
 
   const update = async (action: 'pickup' | 'out-for-delivery') => {
@@ -85,9 +89,10 @@ export const ActiveDeliveryScreen = () => {
       action === 'pickup'
         ? await partnerService.pickup(token, deliveryId)
         : await partnerService.startDelivery(token, deliveryId);
+      showToast(action === 'pickup' ? 'Order Picked Up!' : 'Delivery Started!', 'success');
       await load();
     } catch (e: any) {
-      Alert.alert('Update Not Confirmed', e.message);
+      showToast(e.message || 'Update failed', 'error');
     } finally {
       setBusy(false);
     }
@@ -95,7 +100,7 @@ export const ActiveDeliveryScreen = () => {
 
   const verifyDelivery = async () => {
     if (!token || !delivery || otp.length < 4) {
-      return Alert.alert('Enter Customer OTP', 'Enter the OTP provided by the customer.');
+      return showToast('Enter customer OTP to complete', 'warning');
     }
     setBusy(true);
     try {
@@ -105,10 +110,10 @@ export const ActiveDeliveryScreen = () => {
         { method: 'PATCH' }
       );
       setOtpOpen(false);
-      Alert.alert('Delivery Verified', 'The order was completed successfully.');
+      showToast('Delivery verified and completed!', 'success');
       navigation.popToTop();
     } catch (e: any) {
-      Alert.alert('Delivery Not Completed', e.message);
+      showToast(e.message || 'Verification failed', 'error');
     } finally {
       setBusy(false);
     }
@@ -185,16 +190,31 @@ export const ActiveDeliveryScreen = () => {
               </View>
               {delivery.items && delivery.items.length > 0 ? (
                 <View className="gap-xs">
-                  {delivery.items.map((it, idx) => (
-                    <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-emerald-100">
-                      <Text className="text-xs font-bold text-ruvo-ink flex-1">
-                        <Text className="font-extrabold text-emerald-700">{it.quantity}×</Text> {it.productName}
-                      </Text>
-                      {it.priceAtOrder ? (
-                        <Text className="text-xs font-extrabold text-ruvo-ink">₹{it.priceAtOrder * it.quantity}</Text>
-                      ) : null}
-                    </View>
-                  ))}
+                  {delivery.items.map((it, idx) => {
+                    const itImg = (it as any).productImageUrl ? ((it as any).productImageUrl.startsWith('http') ? (it as any).productImageUrl : `http://192.168.1.5:8080${(it as any).productImageUrl}`) : null;
+                    return (
+                      <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-emerald-100 gap-sm">
+                        {itImg ? (
+                          <Image source={{ uri: itImg }} className="w-9 h-9 rounded-md bg-warm-100" />
+                        ) : (
+                          <View className="w-9 h-9 rounded-md bg-emerald-100 items-center justify-center">
+                            <Ionicons name="basket-outline" size={16} color="#059669" />
+                          </View>
+                        )}
+                        <View className="flex-1 pr-xs">
+                          <Text className="text-xs font-bold text-ruvo-ink" numberOfLines={1}>
+                            {it.productName}
+                          </Text>
+                          <Text className="text-[11px] font-extrabold text-emerald-700 mt-0.5">
+                            Qty: {it.quantity}
+                          </Text>
+                        </View>
+                        {it.priceAtOrder ? (
+                          <Text className="text-xs font-extrabold text-ruvo-ink">₹{it.priceAtOrder * it.quantity}</Text>
+                        ) : null}
+                      </View>
+                    );
+                  })}
                 </View>
               ) : (
                 <View className="bg-white p-sm rounded-lg border border-emerald-100 flex-row justify-between items-center">

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 export interface DeliveryRequest {
@@ -19,8 +20,6 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
   }),
 });
 
@@ -28,13 +27,24 @@ export function useDeliveryAlerts(requests: DeliveryRequest[]) {
   const previousRequestsRef = useRef<DeliveryRequest[]>([]);
 
   useEffect(() => {
-    const askPermissions = async () => {
+    const initNotifications = async () => {
       const { granted } = (await Notifications.getPermissionsAsync()) as any;
       if (!granted) {
          await Notifications.requestPermissionsAsync();
       }
+      
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Orders & Deliveries',
+          description: 'Alerts for new delivery requests',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 500, 250, 500],
+          lightColor: '#EA580C',
+          enableVibrate: true,
+        });
+      }
     };
-    askPermissions();
+    initNotifications();
   }, []);
 
   useEffect(() => {

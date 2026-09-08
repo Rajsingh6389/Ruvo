@@ -41,7 +41,7 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F7F8F3"
+      "backgroundColor": "#FFFFFF"
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",

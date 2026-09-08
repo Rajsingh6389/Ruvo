@@ -12,6 +12,8 @@ import {
   TextInput,
   useWindowDimensions,
 } from 'react-native';
+import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,9 +101,13 @@ export const NearbyShopsScreen = () => {
   const [shopsLoading, setShopsLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const sidebarWidth = 80; // w-20 is 80px
+  const rightPaneWidth = screenWidth - sidebarWidth;
+  const isSmallDevice = rightPaneWidth < 280; // Force 1-column on narrow side-panes
+  const productCardWidth = isSmallDevice ? '100%' : '48%';
+
   const horizontalPadding = screenWidth < 360 ? 12 : 16;
   const gridGap = screenWidth < 360 ? 10 : 14;
-  const productCardWidth = Math.floor((screenWidth - horizontalPadding * 2 - gridGap) / 2);
   const shopTileWidth = Math.min(214, Math.max(172, screenWidth * 0.58));
   const heroImageSize = screenWidth < 360 ? 76 : 96;
 
@@ -309,8 +315,8 @@ export const NearbyShopsScreen = () => {
       {/* ── Main Split View Container ───────────────────────────────── */}
       <View className="flex-1 flex-row">
         {/* ── Left Sidebar: All Shops List ────────────────────────────── */}
-        <View className="w-28 bg-warm-100 border-r border-warm-200 py-2">
-          <Text className="text-[11px] font-black text-warm-600 uppercase tracking-wider text-center mb-2">
+        <View className="w-20 bg-warm-50/50 border-r border-warm-100 py-2">
+          <Text className="text-[10px] font-black text-warm-500 uppercase tracking-wider text-center mb-2">
             Shops ({shops.length})
           </Text>
           {shops.length === 0 ? (
@@ -323,23 +329,30 @@ export const NearbyShopsScreen = () => {
               {shops.map(shop => {
                 const active = shop.id === selectedShop?.id;
                 const logo = shopImage(shop);
+                const isOverdue = (shop as any).settlementBlocked || (shop as any).active === false;
                 return (
                   <Pressable
                     key={shop.id}
                     onPress={() => setSelectedShopId(shop.id)}
-                    className={`p-2 rounded-2xl items-center border ${
-                      active ? 'bg-white border-ruvo-yellow shadow-sm' : 'bg-transparent border-transparent'
+                    className={`p-2 rounded-2xl items-center border border-transparent ${
+                      active ? 'bg-white shadow-[0_4px_12px_rgba(245,183,0,0.15)] border-ruvo-yellow/30' : 'bg-transparent opacity-70'
                     }`}
+                    style={active ? { elevation: 3 } : undefined}
                   >
                     <View className="relative">
-                      <Image source={{ uri: logo }} className="w-14 h-14 rounded-2xl bg-warm-200" resizeMode="cover" />
+                      <Image source={{ uri: logo }} className={`w-12 h-12 rounded-[18px] bg-white ${isOverdue ? 'opacity-50' : ''}`} resizeMode="cover" />
                       {active && (
                         <View className="absolute -top-1 -right-1 bg-ruvo-yellow w-4 h-4 rounded-full items-center justify-center">
                           <Ionicons name="checkmark" size={10} color="#231C10" />
                         </View>
                       )}
+                      {isOverdue && (
+                        <View className="absolute -bottom-1 -right-1 bg-red-600 px-1 py-0.2 rounded">
+                          <Text className="text-[8px] font-black text-white">PAUSED</Text>
+                        </View>
+                      )}
                     </View>
-                    <Text className={`text-xs font-bold text-center mt-1 leading-tight ${active ? 'text-ruvo-ink font-black' : 'text-warm-700'}`} numberOfLines={2}>
+                    <Text className={`text-[10px] font-bold text-center mt-1.5 leading-tight ${active ? 'text-ruvo-ink font-black' : 'text-warm-600'}`} numberOfLines={2}>
                       {shop.name}
                     </Text>
                   </Pressable>
@@ -372,13 +385,35 @@ export const NearbyShopsScreen = () => {
             </View>
           ) : selectedShop ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+              {/* Overdue / Settlement Blocked Warning Banner */}
+              {((selectedShop as any).settlementBlocked || (selectedShop as any).active === false) && (
+                <View className="bg-amber-50 border-b border-amber-300 px-3 py-2.5 flex-row items-center gap-2">
+                  <Ionicons name="alert-circle" size={18} color="#D97706" />
+                  <View className="flex-1">
+                    <Text className="text-xs font-black text-amber-900">
+                      Temporarily Unavailable (Settlement Overdue)
+                    </Text>
+                    <Text className="text-[10px] text-amber-700 font-medium">
+                      This shop is currently paused due to pending shopkeeper settlement. You can browse shop details & info.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {/* Selected Shop Header */}
               <View className="bg-white border-b border-warm-200 p-3 flex-row items-center gap-3">
                 <Image source={{ uri: shopImage(selectedShop) }} className="w-12 h-12 rounded-xl bg-warm-100" resizeMode="cover" />
                 <View className="flex-1">
-                  <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={1}>
-                    {selectedShop.name}
-                  </Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={1}>
+                      {selectedShop.name}
+                    </Text>
+                    {((selectedShop as any).settlementBlocked || (selectedShop as any).active === false) && (
+                      <View className="bg-red-100 px-1.5 py-0.5 rounded border border-red-300">
+                        <Text className="text-[9px] font-black text-red-700">TEMPORARILY OFF</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text className="text-xs text-warm-600" numberOfLines={1}>
                     {selectedShop.category || 'General Store'} • {selectedShop.deliveryTime || 25} mins
                   </Text>
@@ -423,30 +458,57 @@ export const NearbyShopsScreen = () => {
                   <Text className="text-xs text-warm-600 text-center mt-1">This shop hasn't added any products to this category yet.</Text>
                 </View>
               ) : (
-                <View className="p-3 flex-row flex-wrap justify-between gap-y-3">
-                  {filteredProducts.map(product => (
-                    <Pressable
+                <View className="p-3 flex-row flex-wrap justify-between gap-y-4">
+                  {filteredProducts.map((product, index) => (
+                    <Reanimated.View
                       key={product.id}
-                      style={{ width: '48%' }}
-                      className="bg-white border border-warm-200 rounded-xl p-2.5 justify-between"
-                      onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product: { ...product, shopName: selectedShop?.name } })}
+                      entering={FadeInDown.delay((index % 6) * 100).duration(600).springify().damping(12)}
+                      style={{ width: productCardWidth as any, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 4 }}
+                      className="bg-white rounded-[24px] p-2.5 justify-between border border-gray-50/50"
                     >
-                      <View className="w-full h-24 items-center justify-center bg-warm-50 rounded-lg mb-2">
-                        <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
-                      </View>
-                      <Text className="text-xs font-bold text-ruvo-ink leading-tight" numberOfLines={2}>{product.name}</Text>
-                      <Text className="text-[10px] text-warm-500 mt-0.5">{product.variant}</Text>
-                      <View className="flex-row items-center justify-between mt-2 pt-2 border-t border-warm-100">
-                        <Text className="text-sm font-black text-ruvo-ink">₹{product.price.toFixed(0)}</Text>
-                        <Pressable
-                          onPress={() => handleAddToCart(product as any)}
-                          className="bg-ruvo-yellow rounded-md px-2 py-1 flex-row items-center"
-                        >
-                          <Ionicons name="add" size={14} color="#111827" />
-                          <Text className="text-xs font-black text-ruvo-ink ml-0.5">Add</Text>
-                        </Pressable>
-                      </View>
-                    </Pressable>
+                      <Pressable 
+                        onPress={() => (navigation.navigate as any)(ROUTES.PRODUCT_DETAILS, { product: { ...product, shopName: selectedShop?.name } })}
+                      >
+                        {isSmallDevice ? (
+                           <View className="flex-row items-center gap-3">
+                             <View className="w-20 h-20 items-center justify-center bg-gray-50/50 rounded-[18px] overflow-hidden border border-gray-50">
+                               <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
+                             </View>
+                             <View className="flex-1 justify-center">
+                               <Text className="text-sm font-black text-ruvo-ink leading-tight flex-wrap" numberOfLines={2}>{product.name}</Text>
+                               <Text className="text-[10px] text-warm-500 font-medium mt-1">{product.variant}</Text>
+                               <View className="flex-row items-end justify-between mt-2">
+                                 <Text className="text-base font-black text-ruvo-ink">₹{product.price.toFixed(0)}</Text>
+                                 <Pressable
+                                   onPress={() => handleAddToCart(product as any)}
+                                   className="bg-ruvo-yellow rounded-xl px-3 h-9 items-center justify-center flex-row"
+                                 >
+                                   <Text className="text-xs font-black text-ruvo-ink">Add</Text>
+                                 </Pressable>
+                               </View>
+                             </View>
+                           </View>
+                        ) : (
+                           <View>
+                             <View className="w-full h-24 items-center justify-center bg-gray-50/50 rounded-[18px] mb-2 overflow-hidden border border-gray-50">
+                               <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
+                             </View>
+                             <Text className="text-sm font-black text-ruvo-ink leading-tight" numberOfLines={2}>{product.name}</Text>
+                             <Text className="text-[10px] text-warm-500 font-medium mt-1">{product.variant}</Text>
+                             <View className="flex-row items-end justify-between mt-3">
+                               <Text className="text-base font-black text-ruvo-ink">₹{product.price.toFixed(0)}</Text>
+                               <Pressable
+                                 onPress={() => handleAddToCart(product as any)}
+                                 className="bg-ruvo-yellow rounded-xl w-10 h-10 items-center justify-center flex-row"
+                                 style={{ elevation: 2, shadowColor: '#F5B700', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 }}
+                               >
+                                 <Ionicons name="add" size={20} color="#1A1A1A" />
+                               </Pressable>
+                             </View>
+                           </View>
+                        )}
+                      </Pressable>
+                    </Reanimated.View>
                   ))}
                 </View>
               )}
@@ -462,24 +524,27 @@ export const NearbyShopsScreen = () => {
 
       {cartItems.length > 0 && (
         <Animated.View
-          style={{ transform: [{ scale: barScaleAnim }] }}
-          className="absolute bottom-0 left-0 right-0 bg-white border-t border-warm-200 px-4 py-3 flex-row items-center justify-between shadow-lg"
+          style={{ transform: [{ scale: barScaleAnim }], shadowColor: '#000', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 20 }}
+          className="absolute bottom-0 left-0 right-0 overflow-hidden rounded-t-[40px] border-t border-white/80"
         >
-          <Pressable className="flex-row items-center gap-3" onPress={() => (navigation.navigate as any)(ROUTES.CART)}>
-            <View className="w-10 h-10 rounded-xl bg-ruvo-yellow-soft items-center justify-center">
-              <Ionicons name="bag-handle" size={20} color="#B77900" />
-            </View>
-            <View>
-              <Text className="font-black text-ruvo-ink">{cartItems.length} Items</Text>
-              <Text className="text-xs font-semibold text-warm-600">View Cart</Text>
-            </View>
-          </Pressable>
-          <Pressable
-            onPress={() => (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true })}
-            className="bg-ruvo-yellow rounded-xl px-4 h-12 items-center justify-center"
-          >
-            <Text className="font-black text-ruvo-ink">Checkout Rs {cartTotal}</Text>
-          </Pressable>
+          <BlurView intensity={90} tint="light" className="px-5 pt-4 pb-safe flex-row items-center justify-between bg-white/70">
+            <Pressable className="flex-row items-center gap-3" onPress={() => (navigation.navigate as any)(ROUTES.CART)}>
+              <View className="w-12 h-12 rounded-xl bg-ruvo-yellow items-center justify-center shadow-sm">
+                <Ionicons name="cart" size={24} color="#1A1A1A" />
+              </View>
+              <View>
+                <Text className="text-[10px] font-black uppercase text-warm-500 tracking-wider">Shopping Cart</Text>
+                <Text className="font-black text-lg text-ruvo-ink">{cartItems.length} Items</Text>
+              </View>
+            </Pressable>
+            <Pressable
+              onPress={() => (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true })}
+              className="bg-ruvo-ink rounded-2xl px-5 h-12 items-center justify-center flex-row gap-2"
+            >
+              <Text className="font-black text-white">₹{cartTotal}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#FFF" />
+            </Pressable>
+          </BlurView>
         </Animated.View>
       )}
     </View>

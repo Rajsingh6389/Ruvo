@@ -28,6 +28,8 @@ import { CategoryDropdown } from '../../components/CategoryDropdown';
 import { uploadProduct, addProduct } from '../../services/productService';
 import { Button } from '../../components/ui/Button';
 
+import { useToast } from '../../context/ToastContext';
+
 const MAX_IMAGES = 8;
 
 interface ProductImage { uri: string; type: string; fileName: string; }
@@ -40,6 +42,7 @@ export const AddProductScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { token } = useAuth();
+  const { showToast } = useToast();
   const shopId: number = route.params?.shopId;
 
   const [name, setName] = useState('');
@@ -68,7 +71,7 @@ export const AddProductScreen = () => {
   const pickImages = async () => {
     const remaining = MAX_IMAGES - images.length;
     if (remaining <= 0) {
-      Alert.alert('Limit reached', `You can add up to ${MAX_IMAGES} product photos.`);
+      showToast(`You can add up to ${MAX_IMAGES} product photos.`, 'warning');
       return;
     }
     try {
@@ -86,7 +89,7 @@ export const AddProductScreen = () => {
       }));
       setImages(prev => [...prev, ...newImgs].slice(0, MAX_IMAGES));
     } catch {
-      Alert.alert('Image error', 'Could not select images.');
+      showToast('Could not select images.', 'error');
     }
   };
 
@@ -109,7 +112,7 @@ export const AddProductScreen = () => {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    if (!token) { Alert.alert('Error', 'You are not logged in'); return; }
+    if (!token) { showToast('You are not logged in', 'error'); return; }
     setLoading(true);
     try {
       const ap = parseFloat(actualPrice);
@@ -138,9 +141,10 @@ export const AddProductScreen = () => {
           stockQuantity: sq, unit: unit.trim() || undefined, isAvailable,
         }, token);
       }
-      Alert.alert('Success', 'Product added successfully!', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      showToast('Product added successfully!', 'success');
+      navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to add product');
+      showToast(err?.message || 'Failed to add product', 'error');
     } finally {
       setLoading(false);
     }

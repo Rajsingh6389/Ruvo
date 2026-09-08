@@ -42,8 +42,11 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 
+import { useToast } from '../context/ToastContext';
+
 export const DashboardScreen = () => {
   const { user, token, refreshProfile } = useAuth();
+  const { showToast } = useToast();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -93,7 +96,7 @@ export const DashboardScreen = () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Location Permission Required', 'Please grant location permissions to go online and receive delivery runs.');
+        showToast('Please grant location permissions to go online', 'warning');
         return null;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -105,7 +108,7 @@ export const DashboardScreen = () => {
       setCurrentLocationName(name);
       return { lat, lng, name };
     } catch {
-      Alert.alert('Location Error', 'Could not obtain your current location. Please turn on GPS.');
+      showToast('Could not obtain current location. Turn on GPS.', 'warning');
       return null;
     }
   };
@@ -119,7 +122,8 @@ export const DashboardScreen = () => {
       ]);
       setEarnings(income);
       if (Array.isArray(deliveries)) {
-        setActive(deliveries.length > 0 ? deliveries[0] : null);
+        const activeOnly = deliveries.filter(d => ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(d.status));
+        setActive(activeOnly.length > 0 ? activeOnly[0] : null);
       }
       await refreshProfile();
     } catch {} finally {
@@ -200,15 +204,18 @@ export const DashboardScreen = () => {
       await partnerService.acceptRequest(token, requestId);
       setIncomingRequest(null);
       const activeDeliveries = await partnerService.activeDeliveries(token);
-      if (Array.isArray(activeDeliveries) && activeDeliveries.length > 0) {
-        const currentActive = activeDeliveries[0];
-        setActive(currentActive);
-        navigation.navigate('ActiveDelivery', { deliveryId: currentActive.id });
-      } else {
-        await load();
+      if (Array.isArray(activeDeliveries)) {
+        const activeOnly = activeDeliveries.filter(d => ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(d.status));
+        if (activeOnly.length > 0) {
+          const currentActive = activeOnly[0];
+          setActive(currentActive);
+          navigation.navigate('ActiveDelivery', { deliveryId: currentActive.id });
+          return;
+        }
       }
+      await load();
     } catch (e: any) {
-      Alert.alert('Request Expired', e.message || 'This request is no longer available.');
+      showToast(e.message || 'This request is no longer available.', 'error');
       setIncomingRequest(null);
     } finally {
       setActionBusy(false);
@@ -270,10 +277,7 @@ export const DashboardScreen = () => {
   const changeAvailability = async (value: boolean) => {
     if (!token) return;
     if (active && !value) {
-      Alert.alert(
-        'Active Delivery in Progress',
-        'Finish or resolve your active delivery before going offline.'
-      );
+      showToast('Finish or resolve active delivery before going offline', 'warning');
       return;
     }
 
@@ -296,20 +300,21 @@ export const DashboardScreen = () => {
         locData?.name
       );
       setOnline(value);
+      showToast(value ? 'You are now ONLINE' : 'You are now OFFLINE', value ? 'success' : 'info');
     } catch (e: any) {
       let message = 'Availability could not be updated.';
       if (e instanceof ApiError) {
         if (e.status === 401) {
-          Alert.alert('Session Expired', 'Your session has expired. Please log out and log back in.');
+          showToast('Session expired. Please log in again.', 'error');
           return;
         }
         if (e.status === 403) {
-          Alert.alert('Permission Denied', 'Your account does not have partner access.');
+          showToast('Account does not have partner access.', 'error');
           return;
         }
         message = e.message;
       }
-      Alert.alert('Status Change Failed', message);
+      showToast(message, 'error');
     } finally {
       setChanging(false);
     }
@@ -619,25 +624,51 @@ export const DashboardScreen = () => {
               </View>
             </View>
 
-            {/* Order Details */}
-            <Text className="text-2xl font-extrabold text-ruvo-ink mb-md">
-              Order #{incomingRequest?.orderId}
-            </Text>
+            {/* Order Route */}
+            <View className="mb-lg">
+              {incomingRequest?.shopName && (
+                <View className="flex-row mb-sm">
+                  <View className="w-10 h-10 bg-orange-100 rounded-full items-center justify-center mr-md">
+                    <Ionicons name="storefront" size={20} color="#EA580C" />
+                  </View>
+                  <View className="flex-1 justify-center">
+                    <Text className="text-xs font-extrabold text-orange-600 uppercase tracking-widest mb-xs">
+                      PICKUP
+                    </Text>
+                    <Text className="text-base font-extrabold text-ruvo-ink">
+                      {incomingRequest.shopName}
+                    </Text>
+                    {incomingRequest.shopAddress && (
+                      <Text className="text-sm text-warm-600 mt-xs leading-5">
+                        {incomingRequest.shopAddress}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {incomingRequest?.deliveryAddress && (
+                <View className="flex-row">
+                  <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-md">
+                    <Ionicons name="location" size={20} color="#3B82F6" />
+                  </View>
+                  <View className="flex-1 justify-center">
+                    <Text className="text-xs font-extrabold text-blue-600 uppercase tracking-widest mb-xs">
+                      DROP-OFF
+                    </Text>
+                    <Text className="text-sm font-semibold text-ruvo-ink mt-xs leading-5" numberOfLines={3}>
+                      {incomingRequest.deliveryAddress}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
 
             {incomingRequest?.distanceKm != null && (
-              <View className="flex-row items-center gap-md bg-warm-100 rounded-lg p-md mb-sm">
+              <View className="flex-row items-center justify-center gap-md bg-warm-100 rounded-lg p-md mb-md">
                 <Ionicons name="navigate" size={18} color="#16A34A" />
-                <Text className="flex-1 text-sm font-semibold text-ruvo-ink">
-                  Distance: {(Math.round((incomingRequest.distanceKm ?? 0) * 10) / 10).toFixed(1)} km to pickup
-                </Text>
-              </View>
-            )}
-
-            {incomingRequest?.deliveryAddress && (
-              <View className="flex-row items-center gap-md bg-warm-100 rounded-lg p-md mb-sm">
-                <Ionicons name="location" size={18} color="#3B82F6" />
-                <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={2}>
-                  Drop: {incomingRequest.deliveryAddress}
+                <Text className="text-sm font-extrabold text-ruvo-ink uppercase tracking-wider">
+                  {(Math.round((incomingRequest.distanceKm ?? 0) * 10) / 10).toFixed(1)} KM TOTAL DISTANCE
                 </Text>
               </View>
             )}
@@ -663,25 +694,30 @@ export const DashboardScreen = () => {
             )}
 
             {/* Actions */}
-            <View className="flex-row gap-md">
-              <Button
-                variant="outline"
+            <View className="flex-row gap-lg mt-sm">
+              <TouchableOpacity
                 onPress={() => incomingRequest && handleRejectRequest(incomingRequest.requestId)}
                 disabled={actionBusy}
-                className="flex-1"
+                className="flex-[0.8] bg-red-50 border-2 border-red-200 rounded-xl py-lg items-center justify-center"
               >
-                Decline
-              </Button>
+                <Text className="font-extrabold text-red-600 text-base">DECLINE</Text>
+              </TouchableOpacity>
 
-              <Button
-                variant="primary"
+              <TouchableOpacity
                 onPress={() => incomingRequest && handleAcceptRequest(incomingRequest.requestId)}
-                loading={actionBusy}
-                icon="checkmark-circle"
-                className="flex-[2]"
+                disabled={actionBusy}
+                className="flex-1 bg-green-500 rounded-xl py-lg items-center justify-center flex-row gap-sm shadow-xl shadow-green-500/20"
+                style={{ shadowColor: '#22c55e', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
               >
-                ACCEPT RUN
-              </Button>
+                {actionBusy ? (
+                  <ActivityIndicator color="#FFF" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+                    <Text className="font-black text-white text-lg tracking-widest">ACCEPT</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </Animated.View>
         </View>

@@ -144,10 +144,18 @@ export default function OrderHistoryScreen() {
           </View>
         </View>
 
-        {/* Date */}
-        <Text style={[typography.caption, { color: colors.textHint, marginBottom: 12 }]}>
-          {formatDate(item.createdAt)}
-        </Text>
+        {/* Shop Name & Date */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="storefront-outline" size={14} color={colors.primary} />
+            <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
+              {(item as any).shopName || 'RuVo Store'}
+            </Text>
+          </View>
+          <Text style={[typography.caption, { color: colors.textHint }]}>
+            {formatDate(item.createdAt)}
+          </Text>
+        </View>
 
         {/* Product row */}
         <View style={[styles.productRow, { backgroundColor: colors.surfaceSunken, borderRadius: radius.image }]}>
@@ -159,9 +167,12 @@ export default function OrderHistoryScreen() {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            <Text style={[typography.bodyStrong, { color: colors.textPrimary }]} numberOfLines={1}>{item.productName}</Text>
+            <Text style={[typography.bodyStrong, { color: colors.textPrimary }]} numberOfLines={1}>
+              {item.productName}
+              {item.items && item.items.length > 1 ? ` (+${item.items.length - 1} more items)` : ''}
+            </Text>
             <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
-              Qty: {item.quantity}
+              {item.items && item.items.length > 0 ? `${item.items.length} items` : `Qty: ${item.quantity}`}
             </Text>
           </View>
           <Text style={[typography.headingS, { color: colors.textPrimary }]}>₹{item.subtotal || item.totalAmount}</Text>

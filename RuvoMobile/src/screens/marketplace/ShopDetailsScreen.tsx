@@ -8,7 +8,7 @@ import {
   TextInput,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getShopById, Shop } from '../../services/shopService';
@@ -42,6 +42,7 @@ const formatTime = (time?: string) => {
 export const ShopDetailsScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { addToCart, getQuantity, updateQuantity } = useCart();
   const shopId = route.params?.shopId;
 
@@ -122,21 +123,21 @@ export const ShopDetailsScreen = () => {
   // LOADING STATE
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg">
+      <View className="flex-1 bg-ruvo-bg">
         <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
         <LoadingState
           title="Opening shop..."
           subtitle="Getting the latest products for you"
           icon="storefront-outline"
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ERROR STATE
   if (error) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg">
+      <View className="flex-1 bg-ruvo-bg">
         <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
         <ErrorState
           title="Unable to load shop"
@@ -146,16 +147,16 @@ export const ShopDetailsScreen = () => {
             setError(null);
           }}
         />
-      </SafeAreaView>
+      </View>
     );
   }
 
   // SHOP NOT FOUND
   if (!shop) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg">
+      <View className="flex-1 bg-ruvo-bg">
         <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
-        <View className="flex-1 justify-center items-center px-6">
+        <View className="flex-1 justify-center items-center px-6" style={{ paddingTop: insets.top }}>
           <View className="mb-4">
             <Ionicons name="storefront-outline" size={48} color="#9CA3AF" />
           </View>
@@ -170,7 +171,7 @@ export const ShopDetailsScreen = () => {
             <Text className="text-white font-semibold ml-2">Go Back</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -178,8 +179,8 @@ export const ShopDetailsScreen = () => {
   const closeTime = formatTime(shop.closingTime as unknown as string);
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg">
-      <StatusBar barStyle="light-content" />
+    <View className="flex-1 bg-ruvo-bg">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
 
       <FlatList
         data={visibleProducts}
@@ -254,11 +255,11 @@ export const ShopDetailsScreen = () => {
               {formatImageUrl(shop.bannerUrl) ? (
                 <Image
                   source={{ uri: formatImageUrl(shop.bannerUrl)! }}
-                  className="w-full h-48"
+                  className="w-full h-56"
                   resizeMode="cover"
                 />
               ) : (
-                <View className="w-full h-48 bg-ruvo-yellow-soft flex items-center justify-center">
+                <View className="w-full h-56 bg-ruvo-yellow-soft flex items-center justify-center">
                   <Ionicons
                     name="storefront-outline"
                     size={64}
@@ -271,25 +272,28 @@ export const ShopDetailsScreen = () => {
               <View className="absolute inset-0 bg-black opacity-20" />
 
               {/* TOP BAR WITH BACK BUTTON */}
-              <View className="absolute top-0 left-0 right-0 flex-row items-center justify-between px-4 pt-2">
+              <View 
+                className="absolute left-0 right-0 flex-row items-center justify-between px-4"
+                style={{ top: insets.top > 0 ? insets.top + 8 : 16 }}
+              >
                 <Pressable
                   onPress={() => navigation.goBack()}
-                  className="bg-black bg-opacity-40 rounded-full p-2"
+                  className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full items-center justify-center border border-white/20"
                 >
                   <Ionicons
-                    name="arrow-back"
-                    size={20}
+                    name="chevron-back"
+                    size={22}
                     color="#FFFFFF"
                   />
                 </Pressable>
 
-                <View className="flex-row items-center bg-black bg-opacity-40 px-3 py-1 rounded-full gap-1">
+                <View className="flex-row items-center bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 gap-1.5 shadow-sm">
                   <Ionicons
-                    name="location-outline"
-                    size={12}
-                    color="#FFFFFF"
+                    name="location"
+                    size={14}
+                    color="#F5B700"
                   />
-                  <Text className="text-white text-xs font-semibold">
+                  <Text className="text-white text-xs font-black tracking-wide">
                     LOCAL SHOP
                   </Text>
                 </View>
@@ -316,7 +320,10 @@ export const ShopDetailsScreen = () => {
             </View>
 
             {/* SHOP INFORMATION CARD */}
-            <View className="bg-white rounded-lg p-4 mb-6 shadow-sm border border-gray-100">
+            <View 
+              className="bg-white rounded-[24px] p-5 mb-6 mx-4 border border-gray-100"
+              style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5, marginTop: -40 }}
+            >
               <View className="mb-3">
                 <View className="flex-row items-start justify-between mb-2">
                   <View className="flex-1">
@@ -485,6 +492,6 @@ export const ShopDetailsScreen = () => {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 };
