@@ -189,46 +189,13 @@ export const MyShopsScreen = () => {
             })
           }
           variant="default"
-          className={`mb-lg overflow-hidden border-2 rounded-3xl bg-white relative ${
-            isOverdue ? 'border-red-400' : approved ? 'border-amber-400' : 'border-orange-400'
-          }`}
-          style={{
-            shadowColor: isOverdue ? '#EF4444' : approved ? '#F5B700' : '#F97316',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.4,
-            shadowRadius: 14,
-            elevation: 10,
-          }}
+          className="mb-lg overflow-hidden border border-ruvo-border rounded-2xl bg-ruvo-surface shadow-sm"
         >
-          {/* Continuous Glowing Light Beam (Chamaktihui Shine Overlay) */}
-          <RNAnimated.View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: -50,
-              bottom: -50,
-              width: 60,
-              backgroundColor: isOverdue
-                ? 'rgba(239, 68, 68, 0.25)'
-                : approved
-                ? 'rgba(255, 225, 120, 0.45)'
-                : 'rgba(249, 115, 22, 0.3)',
-              transform: [{ translateX }, { rotate: '25deg' }],
-              zIndex: 30,
-            }}
-          />
-          {/* Status Bar Indicator */}
-          <View
-            className={`absolute left-0 top-0 bottom-0 w-2 ${
-              isOverdue ? 'bg-red-600' : approved ? 'bg-ruvo-accent' : 'bg-amber-500'
-            }`}
-          />
-
-          <View className="p-md pl-md">
+          <View className="p-md">
             {/* Overdue Alert Banner if settlementBlocked */}
             {isOverdue && (
               <View className="bg-red-50 border border-red-200 rounded-xl p-sm mb-md flex-row items-center gap-xs">
-                <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                <Ionicons name="alert-circle" size={18} color="#D94A4A" />
                 <View className="flex-1">
                   <Text className="text-xs font-black text-red-900">Settlement Overdue Notice</Text>
                   <Text className="text-[10px] text-red-700 font-medium">
@@ -240,17 +207,17 @@ export const MyShopsScreen = () => {
 
             {/* Shop Info Header */}
             <View className="flex-row items-center gap-md">
-              <View className="w-16 h-16 bg-warm-100 rounded-2xl border border-warm-200 items-center justify-center overflow-hidden">
+              <View className="w-14 h-14 bg-ruvo-bg rounded-xl border border-ruvo-border items-center justify-center overflow-hidden">
                 {thumbUri ? (
                   <Image source={{ uri: thumbUri }} className="w-full h-full" resizeMode="cover" />
                 ) : (
-                  <Ionicons name="storefront" size={30} color="#F5B700" />
+                  <Ionicons name="storefront" size={26} color="#F4B400" />
                 )}
               </View>
 
               <View className="flex-1 gap-1">
                 <View className="flex-row items-center justify-between">
-                  <Text className="flex-1 text-lg font-black text-ruvo-ink mr-xs" numberOfLines={2}>
+                  <Text className="flex-1 text-base font-extrabold text-ruvo-ink mr-xs" numberOfLines={1}>
                     {item.name}
                   </Text>
                   <View className="flex-row items-center gap-xs">
@@ -266,8 +233,8 @@ export const MyShopsScreen = () => {
 
                 {(shopData.category || (item as any).categoryName) && (
                   <View className="flex-row items-center gap-xs">
-                    <Ionicons name="pricetag" size={13} color="#D99B00" />
-                    <Text className="text-xs font-black text-amber-700" numberOfLines={1}>
+                    <Ionicons name="pricetag" size={12} color="#F4B400" />
+                    <Text className="text-xs font-semibold text-warm-600" numberOfLines={1}>
                       {shopData.category || (item as any).categoryName}
                     </Text>
                   </View>
@@ -275,39 +242,37 @@ export const MyShopsScreen = () => {
 
                 {(shopData.address || (item as any).fullAddress) && (
                   <View className="flex-row items-start gap-xs mt-0.5">
-                    <Ionicons name="location" size={13} color="#E11D48" style={{ marginTop: 2 }} />
-                    <Text className="flex-1 text-xs font-semibold text-warm-700 leading-4" numberOfLines={2}>
+                    <Ionicons name="location" size={12} color="#77736B" style={{ marginTop: 2 }} />
+                    <Text className="flex-1 text-xs text-warm-600 leading-4" numberOfLines={1}>
                       {shopData.address || (item as any).fullAddress}
                     </Text>
                   </View>
                 )}
               </View>
 
-              <Ionicons name="chevron-forward" size={20} color="#D4C8B8" />
+              <Ionicons name="chevron-forward" size={18} color="#77736B" />
             </View>
 
             {/* Premium Action Grid Menu */}
-            <View className="mt-md pt-md border-t border-warm-200">
-              <View className="flex-row items-center justify-between gap-1">
+            <View className="mt-md pt-md border-t border-ruvo-border">
+              <View className="flex-row items-center justify-between gap-1.5">
                 {/* Products Tile */}
                 <TouchableOpacity
                   activeOpacity={0.75}
-                  className="flex-1 items-center bg-amber-50 py-2 px-0.5 rounded-xl border border-amber-200 shadow-sm"
-                  style={{ shadowColor: '#D99B00', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
                   onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
                 >
-                  <View className="w-8 h-8 rounded-lg bg-amber-500 items-center justify-center mb-1 shadow-sm">
-                    <Ionicons name="cube" size={16} color="#FFFFFF" />
+                  <View className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 items-center justify-center mb-1">
+                    <Ionicons name="cube" size={15} color="#F4B400" />
                   </View>
-                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Products</Text>
-                  <Text className="text-[9px] font-extrabold text-amber-700 mt-0.5">{productsList.length} Items</Text>
+                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Products</Text>
+                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">{productsList.length} Items</Text>
                 </TouchableOpacity>
 
                 {/* Orders Tile */}
                 <TouchableOpacity
                   activeOpacity={0.75}
-                  className="flex-1 items-center bg-blue-50 py-2 px-0.5 rounded-xl border border-blue-200 shadow-sm"
-                  style={{ shadowColor: '#2563EB', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
                   onPress={() =>
                     navigation.navigate(ROUTES.SHOP_ORDERS, {
                       shopId: item.id,
@@ -315,63 +280,60 @@ export const MyShopsScreen = () => {
                     })
                   }
                 >
-                  <View className="w-8 h-8 rounded-lg bg-blue-600 items-center justify-center mb-1 shadow-sm">
-                    <Ionicons name="receipt" size={16} color="#FFFFFF" />
+                  <View className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 items-center justify-center mb-1">
+                    <Ionicons name="receipt" size={15} color="#3478C8" />
                   </View>
-                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Orders</Text>
-                  <Text className="text-[9px] font-extrabold text-blue-600 mt-0.5">Manage</Text>
+                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Orders</Text>
+                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Manage</Text>
                 </TouchableOpacity>
 
                 {/* Add Item Tile */}
                 <TouchableOpacity
                   activeOpacity={0.75}
-                  className="flex-1 items-center bg-emerald-50 py-2 px-0.5 rounded-xl border border-emerald-200 shadow-sm"
-                  style={{ shadowColor: '#059669', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
                   onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
                 >
-                  <View className="w-8 h-8 rounded-lg bg-emerald-600 items-center justify-center mb-1 shadow-sm">
-                    <Ionicons name="add" size={18} color="#FFFFFF" />
+                  <View className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 items-center justify-center mb-1">
+                    <Ionicons name="add" size={16} color="#18A957" />
                   </View>
-                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Add Item</Text>
-                  <Text className="text-[9px] font-extrabold text-emerald-700 mt-0.5">New</Text>
+                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Add Item</Text>
+                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">New</Text>
                 </TouchableOpacity>
 
                 {/* Edit Tile */}
                 <TouchableOpacity
                   activeOpacity={0.75}
-                  className="flex-1 items-center bg-purple-50 py-2 px-0.5 rounded-xl border border-purple-200 shadow-sm"
-                  style={{ shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
                   onPress={() => navigation.navigate('EditShop', { shop: item })}
                 >
-                  <View className="w-8 h-8 rounded-lg bg-purple-600 items-center justify-center mb-1 shadow-sm">
-                    <Ionicons name="create" size={15} color="#FFFFFF" />
+                  <View className="w-8 h-8 rounded-lg bg-ruvo-surface border border-ruvo-border items-center justify-center mb-1">
+                    <Ionicons name="create" size={15} color="#171A1F" />
                   </View>
-                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Edit</Text>
-                  <Text className="text-[9px] font-extrabold text-purple-700 mt-0.5">Info</Text>
+                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Edit</Text>
+                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Info</Text>
                 </TouchableOpacity>
 
                 {/* Dues Tile */}
                 <TouchableOpacity
                   activeOpacity={0.75}
-                  className="flex-1 items-center bg-rose-50 py-2 px-0.5 rounded-xl border border-rose-200 shadow-sm"
-                  style={{ shadowColor: '#E11D48', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 }}
+                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
                   onPress={() => navigation.navigate('ShopSettlement', { shopId: item.id })}
                 >
-                  <View className="w-8 h-8 rounded-lg bg-rose-600 items-center justify-center mb-1 shadow-sm">
-                    <Ionicons name="wallet" size={15} color="#FFFFFF" />
+                  <View className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 items-center justify-center mb-1">
+                    <Ionicons name="wallet" size={15} color="#D94A4A" />
                   </View>
-                  <Text className="text-[10px] font-black text-ruvo-ink text-center" numberOfLines={1}>Dues</Text>
-                  <Text className="text-[9px] font-extrabold text-rose-700 mt-0.5">Pay</Text>
+                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Dues</Text>
+                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Pay</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Recent Products Showcase */}
-            <View className="mt-md pt-md border-t border-warm-200">
+            <View className="mt-md pt-md border-t border-ruvo-border">
               <View className="flex-row items-center justify-between mb-sm">
                 <View className="flex-row items-center gap-xs">
-                  <Ionicons name="cube" size={16} color="#231C10" />
-                  <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider">
+                  <Ionicons name="cube" size={15} color="#171A1F" />
+                  <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider">
                     Recent Inventory
                   </Text>
                 </View>
@@ -380,14 +342,14 @@ export const MyShopsScreen = () => {
                     onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
                     className="flex-row items-center gap-xs"
                   >
-                    <Text className="text-xs font-bold text-ruvo-yellow-dark">Browse All</Text>
-                    <Ionicons name="chevron-forward" size={12} color="#D99B00" />
+                    <Text className="text-xs font-bold text-ruvo-ink">Browse All</Text>
+                    <Ionicons name="chevron-forward" size={12} color="#171A1F" />
                   </TouchableOpacity>
                 )}
               </View>
 
               {recentProducts.length === 0 ? (
-                <View className="bg-warm-50 p-sm rounded-xl items-center justify-center border border-dashed border-warm-300">
+                <View className="bg-ruvo-bg p-sm rounded-xl items-center justify-center border border-dashed border-ruvo-border">
                   <Text className="text-xs font-medium text-warm-600">No inventory products added yet</Text>
                 </View>
               ) : (
@@ -404,17 +366,17 @@ export const MyShopsScreen = () => {
                     return (
                       <View
                         key={product.id}
-                        className="bg-warm-50 border border-warm-200 rounded-xl p-2.5 flex-row items-center gap-2.5"
+                        className="bg-ruvo-bg border border-ruvo-border rounded-xl p-2.5 flex-row items-center gap-2.5"
                       >
-                        <View className="w-12 h-12 rounded-lg bg-white border border-warm-200 items-center justify-center overflow-hidden relative">
+                        <View className="w-12 h-12 rounded-lg bg-white border border-ruvo-border items-center justify-center overflow-hidden relative">
                           {pImg ? (
                             <Image source={{ uri: pImg }} className="w-full h-full" resizeMode="contain" />
                           ) : (
-                            <Ionicons name="image-outline" size={20} color="#A79E92" />
+                            <Ionicons name="image-outline" size={20} color="#77736B" />
                           )}
                           {discount > 0 && (
-                            <View className="absolute top-0 left-0 bg-ruvo-accent px-1 rounded-br-sm">
-                              <Text className="text-[8px] font-black text-white">{discount}%</Text>
+                            <View className="absolute top-0 left-0 bg-ruvo-primary px-1 rounded-br-sm">
+                              <Text className="text-[8px] font-black text-ruvo-ink">{discount}%</Text>
                             </View>
                           )}
                         </View>
@@ -424,28 +386,18 @@ export const MyShopsScreen = () => {
                             <Text className="text-xs font-extrabold text-ruvo-ink flex-1 mr-1" numberOfLines={1}>
                               {product.name}
                             </Text>
-                            <View
-                              className={`px-1.5 py-0.5 rounded-full ${
-                                isAvailable ? 'bg-green-100' : 'bg-red-100'
-                              }`}
-                            >
-                              <Text
-                                className={`text-[9px] font-black ${
-                                  isAvailable ? 'text-green-700' : 'text-red-700'
-                                }`}
-                              >
-                                {isAvailable ? 'Active' : 'Stock Out'}
-                              </Text>
-                            </View>
+                            <Badge variant={isAvailable ? 'success' : 'error'} size="sm">
+                              {isAvailable ? 'Active' : 'Stock Out'}
+                            </Badge>
                           </View>
 
                           <View className="flex-row items-baseline gap-1 mt-0.5">
-                            <Text className="text-xs font-black text-ruvo-ink">₹{product.sellingPrice}</Text>
+                            <Text className="text-xs font-extrabold text-ruvo-ink">₹{product.sellingPrice}</Text>
                             {product.actualPrice > product.sellingPrice && (
                               <Text className="text-[10px] text-warm-500 line-through">₹{product.actualPrice}</Text>
                             )}
                             {product.unit && (
-                              <Text className="text-[9px] text-warm-500 font-semibold">/ {product.unit}</Text>
+                              <Text className="text-[9px] text-warm-600 font-medium">/ {product.unit}</Text>
                             )}
                           </View>
 
@@ -462,9 +414,9 @@ export const MyShopsScreen = () => {
                               shopId: item.id,
                             })
                           }
-                          className="bg-white p-2 rounded-lg border border-warm-300 items-center justify-center"
+                          className="bg-ruvo-surface p-2 rounded-lg border border-ruvo-border items-center justify-center"
                         >
-                          <Ionicons name="create-outline" size={16} color="#231C10" />
+                          <Ionicons name="create-outline" size={15} color="#171A1F" />
                         </TouchableOpacity>
                       </View>
                     );
@@ -511,28 +463,28 @@ export const MyShopsScreen = () => {
                 elevation: 2,
               }}
             >
-              <Ionicons name="storefront" size={22} color="#F5B700" />
+              <Ionicons name="storefront" size={20} color="#171A1F" />
             </View>
             <View className="flex-1">
-              <Text className="text-2xl font-black text-ruvo-ink">Manage My Shops</Text>
+              <Text className="text-xl font-extrabold text-ruvo-ink">Manage My Shops</Text>
               <Text className="text-xs text-warm-600 font-medium">Control inventory, orders & shop status</Text>
             </View>
           </View>
 
-          <View className="flex-row gap-xs">
+          <View className="flex-row gap-xs items-center">
             <TouchableOpacity
               onPress={() => navigation.navigate(ROUTES.REGISTER_SHOP)}
-              className="bg-ruvo-yellow px-3 py-2 rounded-xl flex-row items-center gap-xs shadow-xs"
+              className="bg-ruvo-primary px-3 py-2 rounded-xl flex-row items-center gap-xs shadow-xs"
             >
-              <Ionicons name="add" size={16} color="#111827" />
-              <Text className="text-xs font-black text-ruvo-ink">Add Shop</Text>
+              <Ionicons name="add" size={16} color="#171A1F" />
+              <Text className="text-xs font-bold text-ruvo-ink">Add Shop</Text>
             </TouchableOpacity>
             <IconButton icon="refresh" onPress={() => loadShops(true)} size="md" />
             <TouchableOpacity
               onPress={() => Alert.alert('Sign Out', 'Are you sure you want to log out?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: logout }])}
               className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 items-center justify-center flex-row shadow-xs"
             >
-              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+              <Ionicons name="log-out-outline" size={18} color="#D94A4A" />
             </TouchableOpacity>
           </View>
         </View>
@@ -553,23 +505,23 @@ export const MyShopsScreen = () => {
         className={`flex-row gap-xs px-lg mb-md ${isTablet ? 'justify-start' : ''}`}
       >
         {[
-          { key: 'ALL', label: 'All Shops', count: shops.length, icon: 'storefront-outline', color: 'bg-ruvo-yellow-soft' },
-          { key: 'APPROVED', label: 'Approved', count: approvedCount, icon: 'checkmark-circle-outline', color: 'bg-ruvo-accent-soft' },
-          { key: 'PENDING', label: 'Pending', count: pendingCount, icon: 'time-outline', color: 'bg-amber-100' },
-          { key: 'OVERDUE', label: 'Overdue', count: overdueCount, icon: 'alert-circle-outline', color: 'bg-red-100' },
+          { key: 'ALL', label: 'All Shops', count: shops.length, icon: 'storefront-outline', color: 'bg-amber-50 border-amber-200', iconColor: '#F4B400' },
+          { key: 'APPROVED', label: 'Approved', count: approvedCount, icon: 'checkmark-circle-outline', color: 'bg-emerald-50 border-emerald-200', iconColor: '#18A957' },
+          { key: 'PENDING', label: 'Pending', count: pendingCount, icon: 'time-outline', color: 'bg-amber-50 border-amber-200', iconColor: '#E99A16' },
+          { key: 'OVERDUE', label: 'Overdue', count: overdueCount, icon: 'alert-circle-outline', color: 'bg-red-50 border-red-200', iconColor: '#D94A4A' },
         ].map(stat => (
           <TouchableOpacity
             key={stat.key}
-            className={`flex-1 ${isTablet ? 'max-w-xs' : ''} bg-ruvo-surface rounded-2xl p-sm border ${
-              activeFilter === stat.key ? 'border-ruvo-yellow shadow-xs' : 'border-warm-300'
+            className={`flex-1 ${isTablet ? 'max-w-xs' : ''} bg-ruvo-surface rounded-2xl p-sm border shadow-xs ${
+              activeFilter === stat.key ? 'border-ruvo-primary' : 'border-ruvo-border'
             }`}
             onPress={() => setActiveFilter(stat.key as any)}
           >
-            <View className={`w-7 h-7 ${stat.color} rounded-lg items-center justify-center mb-xs`}>
-              <Ionicons name={stat.icon as any} size={15} color={stat.key === 'OVERDUE' ? '#DC2626' : stat.key === 'PENDING' ? '#D97706' : stat.key === 'APPROVED' ? '#16A34A' : '#F5B700'} />
+            <View className={`w-7 h-7 ${stat.color} border rounded-lg items-center justify-center mb-xs`}>
+              <Ionicons name={stat.icon as any} size={14} color={stat.iconColor} />
             </View>
-            <Text className="text-lg font-black text-ruvo-ink">{stat.count}</Text>
-            <Text className="text-[10px] font-bold text-warm-600" numberOfLines={1}>{stat.label}</Text>
+            <Text className="text-base font-extrabold text-ruvo-ink">{stat.count}</Text>
+            <Text className="text-[10px] font-medium text-warm-600" numberOfLines={1}>{stat.label}</Text>
           </TouchableOpacity>
         ))}
       </Animated.View>
@@ -578,9 +530,9 @@ export const MyShopsScreen = () => {
       {error && (
         <Animated.View
           entering={FadeInDown.duration(300)}
-          className="mx-lg mb-md bg-red-100 rounded-lg p-md flex-row items-center gap-sm"
+          className="mx-lg mb-md bg-red-50 border border-red-200 rounded-xl p-md flex-row items-center gap-sm"
         >
-          <Ionicons name="alert-circle-outline" size={18} color="#DC2626" />
+          <Ionicons name="alert-circle-outline" size={18} color="#D94A4A" />
           <Text className="flex-1 text-sm text-red-600">{error}</Text>
         </Animated.View>
       )}
@@ -594,7 +546,8 @@ export const MyShopsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadShops(true)}
-            tintColor="#F5B700"
+            tintColor="#F4B400"
+            colors={['#F4B400']}
           />
         }
         showsVerticalScrollIndicator={false}

@@ -139,10 +139,10 @@ export const ProductCard = ({
           ) : null}
           {distanceLabel ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Ionicons name="navigate-outline" size={10} color={colors.primary || '#173F35'} />
+              <Ionicons name="navigate-outline" size={10} color={colors.primary || '#F4B400'} />
               <Text
                 numberOfLines={1}
-                style={[typography.caption, { color: colors.primary || '#173F35', fontSize: sf(10.5), fontWeight: '700' }]}
+                style={[typography.caption, { color: colors.textPrimary, fontSize: sf(10.5), fontWeight: '700' }]}
               >
                 {distanceLabel}
               </Text>
@@ -179,13 +179,13 @@ export const ProductCard = ({
                 style={[
                   styles.addButton,
                   {
-                    backgroundColor: colors.primary || '#F5B700',
+                    backgroundColor: colors.primary || '#F4B400',
                     borderRadius: radius.pill || 999,
                   },
                 ]}
               >
-                <Ionicons name="cart-outline" size={14} color="#111827" />
-                <Text style={[typography.overline, { color: '#111827', fontWeight: '800' }]}>ADD</Text>
+                <Ionicons name="cart-outline" size={14} color="#171A1F" />
+                <Text style={[typography.overline, { color: '#171A1F', fontWeight: '800' }]}>ADD</Text>
               </PressableScale>
             ) : null
           ) : (
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   offerBadgeText: {
-    color: '#173F35',
+    color: '#171A1F',
     fontWeight: '800',
     fontSize: 9.5,
     letterSpacing: 0.3,

@@ -11,37 +11,38 @@ module.exports = {
       colors: {
         // RuVo Brand Colors
         ruvo: {
-          // Yellow Accent
-          yellow: '#F5B700',
+          // Primary Gold Accent
+          yellow: '#F4B400',
           'yellow-light': '#FFC72C',
           'yellow-dark': '#D99B00',
           'yellow-deep': '#8A6400',
-          'yellow-soft': '#FFF7E3',
+          'yellow-soft': '#FFF2C2',
           
-          // Warm Ivory Background
-          'bg': '#FBF8F2',
+          // RuVo Cream Canvas Background & White Surface
+          'bg': '#FAF7F0',
           'surface': '#FFFFFF',
           
-          // Warm Ink
-          'ink': '#231C10',
+          // RuVo Ink & Deep
+          'ink': '#171A1F',
+          'deep': '#202A3A',
           
           // Accent Green
-          'accent': '#16A34A',
+          'accent': '#18A957',
           'accent-light': '#22C55E',
-          'accent-soft': '#E6F6EC',
+          'accent-soft': '#E8F8EE',
           
           // Gold
-          'gold': '#E9A900',
+          'gold': '#F4B400',
           'gold-light': '#FFD874',
-          'gold-dark': '#B07C00',
-          'gold-soft': '#FFFAEC',
-          'gold-border': '#F6E0A3',
+          'gold-dark': '#D99B00',
+          'gold-soft': '#FFF2C2',
+          'gold-border': '#E7E0D5',
           
           // Feedback
-          'error': '#DC2626',
-          'warning': '#D97706',
-          'success': '#16A34A',
-          'info': '#2563EB',
+          'error': '#D94A4A',
+          'warning': '#E99A16',
+          'success': '#18A957',
+          'info': '#3478C8',
         },
         // Extended neutrals with warm tone
         warm: {

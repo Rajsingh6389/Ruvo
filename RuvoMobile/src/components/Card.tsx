@@ -16,10 +16,10 @@ export const Card = ({ children, style, elevation = 'sm', onPress, ...props }: C
     styles.card,
     {
       backgroundColor: colors.card,
-      borderRadius: 16,
+      borderRadius: 18,
       padding: spacing.lg,
       ...shadows[elevation],
-      borderWidth: elevation === 'none' ? 1 : 0,
+      borderWidth: 1,
       borderColor: colors.border,
     },
     style,

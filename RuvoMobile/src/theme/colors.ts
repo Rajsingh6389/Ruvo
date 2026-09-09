@@ -29,59 +29,60 @@ export const Colors = {
   ai: '#B8A4FF',
 
   // ─── Brand ───────────────────────────────────────────────────────────────
-  /** RuVo yellow. Primary actions, active states, brand marks. */
-  primary: '#F5B700',
+  /** RuVo Gold. Primary actions, active states, brand marks. */
+  primary: '#F4B400',
   primaryLight: '#FFC72C',
   primaryDark: '#D99B00',
-  /** Deepest yellow — for text on a light yellow fill, where mid-yellow fails contrast. */
+  /** Deepest gold — for text on a light gold fill, where mid-gold fails contrast. */
   primaryDeep: '#8A6400',
-  /** The faintest yellow wash that still reads as branded. */
-  primarySoft: '#FFF7E3',
-  /** Warm ink. Used for text on yellow and for the darkest brand surfaces. */
-  secondary: '#231C10',
+  /** The faintest gold wash that still reads as branded. */
+  primarySoft: '#FFF2C2',
+  /** Dark RuVo Ink. Used for text on gold and for the darkest brand surfaces. */
+  secondary: '#171A1F',
+  deep: '#202A3A',
 
   // ─── Accent & verification ───────────────────────────────────────────────
-  accent: '#16A34A',
+  accent: '#18A957',
   accentLight: '#22C55E',
-  accentSoft: '#E6F6EC',
+  accentSoft: '#E8F8EE',
 
   // ─── Gold highlights ─────────────────────────────────────────────────────
-  gold: '#E9A900',
+  gold: '#F4B400',
   goldLight: '#FFD874',
-  goldDark: '#B07C00',
-  goldSoft: '#FFFAEC',
-  goldBorder: '#F6E0A3',
+  goldDark: '#D99B00',
+  goldSoft: '#FFF2C2',
+  goldBorder: '#E7E0D5',
 
-  /** Text/icon colour that sits on a `primary` fill. Warm ink, not white — white on RuVo yellow is unreadable. */
-  onPrimary: '#231C10',
+  /** Text/icon colour that sits on a `primary` fill. Dark ink. */
+  onPrimary: '#171A1F',
   onAccent: '#FFFFFF',
 
   // ─── Feedback ────────────────────────────────────────────────────────────
-  error: '#DC2626',
-  warning: '#D97706',
-  success: '#16A34A',
-  info: '#2563EB',
+  error: '#D94A4A',
+  warning: '#E99A16',
+  success: '#18A957',
+  info: '#3478C8',
 
-  // ─── Light — warm ivory ──────────────────────────────────────────────────
+  // ─── Light — RuVo Cream ──────────────────────────────────────────────────
   light: {
-    /** Page canvas. Warm ivory: the single change that sets the whole tone. */
-    background: '#FBF8F2',
+    /** Page canvas. RuVo Cream. */
+    background: '#FAF7F0',
     /** Default surface for cards and sheets. */
     surface: '#FFFFFF',
     /** Cards that need elevation. */
     card: '#FFFFFF',
 
-    border: '#EDE6D9',
-    divider: '#F3EDE2',
+    border: '#E7E0D5',
+    divider: '#F0EAE0',
 
-    placeholder: '#A79E92',
+    placeholder: '#77736B',
     disabled: '#EFEAE0',
-    disabledText: '#A79E92',
+    disabledText: '#A39D93',
 
-    /** Warm near-black. A pure #111827 reads blue against ivory. */
-    textPrimary: '#1E1A15',
-    textSecondary: '#6E6659',
-    textHint: '#9C9385',
+    /** Primary text: Deep charcoal #171717 */
+    textPrimary: '#171717',
+    textSecondary: '#77736B',
+    textHint: '#A39D93',
 
     overlay: 'rgba(35,28,16,0.42)',
 
@@ -113,12 +114,12 @@ export const Colors = {
     canvasTop: '#FFFCF6',
 
     // ── Soft status fills ─────────────────────────────────────────────────
-    primarySoftBg: '#FFF7E3',
-    accentSoft: '#E6F6EC',
-    successSoft: '#E6F6EC',
-    warningSoft: '#FDF0DA',
-    errorSoft: '#FCEAEA',
-    infoSoft: '#E8EFFC',
+    primarySoftBg: '#FFF2C2',
+    accentSoft: '#E8F8EE',
+    successSoft: '#E8F8EE',
+    warningSoft: '#FEF5E7',
+    errorSoft: '#FDECEC',
+    infoSoft: '#EBF2FA',
 
     // ── Pastel supporting tints ───────────────────────────────────────────
     // Category tiles, illustration medallions, status groupings. Muted on

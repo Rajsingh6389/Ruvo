@@ -128,18 +128,18 @@ export const HistoryScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center justify-between">
         <View className="flex-1">
           <Text className="text-xl font-extrabold text-ruvo-ink">Delivery History</Text>
           <Text className="text-xs text-warm-600 font-medium mt-xs">
-            Completed runs · Today: <Text className="text-ruvo-accent font-extrabold">+₹{totalToday.toFixed(0)}</Text>
+            Completed runs · Today: <Text className="text-emerald-700 font-extrabold">+₹{totalToday.toFixed(0)}</Text>
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => { setRefreshing(true); fetchHistory(); }}
-          className="w-10 h-10 bg-green-100 rounded-full items-center justify-center"
+          className="w-10 h-10 bg-ruvo-bg border border-ruvo-border rounded-full items-center justify-center"
         >
-          <Ionicons name="refresh" size={20} color="#16A34A" />
+          <Ionicons name="refresh" size={18} color="#171A1F" />
         </TouchableOpacity>
       </View>
 
@@ -163,7 +163,7 @@ export const HistoryScreen = () => {
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
-                <Card className="mb-sm">
+                <Card className="mb-sm bg-ruvo-surface border border-ruvo-border shadow-sm">
                   {/* Header Row */}
                   <View className="flex-row items-center justify-between mb-sm">
                     <View>
@@ -172,22 +172,22 @@ export const HistoryScreen = () => {
                       </Text>
                       <Text className="text-xs text-warm-600 font-medium mt-xs">{date}</Text>
                     </View>
-                    <Text className="text-xl font-extrabold text-ruvo-accent">
+                    <Text className="text-lg font-extrabold text-emerald-700">
                       +₹{item.deliveryFee}
                     </Text>
                   </View>
 
                   {/* Route Display */}
-                  <View className="bg-warm-100 rounded-lg p-sm mb-sm">
+                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm">
                     <View className="flex-row items-center gap-xs mb-xs">
-                      <Ionicons name="storefront-outline" size={14} color="#64748B" />
-                      <Text className="flex-1 text-xs text-warm-700 font-semibold" numberOfLines={1}>
+                      <Ionicons name="storefront-outline" size={14} color="#F4B400" />
+                      <Text className="flex-1 text-xs text-ruvo-ink font-semibold" numberOfLines={1}>
                         {item.shopName ?? item.pickupLocation?.split(',')[0]}
                       </Text>
                     </View>
                     <View className="flex-row items-center gap-xs">
-                      <Ionicons name="location-outline" size={14} color="#EF4444" />
-                      <Text className="flex-1 text-xs text-warm-700 font-semibold" numberOfLines={1}>
+                      <Ionicons name="location-outline" size={14} color="#3478C8" />
+                      <Text className="flex-1 text-xs text-ruvo-ink font-semibold" numberOfLines={1}>
                         {item.deliveryLocation}
                       </Text>
                     </View>
@@ -195,21 +195,21 @@ export const HistoryScreen = () => {
 
                   {/* COD Section */}
                   {isCod && (
-                    <View className="flex-row items-center justify-between pt-sm border-t border-warm-200">
+                    <View className="flex-row items-center justify-between pt-sm border-t border-ruvo-border">
                       <View className="flex-row items-center gap-xs">
-                        <View className="bg-orange-100 px-sm py-xs rounded-md flex-row items-center gap-xs">
-                          <Ionicons name="cash-outline" size={14} color="#D97706" />
-                          <Text className="text-xs font-bold text-orange-700">
+                        <View className="bg-amber-50 border border-amber-200 px-sm py-xs rounded-lg flex-row items-center gap-xs">
+                          <Ionicons name="cash-outline" size={14} color="#E99A16" />
+                          <Text className="text-xs font-bold text-amber-800">
                             COD: ₹{item.codCollected ?? item.totalAmount ?? 0}
                           </Text>
                         </View>
                       </View>
                       <TouchableOpacity
                         onPress={() => generateHandoverOtp(item.orderId)}
-                        className="bg-green-100 px-sm py-xs rounded-md flex-row items-center gap-xs"
+                        className="bg-ruvo-bg border border-ruvo-border px-sm py-xs rounded-lg flex-row items-center gap-xs"
                       >
-                        <Ionicons name="key-outline" size={14} color="#16A34A" />
-                        <Text className="text-xs font-bold text-ruvo-accent">Handover OTP</Text>
+                        <Ionicons name="key-outline" size={14} color="#171A1F" />
+                        <Text className="text-xs font-bold text-ruvo-ink">Handover OTP</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -218,7 +218,7 @@ export const HistoryScreen = () => {
             );
           }}
           renderSectionHeader={({ section }) => (
-            <View className="bg-warm-200 px-md py-xs rounded-lg mb-sm mt-xs">
+            <View className="bg-ruvo-bg border border-ruvo-border px-md py-xs rounded-lg mb-sm mt-xs">
               <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider">
                 {section.title}
               </Text>
@@ -228,8 +228,8 @@ export const HistoryScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => { setRefreshing(true); fetchHistory(); }}
-              tintColor="#16A34A"
-              colors={['#16A34A']}
+              tintColor="#F4B400"
+              colors={['#F4B400']}
             />
           }
           contentContainerClassName="px-lg pt-lg pb-2xl"

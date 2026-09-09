@@ -124,7 +124,7 @@ export const ShopDetailsScreen = () => {
   if (loading) {
     return (
       <View className="flex-1 bg-ruvo-bg">
-        <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FAF7F0" />
         <LoadingState
           title="Opening shop..."
           subtitle="Getting the latest products for you"
@@ -138,7 +138,7 @@ export const ShopDetailsScreen = () => {
   if (error) {
     return (
       <View className="flex-1 bg-ruvo-bg">
-        <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FAF7F0" />
         <ErrorState
           title="Unable to load shop"
           subtitle="Please check your connection and try again."
@@ -155,20 +155,20 @@ export const ShopDetailsScreen = () => {
   if (!shop) {
     return (
       <View className="flex-1 bg-ruvo-bg">
-        <StatusBar barStyle="dark-content" backgroundColor="#FBF8F2" />
+        <StatusBar barStyle="dark-content" backgroundColor="#FAF7F0" />
         <View className="flex-1 justify-center items-center px-6" style={{ paddingTop: insets.top }}>
           <View className="mb-4">
-            <Ionicons name="storefront-outline" size={48} color="#9CA3AF" />
+            <Ionicons name="storefront-outline" size={48} color="#A39D93" />
           </View>
-          <Text className="text-lg font-semibold text-ruvo-ink mb-2">
+          <Text className="text-lg font-bold text-ruvo-ink mb-2">
             Shop not found
           </Text>
           <Pressable
-            className="bg-ruvo-yellow py-3 px-6 rounded-lg mt-6 flex-row items-center"
+            className="bg-ruvo-yellow py-3 px-6 rounded-xl mt-6 flex-row items-center shadow-sm active:bg-ruvo-yellow-dark"
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={16} color="#FFF" />
-            <Text className="text-white font-semibold ml-2">Go Back</Text>
+            <Ionicons name="arrow-back" size={16} color="#171A1F" />
+            <Text className="text-ruvo-ink font-black ml-2">Go Back</Text>
           </Pressable>
         </View>
       </View>
@@ -225,23 +225,23 @@ export const ShopDetailsScreen = () => {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View className="flex-1 py-8 px-6 items-center justify-center">
-            <View className="mb-4">
+            <View className="mb-4 w-16 h-16 rounded-full bg-ruvo-yellow-soft items-center justify-center border border-ruvo-border">
               <Ionicons
                 name={
                   searchText || activeCategory !== 'All'
                     ? 'search-outline'
                     : 'basket-outline'
                 }
-                size={48}
-                color="#F5B700"
+                size={32}
+                color="#F4B400"
               />
             </View>
-            <Text className="text-base font-semibold text-ruvo-ink mb-1 text-center">
+            <Text className="text-base font-extrabold text-ruvo-ink mb-1 text-center">
               {searchText || activeCategory !== 'All'
                 ? 'No products found'
                 : 'No products yet'}
             </Text>
-            <Text className="text-sm text-ruvo-ink text-opacity-60 text-center">
+            <Text className="text-sm text-ruvo-muted text-center font-medium">
               {searchText || activeCategory !== 'All'
                 ? 'Try another search or category.'
                 : 'This shop has not added products yet.'}
@@ -259,17 +259,17 @@ export const ShopDetailsScreen = () => {
                   resizeMode="cover"
                 />
               ) : (
-                <View className="w-full h-56 bg-ruvo-yellow-soft flex items-center justify-center">
+                <View className="w-full h-56 bg-ruvo-card flex items-center justify-center border-b border-ruvo-border">
                   <Ionicons
                     name="storefront-outline"
                     size={64}
-                    color="rgba(46, 125, 50, 0.2)"
+                    color="#A39D93"
                   />
                 </View>
               )}
 
               {/* OVERLAY GRADIENT EFFECT */}
-              <View className="absolute inset-0 bg-black opacity-20" />
+              <View className="absolute inset-0 bg-black/25" />
 
               {/* TOP BAR WITH BACK BUTTON */}
               <View 
@@ -278,7 +278,7 @@ export const ShopDetailsScreen = () => {
               >
                 <Pressable
                   onPress={() => navigation.goBack()}
-                  className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full items-center justify-center border border-white/20"
+                  className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-full items-center justify-center border border-white/20"
                 >
                   <Ionicons
                     name="chevron-back"
@@ -287,13 +287,13 @@ export const ShopDetailsScreen = () => {
                   />
                 </Pressable>
 
-                <View className="flex-row items-center bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 gap-1.5 shadow-sm">
+                <View className="flex-row items-center bg-black/30 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 gap-1.5 shadow-sm">
                   <Ionicons
                     name="location"
-                    size={14}
-                    color="#F5B700"
+                    size={13}
+                    color="#F4B400"
                   />
-                  <Text className="text-white text-xs font-black tracking-wide">
+                  <Text className="text-white text-xs font-black tracking-wider">
                     LOCAL SHOP
                   </Text>
                 </View>
@@ -304,15 +304,15 @@ export const ShopDetailsScreen = () => {
                 {formatImageUrl(shop.logoUrl) ? (
                   <Image
                     source={{ uri: formatImageUrl(shop.logoUrl)! }}
-                    className="w-20 h-20 rounded-full bg-white border border-ruvo-yellow"
+                    className="w-20 h-20 rounded-full bg-white border-2 border-ruvo-yellow shadow-md"
                     resizeMode="cover"
                   />
                 ) : (
-                  <View className="w-20 h-20 rounded-full bg-white border border-ruvo-yellow flex items-center justify-center">
+                  <View className="w-20 h-20 rounded-full bg-white border-2 border-ruvo-yellow flex items-center justify-center shadow-md">
                     <Ionicons
-                      name="storefront-outline"
+                      name="storefront"
                       size={32}
-                      color="#2E7D32"
+                      color="#171A1F"
                     />
                   </View>
                 )}
@@ -321,26 +321,26 @@ export const ShopDetailsScreen = () => {
 
             {/* SHOP INFORMATION CARD */}
             <View 
-              className="bg-white rounded-[24px] p-5 mb-6 mx-4 border border-gray-100"
-              style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.05, shadowRadius: 15, elevation: 5, marginTop: -40 }}
+              className="bg-white rounded-[20px] p-5 mb-6 mx-4 border border-ruvo-border"
+              style={{ shadowColor: '#171A1F', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 3, marginTop: -40 }}
             >
               <View className="mb-3">
                 <View className="flex-row items-start justify-between mb-2">
                   <View className="flex-1">
-                    <Text className="text-lg font-bold text-ruvo-ink mb-1">
+                    <Text className="text-xl font-black text-ruvo-ink mb-1">
                       {shop.name}
                     </Text>
                     {shop.category && (
-                      <Text className="text-sm text-ruvo-ink text-opacity-60">
+                      <Text className="text-xs font-bold text-ruvo-muted uppercase tracking-wider">
                         {shop.category}
                       </Text>
                     )}
                   </View>
 
                   {shop.approved === false && (
-                    <View className="flex-row items-center bg-yellow-50 px-3 py-1 rounded gap-1">
-                      <View className="w-2 h-2 rounded-full bg-yellow-500" />
-                      <Text className="text-xs font-semibold text-yellow-700">
+                    <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 gap-1">
+                      <View className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <Text className="text-[11px] font-bold text-amber-700">
                         Pending
                       </Text>
                     </View>
@@ -348,62 +348,62 @@ export const ShopDetailsScreen = () => {
                 </View>
 
                 {shop.description && (
-                  <Text className="text-sm text-ruvo-ink text-opacity-70 leading-5">
+                  <Text className="text-sm text-ruvo-text font-normal leading-5 mt-1">
                     {shop.description}
                   </Text>
                 )}
               </View>
 
               {/* SHOP STATS ROW */}
-              <View className="flex-row justify-between py-3 border-t border-gray-100 border-b">
-                {shop.rating && (
-                  <View className="items-center">
-                    <View className="flex-row items-center gap-1 mb-1">
-                      <Ionicons name="star" size={14} color="#F5B700" />
-                      <Text className="text-sm font-bold text-ruvo-ink">
+              <View className="flex-row justify-between py-3 border-t border-ruvo-border border-b">
+                {shop.rating ? (
+                  <View className="items-center flex-1">
+                    <View className="flex-row items-center gap-1 mb-0.5">
+                      <Ionicons name="star" size={14} color="#F4B400" />
+                      <Text className="text-sm font-extrabold text-ruvo-ink">
                         {shop.rating}
                       </Text>
                     </View>
-                    <Text className="text-xs text-ruvo-ink text-opacity-60">
+                    <Text className="text-[11px] font-semibold text-ruvo-muted">
                       Rating
                     </Text>
                   </View>
-                )}
+                ) : null}
 
-                {shop.deliveryTime && (
-                  <View className="items-center">
-                    <View className="flex-row items-center gap-1 mb-1">
-                      <Ionicons name="time-outline" size={14} color="#2E7D32" />
-                      <Text className="text-sm font-bold text-ruvo-ink">
+                {shop.deliveryTime ? (
+                  <View className="items-center flex-1">
+                    <View className="flex-row items-center gap-1 mb-0.5">
+                      <Ionicons name="time-outline" size={14} color="#171A1F" />
+                      <Text className="text-sm font-extrabold text-ruvo-ink">
                         {shop.deliveryTime}m
                       </Text>
                     </View>
-                    <Text className="text-xs text-ruvo-ink text-opacity-60">
+                    <Text className="text-[11px] font-semibold text-ruvo-muted">
                       Delivery
                     </Text>
                   </View>
-                )}
+                ) : null}
 
-                {shop.minOrderAmount && (
-                  <View className="items-center">
-                    <View className="flex-row items-center gap-1 mb-1">
-                      <Text className="text-sm font-bold text-ruvo-ink">
+                {shop.minOrderAmount ? (
+                  <View className="items-center flex-1">
+                    <View className="flex-row items-center gap-1 mb-0.5">
+                      <Text className="text-sm font-extrabold text-ruvo-ink">
                         ₹{shop.minOrderAmount}
                       </Text>
                     </View>
-                    <Text className="text-xs text-ruvo-ink text-opacity-60">
+                    <Text className="text-[11px] font-semibold text-ruvo-muted">
                       Min Order
                     </Text>
                   </View>
-                )}
+                ) : null}
               </View>
 
               {/* HOURS AND CONTACT */}
               <View className="pt-3 gap-2">
                 {openTime && closeTime && (
                   <View className="flex-row items-center gap-2">
-                    <Ionicons name="time-outline" size={16} color="#2E7D32" />
-                    <Text className="text-sm text-ruvo-ink">
+                    <Ionicons name="time-outline" size={15} color="#77736B" />
+                    <Text className="text-xs font-semibold text-ruvo-text">
                       {openTime} - {closeTime}
                     </Text>
                   </View>
@@ -411,15 +411,15 @@ export const ShopDetailsScreen = () => {
 
                 {shop.phone && (
                   <View className="flex-row items-center gap-2">
-                    <Ionicons name="call-outline" size={16} color="#2E7D32" />
-                    <Text className="text-sm text-ruvo-ink">{shop.phone}</Text>
+                    <Ionicons name="call-outline" size={15} color="#77736B" />
+                    <Text className="text-xs font-semibold text-ruvo-text">{shop.phone}</Text>
                   </View>
                 )}
 
                 {shop.address && (
                   <View className="flex-row items-center gap-2">
-                    <Ionicons name="location-outline" size={16} color="#2E7D32" />
-                    <Text className="text-sm text-ruvo-ink flex-1">
+                    <Ionicons name="location-outline" size={15} color="#77736B" />
+                    <Text className="text-xs font-semibold text-ruvo-text flex-1" numberOfLines={2}>
                       {shop.address}
                     </Text>
                   </View>
@@ -429,20 +429,20 @@ export const ShopDetailsScreen = () => {
 
             {/* SEARCH BAR */}
             <View className="mb-4 px-0">
-              <View className="flex-row items-center bg-white rounded-lg px-3 border border-gray-200">
-                <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+              <View className="flex-row items-center bg-white rounded-xl px-3.5 py-1 border border-ruvo-border">
+                <Ionicons name="search-outline" size={18} color="#A39D93" />
                 <TextInput
-                  placeholder="Search products..."
+                  placeholder="Search products in this shop..."
                   value={searchText}
                   onChangeText={setSearchText}
-                  className="flex-1 py-3 pl-2 text-ruvo-ink"
-                  placeholderTextColor="#9CA3AF"
+                  className="flex-1 py-2.5 pl-2.5 text-sm font-semibold text-ruvo-ink"
+                  placeholderTextColor="#A39D93"
                 />
-                {searchText && (
+                {searchText ? (
                   <Pressable onPress={() => setSearchText('')}>
-                    <Ionicons name="close" size={18} color="#9CA3AF" />
+                    <Ionicons name="close" size={18} color="#77736B" />
                   </Pressable>
-                )}
+                ) : null}
               </View>
             </View>
 
@@ -456,14 +456,14 @@ export const ShopDetailsScreen = () => {
                   renderItem={({ item: category }) => (
                     <Pressable
                       onPress={() => setActiveCategory(category)}
-                      className={`px-4 py-2 rounded-full mr-2 ${
+                      className={`px-4 py-2 rounded-full mr-2 border ${
                         activeCategory === category
-                          ? 'bg-ruvo-yellow'
-                          : 'bg-gray-100'
+                          ? 'bg-ruvo-ink border-ruvo-ink'
+                          : 'bg-white border-ruvo-border'
                       }`}
                     >
                       <Text
-                        className={`text-sm font-semibold ${
+                        className={`text-xs font-extrabold ${
                           activeCategory === category
                             ? 'text-white'
                             : 'text-ruvo-ink'

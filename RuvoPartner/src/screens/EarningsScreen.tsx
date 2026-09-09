@@ -63,7 +63,7 @@ export const EarningsScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center justify-between">
         <View className="flex-1">
           <Text className="text-xl font-extrabold text-ruvo-ink">Earnings & Payouts</Text>
           <Text className="text-xs text-warm-600 font-medium mt-xs">
@@ -72,15 +72,15 @@ export const EarningsScreen = () => {
         </View>
         <TouchableOpacity
           onPress={() => load(true)}
-          className="w-10 h-10 bg-green-100 rounded-full items-center justify-center"
+          className="w-10 h-10 bg-ruvo-bg border border-ruvo-border rounded-full items-center justify-center"
         >
-          <Ionicons name="refresh" size={20} color="#16A34A" />
+          <Ionicons name="refresh" size={18} color="#171A1F" />
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#16A34A" />
+          <ActivityIndicator size="large" color="#F4B400" />
         </View>
       ) : (
         <FlatList
@@ -90,8 +90,8 @@ export const EarningsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => load(true)}
-              tintColor="#16A34A"
-              colors={['#16A34A']}
+              tintColor="#F4B400"
+              colors={['#F4B400']}
             />
           }
           ListHeaderComponent={
@@ -99,41 +99,41 @@ export const EarningsScreen = () => {
               {/* Hero Earnings Banner */}
               <Animated.View entering={FadeInUp.duration(500)} className="mx-lg mt-lg">
                 <View
-                  className="bg-ruvo-accent rounded-2xl p-xl relative overflow-hidden"
+                  className="bg-ruvo-ink rounded-2xl p-xl relative overflow-hidden border border-white/10"
                   style={{
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 6 },
+                    shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.15,
                     shadowRadius: 12,
-                    elevation: 6,
+                    elevation: 5,
                   }}
                 >
                   {/* Decorative background circle */}
                   <View
-                    className="absolute w-40 h-40 bg-white/10 rounded-full"
+                    className="absolute w-40 h-40 bg-ruvo-primary/10 rounded-full"
                     style={{ top: -50, right: -40 }}
                   />
 
-                  <Text className="text-xs font-extrabold text-green-200 uppercase tracking-wider mb-xs">
+                  <Text className="text-xs font-extrabold text-ruvo-primary uppercase tracking-wider mb-xs">
                     TODAY'S TOTAL EARNINGS
                   </Text>
-                  <Text className="text-5xl font-extrabold text-white mb-md">
+                  <Text className="text-4xl font-extrabold text-white mb-md">
                     ₹{earnings?.todayEarnings ?? 0}
                   </Text>
 
                   {/* Meta Row */}
-                  <View className="flex-row items-center gap-md">
+                  <View className="flex-row items-center gap-md pt-sm border-t border-white/10">
                     <View className="flex-row items-center gap-xs">
-                      <Ionicons name="wallet-outline" size={16} color="#D1FAE5" />
-                      <Text className="text-xs text-green-100 font-semibold">Wallet Balance</Text>
+                      <Ionicons name="wallet-outline" size={15} color="#A39D93" />
+                      <Text className="text-xs text-warm-400 font-medium">Wallet</Text>
                       <Text className="text-sm text-white font-extrabold ml-xs">
                         ₹{earnings?.walletBalance ?? 0}
                       </Text>
                     </View>
-                    <View className="w-px h-4 bg-white/30" />
+                    <View className="w-px h-3.5 bg-white/20" />
                     <View className="flex-row items-center gap-xs">
-                      <Ionicons name="trending-up-outline" size={16} color="#D1FAE5" />
-                      <Text className="text-xs text-green-100 font-semibold">All Time</Text>
+                      <Ionicons name="trending-up-outline" size={15} color="#A39D93" />
+                      <Text className="text-xs text-warm-400 font-medium">All Time</Text>
                       <Text className="text-sm text-white font-extrabold ml-xs">
                         ₹{earnings?.totalEarnings ?? 0}
                       </Text>
@@ -144,7 +144,7 @@ export const EarningsScreen = () => {
 
               {/* Section Header */}
               <Animated.View entering={FadeInUp.delay(100).duration(500)} className="px-lg mt-xl mb-md flex-row items-center justify-between">
-                <Text className="text-lg font-extrabold text-ruvo-ink">Delivery History</Text>
+                <Text className="text-base font-extrabold text-ruvo-ink">Delivery History</Text>
                 <Badge variant="info" size="sm">
                   {`${history.length} runs`}
                 </Badge>
@@ -163,13 +163,10 @@ export const EarningsScreen = () => {
           ItemSeparatorComponent={() => <View className="h-sm" />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
-              <Card className="overflow-hidden">
-                {/* Top accent bar */}
-                <View className="h-1 bg-ruvo-accent w-full mb-md" />
-
+              <Card className="bg-ruvo-surface border border-ruvo-border shadow-sm">
                 <View className="flex-row items-center gap-md">
-                  <View className="w-11 h-11 bg-green-100 rounded-full items-center justify-center">
-                    <Ionicons name="checkmark-done" size={22} color="#16A34A" />
+                  <View className="w-10 h-10 bg-emerald-50 border border-emerald-100 rounded-xl items-center justify-center">
+                    <Ionicons name="checkmark-done" size={20} color="#18A957" />
                   </View>
 
                   <View className="flex-1">
@@ -181,7 +178,7 @@ export const EarningsScreen = () => {
                     </Text>
                   </View>
 
-                  <Text className="text-xl font-extrabold text-ruvo-accent">
+                  <Text className="text-lg font-extrabold text-emerald-700">
                     +₹{item.deliveryFee}
                   </Text>
                 </View>

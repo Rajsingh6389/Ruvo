@@ -108,7 +108,7 @@ export const AvailableDeliveriesScreen = () => {
       />
 
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center justify-between">
         <View className="flex-1">
           <Text className="text-xl font-extrabold text-ruvo-ink">Available Deliveries</Text>
           <Text className="text-xs text-warm-600 font-medium mt-xs">
@@ -117,9 +117,9 @@ export const AvailableDeliveriesScreen = () => {
         </View>
         <TouchableOpacity
           onPress={() => load(true)}
-          className="w-10 h-10 bg-green-100 rounded-full items-center justify-center"
+          className="w-10 h-10 bg-ruvo-bg border border-ruvo-border rounded-full items-center justify-center"
         >
-          <Ionicons name="refresh" size={20} color="#16A34A" />
+          <Ionicons name="refresh" size={18} color="#171A1F" />
         </TouchableOpacity>
       </View>
 
@@ -133,8 +133,8 @@ export const AvailableDeliveriesScreen = () => {
       ) : error ? (
         <View className="flex-1 items-center justify-center px-xl">
           <Animated.View entering={FadeIn.duration(300)} className="items-center">
-            <View className="w-24 h-24 bg-red-100 rounded-3xl items-center justify-center mb-lg">
-              <Ionicons name="cloud-offline-outline" size={44} color="#DC2626" />
+            <View className="w-24 h-24 bg-red-50 border border-red-200 rounded-3xl items-center justify-center mb-lg">
+              <Ionicons name="cloud-offline-outline" size={44} color="#D94A4A" />
             </View>
             <Text className="text-xl font-extrabold text-ruvo-ink mb-sm">Connection Error</Text>
             <Text className="text-sm text-warm-600 text-center mb-xl leading-5">{error}</Text>
@@ -151,8 +151,8 @@ export const AvailableDeliveriesScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => load(true)}
-              tintColor="#16A34A"
-              colors={['#16A34A']}
+              tintColor="#F4B400"
+              colors={['#F4B400']}
             />
           }
           contentContainerClassName={`px-lg pt-lg pb-2xl ${runs.length === 0 ? 'flex-grow' : ''}`}
@@ -167,7 +167,7 @@ export const AvailableDeliveriesScreen = () => {
           ItemSeparatorComponent={() => <View className="h-md" />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(index * 100).duration(400)}>
-              <Card>
+              <Card className="bg-ruvo-surface border border-ruvo-border shadow-sm">
                 {/* Header */}
                 <View className="flex-row items-center justify-between mb-md">
                   <View className="flex-row items-center gap-sm">
@@ -178,22 +178,22 @@ export const AvailableDeliveriesScreen = () => {
                       {item.status.replaceAll('_', ' ')}
                     </Badge>
                   </View>
-                  <Text className="text-xl font-extrabold text-ruvo-accent">
+                  <Text className="text-lg font-extrabold text-emerald-700">
                     +₹{item.deliveryFee}
                   </Text>
                 </View>
 
                 {/* Items Summary */}
                 {item.items && item.items.length > 0 ? (
-                  <View className="bg-warm-100 rounded-lg p-sm mb-sm flex-row items-center gap-xs">
-                    <Ionicons name="basket-outline" size={16} color="#16A34A" />
+                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm flex-row items-center gap-xs">
+                    <Ionicons name="basket-outline" size={16} color="#F4B400" />
                     <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
                       {item.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
                     </Text>
                   </View>
                 ) : item.productName ? (
-                  <View className="bg-warm-100 rounded-lg p-sm mb-sm flex-row items-center gap-xs">
-                    <Ionicons name="basket-outline" size={16} color="#16A34A" />
+                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm flex-row items-center gap-xs">
+                    <Ionicons name="basket-outline" size={16} color="#F4B400" />
                     <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
                       {item.quantity ? `${item.quantity}x ` : ''}{item.productName}
                     </Text>
@@ -201,16 +201,16 @@ export const AvailableDeliveriesScreen = () => {
                 ) : null}
 
                 {/* Route Section */}
-                <View className="bg-warm-100 rounded-lg p-md mb-md">
+                <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-md mb-md">
                   {/* Pickup */}
                   <View className="flex-row items-center gap-md mb-xs">
-                    <View className="w-2 h-2 bg-ruvo-accent rounded-full" />
+                    <View className="w-2.5 h-2.5 bg-ruvo-primary rounded-full" />
                     <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
                       Pickup
                     </Text>
                     <View className="flex-1">
                       {item.shopName ? (
-                        <Text className="text-xs font-bold text-ruvo-accent">{item.shopName}</Text>
+                        <Text className="text-xs font-bold text-ruvo-ink">{item.shopName}</Text>
                       ) : null}
                       <Text className="text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
                         {item.shopAddress || item.pickupLocation}
@@ -219,11 +219,11 @@ export const AvailableDeliveriesScreen = () => {
                   </View>
 
                   {/* Connector */}
-                  <View className="w-px h-3 bg-warm-300 ml-1" />
+                  <View className="w-px h-3 bg-ruvo-border ml-1 my-0.5" />
 
                   {/* Drop */}
                   <View className="flex-row items-center gap-md">
-                    <View className="w-2 h-2 bg-orange-500 rounded-full" />
+                    <View className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
                     <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
                       Drop
                     </Text>

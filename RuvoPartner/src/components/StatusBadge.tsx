@@ -34,19 +34,19 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     const s = String(status).toLowerCase();
 
     if (s.includes('delivered') || s.includes('completed') || s.includes('approved') || s === 'success' || s === 'active' || s === 'in_stock') {
-      return { bg: '#E8F5E9', text: '#2E7D32', dot: '#4CAF50' };
+      return { bg: '#E8F8EE', text: '#18A957', dot: '#18A957' };
     }
     if (s.includes('pending') || s.includes('processing') || s.includes('preparing') || s === 'warning' || s === 'low_stock') {
-      return { bg: '#FFF8E1', text: '#B78103', dot: '#FFB300' };
+      return { bg: '#FEF5E7', text: '#E99A16', dot: '#E99A16' };
     }
     if (s.includes('cancel') || s.includes('reject') || s === 'error' || s === 'out_of_stock' || s === 'inactive') {
-      return { bg: '#FFEBEE', text: '#C62828', dot: '#EF5350' };
+      return { bg: '#FDECEC', text: '#D94A4A', dot: '#D94A4A' };
     }
-    if (s.includes('shipped') || s.includes('out_for_delivery') || s.includes('accepted') || s === 'info' || s === 'ready') {
-      return { bg: '#E3F2FD', text: '#1565C0', dot: '#2196F3' };
+    if (s.includes('shipped') || s.includes('out_for_delivery') || s.includes('accepted') || s === 'info' || s === 'ready' || s.includes('assign')) {
+      return { bg: '#EBF2FA', text: '#3478C8', dot: '#3478C8' };
     }
     // Default / Primary
-    return { bg: '#E8F5E9', text: colors.primary, dot: colors.primaryLight || '#4CAF50' };
+    return { bg: '#FFF2C2', text: '#171A1F', dot: '#F4B400' };
   };
 
   const palette = getStatusColor();

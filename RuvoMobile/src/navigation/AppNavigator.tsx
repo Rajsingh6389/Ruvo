@@ -16,6 +16,7 @@ import { ROUTES } from '../constants/routes';
 import { SplashScreen }   from '../screens/SplashScreen';
 import { LoginScreen }    from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
+import { RuvoLaunchScreen } from '../components/launch/RuvoLaunchScreen';
 
 // ─── Tab Screens ───────────────────────────────────────────
 import { HomeScreen }        from '../screens/home/HomeScreen';
@@ -60,35 +61,35 @@ const MainTabs = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-          borderColor: isDark ? '#334155' : '#EDE7DA',
+          backgroundColor: isDark ? '#171A1F' : '#FFFFFF',
+          borderColor: isDark ? '#332E29' : '#E7E0D5',
           borderWidth: 1,
           height: tabHeight,
           marginHorizontal: 12,
           marginBottom: Math.max(insets.bottom, 8),
           paddingBottom: Math.max(insets.bottom - 2, 8),
           paddingTop: 8,
-          borderRadius: 26,
+          borderRadius: 24,
           position: 'absolute',
           overflow: Platform.OS === 'android' ? 'hidden' : 'visible',
-          elevation: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.14,
-          shadowRadius: 18,
+          elevation: 8,
+          shadowColor: '#171A1F',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
         },
         tabBarItemStyle: {
-          borderRadius: 18,
+          borderRadius: 16,
           marginHorizontal: 2,
         },
-        tabBarActiveTintColor: '#EAB308',
-        tabBarInactiveTintColor: isDark ? '#475569' : '#9E9E9E',
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 1 },
+        tabBarActiveTintColor: '#F4B400',
+        tabBarInactiveTintColor: isDark ? '#77736B' : '#77736B',
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginTop: 1 },
         tabBarBadgeStyle: {
-          backgroundColor: '#FACC15',
-          color: '#231C10',
+          backgroundColor: '#F4B400',
+          color: '#171A1F',
           fontSize: 10,
-          fontWeight: '900',
+          fontWeight: '800',
           minWidth: 18,
           height: 18,
           borderRadius: 9,
@@ -105,15 +106,15 @@ const MainTabs = () => {
           return (
             <View
               style={{
-                width: 34,
+                width: 36,
                 height: 28,
                 borderRadius: 14,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: focused ? 'rgba(250, 204, 21, 0.18)' : 'transparent',
+                backgroundColor: focused ? 'rgba(244, 180, 0, 0.16)' : 'transparent',
               }}
             >
-              <Ionicons name={icons ? (focused ? icons.on : icons.off) : 'help-outline'} size={size} color={color} />
+              <Ionicons name={icons ? (focused ? icons.on : icons.off) : 'help-outline'} size={22} color={color} />
             </View>
           );
         },
@@ -144,48 +145,48 @@ interface AppNavigatorProps { theme: Theme; }
 
 export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-        <ActivityIndicator size="large" color="#EAB308" />
-        <Text style={{ marginTop: 14, fontSize: 16, fontWeight: '600', color: '#222' }}>Loading RuVo...</Text>
-        <Text style={{ marginTop: 5, fontSize: 12, color: '#777' }}>Please wait</Text>
-      </View>
-    );
-  }
+  const [launchComplete, setLaunchComplete] = React.useState(false);
 
   return (
-    <NavigationContainer theme={theme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name={ROUTES.SPLASH} component={SplashScreen} />
-            <Stack.Screen name={ROUTES.LOGIN}  component={LoginScreen} />
-            <Stack.Screen name={ROUTES.SIGNUP} component={RegisterScreen} />
-          </>
-        ) : (
-          <>
-            {/* MainTabs is the root */}
-            <Stack.Screen name={ROUTES.MAIN_TABS}       component={MainTabs} />
-            {/* Full-screen stack screens (push over tabs) */}
-            <Stack.Screen name={ROUTES.GROCERIES}       component={GroceriesScreen} />
-            <Stack.Screen name={ROUTES.SHOP_DETAILS}    component={ShopDetailsScreen} />
-            <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} />
-            <Stack.Screen name={ROUTES.REGISTER_SHOP}   component={UseRuvoShopScreen} />
-            <Stack.Screen name={ROUTES.EDIT_PROFILE}    component={EditProfileScreen} />
-            <Stack.Screen name={ROUTES.CHECKOUT}        component={CheckoutScreen} />
-            <Stack.Screen name={ROUTES.ORDER_SUCCESS}   component={OrderSuccessScreen} />
-            <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
-            <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
-            <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
-            <Stack.Screen name={ROUTES.SEARCH}          component={SearchScreen} />
-            <Stack.Screen name={ROUTES.HELP}            component={HelpScreen} />
-            <Stack.Screen name={ROUTES.RATE_ORDER}      component={RateOrderScreen} />
-            <Stack.Screen name={ROUTES.JOBS}            component={ComingSoonScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
+      <NavigationContainer theme={theme}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
+            <>
+              <Stack.Screen name={ROUTES.LOGIN}  component={LoginScreen} />
+              <Stack.Screen name={ROUTES.SIGNUP} component={RegisterScreen} />
+            </>
+          ) : (
+            <>
+              {/* MainTabs is the root */}
+              <Stack.Screen name={ROUTES.MAIN_TABS}       component={MainTabs} />
+              {/* Full-screen stack screens (push over tabs) */}
+              <Stack.Screen name={ROUTES.GROCERIES}       component={GroceriesScreen} />
+              <Stack.Screen name={ROUTES.SHOP_DETAILS}    component={ShopDetailsScreen} />
+              <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} />
+              <Stack.Screen name={ROUTES.REGISTER_SHOP}   component={UseRuvoShopScreen} />
+              <Stack.Screen name={ROUTES.EDIT_PROFILE}    component={EditProfileScreen} />
+              <Stack.Screen name={ROUTES.CHECKOUT}        component={CheckoutScreen} />
+              <Stack.Screen name={ROUTES.ORDER_SUCCESS}   component={OrderSuccessScreen} />
+              <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
+              <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
+              <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
+              <Stack.Screen name={ROUTES.SEARCH}          component={SearchScreen} />
+              <Stack.Screen name={ROUTES.HELP}            component={HelpScreen} />
+              <Stack.Screen name={ROUTES.RATE_ORDER}      component={RateOrderScreen} />
+              <Stack.Screen name={ROUTES.JOBS}            component={ComingSoonScreen} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+
+      {!launchComplete && (
+        <RuvoLaunchScreen
+          isReady={!isLoading}
+          roleSubtitle="LOCAL • CONNECTED • MOVING"
+          onFinish={() => setLaunchComplete(true)}
+        />
+      )}
+    </View>
   );
 };

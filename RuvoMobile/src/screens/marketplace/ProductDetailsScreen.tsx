@@ -60,18 +60,18 @@ const Benefit = ({
   subtitle: string;
 }) => (
   <View className="flex-1 flex-row items-center justify-center gap-2">
-    <View className="w-8 h-8 rounded-full bg-ruvo-yellow/20 items-center justify-center">
+    <View className="w-8 h-8 rounded-full bg-ruvo-yellow-soft border border-ruvo-border items-center justify-center">
       <Ionicons
         name={icon}
         size={16}
-        color="#F5B700"
+        color="#F4B400"
       />
     </View>
     <View>
       <Text className="text-xs font-bold text-ruvo-ink">
         {title}
       </Text>
-      <Text className="text-[10px] text-gray-500 mt-0.5">
+      <Text className="text-[10px] text-ruvo-muted mt-0.5">
         {subtitle}
       </Text>
     </View>
@@ -88,18 +88,18 @@ const Spec = ({
   value: string;
 }) => (
   <View className="flex-1 items-center">
-    <View className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center mb-2 border border-orange-100">
+    <View className="w-10 h-10 rounded-xl bg-ruvo-card flex items-center justify-center mb-2 border border-ruvo-border">
       <Ionicons
         name={icon}
         size={18}
-        color="#EA580C"
+        color="#171A1F"
       />
     </View>
-    <Text className="text-xs text-gray-600">
+    <Text className="text-xs text-ruvo-muted font-medium">
       {title}
     </Text>
     <Text
-      className="text-xs font-bold text-ruvo-ink mt-0.5 text-center"
+      className="text-xs font-black text-ruvo-ink mt-0.5 text-center"
       numberOfLines={1}
     >
       {value}
@@ -195,21 +195,23 @@ const ProductDetailsScreen = () => {
   if (!product) {
     return (
       <View className="flex-1 bg-ruvo-bg items-center justify-center px-6">
-        <Ionicons
-          name="alert-circle-outline"
-          size={50}
-          color="#F5B700"
-        />
+        <View className="w-16 h-16 rounded-full bg-ruvo-yellow-soft items-center justify-center border border-ruvo-border mb-3">
+          <Ionicons
+            name="alert-circle-outline"
+            size={36}
+            color="#F4B400"
+          />
+        </View>
 
-        <Text className="text-lg font-bold text-ruvo-ink mt-3">
+        <Text className="text-lg font-black text-ruvo-ink mt-2">
           Product not found
         </Text>
 
         <TouchableOpacity
-          className="bg-ruvo-yellow px-6 py-3 rounded-lg mt-5"
+          className="bg-ruvo-yellow px-6 py-3 rounded-xl mt-5 shadow-sm active:bg-ruvo-yellow-dark"
           onPress={() => navigation.goBack()}
         >
-          <Text className="text-white font-bold text-center">
+          <Text className="text-ruvo-ink font-black text-center text-sm">
             Go Back
           </Text>
         </TouchableOpacity>

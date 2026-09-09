@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { View, Text, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -7,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { DarkTheme, LightTheme } from '../theme/theme';
+import { RuvoLaunchScreen } from '../components/launch/RuvoLaunchScreen';
 
 // Main app screens
 import { SplashScreen } from '../screens/SplashScreen';
@@ -75,14 +77,22 @@ const TabNavigator = () => {
         tabBarActiveTintColor:   colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          height: 68,
-          paddingBottom: 8,
+          backgroundColor: '#FFFFFF',
+          borderTopColor: '#EDE7DE',
+          height: 64,
+          paddingBottom: 6,
           paddingTop: 6,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
         },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '700' },
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
+        },
+        tabBarLabelStyle: { fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+        tabBarIcon: ({ focused, color }) => {
           const icons: Record<string, [string, string]> = {
             Home:          ['home',          'home-outline'],
             Deliveries:    ['bicycle',       'bicycle-outline'],
@@ -92,11 +102,22 @@ const TabNavigator = () => {
           };
           const [active, inactive] = icons[route.name] ?? ['ellipse', 'ellipse-outline'];
           return (
-            <Ionicons
-              name={(focused ? active : inactive) as React.ComponentProps<typeof Ionicons>['name']}
-              size={size}
-              color={color}
-            />
+            <View
+              style={{
+                width: 42,
+                height: 28,
+                borderRadius: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: focused ? 'rgba(244, 180, 0, 0.2)' : 'transparent',
+              }}
+            >
+              <Ionicons
+                name={(focused ? active : inactive) as React.ComponentProps<typeof Ionicons>['name']}
+                size={22}
+                color={focused ? '#D99B00' : color}
+              />
+            </View>
           );
         },
       })}
@@ -114,66 +135,69 @@ const TabNavigator = () => {
 export const AppNavigator = () => {
   const { isAuthenticated, isLoading, verificationStatus } = useAuth();
   const { colors, theme } = useTheme();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <SplashScreen />
-      </View>
-    );
-  }
+  const [launchComplete, setLaunchComplete] = useState(false);
 
   return (
-    <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
+      <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
 
-        {/* ── Not logged in ──────────────────────────────────────── */}
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="Login"            component={LoginScreen}           />
-            <Stack.Screen name="OtpVerification"  component={OtpVerificationScreen} />
-          </>
+          {/* ── Not logged in ──────────────────────────────────────── */}
+          {!isAuthenticated ? (
+            <>
+              <Stack.Screen name="Login"            component={LoginScreen}           />
+              <Stack.Screen name="OtpVerification"  component={OtpVerificationScreen} />
+            </>
 
-        /* ── Approved → main app ─────────────────────────────────── */
-        ) : verificationStatus === 'APPROVED' ? (
-          <>
-            <Stack.Screen name="MainTabs"      component={TabNavigator}          />
-            <Stack.Screen name="ManageShops"   component={Step6_ShopSelection}  />
-            <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
-            <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
-          </>
+          /* ── Approved → main app ─────────────────────────────────── */
+          ) : verificationStatus === 'APPROVED' ? (
+            <>
+              <Stack.Screen name="MainTabs"      component={TabNavigator}          />
+              <Stack.Screen name="ManageShops"   component={Step6_ShopSelection}  />
+              <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
+              <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
+            </>
 
-        /* ── New partner → 7-step onboarding ───────────────────────
-             Steps 1-6 collect info, Step 7 waits for admin approval.
-             All steps are registered so any step can navigate without
-             "screen not found" errors. Initial route is Step1 when
-             verificationStatus is 'NEW'.                              */
-        ) : verificationStatus === 'NEW' ? (
-          <>
-            <Stack.Screen name="Step1_BasicDetails"  component={Step1_BasicDetails}  />
-            <Stack.Screen name="Step2_VehicleType"   component={Step2_VehicleType}   />
-            <Stack.Screen name="Step3_Aadhaar"       component={Step3_Aadhaar}       />
-            <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
-            <Stack.Screen name="Step5_BankAccount"   component={Step5_BankAccount}   />
-            <Stack.Screen name="Step6_ShopSelection" component={Step6_ShopSelection} />
-            <Stack.Screen name="Step7_Success"       component={Step7_Success}       />
-          </>
+          /* ── New partner → 7-step onboarding ───────────────────────
+               Steps 1-6 collect info, Step 7 waits for admin approval.
+               All steps are registered so any step can navigate without
+               "screen not found" errors. Initial route is Step1 when
+               verificationStatus is 'NEW'.                              */
+          ) : verificationStatus === 'NEW' ? (
+            <>
+              <Stack.Screen name="Step1_BasicDetails"  component={Step1_BasicDetails}  />
+              <Stack.Screen name="Step2_VehicleType"   component={Step2_VehicleType}   />
+              <Stack.Screen name="Step3_Aadhaar"       component={Step3_Aadhaar}       />
+              <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+              <Stack.Screen name="Step5_BankAccount"   component={Step5_BankAccount}   />
+              <Stack.Screen name="Step6_ShopSelection" component={Step6_ShopSelection} />
+              <Stack.Screen name="Step7_Success"       component={Step7_Success}       />
+            </>
 
-        /* ── Pending admin approval → stay on approval screen ──────
-             User completed all 7 steps and is waiting for admin.
-             Approval screen polls /api/partners/me every 10s and
-             automatically routes to MainTabs when approved.            */
-        ) : verificationStatus === 'PENDING_APPROVAL' ? (
-          <>
-            <Stack.Screen name="Step7_Success" component={Step7_Success} />
-          </>
+          /* ── Pending admin approval → stay on approval screen ──────
+               User completed all 7 steps and is waiting for admin.
+               Approval screen polls /api/partners/me every 10s and
+               automatically routes to MainTabs when approved.            */
+          ) : verificationStatus === 'PENDING_APPROVAL' ? (
+            <>
+              <Stack.Screen name="Step7_Success" component={Step7_Success} />
+            </>
 
-        /* ── Any other status (REJECTED, SUSPENDED, etc.) ──────────── */
-        ) : (
-          <Stack.Screen name="VerificationStatus" component={VerificationStatusScreen} />
-        )}
+          /* ── Any other status (REJECTED, SUSPENDED, etc.) ──────────── */
+          ) : (
+            <Stack.Screen name="VerificationStatus" component={VerificationStatusScreen} />
+          )}
 
-      </Stack.Navigator>
-    </NavigationContainer>
+        </Stack.Navigator>
+      </NavigationContainer>
+
+      {!launchComplete && (
+        <RuvoLaunchScreen
+          isReady={!isLoading}
+          roleSubtitle="LOCAL • CONNECTED • MOVING"
+          onFinish={() => setLaunchComplete(true)}
+        />
+      )}
+    </View>
   );
 };

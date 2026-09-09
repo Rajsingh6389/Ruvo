@@ -26,14 +26,16 @@ import { ROUTES } from '../../constants/routes';
 import { OfflineBar } from '../../components/OfflineBar';
 import { ProductSkeleton } from '../../components/ProductSkeleton';
 
-const GREEN = '#2E7D32';
-const LIGHT_GREEN = '#E8F5E9';
-const BG = '#F8F1E7'; // warm ivory canvas
-const TEXT = '#1A1A1A';
-const MUTED = '#6B7280';
-const BORDER = '#E5E7EB';
+const GREEN = '#18A957';
+const LIGHT_GREEN = '#E8F8EE';
+const BG = '#FAF7F0'; // unified RuVo Cream
+const TEXT = '#171717';
+const MUTED = '#77736B';
+const BORDER = '#E7E0D5';
 const WHITE = '#FFFFFF';
-const RED = '#D32F2F';
+const RED = '#D94A4A';
+const GOLD = '#F4B400';
+const INK = '#171A1F';
 
 export const MyProductsScreen = () => {
   const navigation = useNavigation<any>();
@@ -659,18 +661,20 @@ const styles = StyleSheet.create({
   },
 
   addButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: GREEN,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   summaryCard: {
     minHeight: 67,
-    backgroundColor: '#F4FAF4',
-    borderRadius: 15,
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 16,
     marginTop: 13,
     paddingHorizontal: 8,
     flexDirection: 'row',
@@ -698,7 +702,7 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     height: 30,
-    backgroundColor: '#D7E5D8',
+    backgroundColor: BORDER,
   },
 
   /* ERROR */
@@ -747,15 +751,15 @@ const styles = StyleSheet.create({
 
   productCard: {
     backgroundColor: WHITE,
-    borderRadius: 17,
+    borderRadius: 16,
     marginBottom: 11,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: BORDER,
     flexDirection: 'row',
     minHeight: 185,
     shadowColor: '#000',
-    shadowOpacity: 0.045,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     shadowOffset: {
       width: 0,
@@ -767,14 +771,14 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: 116,
     height: 165,
-    borderRadius: 14,
-    backgroundColor: '#FAFBFA',
+    borderRadius: 12,
+    backgroundColor: BG,
     overflow: 'hidden',
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#F0F2F0',
+    borderColor: BORDER,
   },
 
   productImage: {
@@ -791,14 +795,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 7,
     top: 7,
-    backgroundColor: GREEN,
+    backgroundColor: GOLD,
     paddingHorizontal: 7,
     paddingVertical: 4,
-    borderRadius: 7,
+    borderRadius: 6,
   },
 
   discountText: {
-    color: WHITE,
+    color: INK,
     fontSize: 8.5,
     fontWeight: '900',
   },
@@ -861,8 +865,8 @@ const styles = StyleSheet.create({
   },
 
   sellingPrice: {
-    color: GREEN,
-    fontSize: 19,
+    color: TEXT,
+    fontSize: 18,
     fontWeight: '900',
   },
 
@@ -883,9 +887,9 @@ const styles = StyleSheet.create({
     minHeight: 34,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F0F1F0',
+    borderTopColor: '#F0EAE0',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F1F0',
+    borderBottomColor: '#F0EAE0',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -925,7 +929,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 33,
     borderRadius: 9,
-    backgroundColor: LIGHT_GREEN,
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -933,7 +939,7 @@ const styles = StyleSheet.create({
   },
 
   editText: {
-    color: GREEN,
+    color: INK,
     fontSize: 9.5,
     fontWeight: '900',
   },
@@ -942,9 +948,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 33,
     borderRadius: 9,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#FDECEC',
     borderWidth: 1,
-    borderColor: '#F0D6D6',
+    borderColor: '#F2D1D1',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -971,7 +977,9 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderRadius: 27,
-    backgroundColor: LIGHT_GREEN,
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -995,7 +1003,7 @@ const styles = StyleSheet.create({
     minHeight: 45,
     paddingHorizontal: 19,
     borderRadius: 13,
-    backgroundColor: GREEN,
+    backgroundColor: GOLD,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1004,7 +1012,7 @@ const styles = StyleSheet.create({
   },
 
   emptyAddText: {
-    color: WHITE,
+    color: INK,
     fontSize: 11.5,
     fontWeight: '900',
   },

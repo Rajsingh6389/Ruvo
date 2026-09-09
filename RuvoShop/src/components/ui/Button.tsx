@@ -3,7 +3,7 @@ import { Pressable, Text, ActivityIndicator, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'dark' | 'success';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -42,13 +42,17 @@ export const Button = ({
       case 'primary':
         return 'bg-ruvo-yellow active:bg-ruvo-yellow-dark';
       case 'secondary':
-        return 'bg-warm-200 active:bg-warm-300';
+        return 'bg-white border border-warm-300 active:bg-warm-100';
+      case 'dark':
+        return 'bg-ruvo-ink active:bg-ruvo-deep';
       case 'outline':
-        return 'border-2 border-warm-300 active:bg-warm-100';
+        return 'border border-warm-300 bg-transparent active:bg-warm-100';
       case 'ghost':
-        return 'active:bg-warm-100';
+        return 'bg-transparent active:bg-warm-100';
       case 'danger':
-        return 'bg-red-500 active:bg-red-600';
+        return 'bg-ruvo-error active:opacity-90';
+      case 'success':
+        return 'bg-ruvo-accent active:opacity-90';
       default:
         return 'bg-ruvo-yellow active:bg-ruvo-yellow-dark';
     }
@@ -57,7 +61,7 @@ export const Button = ({
   const getTextClasses = () => {
     const baseClass = 'font-bold';
     const sizeClass = size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg' : 'text-base';
-    const colorClass = variant === 'danger' ? 'text-white' : 'text-ruvo-ink';
+    const colorClass = (variant === 'danger' || variant === 'dark' || variant === 'success') ? 'text-white' : 'text-ruvo-ink';
     return `${baseClass} ${sizeClass} ${colorClass}`;
   };
 
@@ -98,7 +102,7 @@ export const Button = ({
         className={`
           ${getVariantClasses()}
           ${getSizeClasses()}
-          rounded-lg
+          rounded-xl
           flex-row
           items-center
           justify-center

@@ -26,13 +26,13 @@ export const Card = ({
   const getVariantClasses = () => {
     switch (variant) {
       case 'elevated':
-        return 'bg-ruvo-surface rounded-xl shadow-lg';
+        return 'bg-ruvo-surface rounded-2xl shadow-md border border-warm-300';
       case 'outline':
-        return 'bg-ruvo-surface rounded-lg border-2 border-warm-300';
+        return 'bg-ruvo-surface rounded-2xl border border-warm-400';
       case 'flat':
-        return 'bg-warm-100 rounded-lg';
+        return 'bg-warm-100 rounded-2xl border border-warm-200';
       default:
-        return 'bg-ruvo-surface rounded-lg border border-warm-300 shadow-sm';
+        return 'bg-ruvo-surface rounded-2xl border border-warm-300 shadow-sm';
     }
   };
 

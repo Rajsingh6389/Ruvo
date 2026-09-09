@@ -158,7 +158,7 @@ export const ShopCard = ({
             { backgroundColor: colors.gold || '#D4AF37', borderRadius: radius.pill },
           ]}
         >
-          <Text style={[typography.overline, { color: '#173F35', fontWeight: '800' }]}>
+          <Text style={[typography.overline, { color: '#171A1F', fontWeight: '800' }]}>
             {badge ?? '0% COMMISSION'}
           </Text>
         </View>

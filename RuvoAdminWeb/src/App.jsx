@@ -16,6 +16,7 @@ import { PaymentsPage } from './pages/PaymentsPage';
 import { SettlementsPage } from './pages/SettlementsPage';
 import { RefundsPage } from './pages/RefundsPage';
 import { HelpTicketsPage } from './pages/HelpTicketsPage';
+import { RuvoWebLaunch } from './components/RuvoWebLaunch';
 import './index.css';
 
 const AdminApp = () => {
@@ -120,10 +121,18 @@ const NotFoundPage = () => (
 );
 
 export default function App() {
+  const [launchComplete, setLaunchComplete] = useState(false);
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <AdminApp />
+        {!launchComplete && (
+          <RuvoWebLaunch
+            roleSubtitle="LOCAL • CONNECTED • MOVING"
+            onFinish={() => setLaunchComplete(true)}
+          />
+        )}
       </BrowserRouter>
     </AuthProvider>
   );

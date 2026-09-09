@@ -521,7 +521,7 @@ export default function CustomerTrackingScreen() {
         {!isCancelled && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'PICKED_UP') && (
           <View style={styles.otpBox}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="key-outline" size={20} color="#D97706" />
+              <Ionicons name="key-outline" size={18} color="#171A1F" />
               <Text style={styles.otpLabel}>Delivery Verification OTP</Text>
             </View>
             <Text style={styles.otpCode}>
@@ -536,7 +536,7 @@ export default function CustomerTrackingScreen() {
         {/* Delivered & Verified Badge */}
         {order.orderStatus === 'DELIVERED' && (
           <View style={styles.deliveredBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#059669" />
+            <Ionicons name="checkmark-circle" size={24} color="#18A957" />
             <View style={{ flex: 1 }}>
               <Text style={styles.deliveredTitle}>Order Delivered & Verified</Text>
               <Text style={styles.deliveredSub}>OTP verified. Thank you for ordering with RuVo!</Text>
@@ -548,23 +548,23 @@ export default function CustomerTrackingScreen() {
         {partnerInfo && (
           <View style={styles.partnerCard}>
             <View style={styles.partnerIconBox}>
-              <Ionicons name="bicycle" size={24} color="#2563EB" />
+              <Ionicons name="bicycle" size={22} color="#171A1F" />
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={styles.partnerName}>{partnerInfo.name}</Text>
-                <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ color: '#1D4ED8', fontSize: 10, fontWeight: '700' }}>DELIVERY PARTNER</Text>
+                <View style={{ backgroundColor: '#FAF7F0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#E7E0D5' }}>
+                  <Text style={{ color: '#171A1F', fontSize: 10, fontWeight: '800' }}>DELIVERY PARTNER</Text>
                 </View>
               </View>
-              <Text style={styles.partnerPhone}> {partnerInfo.phone}</Text>
+              <Text style={styles.partnerPhone}>📞 {partnerInfo.phone}</Text>
               {partnerInfo.locationName ? (
-                <Text style={{ color: '#4B5563', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                  {partnerInfo.locationName}
+                <Text style={{ color: '#77736B', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                  📍 {partnerInfo.locationName}
                 </Text>
               ) : (
-                <Text style={{ color: '#059669', fontSize: 12, marginTop: 2, fontWeight: '600' }}>
-                  Live Tracking Active
+                <Text style={{ color: '#18A957', fontSize: 12, marginTop: 2, fontWeight: '700' }}>
+                  ● Live Tracking Active
                 </Text>
               )}
             </View>
@@ -572,7 +572,7 @@ export default function CustomerTrackingScreen() {
               style={styles.callBtn}
               onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
             >
-              <Ionicons name="call" size={18} color="#059669" />
+              <Ionicons name="call" size={18} color="#171A1F" />
             </TouchableOpacity>
           </View>
         )}
@@ -595,21 +595,21 @@ export default function CustomerTrackingScreen() {
                     <Animated.View
                       style={[
                         styles.timelineDot,
-                        { backgroundColor: active ? '#059669' : colors.border, transform: [{ scale }], opacity },
+                        { backgroundColor: active ? '#171A1F' : colors.border, transform: [{ scale }], opacity },
                       ]}
                     >
-                      {active && <Ionicons name="checkmark" size={10} color="#FFF" />}
+                      {active && <Ionicons name="checkmark" size={10} color="#F4B400" />}
                     </Animated.View>
                     {!isLast && (
                       <Animated.View
-                        style={[styles.timelineLine, { backgroundColor: nextActive ? '#059669' : colors.border }]}
+                        style={[styles.timelineLine, { backgroundColor: nextActive ? '#171A1F' : colors.border }]}
                       />
                     )}
                   </View>
                   <Animated.View style={{ flex: 1, paddingBottom: isLast ? 0 : 18, opacity }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name={step.icon} size={15} color={active ? '#059669' : colors.textSecondary} />
-                      <Text style={[typography.bodyStrong, styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '700' : '400' }]}>
+                      <Ionicons name={step.icon} size={16} color={active ? '#171A1F' : colors.textSecondary} />
+                      <Text style={[typography.bodyStrong, styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '800' : '500' }]}>
                         {step.label}
                       </Text>
                       {i === 1 && active && (order.orderStatus === 'DELIVERY_ASSIGNMENT' || order.orderStatus === 'DELIVERY_ASSIGNED') && (
@@ -625,7 +625,7 @@ export default function CustomerTrackingScreen() {
           </View>
         ) : (
           <View style={styles.cancelCard}>
-            <Ionicons name="close-circle" size={40} color="#EF4444" />
+            <Ionicons name="close-circle" size={40} color="#D94A4A" />
             <Text style={styles.cancelCardTitle}>
               {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
                 ? 'Order Timed Out'
@@ -665,10 +665,10 @@ export default function CustomerTrackingScreen() {
          order.orderStatus !== 'OUT_FOR_DELIVERY' &&
          order.orderStatus !== 'DELIVERED' && (
           <TouchableOpacity
-            style={[styles.cancelBtn, { backgroundColor: colors.error, borderRadius: radius.button }, shadows.sm]}
+            style={[styles.cancelBtn, { backgroundColor: '#FDECEC', borderColor: '#F8B4B4', borderRadius: radius.button }, shadows.sm]}
             onPress={handleCancelOrder}
           >
-            <Text style={[typography.button, styles.cancelBtnText, { color: '#FFF' }]}>Cancel Order</Text>
+            <Text style={[typography.button, styles.cancelBtnText, { color: '#D94A4A' }]}>Cancel Order</Text>
           </TouchableOpacity>
         )}
       </ScrollView>

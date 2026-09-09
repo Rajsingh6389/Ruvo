@@ -35,3 +35,5 @@ Thumbs.db
 *.old.tsx
 *.backup
 *.original
+.agents/mcp_config.json
+mcp_config.json

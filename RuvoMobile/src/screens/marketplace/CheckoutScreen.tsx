@@ -303,11 +303,14 @@ export default function CheckoutScreen() {
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg">
       {/* HEADER */}
-      <View className="h-14 px-4 border-b border-warm-300 bg-white flex-row items-center justify-between">
-        <TouchableOpacity className="p-2" onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#231C10" />
+      <View className="h-14 px-4 border-b border-ruvo-border bg-white flex-row items-center justify-between">
+        <TouchableOpacity 
+          className="w-10 h-10 rounded-full bg-ruvo-card border border-ruvo-border items-center justify-center" 
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={20} color="#171A1F" />
         </TouchableOpacity>
-        <Text className="text-lg font-extrabold text-ruvo-ink">Checkout</Text>
+        <Text className="text-lg font-black text-ruvo-ink">Checkout</Text>
         <View className="w-10" />
       </View>
 
@@ -316,8 +319,8 @@ export default function CheckoutScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ORDER ITEMS */}
-        <View className="bg-white rounded-2xl border border-warm-300 p-4 mb-4 shadow-sm">
-          <Text className="text-base font-black text-ruvo-ink mb-3">
+        <View className="bg-white rounded-[20px] border border-ruvo-border p-4 mb-4 shadow-xs">
+          <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider mb-3">
             Order items ({checkoutItems.length})
           </Text>
           {checkoutItems.map(item => {
@@ -333,12 +336,12 @@ export default function CheckoutScreen() {
                 {imgUri ? (
                   <Image
                     source={{ uri: imgUri }}
-                    className="w-16 h-16 rounded-xl bg-warm-50"
+                    className="w-16 h-16 rounded-xl bg-ruvo-card border border-ruvo-border"
                     resizeMode="cover"
                   />
                 ) : (
-                  <View className="w-16 h-16 rounded-xl bg-ruvo-yellow-soft items-center justify-center border border-ruvo-yellow-soft">
-                    <Ionicons name="basket" size={26} color="#F5B700" />
+                  <View className="w-16 h-16 rounded-xl bg-ruvo-yellow-soft items-center justify-center border border-ruvo-border">
+                    <Ionicons name="basket" size={24} color="#F4B400" />
                   </View>
                 )}
                 <View className="flex-1 ml-3">
@@ -349,11 +352,11 @@ export default function CheckoutScreen() {
                     {p.name}
                   </Text>
                   {p.unit ? (
-                    <Text className="text-warm-600 text-xs mt-0.5">
+                    <Text className="text-ruvo-muted text-xs mt-0.5">
                       {p.unit}
                     </Text>
                   ) : null}
-                  <Text className="text-ruvo-ink text-sm font-black mt-1">
+                  <Text className="text-ruvo-ink text-xs font-black mt-1">
                     ₹{validUnitPrice} × {qty}
                   </Text>
                 </View>
@@ -366,48 +369,48 @@ export default function CheckoutScreen() {
         </View>
 
         {/* DELIVERY ADDRESS */}
-        <View className="bg-white rounded-2xl border border-warm-300 p-4 mb-4 shadow-sm">
+        <View className="bg-white rounded-[20px] border border-ruvo-border p-4 mb-4 shadow-xs">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-base font-black text-ruvo-ink">
+            <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider">
               Delivery Address
             </Text>
             <TouchableOpacity onPress={() => setLocationPickerVisible(true)}>
-              <Text className="text-ruvo-yellow-dark font-black text-xs uppercase">Change</Text>
+              <Text className="text-ruvo-ink font-extrabold text-xs uppercase tracking-wider underline">Change</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
             className="flex-row items-center"
             onPress={() => setLocationPickerVisible(true)}
           >
-            <View className="w-9 h-9 rounded-xl bg-ruvo-yellow-soft items-center justify-center mr-3">
-              <Ionicons name="location" size={20} color="#D99B00" />
+            <View className="w-10 h-10 rounded-xl bg-ruvo-yellow-soft border border-ruvo-border items-center justify-center mr-3">
+              <Ionicons name="location" size={20} color="#F4B400" />
             </View>
             <View className="flex-1">
               <Text className="text-ruvo-ink text-sm font-extrabold">
                 {getDeliveryLocationLabel(location)}
               </Text>
-              <Text className="text-warm-700 text-xs leading-5 mt-0.5" numberOfLines={2}>
+              <Text className="text-ruvo-muted text-xs leading-5 mt-0.5 font-medium" numberOfLines={2}>
                 {deliveryAddress}
               </Text>
               {location?.details.phone ? (
-                <Text className="text-warm-600 text-xs mt-1 font-medium">
+                <Text className="text-ruvo-muted text-xs mt-1 font-semibold">
                   Contact: {location.details.receiverName ? `${location.details.receiverName} · ` : ''}{location.details.phone}
                 </Text>
               ) : null}
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={18} color="#A39D93" />
           </TouchableOpacity>
         </View>
 
         {/* PAYMENT METHOD */}
-        <View className="bg-white rounded-2xl border border-warm-300 p-4 mb-4 shadow-sm">
-          <Text className="text-base font-black text-ruvo-ink mb-3">
+        <View className="bg-white rounded-[20px] border border-ruvo-border p-4 mb-4 shadow-xs">
+          <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider mb-3">
             Payment Method
           </Text>
 
           <TouchableOpacity
-            className={`flex-row items-center p-3 rounded-xl border ${
-              paymentMethod === 'CASHFREE' ? 'border-ruvo-yellow bg-ruvo-yellow-soft' : 'border-warm-200 bg-white'
+            className={`flex-row items-center p-3.5 rounded-xl border ${
+              paymentMethod === 'CASHFREE' ? 'border-ruvo-ink bg-ruvo-card' : 'border-ruvo-border bg-white'
             }`}
             activeOpacity={0.7}
             onPress={() => setPaymentMethod('CASHFREE')}
@@ -415,21 +418,21 @@ export default function CheckoutScreen() {
             <Ionicons
               name={paymentMethod === 'CASHFREE' ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={paymentMethod === 'CASHFREE' ? '#D99B00' : '#8B8378'}
+              color={paymentMethod === 'CASHFREE' ? '#171A1F' : '#A39D93'}
             />
             <View className="ml-3 flex-1">
               <Text className="text-ruvo-ink text-sm font-extrabold">
                 UPI / Online Payment (Cashfree)
               </Text>
-              <Text className="text-warm-600 text-xs mt-0.5">
+              <Text className="text-ruvo-muted text-xs mt-0.5 font-medium">
                 Instant pay via Google Pay, PhonePe, Paytm, Cards, NetBanking
               </Text>
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className={`flex-row items-center p-3 rounded-xl border mt-2.5 ${
-              paymentMethod === 'COD' ? 'border-ruvo-yellow bg-ruvo-yellow-soft' : 'border-warm-200 bg-white'
+            className={`flex-row items-center p-3.5 rounded-xl border mt-2.5 ${
+              paymentMethod === 'COD' ? 'border-ruvo-ink bg-ruvo-card' : 'border-ruvo-border bg-white'
             }`}
             activeOpacity={0.7}
             onPress={() => setPaymentMethod('COD')}
@@ -437,13 +440,13 @@ export default function CheckoutScreen() {
             <Ionicons
               name={paymentMethod === 'COD' ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={paymentMethod === 'COD' ? '#D99B00' : '#8B8378'}
+              color={paymentMethod === 'COD' ? '#171A1F' : '#A39D93'}
             />
             <View className="ml-3 flex-1">
               <Text className="text-ruvo-ink text-sm font-extrabold">
                 Cash on Delivery (COD)
               </Text>
-              <Text className="text-warm-600 text-xs mt-0.5">
+              <Text className="text-ruvo-muted text-xs mt-0.5 font-medium">
                 Pay with cash directly to delivery partner upon arrival
               </Text>
             </View>
@@ -451,15 +454,15 @@ export default function CheckoutScreen() {
         </View>
 
         {/* BILL DETAILS */}
-        <View className="bg-white rounded-2xl border border-warm-300 p-4 shadow-sm">
+        <View className="bg-white rounded-[20px] border border-ruvo-border p-4 shadow-xs">
           <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-base font-black text-ruvo-ink">
+            <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider">
               Bill Summary
             </Text>
             {distanceKm !== null && (
-              <View className="flex-row items-center bg-ruvo-yellow-soft px-2 py-0.5 rounded-full gap-1 border border-warm-300">
-                <Ionicons name="navigate" size={11} color="#D99B00" />
-                <Text className="text-ruvo-yellow-dark text-xs font-black">
+              <View className="flex-row items-center bg-ruvo-yellow-soft px-2.5 py-0.5 rounded-full gap-1 border border-ruvo-border">
+                <Ionicons name="navigate" size={11} color="#F4B400" />
+                <Text className="text-ruvo-ink text-xs font-black">
                   {distanceKm} km
                 </Text>
               </View>
@@ -468,7 +471,7 @@ export default function CheckoutScreen() {
 
           {!serviceable && !pricingLoading && (
             <View className="flex-row items-center gap-1.5 bg-red-50 rounded-xl p-2.5 mb-3 border border-red-200">
-              <Ionicons name="close-circle" size={16} color="#DC2626" />
+              <Ionicons name="close-circle" size={16} color="#D94A4A" />
               <Text className="text-red-700 text-xs font-bold flex-shrink">
                 This shop is outside the delivery zone.
               </Text>
@@ -477,24 +480,24 @@ export default function CheckoutScreen() {
 
           {pricingLoading ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#F5B700" />
-              <Text className="text-warm-600 text-xs mt-2 font-medium">
+              <ActivityIndicator size="small" color="#F4B400" />
+              <Text className="text-ruvo-muted text-xs mt-2 font-medium">
                 Calculating delivery fees...
               </Text>
             </View>
           ) : (
             <>
               <View className="mb-4">
-                <Text className="text-xs font-black text-ruvo-ink mb-2 uppercase tracking-wider">
+                <Text className="text-xs font-extrabold text-ruvo-muted mb-2 uppercase tracking-wider">
                   Apply Coupon Code
                 </Text>
                 <View className="flex-row items-center gap-2">
-                  <View className="flex-1 h-11 rounded-xl border border-warm-300 bg-warm-50 px-3 flex-row items-center">
-                    <Ionicons name="pricetag-outline" size={16} color="#D99B00" />
+                  <View className="flex-1 h-11 rounded-xl border border-ruvo-border bg-ruvo-card px-3 flex-row items-center">
+                    <Ionicons name="pricetag-outline" size={16} color="#F4B400" />
                     <TextInput
                       className="flex-1 ml-2 text-sm font-extrabold text-ruvo-ink"
                       placeholder="Enter coupon code"
-                      placeholderTextColor="#8B8378"
+                      placeholderTextColor="#A39D93"
                       value={couponCode}
                       autoCapitalize="characters"
                       onChangeText={(value) => {
@@ -506,7 +509,7 @@ export default function CheckoutScreen() {
                   </View>
                   <TouchableOpacity
                     className={`h-11 px-4 rounded-xl items-center justify-center ${
-                      appliedCoupon ? 'bg-warm-200' : 'bg-ruvo-yellow'
+                      appliedCoupon ? 'bg-ruvo-card border border-ruvo-border' : 'bg-ruvo-yellow shadow-xs'
                     }`}
                     onPress={() => {
                       if (appliedCoupon) {
@@ -523,16 +526,16 @@ export default function CheckoutScreen() {
                   </TouchableOpacity>
                 </View>
                 <TouchableOpacity
-                  className="mt-2 self-start bg-ruvo-yellow-soft border border-ruvo-yellow-dark rounded-full px-3 py-1"
+                  className="mt-2 self-start bg-ruvo-yellow-soft border border-ruvo-border rounded-full px-3 py-1"
                   onPress={() => handleApplyCoupon(WELCOME_COUPON.code)}
                 >
-                  <Text className="text-xs font-black text-ruvo-yellow-dark">
+                  <Text className="text-xs font-extrabold text-ruvo-ink">
                     Use WELCOME100: ₹100 off above ₹299
                   </Text>
                 </TouchableOpacity>
                 {couponMessage ? (
                   <Text className={`text-xs mt-2 font-bold ${
-                    appliedCoupon ? 'text-emerald-600' : 'text-red-500'
+                    appliedCoupon ? 'text-emerald-700' : 'text-red-600'
                   }`}>
                     {couponMessage}
                   </Text>
@@ -540,15 +543,15 @@ export default function CheckoutScreen() {
               </View>
 
               <View className="flex-row justify-between mb-2">
-                <Text className="text-warm-700 text-xs font-semibold">Item Total</Text>
+                <Text className="text-ruvo-muted text-xs font-semibold">Item Total</Text>
                 <Text className="text-ruvo-ink text-xs font-black">₹{itemTotal}</Text>
               </View>
               <View className="flex-row justify-between mb-2">
-                <Text className="text-warm-700 text-xs font-semibold">Platform Fee</Text>
+                <Text className="text-ruvo-muted text-xs font-semibold">Platform Fee</Text>
                 <Text className="text-ruvo-ink text-xs font-black">₹{platformFee}</Text>
               </View>
               <View className="flex-row justify-between mb-2">
-                <Text className="text-warm-700 text-xs font-semibold">
+                <Text className="text-ruvo-muted text-xs font-semibold">
                   Delivery Fee{distanceKm !== null ? ` (${distanceKm} km)` : ''}
                 </Text>
                 <Text className="text-ruvo-ink text-xs font-black">₹{deliveryFee}</Text>
@@ -563,7 +566,7 @@ export default function CheckoutScreen() {
                   </Text>
                 </View>
               )}
-              <View className="border-t border-warm-200 mt-2 pt-2 flex-row justify-between items-center">
+              <View className="border-t border-ruvo-border mt-2 pt-2 flex-row justify-between items-center">
                 <Text className="text-base font-black text-ruvo-ink">
                   Grand Total
                 </Text>
@@ -577,9 +580,9 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* FOOTER */}
-      <View className="bg-white px-4 py-4 border-t border-warm-300 flex-row items-center justify-between shadow-xl">
+      <View className="bg-white px-5 py-4 border-t border-ruvo-border flex-row items-center justify-between shadow-lg">
         <View>
-          <Text className="text-warm-600 text-xs font-bold uppercase tracking-wider">Grand Total</Text>
+          <Text className="text-ruvo-muted text-[11px] font-bold uppercase tracking-wider">Grand Total</Text>
           <Text className="text-2xl font-black text-ruvo-ink">
             {pricingLoading ? '...' : `₹${grandTotal}`}
           </Text>
@@ -587,7 +590,7 @@ export default function CheckoutScreen() {
 
         <TouchableOpacity
           className={`px-6 py-3.5 rounded-xl flex-row items-center justify-center ${
-            submitting ? 'bg-warm-300' : 'bg-ruvo-yellow shadow-md active:bg-ruvo-yellow-dark'
+            submitting ? 'bg-ruvo-card border border-ruvo-border' : 'bg-ruvo-yellow shadow-md active:bg-ruvo-yellow-dark'
           }`}
           disabled={submitting}
           onPress={() => {
@@ -604,7 +607,7 @@ export default function CheckoutScreen() {
           }}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#231C10" />
+            <ActivityIndicator size="small" color="#171A1F" />
           ) : (
             <>
               <Text className="text-ruvo-ink font-black text-center text-base">
@@ -614,7 +617,7 @@ export default function CheckoutScreen() {
                 <Ionicons
                   name="arrow-forward"
                   size={18}
-                  color="#231C10"
+                  color="#171A1F"
                   className="ml-2"
                 />
               )}

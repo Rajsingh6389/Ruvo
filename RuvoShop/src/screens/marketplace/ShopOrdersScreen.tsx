@@ -44,31 +44,31 @@ type OrderStatus =
   | 'CANCELLED_BY_SHOP' | 'CANCELLED_BY_USER' | 'SHOP_TIMEOUT';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  PAYMENT_PENDING:            { color: '#9CA3AF', bg: '#F3F4F6', label: 'Payment Pending' },
-  ORDER_PLACED:               { color: '#D97706', bg: '#FEF3C7', label: 'New Request' },
-  SHOP_PENDING:               { color: '#D97706', bg: '#FEF3C7', label: 'Pending' },
-  SHOP_ACCEPTED:              { color: '#2563EB', bg: '#DBEAFE', label: 'Accepted' },
-  PREPARING:                  { color: '#2563EB', bg: '#DBEAFE', label: 'Preparing' },
-  READY:                      { color: '#7C3AED', bg: '#EDE9FE', label: 'Ready' },
-  DELIVERY_BROADCASTED:       { color: '#EA580C', bg: '#FFEDD5', label: '📡 Broadcasting' },
-  DELIVERY_ASSIGNMENT:        { color: '#EA580C', bg: '#FFEDD5', label: '📡 Broadcasting' },
-  WAITING_PARTNER:            { color: '#EA580C', bg: '#FFEDD5', label: '📡 Broadcasting' },
-  BROADCASTED:                { color: '#EA580C', bg: '#FFEDD5', label: '📡 Broadcasting' },
-  SEARCHING_PARTNER:          { color: '#EA580C', bg: '#FFEDD5', label: '📡 Broadcasting' },
-  DELIVERY_ASSIGNED:          { color: '#0891B2', bg: '#CFFAFE', label: 'Partner Assigned' },
-  PICKED_UP:                  { color: '#059669', bg: '#D1FAE5', label: 'Picked Up' },
-  OUT_FOR_DELIVERY:           { color: '#059669', bg: '#D1FAE5', label: 'Out for Delivery' },
-  DELIVERED:                  { color: '#15803D', bg: '#DCFCE7', label: 'Delivered' },
-  CANCELLED:                  { color: '#DC2626', bg: '#FEE2E2', label: 'Cancelled' },
-  SHOP_REJECTED:              { color: '#DC2626', bg: '#FEE2E2', label: 'Rejected' },
-  CANCELLED_NO_PARTNER_FOUND: { color: '#DC2626', bg: '#FEE2E2', label: 'No Partner Found' },
-  CANCELLED_BY_SHOP:          { color: '#DC2626', bg: '#FEE2E2', label: 'Cancelled by Shop' },
-  CANCELLED_BY_USER:          { color: '#DC2626', bg: '#FEE2E2', label: 'Cancelled by Customer' },
-  SHOP_TIMEOUT:               { color: '#DC2626', bg: '#FEE2E2', label: 'Timeout' },
+  PAYMENT_PENDING:            { color: '#77736B', bg: '#FAF7F0', label: 'Payment Pending' },
+  ORDER_PLACED:               { color: '#E99A16', bg: '#FEF5E7', label: 'New Request' },
+  SHOP_PENDING:               { color: '#E99A16', bg: '#FEF5E7', label: 'Pending' },
+  SHOP_ACCEPTED:              { color: '#3478C8', bg: '#EBF2FA', label: 'Accepted' },
+  PREPARING:                  { color: '#3478C8', bg: '#EBF2FA', label: 'Preparing' },
+  READY:                      { color: '#18A957', bg: '#E8F8EE', label: 'Ready' },
+  DELIVERY_BROADCASTED:       { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
+  DELIVERY_ASSIGNMENT:        { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
+  WAITING_PARTNER:            { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
+  BROADCASTED:                { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
+  SEARCHING_PARTNER:          { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
+  DELIVERY_ASSIGNED:          { color: '#3478C8', bg: '#EBF2FA', label: 'Partner Assigned' },
+  PICKED_UP:                  { color: '#18A957', bg: '#E8F8EE', label: 'Picked Up' },
+  OUT_FOR_DELIVERY:           { color: '#18A957', bg: '#E8F8EE', label: 'Out for Delivery' },
+  DELIVERED:                  { color: '#18A957', bg: '#E8F8EE', label: 'Delivered' },
+  CANCELLED:                  { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled' },
+  SHOP_REJECTED:              { color: '#D94A4A', bg: '#FDECEC', label: 'Rejected' },
+  CANCELLED_NO_PARTNER_FOUND: { color: '#D94A4A', bg: '#FDECEC', label: 'No Partner Found' },
+  CANCELLED_BY_SHOP:          { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled by Shop' },
+  CANCELLED_BY_USER:          { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled by Customer' },
+  SHOP_TIMEOUT:               { color: '#D94A4A', bg: '#FDECEC', label: 'Timeout' },
 };
 
 const getStatusCfg = (status?: string) =>
-  STATUS_CONFIG[status ?? ''] ?? { color: '#6B7280', bg: '#F3F4F6', label: status?.replace(/_/g, ' ') ?? 'Unknown' };
+  STATUS_CONFIG[status ?? ''] ?? { color: '#77736B', bg: '#FAF7F0', label: status?.replace(/_/g, ' ') ?? 'Unknown' };
 
 const formatImgUrl = (url?: string): string | null => {
   if (!url) return null;
@@ -312,23 +312,23 @@ export default function ShopOrdersScreen() {
     <View className="flex-1 bg-ruvo-bg" style={{ paddingTop: insets.top }}>
       <OfflineBar />
       {/* Header */}
-      <View className="bg-white border-b border-warm-200 px-lg py-sm flex-row items-center justify-between shadow-xs">
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-sm flex-row items-center justify-between">
         <View className="flex-row items-center gap-sm flex-1">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
+            className="w-10 h-10 rounded-xl bg-ruvo-bg items-center justify-center border border-ruvo-border"
           >
-            <Ionicons name="arrow-back" size={20} color="#231C10" />
+            <Ionicons name="arrow-back" size={18} color="#171A1F" />
           </TouchableOpacity>
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
-              <Text className="text-xl font-black text-ruvo-ink">Store Orders</Text>
-              <View className="bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
-                <Text className="text-[11px] font-black text-amber-800">Today: {todayOrdersCount}</Text>
+              <Text className="text-xl font-extrabold text-ruvo-ink">Store Orders</Text>
+              <View className="bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                <Text className="text-[11px] font-extrabold text-amber-800">Today: {todayOrdersCount}</Text>
               </View>
             </View>
             {pendingCount > 0 && (
-              <Text className="text-xs text-rose-600 font-extrabold mt-0.5">⚠️ {pendingCount} pending action</Text>
+              <Text className="text-xs text-red-600 font-extrabold mt-0.5">⚠️ {pendingCount} pending action</Text>
             )}
           </View>
         </View>
@@ -337,23 +337,23 @@ export default function ShopOrdersScreen() {
           {!!shopId && (
             <TouchableOpacity
               onPress={() => navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true })}
-              className="px-md py-2 bg-amber-500 rounded-2xl flex-row items-center gap-xs border border-amber-600 shadow-xs"
+              className="px-md py-2 bg-ruvo-primary rounded-xl flex-row items-center gap-xs border border-amber-400"
             >
-              <Ionicons name="bicycle" size={16} color="#FFFFFF" />
-              <Text className="text-xs font-black text-white">Riders</Text>
+              <Ionicons name="bicycle" size={15} color="#171A1F" />
+              <Text className="text-xs font-bold text-ruvo-ink">Riders</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={() => fetchOrders(true)}
-            className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
+            className="w-10 h-10 rounded-xl bg-ruvo-bg items-center justify-center border border-ruvo-border"
           >
-            <Ionicons name="refresh" size={18} color="#231C10" />
+            <Ionicons name="refresh" size={18} color="#171A1F" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Filter Tabs */}
-      <View className="bg-white border-b border-warm-200 py-xs">
+      <View className="bg-ruvo-surface border-b border-ruvo-border py-xs">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
           <View className="flex-row gap-xs py-1">
             {TABS.map(tab => {
@@ -364,16 +364,16 @@ export default function ShopOrdersScreen() {
                   key={tab.key}
                   activeOpacity={0.8}
                   onPress={() => setFilterTab(tab.key)}
-                  className={`flex-row items-center gap-xs px-md py-2 rounded-2xl ${
-                    isActive ? 'bg-amber-500 border border-amber-600 shadow-sm' : 'bg-warm-100/70 border border-warm-200/50'
+                  className={`flex-row items-center gap-xs px-md py-2 rounded-xl ${
+                    isActive ? 'bg-ruvo-primary border border-amber-400' : 'bg-ruvo-bg border border-ruvo-border'
                   }`}
                 >
-                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-warm-700'}`}>
+                  <Text className={`text-xs font-bold ${isActive ? 'text-ruvo-ink' : 'text-warm-700'}`}>
                     {tab.label}
                   </Text>
                   {count > 0 && (
-                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white' : 'bg-warm-300'}`}>
-                      <Text className={`text-[10px] font-black ${isActive ? 'text-amber-600' : 'text-ruvo-ink'}`}>
+                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-ruvo-ink' : 'bg-warm-200'}`}>
+                      <Text className={`text-[10px] font-extrabold ${isActive ? 'text-white' : 'text-ruvo-ink'}`}>
                         {count}
                       </Text>
                     </View>
@@ -394,8 +394,8 @@ export default function ShopOrdersScreen() {
         </View>
       ) : error ? (
         <Animated.View entering={FadeIn.duration(300)} className="flex-1 items-center justify-center px-xl">
-          <View className="w-24 h-24 bg-red-100 rounded-3xl items-center justify-center mb-lg">
-            <Ionicons name="alert-circle-outline" size={44} color="#DC2626" />
+          <View className="w-24 h-24 bg-red-50 border border-red-200 rounded-3xl items-center justify-center mb-lg">
+            <Ionicons name="alert-circle-outline" size={44} color="#D94A4A" />
           </View>
           <Text className="text-xl font-extrabold text-ruvo-ink mb-sm">Couldn't Load Orders</Text>
           <Text className="text-sm text-warm-600 text-center mb-xl">{error}</Text>
@@ -409,8 +409,8 @@ export default function ShopOrdersScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => { setRefreshing(true); fetchOrders(false); }}
-              tintColor="#F5B700"
-              colors={['#F5B700']}
+              tintColor="#F4B400"
+              colors={['#F4B400']}
             />
           }
           contentContainerClassName={`px-lg pt-sm pb-2xl ${filtered.length === 0 ? 'flex-grow' : ''}`}
@@ -432,95 +432,95 @@ export default function ShopOrdersScreen() {
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
-                <View className="bg-white border border-warm-300 rounded-3xl p-lg shadow-sm">
+                <View className="bg-ruvo-surface border border-ruvo-border rounded-2xl p-lg shadow-sm">
                   {/* Order Header */}
                   <View className="flex-row items-start justify-between mb-md">
                     <View className="flex-1 pr-sm flex-row items-center gap-md">
                       {mainImg ? (
                         <Image 
                           source={{ uri: mainImg }} 
-                          className="w-14 h-14 rounded-2xl bg-warm-100 border border-warm-200" 
+                          className="w-14 h-14 rounded-xl bg-warm-100 border border-ruvo-border" 
                         />
                       ) : (
-                        <View className="w-14 h-14 rounded-2xl bg-warm-100 border border-warm-200 items-center justify-center">
-                          <Ionicons name="cart-outline" size={26} color="#A79E92" />
+                        <View className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center">
+                          <Ionicons name="cart-outline" size={24} color="#F4B400" />
                         </View>
                       )}
                       <View className="flex-1">
-                        <Text className="text-base font-black text-ruvo-ink" numberOfLines={2}>
+                        <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={2}>
                           {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
                         </Text>
-                        <Text className="text-xs text-warm-600 font-bold mt-1">
+                        <Text className="text-xs text-warm-600 font-medium mt-0.5">
                           {item.distanceKm != null ? `📍 ${item.distanceKm} km away` : '📍 Store Order'}
                         </Text>
                       </View>
                     </View>
-                    <View className="px-3 py-1 rounded-full border border-warm-200" style={{ backgroundColor: cfg.bg }}>
-                      <Text className="text-[11px] font-black" style={{ color: cfg.color }}>{cfg.label}</Text>
+                    <View className="px-3 py-1 rounded-full border border-ruvo-border" style={{ backgroundColor: cfg.bg }}>
+                      <Text className="text-[11px] font-extrabold" style={{ color: cfg.color }}>{cfg.label}</Text>
                     </View>
                   </View>
 
                   {/* Customer & Address Section */}
-                  <View className={`rounded-2xl p-md gap-sm mb-sm border ${
+                  <View className={`rounded-xl p-md gap-sm mb-sm border ${
                     ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
-                      ? 'bg-rose-50/80 border-rose-200' 
-                      : 'bg-amber-50/60 border-amber-200/80'
+                      ? 'bg-red-50 border-red-200' 
+                      : 'bg-ruvo-bg border-ruvo-border'
                   }`}>
                     {/* Customer Info */}
                     {item.customerName || item.customerPhone ? (
-                      <View className="flex-row items-center justify-between pb-xs border-b border-amber-200/60 mb-xs">
+                      <View className="flex-row items-center justify-between pb-xs border-b border-ruvo-border mb-xs">
                         <View className="flex-row items-center gap-1.5">
-                          <Ionicons name="person-circle" size={18} color="#231C10" />
-                          <Text className="text-sm font-black text-ruvo-ink">{item.customerName || 'Customer'}</Text>
+                          <Ionicons name="person-circle" size={16} color="#171A1F" />
+                          <Text className="text-sm font-extrabold text-ruvo-ink">{item.customerName || 'Customer'}</Text>
                         </View>
                         {item.customerPhone ? (
-                          <TouchableOpacity className="flex-row items-center gap-1 bg-amber-500 px-3 py-1 rounded-full border border-amber-600 shadow-xs">
-                            <Ionicons name="call" size={12} color="#FFFFFF" />
-                            <Text className="text-xs font-black text-white">{item.customerPhone}</Text>
+                          <TouchableOpacity className="flex-row items-center gap-1 bg-ruvo-surface px-3 py-1 rounded-full border border-ruvo-border">
+                            <Ionicons name="call" size={12} color="#171A1F" />
+                            <Text className="text-xs font-bold text-ruvo-ink">{item.customerPhone}</Text>
                           </TouchableOpacity>
                         ) : null}
                       </View>
                     ) : null}
 
-                    {/* Complete Address section - Highly Legible & Bold */}
-                    <View className="flex-row items-start gap-2 mb-xs bg-white p-sm rounded-xl border border-amber-200/70">
-                      <Ionicons name="location" size={18} color="#E11D48" className="mt-0.5" />
+                    {/* Complete Address section */}
+                    <View className="flex-row items-start gap-2 mb-xs bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
+                      <Ionicons name="location" size={16} color="#3478C8" className="mt-0.5" />
                       <View className="flex-1">
-                        <Text className="text-[10px] font-black text-rose-700 uppercase tracking-wider mb-0.5">Delivery Address</Text>
-                        <Text className="text-xs text-black font-black leading-5">
+                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider mb-0.5">Delivery Address</Text>
+                        <Text className="text-xs text-ruvo-ink font-semibold leading-5">
                           {item.deliveryAddress || 'No delivery address provided'}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Multi-Item Breakdown - Crisp Contrast */}
+                    {/* Multi-Item Breakdown */}
                     {item.items && item.items.length > 0 ? (
                       <View className="gap-xs my-xs">
-                        <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider mb-xs">
+                        <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider mb-xs">
                           Order Items ({item.items.length})
                         </Text>
                         {item.items.map((it, idx) => {
                           const itImg = formatImgUrl(it.productImageUrl) || mainImg;
                           return (
-                            <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-warm-300 gap-sm shadow-xs">
+                            <View key={it.id || idx} className="flex-row justify-between items-center bg-ruvo-surface p-sm rounded-xl border border-ruvo-border gap-sm">
                               {itImg ? (
-                                <Image source={{ uri: itImg }} className="w-12 h-12 rounded-lg bg-warm-100 border border-warm-200" />
+                                <Image source={{ uri: itImg }} className="w-11 h-11 rounded-lg bg-warm-100 border border-ruvo-border" />
                               ) : (
-                                <View className="w-12 h-12 rounded-lg bg-warm-100 border border-warm-200 items-center justify-center">
-                                  <Ionicons name="basket-outline" size={20} color="#A79E92" />
+                                <View className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 items-center justify-center">
+                                  <Ionicons name="basket-outline" size={18} color="#F4B400" />
                                 </View>
                               )}
                               <View className="flex-1 pr-xs">
-                                <Text className="text-sm font-black text-ruvo-ink" numberOfLines={1}>
+                                <Text className="text-xs font-extrabold text-ruvo-ink" numberOfLines={1}>
                                   {it.productName}
                                 </Text>
-                                <View className="bg-amber-100 self-start px-2 py-0.5 rounded-md mt-1 border border-amber-300">
-                                  <Text className="text-xs font-black text-amber-900">
+                                <View className="bg-amber-50 self-start px-2 py-0.5 rounded-md mt-1 border border-amber-200">
+                                  <Text className="text-[10px] font-extrabold text-amber-800">
                                     Qty: {it.quantity}
                                   </Text>
                                 </View>
                               </View>
-                              <Text className="text-base font-black text-ruvo-ink">
+                              <Text className="text-sm font-extrabold text-ruvo-ink">
                                 ₹{it.priceAtOrder ? (it.priceAtOrder * it.quantity) : (item.subtotal || item.totalAmount)}
                               </Text>
                             </View>
@@ -528,26 +528,26 @@ export default function ShopOrdersScreen() {
                         })}
                       </View>
                     ) : (
-                      <View className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-warm-200">
-                        <Text className="text-xs text-warm-700 font-extrabold">Item Price</Text>
-                        <Text className="text-base font-black text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
+                      <View className="flex-row justify-between items-center bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
+                        <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
+                        <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
                       </View>
                     )}
 
                     {/* Total & Payment Method */}
-                    <View className="flex-row justify-between items-center mt-xs bg-white p-sm rounded-xl border border-amber-300">
+                    <View className="flex-row justify-between items-center mt-xs bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
                       <View>
-                        <Text className="text-[10px] font-black text-warm-600 uppercase tracking-wider">Total Amount</Text>
-                        <Text className="text-lg font-black text-emerald-700">₹{item.totalAmount}</Text>
+                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider">Total Amount</Text>
+                        <Text className="text-lg font-extrabold text-emerald-700">₹{item.totalAmount}</Text>
                       </View>
                       
                       <View className="items-end">
-                        <Text className="text-[10px] font-black text-warm-600 uppercase tracking-wider mb-0.5">Payment</Text>
-                        <View className={`px-3 py-1 rounded-full flex-row items-center gap-1 border ${
-                          isCod ? 'bg-amber-100 border-amber-300' : 'bg-blue-100 border-blue-300'
+                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider mb-0.5">Payment</Text>
+                        <View className={`px-2.5 py-0.5 rounded-full flex-row items-center gap-1 border ${
+                          isCod ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
                         }`}>
-                          <Ionicons name={isCod ? 'cash' : 'card'} size={14} color={isCod ? '#B45309' : '#1D4ED8'} />
-                          <Text className={`text-xs font-black uppercase ${isCod ? 'text-amber-900' : 'text-blue-900'}`}>
+                          <Ionicons name={isCod ? 'cash' : 'card'} size={12} color={isCod ? '#E99A16' : '#3478C8'} />
+                          <Text className={`text-xs font-bold uppercase ${isCod ? 'text-amber-800' : 'text-blue-800'}`}>
                             {item.paymentMethod || 'N/A'}
                           </Text>
                         </View>
@@ -557,8 +557,8 @@ export default function ShopOrdersScreen() {
 
                   {/* Cancellation Explanation */}
                   {['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) && (
-                    <View className="flex-row items-center gap-xs mt-3 bg-red-100 p-sm rounded-lg border border-red-200">
-                      <Ionicons name="information-circle" size={16} color="#DC2626" />
+                    <View className="flex-row items-center gap-xs mt-3 bg-red-50 p-sm rounded-xl border border-red-200">
+                      <Ionicons name="information-circle" size={16} color="#D94A4A" />
                       <Text className="text-xs text-red-700 font-bold flex-1">
                         {status === 'SHOP_REJECTED' && 'You rejected this order before accepting.'}
                         {status === 'CANCELLED_BY_SHOP' && 'You cancelled the delivery partner broadcast.'}
@@ -572,8 +572,8 @@ export default function ShopOrdersScreen() {
 
                   {/* Countdown Timer */}
                   {isPending && !!countdown && (
-                    <View className="bg-orange-100 px-md py-xs rounded-lg mb-sm mt-sm">
-                      <Text className="text-xs font-bold text-orange-600">⏰ {countdown}</Text>
+                    <View className="bg-amber-50 border border-amber-200 px-md py-xs rounded-xl mb-sm mt-sm">
+                      <Text className="text-xs font-bold text-amber-800">⏰ {countdown}</Text>
                     </View>
                   )}
 
@@ -583,20 +583,20 @@ export default function ShopOrdersScreen() {
                       <TouchableOpacity
                         onPress={() => handleReject(item.id!)}
                         disabled={processing}
-                        className="flex-1 border-2 border-red-300 rounded-xl py-md items-center justify-center"
+                        className="flex-1 border border-red-200 bg-red-50 rounded-xl py-md items-center justify-center"
                       >
                         <Text className="text-sm font-extrabold text-red-600">Reject</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={() => handleAccept(item.id!)}
                         disabled={processing}
-                        className="flex-[2] bg-ruvo-yellow rounded-xl py-md items-center justify-center flex-row gap-xs"
+                        className="flex-[2] bg-ruvo-primary rounded-xl py-md items-center justify-center flex-row gap-xs shadow-sm"
                         style={{ opacity: processing ? 0.7 : 1 }}
                       >
                         {processing
-                          ? <ActivityIndicator color="#231C10" size="small" />
+                          ? <ActivityIndicator color="#171A1F" size="small" />
                           : <>
-                              <Ionicons name="checkmark-circle-outline" size={18} color="#231C10" />
+                              <Ionicons name="checkmark-circle-outline" size={18} color="#171A1F" />
                               <Text className="text-sm font-extrabold text-ruvo-ink">Accept Order</Text>
                             </>
                         }
@@ -612,15 +612,15 @@ export default function ShopOrdersScreen() {
                           <View className="absolute left-0 bottom-0 top-0 bg-blue-200/40" style={{ width: `${broadcast.progress * 100}%` }} />
                           <Animated.View entering={FadeIn.duration(1000)} style={{ alignItems: 'center' }}>
                             <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mb-1 border border-blue-200 shadow-sm">
-                              <Ionicons name="radio-outline" size={20} color="#2563EB" />
+                              <Ionicons name="radio-outline" size={20} color="#3478C8" />
                             </View>
                             <Text className="text-xs font-black text-blue-800 uppercase tracking-widest mt-1 mb-0.5">
                               Finding Rider
                             </Text>
-                            <Text className="text-xl font-black text-blue-600 font-mono tracking-widest">
+                            <Text className="text-xl font-black text-blue-700 font-mono tracking-widest">
                               {broadcast.text}
                             </Text>
-                            <Text className="text-[9px] text-blue-500 font-bold mt-0.5 mb-1">
+                            <Text className="text-[9px] text-blue-600 font-bold mt-0.5 mb-1">
                               Broadcasting to online partners
                             </Text>
                             
@@ -636,9 +636,9 @@ export default function ShopOrdersScreen() {
                             )}
 
                             {liveBroadcastData && liveBroadcastData.status === 'NONE' && (
-                              <View className="bg-orange-50 px-md py-xs rounded-lg border border-orange-200 mb-2 items-center">
-                                <Text className="text-[10px] font-bold text-orange-600">No partner in range</Text>
-                                <Text className="text-[9px] text-orange-500">Retrying...</Text>
+                              <View className="bg-amber-50 px-md py-xs rounded-lg border border-amber-200 mb-2 items-center">
+                                <Text className="text-[10px] font-bold text-amber-800">No partner in range</Text>
+                                <Text className="text-[9px] text-amber-700">Retrying...</Text>
                               </View>
                             )}
 
@@ -652,7 +652,7 @@ export default function ShopOrdersScreen() {
                           onPress={() => setViewBroadcastId(item.id!)}
                           className="bg-blue-50 py-md px-md rounded-xl border border-blue-200 items-center justify-center flex-row gap-xs mb-sm"
                         >
-                          <Ionicons name="radio-outline" size={18} color="#2563EB" />
+                          <Ionicons name="radio-outline" size={18} color="#3478C8" />
                           <Text className="text-sm font-extrabold text-blue-700">View Live Broadcast Tracker</Text>
                         </TouchableOpacity>
                       ) : null}

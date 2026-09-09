@@ -45,11 +45,11 @@ export const Input = ({
       <View
         className={`
           bg-ruvo-surface
-          rounded-lg
+          rounded-xl
           flex-row
           items-center
           px-lg
-          ${isFocused ? 'border-2 border-ruvo-yellow' : 'border-2 border-warm-300'}
+          ${isFocused ? 'border border-ruvo-yellow shadow-xs' : 'border border-warm-300'}
           ${error ? 'border-ruvo-error' : ''}
         `}
       >
@@ -58,7 +58,7 @@ export const Input = ({
           <Ionicons 
             name={leftIcon} 
             size={20} 
-            color={isFocused ? '#F5B700' : '#A79E92'} 
+            color={isFocused ? '#F4B400' : '#77736B'} 
             style={{ marginRight: 8 }}
           />
         )}
@@ -76,7 +76,7 @@ export const Input = ({
             textInputProps.onBlur?.(e);
           }}
           className="flex-1 py-3 text-base text-ruvo-ink"
-          placeholderTextColor="#A79E92"
+          placeholderTextColor="#77736B"
         />
 
         {/* Password Toggle or Right Icon */}
@@ -85,12 +85,12 @@ export const Input = ({
             <Ionicons
               name={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
               size={20}
-              color="#A79E92"
+              color="#77736B"
             />
           </Pressable>
         ) : rightIcon ? (
           <Pressable onPress={onRightIconPress}>
-            <Ionicons name={rightIcon} size={20} color="#A79E92" />
+            <Ionicons name={rightIcon} size={20} color="#77736B" />
           </Pressable>
         ) : null}
       </View>

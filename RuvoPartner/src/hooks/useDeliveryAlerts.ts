@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 
 export interface DeliveryRequest {
   requestId: number;
@@ -14,43 +13,52 @@ export interface DeliveryRequest {
   deliveryFee?: number;
 }
 
-// Ensure notifications show persistently in the foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+let Notifications: any = null;
+try {
+  Notifications = require('expo-notifications');
+  if (Notifications && Notifications.setNotificationHandler) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }
+} catch (e) {}
 
 export function useDeliveryAlerts(requests: DeliveryRequest[]) {
   const previousRequestsRef = useRef<DeliveryRequest[]>([]);
 
   useEffect(() => {
+    if (!Notifications) return;
     const initNotifications = async () => {
-      const { granted } = (await Notifications.getPermissionsAsync()) as any;
-      if (!granted) {
-         await Notifications.requestPermissionsAsync();
-      }
-      
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'Orders & Deliveries',
-          description: 'Alerts for new delivery requests',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 500, 250, 500],
-          lightColor: '#EA580C',
-          enableVibrate: true,
-        });
-      }
+      try {
+        const { granted } = (await Notifications.getPermissionsAsync()) as any;
+        if (!granted) {
+          await Notifications.requestPermissionsAsync();
+        }
+        
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Orders & Deliveries',
+            description: 'Alerts for new delivery requests',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 500, 250, 500],
+            lightColor: '#EA580C',
+            enableVibrate: true,
+          });
+        }
+      } catch {}
     };
     initNotifications();
   }, []);
 
   useEffect(() => {
+    if (!Notifications) return;
     const prevRequests = previousRequestsRef.current;
     
-    if (prevRequests.length >= 0 && requests.length > 0) { // Note prevRequests can be 0 when starting
+    if (prevRequests.length >= 0 && requests.length > 0) {
       const newPendingRequests = requests.filter((currentReq) => {
         if (currentReq.status !== 'PENDING') return false;
         
@@ -61,31 +69,27 @@ export function useDeliveryAlerts(requests: DeliveryRequest[]) {
         return false;
       });
 
-      // Avoid spamming if initial load mounts with existing requests, but let's notify anyway so they know
-      // Actually, if prevRequests length was 0, it means the very first fetch might trigger notification. Handled!
-
       if (newPendingRequests.length > 0 && prevRequests.length > 0) {
         newPendingRequests.forEach((req) => {
-          Notifications.scheduleNotificationAsync({
+          Notifications.scheduleNotificationAsync?.({
             content: {
               title: '🚀 New Delivery Request!',
               body: `A new order is ready for pickup (${req.distanceKm ? req.distanceKm + ' km away' : 'nearby'}).`,
               sound: true,
             },
-            trigger: null, // trigger immediately
-          });
+            trigger: null,
+          }).catch(() => {});
         });
       } else if (newPendingRequests.length > 0 && prevRequests.length === 0) {
-         // Optionally notify on startup if there's an active one? Sure.
-         newPendingRequests.forEach((req) => {
-          Notifications.scheduleNotificationAsync({
+        newPendingRequests.forEach((req) => {
+          Notifications.scheduleNotificationAsync?.({
             content: {
               title: '🚀 Pending Delivery Request!',
               body: `You have an active request ready for pickup.`,
               sound: true,
             },
             trigger: null,
-          });
+          }).catch(() => {});
         });
       }
     }

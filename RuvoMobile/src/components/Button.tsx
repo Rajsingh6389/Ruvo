@@ -51,7 +51,7 @@ export const Button = ({
 
   const getTextColor = () => {
     if (disabled && !loading) return colors.disabledText;
-    if (variant === 'primary') return '#FFFFFF';
+    if (variant === 'primary') return colors.onPrimary || '#171A1F';
     if (variant === 'secondary' || variant === 'ghost') return colors.textPrimary;
     return colors.primary; // outline
   };

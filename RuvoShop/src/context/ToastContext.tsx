@@ -10,7 +10,7 @@ import React, {
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-type ToastType = 'success' | 'info' | 'error';
+type ToastType = 'success' | 'info' | 'error' | 'warning';
 
 type ToastContextData = {
   showToast: (message: string, type?: ToastType) => void;

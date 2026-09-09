@@ -137,11 +137,11 @@ export const ActiveDeliveryScreen = () => {
   const index = states.indexOf(delivery.status);
   const action =
     delivery.status === 'ASSIGNED'
-      ? { label: 'ARRIVED AT SHOP & PICKED UP', handler: () => update('pickup'), color: 'bg-orange-500' }
+      ? { label: 'ARRIVED AT SHOP & PICKED UP', handler: () => update('pickup'), color: 'bg-ruvo-primary text-ruvo-ink' }
       : delivery.status === 'PICKED_UP'
-      ? { label: 'START DELIVERY TO CUSTOMER', handler: () => update('out-for-delivery'), color: 'bg-orange-500' }
+      ? { label: 'START DELIVERY TO CUSTOMER', handler: () => update('out-for-delivery'), color: 'bg-ruvo-primary text-ruvo-ink' }
       : delivery.status === 'OUT_FOR_DELIVERY'
-      ? { label: 'COMPLETE DELIVERY (ENTER OTP)', handler: () => setOtpOpen(true), color: 'bg-ruvo-accent' }
+      ? { label: 'COMPLETE DELIVERY (ENTER OTP)', handler: () => setOtpOpen(true), color: 'bg-emerald-600 text-white' }
       : null;
 
   return (
@@ -149,9 +149,9 @@ export const ActiveDeliveryScreen = () => {
       <OfflineBar />
 
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#231C10" />
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center gap-md">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-ruvo-bg border border-ruvo-border rounded-xl items-center justify-center">
+          <Ionicons name="arrow-back" size={18} color="#171A1F" />
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-lg font-extrabold text-ruvo-ink">Active Delivery</Text>
@@ -165,12 +165,12 @@ export const ActiveDeliveryScreen = () => {
       <ScrollView className="flex-1" contentContainerClassName="px-lg pt-lg pb-2xl" showsVerticalScrollIndicator={false}>
         {/* Timeline Progress */}
         <Animated.View entering={FadeInUp.duration(500)}>
-          <Card className="mb-lg">
+          <Card className="mb-lg bg-ruvo-surface border border-ruvo-border shadow-sm">
             <Text className="text-base font-extrabold text-ruvo-ink mb-md">Delivery Status Timeline</Text>
             <View className="gap-sm">
               {states.map((state, i) => (
                 <View key={state} className="flex-row items-center gap-md">
-                  <View className={`w-3 h-3 rounded-full ${i <= index ? 'bg-ruvo-accent' : 'bg-warm-300'}`} />
+                  <View className={`w-3 h-3 rounded-full ${i <= index ? 'bg-ruvo-primary' : 'bg-warm-300'}`} />
                   <Text className={`text-sm ${i <= index ? 'text-ruvo-ink font-bold' : 'text-warm-600 font-medium'} ${i === index ? 'font-extrabold' : ''}`}>
                     {state.replaceAll('_', ' ')}
                   </Text>
@@ -183,9 +183,9 @@ export const ActiveDeliveryScreen = () => {
         {/* Order Items Details Card */}
         {((delivery.items && delivery.items.length > 0) || delivery.productName) && (
           <Animated.View entering={FadeInDown.delay(50).duration(500)}>
-            <Card className="mb-lg bg-emerald-50 border-emerald-200">
+            <Card className="mb-lg bg-ruvo-surface border border-ruvo-border shadow-sm">
               <View className="flex-row items-center gap-xs mb-sm">
-                <Ionicons name="basket" size={18} color="#059669" />
+                <Ionicons name="basket" size={18} color="#F4B400" />
                 <Text className="text-base font-extrabold text-ruvo-ink">Items to Pick Up</Text>
               </View>
               {delivery.items && delivery.items.length > 0 ? (
@@ -193,19 +193,19 @@ export const ActiveDeliveryScreen = () => {
                   {delivery.items.map((it, idx) => {
                     const itImg = (it as any).productImageUrl ? ((it as any).productImageUrl.startsWith('http') ? (it as any).productImageUrl : `http://192.168.1.5:8080${(it as any).productImageUrl}`) : null;
                     return (
-                      <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-lg border border-emerald-100 gap-sm">
+                      <View key={it.id || idx} className="flex-row justify-between items-center bg-ruvo-bg p-sm rounded-xl border border-ruvo-border gap-sm">
                         {itImg ? (
                           <Image source={{ uri: itImg }} className="w-9 h-9 rounded-md bg-warm-100" />
                         ) : (
-                          <View className="w-9 h-9 rounded-md bg-emerald-100 items-center justify-center">
-                            <Ionicons name="basket-outline" size={16} color="#059669" />
+                          <View className="w-9 h-9 rounded-md bg-amber-50 items-center justify-center">
+                            <Ionicons name="basket-outline" size={16} color="#F4B400" />
                           </View>
                         )}
                         <View className="flex-1 pr-xs">
                           <Text className="text-xs font-bold text-ruvo-ink" numberOfLines={1}>
                             {it.productName}
                           </Text>
-                          <Text className="text-[11px] font-extrabold text-emerald-700 mt-0.5">
+                          <Text className="text-[11px] font-extrabold text-amber-700 mt-0.5">
                             Qty: {it.quantity}
                           </Text>
                         </View>
@@ -217,9 +217,9 @@ export const ActiveDeliveryScreen = () => {
                   })}
                 </View>
               ) : (
-                <View className="bg-white p-sm rounded-lg border border-emerald-100 flex-row justify-between items-center">
+                <View className="bg-ruvo-bg p-sm rounded-xl border border-ruvo-border flex-row justify-between items-center">
                   <Text className="text-xs font-bold text-ruvo-ink">
-                    <Text className="font-extrabold text-emerald-700">{delivery.quantity || 1}×</Text> {delivery.productName}
+                    <Text className="font-extrabold text-amber-700">{delivery.quantity || 1}×</Text> {delivery.productName}
                   </Text>
                   {delivery.totalAmount ? (
                     <Text className="text-xs font-extrabold text-ruvo-ink">₹{delivery.totalAmount}</Text>
@@ -232,13 +232,13 @@ export const ActiveDeliveryScreen = () => {
 
         {/* Pickup Location Card */}
         <Animated.View entering={FadeInDown.delay(100).duration(500)}>
-          <Card className="mb-lg">
+          <Card className="mb-lg bg-ruvo-surface border border-ruvo-border shadow-sm">
             <View className="flex-row items-start gap-md">
-              <View className="w-12 h-12 bg-green-100 rounded-xl items-center justify-center">
-                <Ionicons name="storefront" size={24} color="#16A34A" />
+              <View className="w-11 h-11 bg-amber-50 border border-amber-200 rounded-xl items-center justify-center">
+                <Ionicons name="storefront" size={22} color="#F4B400" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs font-extrabold text-ruvo-accent uppercase tracking-wider mb-xs">
+                <Text className="text-[11px] font-extrabold text-amber-700 uppercase tracking-wider mb-xs">
                   PICKUP LOCATION
                 </Text>
                 <Text className="text-sm text-ruvo-ink font-semibold mb-md leading-5">
@@ -246,10 +246,10 @@ export const ActiveDeliveryScreen = () => {
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigateTo(delivery.pickupLocation)}
-                  className="bg-green-100 px-md py-sm rounded-lg flex-row items-center gap-xs self-start"
+                  className="bg-ruvo-bg border border-ruvo-border px-md py-sm rounded-xl flex-row items-center gap-xs self-start"
                 >
-                  <Ionicons name="navigate-outline" size={16} color="#16A34A" />
-                  <Text className="text-xs font-bold text-ruvo-accent">Navigate to Store</Text>
+                  <Ionicons name="navigate-outline" size={15} color="#171A1F" />
+                  <Text className="text-xs font-bold text-ruvo-ink">Navigate to Store</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -258,13 +258,13 @@ export const ActiveDeliveryScreen = () => {
 
         {/* Delivery Location Card */}
         <Animated.View entering={FadeInDown.delay(200).duration(500)}>
-          <Card className="mb-lg">
+          <Card className="mb-lg bg-ruvo-surface border border-ruvo-border shadow-sm">
             <View className="flex-row items-start gap-md">
-              <View className="w-12 h-12 bg-orange-100 rounded-xl items-center justify-center">
-                <Ionicons name="location" size={24} color="#F97316" />
+              <View className="w-11 h-11 bg-blue-50 border border-blue-200 rounded-xl items-center justify-center">
+                <Ionicons name="location" size={22} color="#3478C8" />
               </View>
               <View className="flex-1">
-                <Text className="text-xs font-extrabold text-orange-600 uppercase tracking-wider mb-xs">
+                <Text className="text-[11px] font-extrabold text-blue-700 uppercase tracking-wider mb-xs">
                   DELIVERY LOCATION
                 </Text>
                 <Text className="text-sm text-ruvo-ink font-semibold mb-md leading-5">
@@ -272,10 +272,10 @@ export const ActiveDeliveryScreen = () => {
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigateTo(delivery.deliveryLocation)}
-                  className="bg-orange-100 px-md py-sm rounded-lg flex-row items-center gap-xs self-start"
+                  className="bg-ruvo-bg border border-ruvo-border px-md py-sm rounded-xl flex-row items-center gap-xs self-start"
                 >
-                  <Ionicons name="navigate-outline" size={16} color="#F97316" />
-                  <Text className="text-xs font-bold text-orange-600">Navigate to Customer</Text>
+                  <Ionicons name="navigate-outline" size={15} color="#171A1F" />
+                  <Text className="text-xs font-bold text-ruvo-ink">Navigate to Customer</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -284,38 +284,38 @@ export const ActiveDeliveryScreen = () => {
 
         {/* Earnings Card */}
         <Animated.View entering={FadeInDown.delay(300).duration(500)}>
-          <Card className="bg-green-50 border-green-300 flex-row items-center justify-between">
+          <Card className="bg-ruvo-surface border border-ruvo-border shadow-sm flex-row items-center justify-between">
             <View>
               <Text className="text-sm font-extrabold text-ruvo-ink">Guaranteed Delivery Fee</Text>
               <Text className="text-xs text-warm-600 font-medium mt-xs">
                 Added to wallet upon completion
               </Text>
             </View>
-            <Text className="text-2xl font-extrabold text-ruvo-accent">+₹{delivery.deliveryFee}</Text>
+            <Text className="text-2xl font-extrabold text-emerald-700">+₹{delivery.deliveryFee}</Text>
           </Card>
         </Animated.View>
       </ScrollView>
 
       {/* Action Footer */}
       {action && (
-        <View className="px-lg pb-lg pt-md bg-ruvo-surface border-t border-warm-300">
+        <View className="px-lg pb-lg pt-md bg-ruvo-surface border-t border-ruvo-border">
           <TouchableOpacity
             disabled={busy}
             onPress={action.handler}
             activeOpacity={0.85}
-            className={`${action.color} rounded-xl py-lg items-center justify-center`}
+            className={`${action.color.split(' ')[0]} rounded-xl py-lg items-center justify-center`}
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.2,
+              shadowOpacity: 0.12,
               shadowRadius: 8,
-              elevation: 4,
+              elevation: 3,
             }}
           >
             {busy ? (
-              <ActivityIndicator color="#FFF" />
+              <ActivityIndicator color={action.color.includes('text-ruvo-ink') ? '#171A1F' : '#FFF'} />
             ) : (
-              <Text className="text-base font-extrabold text-white tracking-wide">
+              <Text className={`text-base font-extrabold tracking-wide ${action.color.includes('text-ruvo-ink') ? 'text-ruvo-ink' : 'text-white'}`}>
                 {action.label}
               </Text>
             )}
@@ -325,14 +325,14 @@ export const ActiveDeliveryScreen = () => {
 
       {/* OTP Verification Modal */}
       <Modal visible={otpOpen} transparent animationType="slide">
-        <View className="flex-1 bg-warm-900/75 justify-end">
+        <View className="flex-1 bg-ruvo-ink/80 justify-end">
           <Animated.View
             entering={FadeInUp.duration(400)}
-            className="bg-ruvo-surface rounded-t-3xl p-xl"
+            className="bg-ruvo-surface rounded-t-3xl p-xl border-t border-ruvo-border"
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.25,
+              shadowOpacity: 0.15,
               shadowRadius: 16,
               elevation: 10,
             }}
@@ -341,7 +341,7 @@ export const ActiveDeliveryScreen = () => {
             <View className="flex-row items-center justify-between mb-lg">
               <Text className="text-xl font-extrabold text-ruvo-ink">Verify Customer Delivery</Text>
               <TouchableOpacity onPress={() => setOtpOpen(false)}>
-                <Ionicons name="close-circle-outline" size={28} color="#A79E92" />
+                <Ionicons name="close-circle-outline" size={26} color="#77736B" />
               </TouchableOpacity>
             </View>
 
@@ -356,8 +356,8 @@ export const ActiveDeliveryScreen = () => {
               keyboardType="number-pad"
               maxLength={6}
               placeholder="0 0 0 0"
-              placeholderTextColor="#94A3B8"
-              className="bg-warm-100 border-2 border-warm-300 rounded-xl px-lg py-lg text-center text-2xl font-bold text-ruvo-ink mb-lg tracking-widest"
+              placeholderTextColor="#A39D93"
+              className="bg-ruvo-bg border border-ruvo-border rounded-xl px-lg py-lg text-center text-2xl font-bold text-ruvo-ink mb-lg tracking-widest"
             />
 
             {/* Verify Button */}

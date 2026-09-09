@@ -20,32 +20,32 @@ export const Badge = ({
   const getVariantClasses = () => {
     switch (variant) {
       case 'success':
-        return 'bg-ruvo-accent-soft';
+        return 'bg-emerald-50 border border-emerald-200';
       case 'warning':
-        return 'bg-orange-100';
+        return 'bg-amber-50 border border-amber-200';
       case 'error':
-        return 'bg-red-100';
+        return 'bg-red-50 border border-red-200';
       case 'info':
-        return 'bg-blue-100';
+        return 'bg-blue-50 border border-blue-200';
       case 'premium':
-        return 'bg-ruvo-gold-soft border border-ruvo-gold-border';
+        return 'bg-ruvo-yellow-soft border border-ruvo-gold-border';
       default:
-        return 'bg-warm-200';
+        return 'bg-warm-100 border border-warm-300';
     }
   };
 
   const getTextVariantClasses = () => {
     switch (variant) {
       case 'success':
-        return 'text-ruvo-accent';
+        return 'text-emerald-700';
       case 'warning':
-        return 'text-ruvo-warning';
+        return 'text-amber-700';
       case 'error':
-        return 'text-ruvo-error';
+        return 'text-red-600';
       case 'info':
-        return 'text-ruvo-info';
+        return 'text-blue-700';
       case 'premium':
-        return 'text-ruvo-gold-dark';
+        return 'text-amber-800';
       default:
         return 'text-warm-800';
     }

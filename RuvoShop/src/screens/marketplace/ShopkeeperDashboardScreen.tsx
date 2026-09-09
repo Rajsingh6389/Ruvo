@@ -829,21 +829,21 @@ function DashboardTab({
         <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Orders Analytics</Text>
         <View className="flex-row flex-wrap gap-xs">
           {[
-            { label: 'Pending', value: pendingCount, icon: 'time', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', iconBg: 'bg-amber-500' },
-            { label: 'Active', value: activeCount, icon: 'bicycle', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', iconBg: 'bg-blue-600' },
-            { label: 'Completed', value: completedCount, icon: 'checkmark-circle', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', iconBg: 'bg-emerald-600' },
-            { label: 'Total Orders', value: orders.length, icon: 'receipt', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', iconBg: 'bg-purple-600' },
+            { label: 'Pending', value: pendingCount, icon: 'time-outline', iconColor: '#E99A16', badgeBg: 'bg-amber-50', badgeText: 'text-amber-700' },
+            { label: 'Active', value: activeCount, icon: 'bicycle-outline', iconColor: '#3478C8', badgeBg: 'bg-blue-50', badgeText: 'text-blue-700' },
+            { label: 'Completed', value: completedCount, icon: 'checkmark-circle-outline', iconColor: '#18A957', badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-700' },
+            { label: 'Total Orders', value: orders.length, icon: 'receipt-outline', iconColor: '#171A1F', badgeBg: 'bg-warm-100', badgeText: 'text-warm-800' },
           ].map((stat, idx) => (
             <View
               key={idx}
-              className={`flex-1 min-w-[45%] ${stat.bg} ${stat.border} border p-md rounded-2xl flex-row items-center justify-between shadow-xs`}
+              className="flex-1 min-w-[45%] bg-white border border-warm-300 p-md rounded-2xl flex-row items-center justify-between shadow-xs"
             >
               <View>
                 <Text className="text-2xl font-black text-ruvo-ink">{stat.value}</Text>
-                <Text className={`text-xs font-bold ${stat.text} mt-0.5`}>{stat.label}</Text>
+                <Text className="text-xs font-bold text-warm-600 mt-0.5">{stat.label}</Text>
               </View>
-              <View className={`w-10 h-10 ${stat.iconBg} rounded-xl items-center justify-center shadow-xs`}>
-                <Ionicons name={stat.icon as any} size={20} color="#FFFFFF" />
+              <View className="w-10 h-10 bg-warm-100 rounded-xl items-center justify-center border border-warm-200">
+                <Ionicons name={stat.icon as any} size={20} color={stat.iconColor} />
               </View>
             </View>
           ))}
@@ -857,23 +857,23 @@ function DashboardTab({
           <View className="flex-1 bg-white border border-warm-300 rounded-2xl p-md shadow-xs">
             <View className="flex-row items-center justify-between mb-xs">
               <Text className="text-xs font-black text-warm-600">Total Sales</Text>
-              <View className="w-7 h-7 rounded-lg bg-amber-100 items-center justify-center">
-                <Ionicons name="wallet" size={16} color="#D99B00" />
+              <View className="w-7 h-7 rounded-lg bg-ruvo-yellow-soft items-center justify-center">
+                <Ionicons name="wallet-outline" size={16} color="#D99B00" />
               </View>
             </View>
             <Text className="text-2xl font-black text-ruvo-ink">₹{totalSales.toFixed(2)}</Text>
-            <Text className="text-[10px] font-extrabold text-amber-700 mt-1">Realized Net Sales</Text>
+            <Text className="text-[10px] font-bold text-warm-500 mt-1">Realized Net Sales</Text>
           </View>
 
-          <View className="flex-1 bg-emerald-500 border border-emerald-600 rounded-2xl p-md shadow-sm">
+          <View className="flex-1 bg-white border border-warm-300 rounded-2xl p-md shadow-xs">
             <View className="flex-row items-center justify-between mb-xs">
-              <Text className="text-xs font-black text-emerald-100">Today Sales</Text>
-              <View className="w-7 h-7 rounded-lg bg-emerald-400/50 items-center justify-center">
-                <Ionicons name="trending-up" size={16} color="#FFFFFF" />
+              <Text className="text-xs font-black text-warm-600">Today Sales</Text>
+              <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
+                <Ionicons name="trending-up" size={16} color="#18A957" />
               </View>
             </View>
-            <Text className="text-2xl font-black text-white">₹{todaySales.toFixed(2)}</Text>
-            <Text className="text-[10px] font-black text-emerald-100 mt-1">Live Today Earnings</Text>
+            <Text className="text-2xl font-black text-ruvo-ink">₹{todaySales.toFixed(2)}</Text>
+            <Text className="text-[10px] font-bold text-emerald-600 mt-1">Live Today Earnings</Text>
           </View>
         </View>
       </Animated.View>
@@ -885,18 +885,18 @@ function DashboardTab({
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onNavigateOrders}
-            className="flex-1 bg-amber-500 py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-sm border border-amber-600"
+            className="flex-1 bg-ruvo-yellow py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-xs border border-ruvo-yellow-dark"
           >
-            <Ionicons name="receipt" size={20} color="#FFFFFF" />
-            <Text className="text-xs font-black text-white">View Orders</Text>
+            <Ionicons name="receipt-outline" size={20} color="#171A1F" />
+            <Text className="text-xs font-black text-ruvo-ink">View Orders</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={onNavigateProducts}
-            className="flex-1 bg-blue-600 py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-sm border border-blue-700"
+            className="flex-1 bg-ruvo-ink py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-xs"
           >
-            <Ionicons name="cube" size={20} color="#FFFFFF" />
+            <Ionicons name="cube-outline" size={20} color="#FFFFFF" />
             <Text className="text-xs font-black text-white">Products</Text>
           </TouchableOpacity>
         </View>

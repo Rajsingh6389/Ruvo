@@ -123,25 +123,25 @@ export const HomeScreen = () => {
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-3 pt-2 pb-3">
+      <View className="bg-ruvo-surface border-b border-ruvo-border px-3 pt-2 pb-3">
         {/* Logo and Location Row */}
         <View className="flex-row items-center justify-between mb-sm">
           {/* Sketched Premium Logo Layout */}
           <View style={{ flexDirection: 'row', alignItems: 'baseline', paddingBottom: 2, paddingLeft: 4 }}>
             <Text style={{ 
-              fontSize: 36, 
+              fontSize: 34, 
               fontFamily: Platform.OS === 'ios' ? 'AvenirNext-Heavy' : 'sans-serif-black',
-              color: '#F5B700',
+              color: '#F4B400',
               fontStyle: 'italic',
               marginRight: 1,
             }}>
               R
             </Text>
             <Text style={{ 
-              fontSize: 26, 
+              fontSize: 24, 
               fontFamily: Platform.OS === 'ios' ? 'AvenirNext-Heavy' : 'sans-serif-black',
-              color: '#1A1A1A', 
-              letterSpacing: 1,
+              color: '#171A1F', 
+              letterSpacing: 0.8,
             }}>
               uvo
             </Text>
@@ -150,19 +150,19 @@ export const HomeScreen = () => {
           {/* Location Pill */}
           <Pressable
             onPress={() => setLocationPickerVisible(true)}
-            className="flex-row items-center gap-xs px-md py-xs bg-ruvo-yellow-soft rounded-full flex-1 mx-md"
+            className="flex-row items-center gap-xs px-md py-xs bg-ruvo-bg border border-ruvo-border rounded-xl flex-1 mx-md"
           >
-            <Ionicons name="location-sharp" size={14} color="#F5B700" />
+            <Ionicons name="location-sharp" size={14} color="#F4B400" />
             <View className="flex-1">
-              <Text className="text-xs text-warm-600 font-semibold">Deliver to</Text>
+              <Text className="text-[10px] text-warm-600 font-medium">Deliver to</Text>
               <View className="flex-row items-center gap-xs">
                 {isFetchingLocation && (
-                  <ActivityIndicator size="small" color="#F5B700" />
+                  <ActivityIndicator size="small" color="#F4B400" />
                 )}
-                <Text className="text-sm font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
                   {locationText}
                 </Text>
-                <Ionicons name="chevron-down" size={12} color="#A79E92" />
+                <Ionicons name="chevron-down" size={12} color="#77736B" />
               </View>
             </View>
           </Pressable>
@@ -170,18 +170,18 @@ export const HomeScreen = () => {
           {/* Notifications and Cart */}
           <View className="flex-row items-center gap-md">
             <Pressable onPress={onRefresh} className="p-1">
-              <Ionicons name="refresh-outline" size={20} color="#231C10" />
+              <Ionicons name="refresh-outline" size={20} color="#171A1F" />
             </Pressable>
             <Pressable className="relative">
-              <Ionicons name="notifications-outline" size={22} color="#231C10" />
-              <View className="absolute -top-1 -right-1 bg-ruvo-error rounded-full w-5 h-5 items-center justify-center">
-                <Text className="text-white text-xs font-bold">3</Text>
+              <Ionicons name="notifications-outline" size={22} color="#171A1F" />
+              <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 items-center justify-center">
+                <Text className="text-white text-[9px] font-bold">3</Text>
               </View>
             </Pressable>
             <Pressable
               onPress={() => (navigation.navigate as any)(ROUTES.CART)}
             >
-              <Ionicons name="bag-outline" size={22} color="#231C10" />
+              <Ionicons name="bag-outline" size={22} color="#171A1F" />
             </Pressable>
           </View>
         </View>
@@ -189,10 +189,10 @@ export const HomeScreen = () => {
         {/* Search Bar Button */}
         <Pressable 
           onPress={() => (navigation.navigate as any)(ROUTES.SEARCH)}
-          className="flex-row items-center bg-warm-100 rounded-lg px-md py-sm gap-sm"
+          className="flex-row items-center bg-ruvo-bg border border-ruvo-border rounded-xl px-md py-2 gap-sm"
         >
-          <Ionicons name="search-outline" size={18} color="#A79E92" />
-          <Text className="flex-1 text-base text-[#A79E92] py-2">
+          <Ionicons name="search-outline" size={18} color="#77736B" />
+          <Text className="flex-1 text-sm text-warm-600">
             Search shops, products...
           </Text>
         </Pressable>
@@ -203,25 +203,25 @@ export const HomeScreen = () => {
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 80 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F5B700']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F4B400']} />
         }
       >
         {/* ── Active Order Tracking Widget ─────────────────── */}
         {activeOrder && (
           <Pressable
             onPress={() => (navigation.navigate as any)('CustomerTracking', { orderId: activeOrder.id })}
-            className="flex-row items-center mx-md mt-lg mb-md bg-blue-50 border border-blue-300 rounded-lg p-md gap-md"
+            className="flex-row items-center mx-md mt-lg mb-md bg-ruvo-surface border border-ruvo-border rounded-2xl p-md gap-md shadow-sm"
           >
-            <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center">
-              <Ionicons name="bicycle" size={20} color="#2563EB" />
+            <View className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center">
+              <Ionicons name="bicycle" size={20} color="#F4B400" />
             </View>
             <View className="flex-1">
-              <Text className="text-sm font-bold text-ruvo-ink">
+              <Text className="text-sm font-extrabold text-ruvo-ink">
                 Active Order: {activeOrder.orderStatus?.replace(/_/g, ' ')}
               </Text>
-              <Text className="text-xs text-blue-600 mt-xs">Tap to track your delivery</Text>
+              <Text className="text-xs text-amber-700 font-medium mt-xs">Tap to track your delivery</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={18} color="#77736B" />
           </Pressable>
         )}
         {/* ── Shop by Category ──── */}
