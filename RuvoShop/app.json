@@ -46,7 +46,8 @@
         {
           "locationWhenInUsePermission": "Allow RuVo Shop to use your location to fill your shop address."
         }
-      ]
+      ],
+      "expo-asset"
     ]
   }
 }

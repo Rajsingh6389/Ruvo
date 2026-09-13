@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { TextInput as RNTextInput, TextInputProps, StyleSheet, View, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 

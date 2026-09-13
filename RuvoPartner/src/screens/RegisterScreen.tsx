@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   dateInput: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   locationButton: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',

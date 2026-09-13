@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 0.5,
     paddingVertical: 30,
     paddingHorizontal: 24,
     alignItems: 'center',

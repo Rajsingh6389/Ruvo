@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   summaryCard: {
     minHeight: 67,
     backgroundColor: BG,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     borderRadius: 16,
     marginTop: 13,
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
     padding: 11,
     borderRadius: 14,
     backgroundColor: '#FFF5F5',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#F2D1D1',
     flexDirection: 'row',
     alignItems: 'center',
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 11,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     flexDirection: 'row',
     minHeight: 185,
@@ -777,7 +777,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
   },
 
@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     minHeight: 33,
     borderRadius: 9,
     backgroundColor: BG,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
     minHeight: 33,
     borderRadius: 9,
     backgroundColor: '#FDECEC',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#F2D1D1',
     alignItems: 'center',
     justifyContent: 'center',
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     height: 82,
     borderRadius: 27,
     backgroundColor: BG,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     alignItems: 'center',
     justifyContent: 'center',

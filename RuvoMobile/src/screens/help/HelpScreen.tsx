@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: sw(16),
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 0.5,
     gap: sh(12),
     minHeight: 110,
     shadowOffset: { width: 0, height: 4 },
@@ -296,14 +296,14 @@ const styles = StyleSheet.create({
   },
   categoryLabel: { fontSize: sf(13), fontWeight: '800', textAlign: 'center' },
   input: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: sw(16),
     fontSize: sf(15),
     fontWeight: '500',
   },
   textArea: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: sw(16),
     fontSize: sf(15),
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: sh(10),
     borderRadius: sw(8),
-    borderWidth: 1,
+    borderWidth: 0.5,
     alignItems: 'center',
   },
   priorityLabel: { fontSize: sf(13), fontWeight: '600' },

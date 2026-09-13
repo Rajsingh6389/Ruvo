@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFF',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
     borderRadius: 12,
     paddingHorizontal: 14,

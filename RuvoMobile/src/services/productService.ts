@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../config/api';
 export interface Product {
   id?: number;
   shopId: number;
+  shopName?: string;
   name: string;
   category: string;
   brandName?: string;

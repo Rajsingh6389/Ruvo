@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   tabItem: {
     flex: 1,

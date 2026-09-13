@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton } from './Skeleton';
 
@@ -29,7 +29,7 @@ export const OrderSkeleton = ({ count = 3 }: { count?: number }) => {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     padding: 16,
     marginBottom: 12,
     gap: 8,

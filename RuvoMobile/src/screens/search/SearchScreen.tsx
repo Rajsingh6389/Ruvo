@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   productWrapper: { width: '48%' },
   productCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: sw(12),
     overflow: 'hidden',
     marginBottom: sh(8),
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   shopCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginHorizontal: sw(16),
     marginBottom: sh(10),
     padding: sw(12),

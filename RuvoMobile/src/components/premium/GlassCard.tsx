@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
@@ -30,7 +30,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
           backgroundColor: colors.glass,
           borderColor: colors.glassBorder,
           borderRadius: radius.card,
-          borderWidth: 1,
+          borderWidth: 0.5,
         },
         style,
       ]}

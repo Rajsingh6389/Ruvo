@@ -7,7 +7,7 @@ module.exports = {
   ],
   presets: [require('nativewind/preset')],
   theme: {
-    extend: {
+    extend: { borderWidth: { DEFAULT: 0.5, 0: '0px', 1: '1px', 2: '2px', 4: '4px' },
       colors: {
         ruvo: {
           // Primary Gold Accent
@@ -20,6 +20,7 @@ module.exports = {
           // RuVo Cream Canvas Background & White Surface
           'bg': '#FAF7F0',
           'surface': '#FFFFFF',
+          'border': '#E7E0D5',
           
           // RuVo Ink & Deep
           'ink': '#171A1F',
@@ -112,3 +113,4 @@ module.exports = {
   },
   plugins: [],
 };
+

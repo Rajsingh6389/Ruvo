@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -223,13 +223,13 @@ const styles = StyleSheet.create({
   iconCircle: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   title: { marginBottom: 8 },
   subtitle: { textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  formCard: { borderWidth: 1, width: '100%', marginBottom: 20 },
+  formCard: { borderWidth: StyleSheet.hairlineWidth, width: '100%', marginBottom: 20 },
   label: { marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 1.5,
     height: 56, marginBottom: 16, paddingHorizontal: 14, gap: 10,
   },
-  inputFocused: { borderWidth: 2 },
+  inputFocused: { borderWidth: StyleSheet.hairlineWidth },
   input: { flex: 1 },
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginBottom: 14 },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, gap: 8 },

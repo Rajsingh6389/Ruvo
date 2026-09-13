@@ -41,6 +41,7 @@ import CustomerTrackingScreen from '../screens/marketplace/CustomerTrackingScree
 import { SearchScreen }       from '../screens/search/SearchScreen';
 import { HelpScreen }         from '../screens/help/HelpScreen';
 import { RateOrderScreen }    from '../screens/reviews/RateOrderScreen';
+import NotificationsScreen    from '../screens/notifications/NotificationsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator();
@@ -63,7 +64,7 @@ const MainTabs = () => {
         tabBarStyle: {
           backgroundColor: isDark ? '#171A1F' : '#FFFFFF',
           borderColor: isDark ? '#332E29' : '#E7E0D5',
-          borderWidth: 1,
+          borderWidth: 0.5,
           height: tabHeight,
           marginHorizontal: 12,
           marginBottom: Math.max(insets.bottom, 8),
@@ -130,11 +131,6 @@ const MainTabs = () => {
           tabBarBadge: cartItems.length > 0 ? cartItems.length : undefined,
         }}
       />
-      <Tab.Screen
-        name={ROUTES.LOCAL_JOBS}
-        component={ComingSoonScreen}
-        options={{ tabBarLabel: 'Local Jobs' }}
-      />
       <Tab.Screen name={ROUTES.PROFILE}     component={ProfileScreen}     options={{ tabBarLabel: 'Settings' }} />
     </Tab.Navigator>
   );
@@ -150,34 +146,40 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   return (
     <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
       <NavigationContainer theme={theme}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!isAuthenticated ? (
-            <>
-              <Stack.Screen name={ROUTES.LOGIN}  component={LoginScreen} />
-              <Stack.Screen name={ROUTES.SIGNUP} component={RegisterScreen} />
-            </>
-          ) : (
-            <>
-              {/* MainTabs is the root */}
-              <Stack.Screen name={ROUTES.MAIN_TABS}       component={MainTabs} />
-              {/* Full-screen stack screens (push over tabs) */}
-              <Stack.Screen name={ROUTES.GROCERIES}       component={GroceriesScreen} />
-              <Stack.Screen name={ROUTES.SHOP_DETAILS}    component={ShopDetailsScreen} />
-              <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} />
-              <Stack.Screen name={ROUTES.REGISTER_SHOP}   component={UseRuvoShopScreen} />
-              <Stack.Screen name={ROUTES.EDIT_PROFILE}    component={EditProfileScreen} />
-              <Stack.Screen name={ROUTES.CHECKOUT}        component={CheckoutScreen} />
-              <Stack.Screen name={ROUTES.ORDER_SUCCESS}   component={OrderSuccessScreen} />
-              <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
-              <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
-              <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
-              <Stack.Screen name={ROUTES.SEARCH}          component={SearchScreen} />
-              <Stack.Screen name={ROUTES.HELP}            component={HelpScreen} />
-              <Stack.Screen name={ROUTES.RATE_ORDER}      component={RateOrderScreen} />
-              <Stack.Screen name={ROUTES.JOBS}            component={ComingSoonScreen} />
-            </>
-          )}
-        </Stack.Navigator>
+        {/* Do not render auth-dependent navigator until initial token check completes */}
+        {isLoading ? (
+          <View style={{ flex: 1, backgroundColor: '#FAF7F0' }} />
+        ) : (
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!isAuthenticated ? (
+              <>
+                <Stack.Screen name={ROUTES.LOGIN}  component={LoginScreen} />
+                <Stack.Screen name={ROUTES.SIGNUP} component={RegisterScreen} />
+              </>
+            ) : (
+              <>
+                {/* MainTabs is the root */}
+                <Stack.Screen name={ROUTES.MAIN_TABS}       component={MainTabs} />
+                {/* Full-screen stack screens (push over tabs) */}
+                <Stack.Screen name={ROUTES.GROCERIES}       component={GroceriesScreen} />
+                <Stack.Screen name={ROUTES.SHOP_DETAILS}    component={ShopDetailsScreen} />
+                <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} />
+                <Stack.Screen name={ROUTES.REGISTER_SHOP}   component={UseRuvoShopScreen} />
+                <Stack.Screen name={ROUTES.EDIT_PROFILE}    component={EditProfileScreen} />
+                <Stack.Screen name={ROUTES.CHECKOUT}        component={CheckoutScreen} />
+                <Stack.Screen name={ROUTES.ORDER_SUCCESS}   component={OrderSuccessScreen} />
+                <Stack.Screen name={ROUTES.CUSTOMER_TRACKING} component={CustomerTrackingScreen} />
+                <Stack.Screen name={ROUTES.ORDER_HISTORY}   component={OrderHistoryScreen} />
+                <Stack.Screen name={ROUTES.ADMIN_DASHBOARD} component={AdminDashboardScreen} />
+                <Stack.Screen name={ROUTES.SEARCH}          component={SearchScreen} />
+                <Stack.Screen name={ROUTES.HELP}            component={HelpScreen} />
+                <Stack.Screen name={ROUTES.RATE_ORDER}      component={RateOrderScreen} />
+                <Stack.Screen name={ROUTES.JOBS}            component={ComingSoonScreen} />
+                <Stack.Screen name={ROUTES.NOTIFICATIONS}   component={NotificationsScreen} />
+              </>
+            )}
+          </Stack.Navigator>
+        )}
       </NavigationContainer>
 
       {!launchComplete && (

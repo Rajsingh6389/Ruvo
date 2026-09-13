@@ -29,15 +29,15 @@ export const Colors = {
   ai: '#B8A4FF',
 
   // ─── Brand ───────────────────────────────────────────────────────────────
-  /** RuVo Gold. Primary actions, active states, brand marks. */
-  primary: '#F4B400',
-  primaryLight: '#FFC72C',
-  primaryDark: '#D99B00',
-  /** Deepest gold — for text on a light gold fill, where mid-gold fails contrast. */
-  primaryDeep: '#8A6400',
-  /** The faintest gold wash that still reads as branded. */
-  primarySoft: '#FFF2C2',
-  /** Dark RuVo Ink. Used for text on gold and for the darkest brand surfaces. */
+  /** RuVo Gold & Orange Warmth matching icon palette */
+  primary: '#FF8A00',
+  primaryLight: '#FFA033',
+  primaryDark: '#E07600',
+  /** Deepest warm tone — for contrast on light fills */
+  primaryDeep: '#A35200',
+  /** The faintest gold-warm wash */
+  primarySoft: '#FFF3E0',
+  /** Dark RuVo Ink */
   secondary: '#171A1F',
   deep: '#202A3A',
 
@@ -46,12 +46,12 @@ export const Colors = {
   accentLight: '#22C55E',
   accentSoft: '#E8F8EE',
 
-  // ─── Gold highlights ─────────────────────────────────────────────────────
-  gold: '#F4B400',
-  goldLight: '#FFD874',
-  goldDark: '#D99B00',
-  goldSoft: '#FFF2C2',
-  goldBorder: '#E7E0D5',
+  // ─── Gold & Warm highlights ─────────────────────────────────────────────
+  gold: '#FF8A00',
+  goldLight: '#FFB359',
+  goldDark: '#E07600',
+  goldSoft: '#FFF3E0',
+  goldBorder: '#EEDDC8',
 
   /** Text/icon colour that sits on a `primary` fill. Dark ink. */
   onPrimary: '#171A1F',
@@ -72,8 +72,8 @@ export const Colors = {
     /** Cards that need elevation. */
     card: '#FFFFFF',
 
-    border: '#E7E0D5',
-    divider: '#F0EAE0',
+    border: '#EDEAD4',
+    divider: '#F5F2EA',
 
     placeholder: '#77736B',
     disabled: '#EFEAE0',
@@ -93,7 +93,7 @@ export const Colors = {
     surfaceSunken: '#F5F1E8',
     /** One step warmer/deeper than sunken, for a third layer. */
     surfaceMuted: '#EFEADF',
-    hairline: '#E8E0D1',
+    hairline: '#F0EBE1',
 
     // ── Translucency & glass ──────────────────────────────────────────────
     scrim: 'rgba(30,26,21,0.38)',
@@ -141,8 +141,8 @@ export const Colors = {
     surface: '#1D1A18',
     card: '#1D1A18',
 
-    border: '#332E29',
-    divider: '#282320',
+    border: '#2C2822',
+    divider: '#231F1C',
 
     placeholder: '#7C736A',
     disabled: '#2C2724',
@@ -157,7 +157,7 @@ export const Colors = {
     surfaceElevated: '#242120',
     surfaceSunken: '#0D0C0B',
     surfaceMuted: '#2B2724',
-    hairline: '#332E29',
+    hairline: '#252220',
 
     scrim: 'rgba(8,7,6,0.5)',
     scrimStrong: 'rgba(8,7,6,0.76)',

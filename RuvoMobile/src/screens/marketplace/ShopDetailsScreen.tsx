@@ -188,6 +188,7 @@ export const ShopDetailsScreen = () => {
           item.id?.toString() ?? Math.random().toString()
         }
         renderItem={({ item }) => {
+          const isShopOffline = shop.active === false;
           const productObj: any = {
             ...item,
             id: item.id || 0,
@@ -205,10 +206,12 @@ export const ShopDetailsScreen = () => {
           return (
             <ProductCard
               product={productObj}
-              onAddToCart={() => addToCart(productObj as any, 1)}
+              onAddToCart={isShopOffline ? () => {} : () => addToCart(productObj as any, 1)}
+              disabled={isShopOffline}
               onPress={() =>
                 navigation.navigate('ProductDetails', {
                   product: productObj,
+                  isShopOffline,
                 })
               }
             />
@@ -304,11 +307,11 @@ export const ShopDetailsScreen = () => {
                 {formatImageUrl(shop.logoUrl) ? (
                   <Image
                     source={{ uri: formatImageUrl(shop.logoUrl)! }}
-                    className="w-20 h-20 rounded-full bg-white border-2 border-ruvo-yellow shadow-md"
+                    className="w-20 h-20 rounded-full bg-white border border-ruvo-yellow shadow-md"
                     resizeMode="cover"
                   />
                 ) : (
-                  <View className="w-20 h-20 rounded-full bg-white border-2 border-ruvo-yellow flex items-center justify-center shadow-md">
+                  <View className="w-20 h-20 rounded-full bg-white border border-ruvo-yellow flex items-center justify-center shadow-md">
                     <Ionicons
                       name="storefront"
                       size={32}
@@ -337,14 +340,21 @@ export const ShopDetailsScreen = () => {
                     )}
                   </View>
 
-                  {shop.approved === false && (
+                  {shop.active === false ? (
+                    <View className="flex-row items-center bg-rose-100 px-3 py-1 rounded-full border border-rose-300 gap-1.5">
+                      <View className="w-2 h-2 rounded-full bg-rose-600" />
+                      <Text className="text-xs font-black text-rose-700 uppercase">
+                        Closed
+                      </Text>
+                    </View>
+                  ) : shop.approved === false ? (
                     <View className="flex-row items-center bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 gap-1">
                       <View className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                       <Text className="text-[11px] font-bold text-amber-700">
                         Pending
                       </Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
 
                 {shop.description && (
@@ -353,6 +363,21 @@ export const ShopDetailsScreen = () => {
                   </Text>
                 )}
               </View>
+
+              {/* SHOP OFFLINE BLACK AND WHITE HEADER BANNER */}
+              {shop.active === false && (
+                <View className="bg-zinc-900 border border-zinc-800 rounded-xl p-3.5 my-2 flex-row items-center gap-3 shadow-md">
+                  <View className="w-10 h-10 rounded-full bg-zinc-800 items-center justify-center border border-zinc-700">
+                    <Ionicons name="time-outline" size={20} color="#F4B400" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs font-black text-white uppercase tracking-wider">TEMPORARILY CLOSED FOR NOW</Text>
+                    <Text className="text-[11px] font-semibold text-zinc-300 mt-0.5 leading-4">
+                      This shop is taking a short break. You can browse products now; ordering will reopen as soon as the shopkeeper returns online.
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               {/* SHOP STATS ROW */}
               <View className="flex-row justify-between py-3 border-t border-ruvo-border border-b">

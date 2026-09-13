@@ -15,7 +15,7 @@ import { Platform } from 'react-native';
  *
  * Every previous key is preserved so existing call sites keep working.
  */
-const fontFamily = Platform.OS === 'ios' ? 'System' : 'Roboto';
+const fontFamily = Platform.OS === 'ios' ? 'System' : 'sans-serif-medium';
 
 export const TYPOGRAPHY = {
   /** The largest text in the app — splash, order-success, a single hero number. */

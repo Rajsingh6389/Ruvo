@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Modal, View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from './Button';
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
 
     elevation: 25,
 
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.08)',
   },
 

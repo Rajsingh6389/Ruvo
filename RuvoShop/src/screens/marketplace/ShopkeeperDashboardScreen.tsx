@@ -396,7 +396,7 @@ export default function ShopkeeperDashboardScreen() {
             >
               <Ionicons name="notifications-outline" size={20} color="#231C10" />
               {unreadNotifs > 0 && (
-                <View className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full items-center justify-center border-2 border-white">
+                <View className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full items-center justify-center border border-white">
                   <Text className="text-[10px] font-black text-white">{unreadNotifs}</Text>
                 </View>
               )}
@@ -483,6 +483,8 @@ export default function ShopkeeperDashboardScreen() {
         {activeTab === 'dashboard' && (
           <DashboardTab
             shop={shop}
+            setShop={setShop}
+            token={token}
             orders={orders}
             products={products}
             settlementSummary={settlementSummary}
@@ -607,6 +609,8 @@ export default function ShopkeeperDashboardScreen() {
 // ── Dashboard Tab Component ──────────────────────────────────────────────────
 function DashboardTab({
   shop,
+  setShop,
+  token,
   orders,
   products = [],
   settlementSummary,
@@ -648,14 +652,42 @@ function DashboardTab({
               <Text className="text-xs text-warm-600 font-semibold mt-0.5" numberOfLines={1}>
                 {`${shop?.category || 'General Merchant'} • ${shop?.address || 'Verified Partner'}`}
               </Text>
-              <View className="flex-row items-center gap-xs mt-2">
-                <View className="bg-ruvo-accent-soft px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
-                  <View className="w-2 h-2 rounded-full bg-ruvo-accent" />
-                  <Text className="text-[10px] font-black text-ruvo-accent uppercase">Active Shop</Text>
+              <View className="flex-row items-center justify-between gap-xs mt-3 pt-2.5 border-t border-warm-200">
+                <View className="flex-1">
+                  <Text className="text-[11px] font-bold text-warm-600">
+                    {(shop?.active ?? true) ? '🟢 Accepting Orders' : '🔴 Shop is Offline'}
+                  </Text>
                 </View>
-                <Text className="text-[11px] text-warm-500 font-bold ml-1">
-                  {products.length} Products Listed
-                </Text>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={async () => {
+                    if (!shop?.id || !token) return;
+                    const newActiveStatus = !(shop.active ?? true);
+                    try {
+                      const res = await fetch(`${API_BASE_URL}/api/shops/${shop.id}/active?active=${newActiveStatus}`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${token}` },
+                      });
+                      if (res.ok) {
+                        setShop((prev: any) => ({ ...prev, active: newActiveStatus }));
+                      } else {
+                        Alert.alert('Error', 'Failed to update shop active status');
+                      }
+                    } catch (e) {
+                      Alert.alert('Error', 'Network error');
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full flex-row items-center gap-2 border shadow-sm ${
+                    (shop?.active ?? true) ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600'
+                  }`}
+                >
+                  <View className="w-2 h-2 rounded-full bg-white" />
+                  <Text className="text-[12px] font-black text-white uppercase tracking-wide">
+                    {(shop?.active ?? true) ? 'SHOP ONLINE' : 'SHOP OFFLINE'}
+                  </Text>
+                  <Ionicons name="swap-horizontal" size={14} color="#FFFFFF" />
+                </TouchableOpacity>
               </View>
             </View>
           </View>

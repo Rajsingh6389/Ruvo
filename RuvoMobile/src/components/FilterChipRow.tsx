@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { FlatList, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     // 36px painted + the row's vertical padding clears a comfortable target.
     height: 36,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     maxWidth: 220,
   },
   chipText: {

@@ -128,7 +128,7 @@ export const SearchInput = ({
   className = '',
 }: SearchInputProps) => {
   return (
-    <View className={`bg-ruvo-surface rounded-lg flex-row items-center px-lg py-3 border-2 border-warm-300 ${className}`}>
+    <View className={`bg-ruvo-surface rounded-lg flex-row items-center px-lg py-3 border border-warm-300 ${className}`}>
       <Ionicons name="search" size={20} color="#A79E92" style={{ marginRight: 8 }} />
       <RNTextInput
         value={value}

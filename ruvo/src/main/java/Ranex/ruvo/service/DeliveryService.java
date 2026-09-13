@@ -341,6 +341,23 @@ public class DeliveryService {
             .build();
         notificationRepository.save(notif);
         System.out.println("🔔 [DeliveryService] Notification saved for Partner #" + partner.getId() + " (userId=" + partner.getUserId() + ")");
+
+        // Trigger Real Push Notification
+        try {
+            Long partnerUserId = Long.parseLong(partner.getUserId());
+            notificationService.sendToUser(
+                partnerUserId,
+                "PARTNER",
+                "🚴 New Delivery Request",
+                "Order #" + order.getId() + " • Pickup distance: " + Math.round(distanceKm * 10.0) / 10.0 + " km.",
+                "DELIVERY_REQUEST",
+                "ORDER",
+                order.getId(),
+                java.util.Map.of("type", "DELIVERY_REQUEST", "orderId", order.getId())
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send push to partner " + partner.getUserId() + ": " + e.getMessage());
+        }
     }
 
     @Transactional

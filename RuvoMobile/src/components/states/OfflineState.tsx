@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../Button';
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 12,

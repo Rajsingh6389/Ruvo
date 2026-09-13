@@ -137,10 +137,10 @@ export const LoginScreen = ({ navigation }: Props) => {
         >
           {/* Brand mark */}
           <View style={styles.brandRow}>
-            <View style={[styles.brandBadge, { backgroundColor: colors.primary, borderRadius: radius.md }]}>
-              <Text style={styles.brandLetter}>R</Text>
-            </View>
-            <Text style={[typography.headingS, styles.brandName, { color: colors.textPrimary }]}>RuVo</Text>
+            <Image
+              source={require('../../assets/images/RuvoMobileLogo.png')}
+              style={{ width: 180, height: 60, resizeMode: 'contain' }}
+            />
           </View>
 
           {/* Step indicator */}
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   formCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 20,
   },
   label: {
@@ -366,14 +366,14 @@ const styles = StyleSheet.create({
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     height: 52,
     marginBottom: 16,
     paddingHorizontal: 14,
     gap: 10,
   },
   inputFocused: {
-    borderWidth: 2,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   prefixBox: {
     paddingRight: 10,

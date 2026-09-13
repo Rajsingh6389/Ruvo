@@ -3,11 +3,11 @@
     "name": "RuvoPartner",
     "slug": "RuvoPartner",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "57.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ruvopartner",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.ruvo.partner",
       "config": {
@@ -55,7 +55,8 @@
         {
           "locationWhenInUsePermission": "Allow RuvoPartner to use your location to fill your registration address."
         }
-      ]
+      ],
+      "expo-status-bar"
     ]
   }
 }

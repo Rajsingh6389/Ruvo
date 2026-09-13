@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 4 — Onboarding Fee
  * Currently ₹0. Partner sees a confirmation card and proceeds.
  * Future: integrate Razorpay / payment gateway here.

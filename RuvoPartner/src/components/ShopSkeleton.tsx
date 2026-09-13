@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton } from './Skeleton';
 import { useTheme } from '../context/ThemeContext';
@@ -28,7 +28,7 @@ export const ShopSkeleton = ({ count = 4 }: { count?: number }) => {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     marginBottom: 14,
   },

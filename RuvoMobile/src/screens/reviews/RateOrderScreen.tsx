@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: sw(16),
     borderRadius: sw(12),
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: sh(24),
     gap: sw(12),
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: sf(16), fontWeight: '600' },
   reviewSection: { marginBottom: sh(24) },
   reviewInput: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: sw(12),
     padding: sw(12),
     fontSize: sf(14),

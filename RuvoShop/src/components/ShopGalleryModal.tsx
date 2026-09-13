@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     position: 'relative',
   },
   image: { width: '100%', height: '100%' },

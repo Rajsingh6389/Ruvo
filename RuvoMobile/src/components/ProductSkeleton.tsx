@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton } from './Skeleton';
 
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: 0.5,
     overflow: 'hidden',
     width: '47%',
   },

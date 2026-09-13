@@ -46,6 +46,7 @@ type HistoryItem = {
   codCollected?: number;
   shopId?: number;
   shopName?: string;
+  items?: { productName: string; quantity: number }[];
 };
 
 function isToday(dateStr?: string): boolean {
@@ -163,22 +164,30 @@ export const HistoryScreen = () => {
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
-                <Card className="mb-sm bg-ruvo-surface border border-ruvo-border shadow-sm">
+                <View className="mb-sm bg-white rounded-2xl p-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
                   {/* Header Row */}
                   <View className="flex-row items-center justify-between mb-sm">
-                    <View>
+                    <View className="flex-1 pr-2">
                       <Text className="text-base font-extrabold text-ruvo-ink">
-                        Run #{item.id} · Order #{item.orderId}
+                        Order #{item.orderId}
                       </Text>
-                      <Text className="text-xs text-warm-600 font-medium mt-xs">{date}</Text>
+                      {item.items && item.items.length > 0 ? (
+                        <Text className="text-xs text-warm-700 font-medium mt-0.5 leading-tight" numberOfLines={2}>
+                          {item.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
+                        </Text>
+                      ) : null}
+                      <Text className="text-[10px] text-warm-500 font-bold mt-1 uppercase tracking-wider">{date}</Text>
                     </View>
-                    <Text className="text-lg font-extrabold text-emerald-700">
-                      +₹{item.deliveryFee}
-                    </Text>
+                    <View className="items-end">
+                      <Text className="text-lg font-extrabold text-emerald-700">
+                        +₹{item.deliveryFee}
+                      </Text>
+                      <Text className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Earned</Text>
+                    </View>
                   </View>
 
                   {/* Route Display */}
-                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm">
+                  <View className="bg-ruvo-bg rounded-xl p-sm mb-sm" style={{ borderWidth: 1, borderColor: '#FAFAFA' }}>
                     <View className="flex-row items-center gap-xs mb-xs">
                       <Ionicons name="storefront-outline" size={14} color="#F4B400" />
                       <Text className="flex-1 text-xs text-ruvo-ink font-semibold" numberOfLines={1}>
@@ -213,13 +222,13 @@ export const HistoryScreen = () => {
                       </TouchableOpacity>
                     </View>
                   )}
-                </Card>
+                </View>
               </Animated.View>
             );
           }}
           renderSectionHeader={({ section }) => (
-            <View className="bg-ruvo-bg border border-ruvo-border px-md py-xs rounded-lg mb-sm mt-xs">
-              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider">
+            <View className="bg-transparent px-md py-xs mb-1 mt-xs">
+              <Text className="text-xs font-black text-warm-500 uppercase tracking-widest">
                 {section.title}
               </Text>
             </View>

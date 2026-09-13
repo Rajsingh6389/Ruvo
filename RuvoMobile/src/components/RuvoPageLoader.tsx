@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+﻿import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { sf, sh, sw } from '../utils/responsive';
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   container: {
     borderRadius: sw(20),
-    borderWidth: 1,
+    borderWidth: 0.5,
     paddingVertical: sh(24),
     paddingHorizontal: sw(28),
     alignItems: 'center',

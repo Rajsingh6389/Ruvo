@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     // 46px clears the §16 minimum without the field looking like a button.
     height: 46,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
   },
   input: {
     flex: 1,

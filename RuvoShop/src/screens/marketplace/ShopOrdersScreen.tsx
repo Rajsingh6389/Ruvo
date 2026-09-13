@@ -30,10 +30,11 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useToast } from '../../context/ToastContext';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 import { ROUTES } from '../../constants/routes';
 
-type FilterTab = 'ALL' | 'NEW' | 'PREPARE' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+type FilterTab = 'ALL' | 'TODAY' | 'NEW' | 'PREPARE' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 type OrderStatus =
   | 'PAYMENT_PENDING' | 'ORDER_PLACED' | 'SHOP_PENDING' | 'SHOP_ACCEPTED' | 'PREPARING' | 'READY'
@@ -44,27 +45,27 @@ type OrderStatus =
   | 'CANCELLED_BY_SHOP' | 'CANCELLED_BY_USER' | 'SHOP_TIMEOUT';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  PAYMENT_PENDING:            { color: '#77736B', bg: '#FAF7F0', label: 'Payment Pending' },
-  ORDER_PLACED:               { color: '#E99A16', bg: '#FEF5E7', label: 'New Request' },
-  SHOP_PENDING:               { color: '#E99A16', bg: '#FEF5E7', label: 'Pending' },
-  SHOP_ACCEPTED:              { color: '#3478C8', bg: '#EBF2FA', label: 'Accepted' },
-  PREPARING:                  { color: '#3478C8', bg: '#EBF2FA', label: 'Preparing' },
-  READY:                      { color: '#18A957', bg: '#E8F8EE', label: 'Ready' },
-  DELIVERY_BROADCASTED:       { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
-  DELIVERY_ASSIGNMENT:        { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
-  WAITING_PARTNER:            { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
-  BROADCASTED:                { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
-  SEARCHING_PARTNER:          { color: '#E99A16', bg: '#FEF5E7', label: '📡 Broadcasting' },
-  DELIVERY_ASSIGNED:          { color: '#3478C8', bg: '#EBF2FA', label: 'Partner Assigned' },
-  PICKED_UP:                  { color: '#18A957', bg: '#E8F8EE', label: 'Picked Up' },
-  OUT_FOR_DELIVERY:           { color: '#18A957', bg: '#E8F8EE', label: 'Out for Delivery' },
-  DELIVERED:                  { color: '#18A957', bg: '#E8F8EE', label: 'Delivered' },
-  CANCELLED:                  { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled' },
-  SHOP_REJECTED:              { color: '#D94A4A', bg: '#FDECEC', label: 'Rejected' },
-  CANCELLED_NO_PARTNER_FOUND: { color: '#D94A4A', bg: '#FDECEC', label: 'No Partner Found' },
-  CANCELLED_BY_SHOP:          { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled by Shop' },
-  CANCELLED_BY_USER:          { color: '#D94A4A', bg: '#FDECEC', label: 'Cancelled by Customer' },
-  SHOP_TIMEOUT:               { color: '#D94A4A', bg: '#FDECEC', label: 'Timeout' },
+  PAYMENT_PENDING:            { color: '#6B7280', bg: '#F3F4F6', label: 'Payment Pending' },
+  ORDER_PLACED:               { color: '#FF7A00', bg: '#FFF7ED', label: 'New Request' },
+  SHOP_PENDING:               { color: '#FF7A00', bg: '#FFF7ED', label: 'Pending' },
+  SHOP_ACCEPTED:              { color: '#2563EB', bg: '#EFF6FF', label: 'Accepted' },
+  PREPARING:                  { color: '#7C3AED', bg: '#F5F3FF', label: 'Preparing' },
+  READY:                      { color: '#16A34A', bg: '#F0FDF4', label: 'Ready' },
+  DELIVERY_BROADCASTED:       { color: '#FF7A00', bg: '#FFF7ED', label: '📡 Broadcasting' },
+  DELIVERY_ASSIGNMENT:        { color: '#FF7A00', bg: '#FFF7ED', label: '📡 Broadcasting' },
+  WAITING_PARTNER:            { color: '#FF7A00', bg: '#FFF7ED', label: '📡 Broadcasting' },
+  BROADCASTED:                { color: '#FF7A00', bg: '#FFF7ED', label: '📡 Broadcasting' },
+  SEARCHING_PARTNER:          { color: '#FF7A00', bg: '#FFF7ED', label: '📡 Broadcasting' },
+  DELIVERY_ASSIGNED:          { color: '#2563EB', bg: '#EFF6FF', label: 'Partner Assigned' },
+  PICKED_UP:                  { color: '#16A34A', bg: '#F0FDF4', label: 'Picked Up' },
+  OUT_FOR_DELIVERY:           { color: '#16A34A', bg: '#F0FDF4', label: 'Out for Delivery' },
+  DELIVERED:                  { color: '#10B981', bg: '#ECFDF5', label: 'Delivered' },
+  CANCELLED:                  { color: '#EF4444', bg: '#FEF2F2', label: 'Cancelled' },
+  SHOP_REJECTED:              { color: '#EF4444', bg: '#FEF2F2', label: 'Rejected' },
+  CANCELLED_NO_PARTNER_FOUND: { color: '#EF4444', bg: '#FEF2F2', label: 'No Partner' },
+  CANCELLED_BY_SHOP:          { color: '#EF4444', bg: '#FEF2F2', label: 'Cancelled by Shop' },
+  CANCELLED_BY_USER:          { color: '#EF4444', bg: '#FEF2F2', label: 'Cancelled by User' },
+  SHOP_TIMEOUT:               { color: '#EF4444', bg: '#FEF2F2', label: 'Timeout' },
 };
 
 const getStatusCfg = (status?: string) =>
@@ -81,6 +82,7 @@ const formatImgUrl = (url?: string): string | null => {
 
 const TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL',       label: 'All' },
+  { key: 'TODAY',     label: "Today's" },
   { key: 'NEW',       label: 'New' },
   { key: 'PREPARE',   label: 'Prepare' },
   { key: 'ACTIVE',    label: 'Active' },
@@ -88,8 +90,14 @@ const TABS: { key: FilterTab; label: string }[] = [
   { key: 'CANCELLED', label: 'Cancelled' },
 ];
 
-const tabMatches = (tab: FilterTab, status?: string): boolean => {
+const tabMatches = (tab: FilterTab, order?: Order): boolean => {
+  if (!order) return false;
+  const status = order.orderStatus;
   if (tab === 'ALL') return true;
+  if (tab === 'TODAY') {
+    if (!order.createdAt) return false;
+    return new Date(order.createdAt).toDateString() === new Date().toDateString();
+  }
   if (tab === 'NEW') return ['SHOP_PENDING', 'ORDER_PLACED', 'PAYMENT_PENDING'].includes(status ?? '');
   if (tab === 'PREPARE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY'].includes(status ?? '');
   if (tab === 'ACTIVE') return ['DELIVERY_ASSIGNMENT','DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED','WAITING_PARTNER','BROADCASTED','SEARCHING_PARTNER', 'PICKED_UP','OUT_FOR_DELIVERY'].includes(status ?? '');
@@ -102,6 +110,7 @@ export default function ShopOrdersScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
 
   const routeShopId = route?.params?.shopId;
@@ -238,13 +247,30 @@ export default function ShopOrdersScreen() {
       });
       if (!response.ok) throw new Error('Failed to accept order');
       await fetchOrders(false);
+      showToast('✅ Order Accepted! Finding delivery partner...', 'success');
+    } catch {
+      showToast('❌ Failed to accept order. Try again.', 'error');
+    } finally {
+      setProcessingOrderId(null);
+    }
+  };
+
+  const handleGeneratePickupOtp = async (orderId: number) => {
+    if (!token) return;
+    setProcessingOrderId(orderId);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/generate-pickup-otp`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to generate pickup OTP');
+      const data = await response.json();
       Alert.alert(
-        'Order Accepted',
-        'Order accepted! Broadcasting delivery request to online partners.',
-        [{ text: 'View Assignment', onPress: () => navigation.navigate('DeliveryPartnerAssignment', { orderId, shopId }) }]
+        'Handover OTP', 
+        `Share this 6-digit OTP with the delivery partner when they arrive:\n\n⭐ ${data.pickupOtp} ⭐`
       );
     } catch {
-      Alert.alert('Error', 'Failed to accept order. Please try again.');
+      Alert.alert('Error', 'Failed to generate Pickup OTP');
     } finally {
       setProcessingOrderId(null);
     }
@@ -300,13 +326,54 @@ export default function ShopOrdersScreen() {
     ]);
   };
 
-  const filtered = orders.filter(o => tabMatches(filterTab, o.orderStatus));
+  const filtered = orders.filter(o => tabMatches(filterTab, o));
   const pendingCount = orders.filter(o => o.orderStatus === 'SHOP_PENDING').length;
   const todayOrdersCount = orders.filter(o => {
     if (!o.createdAt) return false;
     const orderDate = new Date(o.createdAt).toDateString();
     return orderDate === new Date().toDateString();
   }).length;
+
+  // Shop Active Status State
+  const [isShopActive, setIsShopActive] = useState<boolean>(true);
+  const [togglingStatus, setTogglingStatus] = useState<boolean>(false);
+
+  // Fetch shop active status
+  useEffect(() => {
+    if (!shopId || !token) return;
+    fetch(`${API_BASE_URL}/api/shops/${shopId}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && typeof data.active === 'boolean') {
+          setIsShopActive(data.active);
+        }
+      })
+      .catch(() => {});
+  }, [shopId, token]);
+
+  const toggleShopStatus = async () => {
+    if (!shopId || !token || togglingStatus) return;
+    const nextState = !isShopActive;
+    setTogglingStatus(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/active?active=${nextState}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (res.ok) {
+        setIsShopActive(nextState);
+        showToast(nextState ? '🟢 Shop is now OPEN & accepting orders' : '🔴 Shop is now CLOSED', 'info');
+      } else {
+        showToast('Failed to update shop status', 'error');
+      }
+    } catch {
+      showToast('Network error while updating status', 'error');
+    } finally {
+      setTogglingStatus(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-ruvo-bg" style={{ paddingTop: insets.top }}>
@@ -322,10 +389,15 @@ export default function ShopOrdersScreen() {
           </TouchableOpacity>
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
-              <Text className="text-xl font-extrabold text-ruvo-ink">Store Orders</Text>
-              <View className="bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                <Text className="text-[11px] font-extrabold text-amber-800">Today: {todayOrdersCount}</Text>
-              </View>
+              <Text className="text-xl font-black text-gray-900">Store Orders</Text>
+              
+              {/* Today's Orders Pill */}
+              <TouchableOpacity
+                onPress={() => setFilterTab('TODAY')}
+                className="bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-200 active:opacity-80"
+              >
+                <Text className="text-[11px] font-black text-[#FF7A00]">Today: {todayOrdersCount}</Text>
+              </TouchableOpacity>
             </View>
             {pendingCount > 0 && (
               <Text className="text-xs text-red-600 font-extrabold mt-0.5">⚠️ {pendingCount} pending action</Text>
@@ -334,13 +406,31 @@ export default function ShopOrdersScreen() {
         </View>
 
         <View className="flex-row items-center gap-xs">
+          {/* Shop Open / Close Toggle Button */}
+          {!!shopId && (
+            <TouchableOpacity
+              onPress={toggleShopStatus}
+              disabled={togglingStatus}
+              className={`px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 border ${
+                isShopActive
+                  ? 'bg-emerald-50 border-emerald-300'
+                  : 'bg-red-50 border-red-300'
+              }`}
+            >
+              <View className={`w-2.5 h-2.5 rounded-full ${isShopActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              <Text className={`text-xs font-black ${isShopActive ? 'text-emerald-800' : 'text-red-800'}`}>
+                {togglingStatus ? '...' : isShopActive ? 'OPEN' : 'CLOSED'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {!!shopId && (
             <TouchableOpacity
               onPress={() => navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true })}
-              className="px-md py-2 bg-ruvo-primary rounded-xl flex-row items-center gap-xs border border-amber-400"
+              className="px-md py-2 bg-[#FF7A00] rounded-xl flex-row items-center gap-xs shadow-sm active:opacity-90"
             >
-              <Ionicons name="bicycle" size={15} color="#171A1F" />
-              <Text className="text-xs font-bold text-ruvo-ink">Riders</Text>
+              <Ionicons name="bicycle" size={15} color="#FFFFFF" />
+              <Text className="text-xs font-black text-white">Riders</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -353,27 +443,27 @@ export default function ShopOrdersScreen() {
       </View>
 
       {/* Filter Tabs */}
-      <View className="bg-ruvo-surface border-b border-ruvo-border py-xs">
+      <View className="bg-ruvo-surface border-b border-gray-100 py-xs">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
           <View className="flex-row gap-xs py-1">
             {TABS.map(tab => {
               const isActive = filterTab === tab.key;
-              const count = tab.key === 'ALL' ? orders.length : orders.filter(o => tabMatches(tab.key, o.orderStatus)).length;
+              const count = tab.key === 'ALL' ? orders.length : orders.filter(o => tabMatches(tab.key, o)).length;
               return (
                 <TouchableOpacity
                   key={tab.key}
                   activeOpacity={0.8}
                   onPress={() => setFilterTab(tab.key)}
                   className={`flex-row items-center gap-xs px-md py-2 rounded-xl ${
-                    isActive ? 'bg-ruvo-primary border border-amber-400' : 'bg-ruvo-bg border border-ruvo-border'
+                    isActive ? 'bg-[#FF7A00] border border-[#FF7A00]' : 'bg-gray-50 border border-gray-200'
                   }`}
                 >
-                  <Text className={`text-xs font-bold ${isActive ? 'text-ruvo-ink' : 'text-warm-700'}`}>
+                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-gray-700'}`}>
                     {tab.label}
                   </Text>
                   {count > 0 && (
-                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-ruvo-ink' : 'bg-warm-200'}`}>
-                      <Text className={`text-[10px] font-extrabold ${isActive ? 'text-white' : 'text-ruvo-ink'}`}>
+                    <View className={`px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white' : 'bg-gray-200'}`}>
+                      <Text className={`text-[10px] font-black ${isActive ? 'text-[#FF7A00]' : 'text-gray-800'}`}>
                         {count}
                       </Text>
                     </View>
@@ -432,7 +522,7 @@ export default function ShopOrdersScreen() {
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
-                <View className="bg-ruvo-surface border border-ruvo-border rounded-2xl p-lg shadow-sm">
+                <View className="bg-ruvo-surface rounded-2xl p-lg shadow-sm" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
                   {/* Order Header */}
                   <View className="flex-row items-start justify-between mb-md">
                     <View className="flex-1 pr-sm flex-row items-center gap-md">
@@ -461,14 +551,14 @@ export default function ShopOrdersScreen() {
                   </View>
 
                   {/* Customer & Address Section */}
-                  <View className={`rounded-xl p-md gap-sm mb-sm border ${
+                  <View className={`rounded-xl p-md gap-sm mb-sm ${
                     ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
-                      ? 'bg-red-50 border-red-200' 
-                      : 'bg-ruvo-bg border-ruvo-border'
-                  }`}>
+                      ? 'bg-red-50' 
+                      : 'bg-ruvo-bg'
+                  }`} style={{ borderWidth: 0.5, borderColor: ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) ? '#FECACA' : '#EEE7DA' }}>
                     {/* Customer Info */}
                     {item.customerName || item.customerPhone ? (
-                      <View className="flex-row items-center justify-between pb-xs border-b border-ruvo-border mb-xs">
+                      <View className="flex-row items-center justify-between pb-xs mb-xs" style={{ borderBottomWidth: 0.5, borderBottomColor: '#EEE7DA' }}>
                         <View className="flex-row items-center gap-1.5">
                           <Ionicons name="person-circle" size={16} color="#171A1F" />
                           <Text className="text-sm font-extrabold text-ruvo-ink">{item.customerName || 'Customer'}</Text>
@@ -534,22 +624,46 @@ export default function ShopOrdersScreen() {
                       </View>
                     )}
 
-                    {/* Total & Payment Method */}
-                    <View className="flex-row justify-between items-center mt-xs bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
-                      <View>
-                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider">Total Amount</Text>
-                        <Text className="text-lg font-extrabold text-emerald-700">₹{item.totalAmount}</Text>
-                      </View>
+                    {/* Total & Payment Method (Detailed Breakdown) */}
+                    <View className="mt-xs bg-ruvo-surface p-sm rounded-xl" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
                       
-                      <View className="items-end">
-                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider mb-0.5">Payment</Text>
-                        <View className={`px-2.5 py-0.5 rounded-full flex-row items-center gap-1 border ${
-                          isCod ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
-                        }`}>
-                          <Ionicons name={isCod ? 'cash' : 'card'} size={12} color={isCod ? '#E99A16' : '#3478C8'} />
-                          <Text className={`text-xs font-bold uppercase ${isCod ? 'text-amber-800' : 'text-blue-800'}`}>
-                            {item.paymentMethod || 'N/A'}
-                          </Text>
+                      {/* Breakdown Rows */}
+                      <View className="gap-1.5 mb-2 pb-2" style={{ borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' }}>
+                        <View className="flex-row justify-between">
+                          <Text className="text-xs font-extrabold text-gray-700">Item Total</Text>
+                          <Text className="text-xs font-black text-gray-900">₹{item.subtotal || item.totalAmount}</Text>
+                        </View>
+                        {!!item.deliveryFee && (
+                          <View className="flex-row justify-between">
+                            <Text className="text-xs font-extrabold text-gray-700">Delivery Fee</Text>
+                            <Text className="text-xs font-black text-gray-900">₹{item.deliveryFee}</Text>
+                          </View>
+                        )}
+                        {!!item.platformFee && (
+                          <View className="flex-row justify-between">
+                            <Text className="text-xs font-extrabold text-gray-700">Platform Fee</Text>
+                            <Text className="text-xs font-black text-gray-900">₹{item.platformFee}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Final Total & Payment Type */}
+                      <View className="flex-row justify-between items-end">
+                        <View>
+                          <Text className="text-[10px] font-black text-gray-800 uppercase tracking-wider mb-0.5">Grand Total</Text>
+                          <Text className="text-xl font-black text-emerald-700">₹{item.totalAmount}</Text>
+                        </View>
+                        
+                        <View className="items-end">
+                          <Text className="text-[10px] font-black text-gray-800 uppercase tracking-wider mb-1">Payment</Text>
+                          <View className={`px-2 py-0.5 rounded flex-row items-center gap-1 ${
+                            isCod ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'
+                          }`}>
+                            <Ionicons name={isCod ? 'cash' : 'card'} size={12} color={isCod ? '#E99A16' : '#3478C8'} />
+                            <Text className={`text-[10px] font-bold uppercase ${isCod ? 'text-amber-800' : 'text-blue-800'}`}>
+                              {item.paymentMethod || 'N/A'}
+                            </Text>
+                          </View>
                         </View>
                       </View>
                     </View>
@@ -590,17 +704,32 @@ export default function ShopOrdersScreen() {
                       <TouchableOpacity
                         onPress={() => handleAccept(item.id!)}
                         disabled={processing}
-                        className="flex-[2] bg-ruvo-primary rounded-xl py-md items-center justify-center flex-row gap-xs shadow-sm"
+                        className="flex-[2] bg-[#FF7A00] rounded-xl py-md items-center justify-center flex-row gap-xs shadow-md active:opacity-90"
                         style={{ opacity: processing ? 0.7 : 1 }}
                       >
                         {processing
-                          ? <ActivityIndicator color="#171A1F" size="small" />
+                          ? <ActivityIndicator color="#FFFFFF" size="small" />
                           : <>
-                              <Ionicons name="checkmark-circle-outline" size={18} color="#171A1F" />
-                              <Text className="text-sm font-extrabold text-ruvo-ink">Accept Order</Text>
+                              <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                              <Text className="text-sm font-black text-white">Accept Order</Text>
                             </>
                         }
                       </TouchableOpacity>
+                    </View>
+                  )}
+                  {/* Assigned Action */}
+                  {status === 'DELIVERY_ASSIGNED' && (
+                    <View className="mt-md gap-sm">
+                      <Button
+                        variant="primary"
+                        onPress={() => item.id && handleGeneratePickupOtp(item.id)}
+                        disabled={processing}
+                      >
+                        {processing ? <ActivityIndicator color="#171A1F" size="small" /> : 'Generate Handover OTP'}
+                      </Button>
+                      <Text className="text-[10px] text-warm-500 text-center">
+                        Generate and share this 6-digit OTP to confirm order pickup.
+                      </Text>
                     </View>
                   )}
                   {/* Active Order Actions */}

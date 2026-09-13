@@ -98,48 +98,48 @@ export const EarningsScreen = () => {
             <>
               {/* Hero Earnings Banner */}
               <Animated.View entering={FadeInUp.duration(500)} className="mx-lg mt-lg">
-                <View
-                  className="bg-ruvo-ink rounded-2xl p-xl relative overflow-hidden border border-white/10"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    elevation: 5,
-                  }}
-                >
-                  {/* Decorative background circle */}
                   <View
-                    className="absolute w-40 h-40 bg-ruvo-primary/10 rounded-full"
-                    style={{ top: -50, right: -40 }}
-                  />
-
-                  <Text className="text-xs font-extrabold text-ruvo-primary uppercase tracking-wider mb-xs">
-                    TODAY'S TOTAL EARNINGS
-                  </Text>
-                  <Text className="text-4xl font-extrabold text-white mb-md">
-                    ₹{earnings?.todayEarnings ?? 0}
-                  </Text>
-
-                  {/* Meta Row */}
-                  <View className="flex-row items-center gap-md pt-sm border-t border-white/10">
-                    <View className="flex-row items-center gap-xs">
-                      <Ionicons name="wallet-outline" size={15} color="#A39D93" />
-                      <Text className="text-xs text-warm-400 font-medium">Wallet</Text>
-                      <Text className="text-sm text-white font-extrabold ml-xs">
-                        ₹{earnings?.walletBalance ?? 0}
-                      </Text>
-                    </View>
-                    <View className="w-px h-3.5 bg-white/20" />
-                    <View className="flex-row items-center gap-xs">
-                      <Ionicons name="trending-up-outline" size={15} color="#A39D93" />
-                      <Text className="text-xs text-warm-400 font-medium">All Time</Text>
-                      <Text className="text-sm text-white font-extrabold ml-xs">
-                        ₹{earnings?.totalEarnings ?? 0}
-                      </Text>
+                    className="bg-emerald-700 rounded-2xl p-xl relative overflow-hidden border border-emerald-600/50"
+                    style={{
+                      shadowColor: '#18A957',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 12,
+                      elevation: 5,
+                    }}
+                  >
+                    {/* Decorative background circle */}
+                    <View
+                      className="absolute w-40 h-40 bg-emerald-600/40 rounded-full"
+                      style={{ top: -50, right: -40 }}
+                    />
+  
+                    <Text className="text-xs font-extrabold text-emerald-200 uppercase tracking-wider mb-xs">
+                      TODAY'S TOTAL EARNINGS
+                    </Text>
+                    <Text className="text-4xl font-extrabold text-white mb-md">
+                      ₹{earnings?.todayEarnings ?? 0}
+                    </Text>
+  
+                    {/* Meta Row */}
+                    <View className="flex-row items-center gap-md pt-sm border-t border-emerald-600/50">
+                      <View className="flex-row items-center gap-xs">
+                        <Ionicons name="wallet-outline" size={15} color="#A7F3D0" />
+                        <Text className="text-xs text-emerald-100 font-medium">Wallet</Text>
+                        <Text className="text-sm text-white font-extrabold ml-xs">
+                          ₹{earnings?.walletBalance ?? 0}
+                        </Text>
+                      </View>
+                      <View className="w-px h-3.5 bg-emerald-600/50" />
+                      <View className="flex-row items-center gap-xs">
+                        <Ionicons name="trending-up-outline" size={15} color="#A7F3D0" />
+                        <Text className="text-xs text-emerald-100 font-medium">All Time</Text>
+                        <Text className="text-sm text-white font-extrabold ml-xs">
+                          ₹{earnings?.totalEarnings ?? 0}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
               </Animated.View>
 
               {/* Section Header */}
@@ -163,9 +163,9 @@ export const EarningsScreen = () => {
           ItemSeparatorComponent={() => <View className="h-sm" />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
-              <Card className="bg-ruvo-surface border border-ruvo-border shadow-sm">
+              <View className="bg-white rounded-2xl p-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
                 <View className="flex-row items-center gap-md">
-                  <View className="w-10 h-10 bg-emerald-50 border border-emerald-100 rounded-xl items-center justify-center">
+                  <View className="w-10 h-10 bg-emerald-50 rounded-xl items-center justify-center">
                     <Ionicons name="checkmark-done" size={20} color="#18A957" />
                   </View>
 
@@ -182,7 +182,7 @@ export const EarningsScreen = () => {
                     +₹{item.deliveryFee}
                   </Text>
                 </View>
-              </Card>
+              </View>
             </Animated.View>
           )}
         />

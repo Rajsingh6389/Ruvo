@@ -71,7 +71,7 @@ export const partnerService = {
   requests: (token: string) => api<DeliveryRequest[]>('/api/delivery/requests', token),
   acceptRequest: (token: string, id: number) => api<void>(`/api/delivery/requests/${id}/accept`, token, { method: 'POST' }),
   rejectRequest: (token: string, id: number) => api<void>(`/api/delivery/requests/${id}/reject`, token, { method: 'POST' }),
-  pickup: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/pickup`, token, { method: 'PUT' }),
+  pickup: (token: string, id: number, otp?: string) => api<any>(`/api/partner/deliveries/${id}/pickup${otp ? `?otp=${encodeURIComponent(otp)}` : ''}`, token, { method: 'PUT' }),
   startDelivery: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/out-for-delivery`, token, { method: 'PUT' }),
   completeLegacy: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/delivered`, token, { method: 'PUT' }),
   notifications: (token: string) => api<any[]>('/api/notifications/mine', token),

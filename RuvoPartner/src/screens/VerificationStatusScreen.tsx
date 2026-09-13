@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refreshBtn: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingVertical: 12,
     width: '100%',

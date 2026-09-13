@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 5 — Bank Account Details (DEMO)
  * Collects account holder name, account number, IFSC, bank name.
  * Demo: simulates a verification delay then proceeds.
@@ -334,7 +334,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   bankDropdown: {
-    borderWidth: 1, marginTop: 4, marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth, marginTop: 4, marginBottom: 12,
     overflow: 'hidden',
   },
   bankOption: {
@@ -358,7 +358,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8, marginTop: 12,
   },
   spinnerCard: {
-    borderWidth: 1, padding: 28,
+    borderWidth: StyleSheet.hairlineWidth, padding: 28,
     alignItems: 'center', marginBottom: 16,
   },
 });

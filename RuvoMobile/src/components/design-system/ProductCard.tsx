@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, Image } from 'react-native';
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  Image,
+  Animated,
+  Easing,
+  StyleSheet,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../../types';
 
@@ -8,6 +16,7 @@ interface ProductCardProps {
   onPress: () => void;
   onAddToCart?: () => void;
   showDiscount?: boolean;
+  disabled?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -15,8 +24,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onPress,
   onAddToCart,
   showDiscount = true,
+  disabled = false,
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
+  const [animating, setAnimating] = useState(false);
+
+  // Animation values
+  const flyX   = useRef(new Animated.Value(0)).current;
+  const flyY   = useRef(new Animated.Value(0)).current;
+  const flyOpacity = useRef(new Animated.Value(0)).current;
+  const flyScale   = useRef(new Animated.Value(1)).current;
+  const btnScale   = useRef(new Animated.Value(1)).current;
+  const checkOpacity = useRef(new Animated.Value(0)).current;
 
   const originalPrice = product.originalPrice || product.price;
   const discount = showDiscount && originalPrice > product.price
@@ -26,10 +45,74 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const rating = product.rating || 0;
   const reviewCount = product.reviewCount || 0;
 
+  const handleAddToCart = () => {
+    if (animating) return;
+    setAnimating(true);
+
+    // Reset
+    flyX.setValue(0);
+    flyY.setValue(0);
+    flyOpacity.setValue(1);
+    flyScale.setValue(1);
+    checkOpacity.setValue(0);
+
+    Animated.parallel([
+      // Button bounce
+      Animated.sequence([
+        Animated.timing(btnScale, { toValue: 0.82, duration: 100, useNativeDriver: true }),
+        Animated.spring(btnScale, { toValue: 1, friction: 4, useNativeDriver: true }),
+      ]),
+      // Fly arc: X goes right ~110, Y goes up ~-160 then drops
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(flyX, {
+            toValue: 110,
+            duration: 550,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(flyY, {
+            toValue: -160,
+            duration: 280,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(flyY, {
+            toValue: -260,
+            duration: 270,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(flyScale, {
+            toValue: 0.3,
+            duration: 270,
+            useNativeDriver: true,
+          }),
+          Animated.timing(flyOpacity, {
+            toValue: 0,
+            duration: 270,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]),
+    ]).start(() => {
+      // Show checkmark briefly
+      Animated.sequence([
+        Animated.timing(checkOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.delay(700),
+        Animated.timing(checkOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => setAnimating(false));
+
+      onAddToCart?.();
+    });
+  };
+
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 ruvo-card mx-xs mb-md overflow-hidden"
+      className="flex-1 ruvo-card mx-xs mb-md overflow-visible"
     >
       {/* Image Container */}
       <View className="w-full h-28 bg-warm-200 mb-md relative overflow-hidden rounded-lg">
@@ -105,17 +188,97 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Add to Cart Button */}
         {onAddToCart && (
-          <Pressable
-            onPress={onAddToCart}
-            className="bg-ruvo-yellow rounded-lg py-xs flex-row items-center justify-center"
-          >
-            <Ionicons name="add" size={18} color="#231C10" />
-            <Text className="text-sm font-bold text-ruvo-ink ml-xs">
-              Add
-            </Text>
-          </Pressable>
+          <View style={{ position: 'relative' }}>
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <Pressable
+                onPress={disabled ? undefined : handleAddToCart}
+                disabled={disabled}
+                style={[
+                  styles.addBtn,
+                  disabled && { backgroundColor: '#E5E7EB' },
+                  animating && styles.addBtnAnimating,
+                ]}
+              >
+                {/* Normal state */}
+                <Animated.View
+                  style={[
+                    styles.addBtnInner,
+                    { opacity: Animated.subtract(new Animated.Value(1), checkOpacity) },
+                  ]}
+                >
+                  <Ionicons name={disabled ? "lock-closed" : "add"} size={16} color={disabled ? "#9CA3AF" : "#231C10"} />
+                  <Text style={[styles.addBtnText, disabled && { color: "#9CA3AF" }]}>
+                    {disabled ? 'Closed' : 'Add'}
+                  </Text>
+                </Animated.View>
+
+                {/* Checkmark after add */}
+                <Animated.View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    styles.addBtnInner,
+                    { opacity: checkOpacity },
+                  ]}
+                >
+                  <Ionicons name="checkmark" size={18} color="#16A34A" />
+                  <Text style={[styles.addBtnText, { color: '#16A34A' }]}>Added!</Text>
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
+
+            {/* Flying product dot */}
+            {animating && (
+              <Animated.View
+                style={[
+                  styles.flyDot,
+                  {
+                    opacity: flyOpacity,
+                    transform: [
+                      { translateX: flyX },
+                      { translateY: flyY },
+                      { scale: flyScale },
+                    ],
+                  },
+                ]}
+                pointerEvents="none"
+              >
+                <Text style={{ fontSize: 18 }}>🛒</Text>
+              </Animated.View>
+            )}
+          </View>
         )}
       </View>
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  addBtn: {
+    backgroundColor: '#F4B400',
+    borderRadius: 10,
+    paddingVertical: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  addBtnAnimating: {
+    backgroundColor: '#FFF2C2',
+  },
+  addBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  addBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#231C10',
+  },
+  flyDot: {
+    position: 'absolute',
+    bottom: 6,
+    left: '30%',
+    zIndex: 999,
+  },
+});

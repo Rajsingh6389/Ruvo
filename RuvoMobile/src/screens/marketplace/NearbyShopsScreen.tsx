@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -226,7 +227,7 @@ export const NearbyShopsScreen = () => {
   }
 
   return (
-    <View className="flex-1 bg-ruvo-bg">
+    <SafeAreaView edges={['top']} className="flex-1 bg-ruvo-bg">
       <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
 
       <View className="bg-white px-4 pt-3 pb-4 border-b border-warm-200">
@@ -462,7 +463,7 @@ export const NearbyShopsScreen = () => {
                   {filteredProducts.map((product, index) => (
                     <Reanimated.View
                       key={product.id}
-                      entering={FadeInDown.delay((index % 6) * 100).duration(600).springify().damping(12)}
+                      entering={FadeInDown.duration(300)}
                       style={{ width: productCardWidth as any, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 4 }}
                       className="bg-white rounded-[24px] p-2.5 justify-between border border-gray-50/50"
                     >
@@ -547,7 +548,7 @@ export const NearbyShopsScreen = () => {
           </BlurView>
         </Animated.View>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 18,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#EEE7DA',
     backgroundColor: '#FFFFFF',
   },
@@ -584,7 +585,7 @@ const styles = StyleSheet.create({
   productCard: {
     minHeight: 232,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#EEE7DA',
     backgroundColor: '#FFFFFF',
     padding: 12,

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 2 — Vehicle Type & Details
  * Lets the partner pick vehicle type, enter reg number, model, capacity and fuel.
  * Posts to /api/partner/vehicle then navigates to Aadhaar step.

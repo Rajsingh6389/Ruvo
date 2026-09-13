@@ -100,9 +100,10 @@ export const ShopCard = ({
     (shop as { openingTime?: string }).openingTime,
     (shop as { closingTime?: string }).closingTime,
   );
-  // An explicit backend flag always wins over our derivation.
-  const isOpen = meta?.isOpen ?? derivedHours?.isOpen ?? null;
-  const hoursDetail = derivedHours?.detail ?? null;
+  // An explicit backend active flag / meta.isOpen always wins over our derivation.
+  const isShopActive = (shop as any).active ?? true;
+  const isOpen = isShopActive === false ? false : (meta?.isOpen ?? derivedHours?.isOpen ?? null);
+  const hoursDetail = isShopActive === false ? 'Shop is Offline' : (derivedHours?.detail ?? null);
 
   const eta =
     Array.isArray(meta?.etaMinutes) && meta!.etaMinutes!.length >= 2
@@ -245,7 +246,7 @@ export const ShopCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     overflow: 'hidden',
   },
   bannerScrim: {
@@ -269,7 +270,7 @@ const styles = StyleSheet.create({
     right: 6,
   },
   closedVeil: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     bottom: -10,
     left: 12,
     padding: 3,
-    borderWidth: 2,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   body: {
     padding: 12,

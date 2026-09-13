@@ -65,7 +65,11 @@ export const ShopNavigator = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
       <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* Do not render auth-dependent navigator until initial token check completes */}
+        {isLoading ? (
+          <View style={{ flex: 1, backgroundColor: '#FAF7F0' }} />
+        ) : (
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
 
           {/* ── Not authenticated ────────────────────────────────────── */}
           {!isAuthenticated ? (
@@ -123,6 +127,7 @@ export const ShopNavigator = () => {
           )}
 
         </Stack.Navigator>
+        )}
       </NavigationContainer>
 
       {!launchComplete && (

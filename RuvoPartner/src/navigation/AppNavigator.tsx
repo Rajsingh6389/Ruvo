@@ -54,6 +54,7 @@ export type RootStackParamList = {
   ManageShops: undefined;
   ActiveDelivery: { deliveryId: number };
   ActiveDevices: undefined;
+  History: undefined;
 };
 
 export type TabParamList = {
@@ -156,6 +157,7 @@ export const AppNavigator = () => {
               <Stack.Screen name="ManageShops"   component={Step6_ShopSelection}  />
               <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
               <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
+              <Stack.Screen name="History"        component={HistoryScreen}        />
             </>
 
           /* ── New partner → 7-step onboarding ───────────────────────

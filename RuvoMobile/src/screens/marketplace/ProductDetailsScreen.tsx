@@ -119,14 +119,16 @@ const ProductDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
-  // Expected navigation: navigation.navigate(ROUTES.PRODUCT_DETAILS, { product: item })
+  // Expected navigation: navigation.navigate(ROUTES.PRODUCT_DETAILS, { product: item, isShopOffline: boolean })
   const product: Product | undefined = route.params?.product;
+  const initialIsShopOffline: boolean = route.params?.isShopOffline ?? false;
 
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fetchedShopName, setFetchedShopName] = useState<string | null>(null);
   const [fetchedShopLogo, setFetchedShopLogo] = useState<string | null>(null);
+  const [isShopOffline, setIsShopOffline] = useState<boolean>(initialIsShopOffline);
 
   // Fetch shop details dynamically if product has a shopId
   React.useEffect(() => {
@@ -137,6 +139,9 @@ const ProductDetailsScreen = () => {
           if (data && data.name) setFetchedShopName(data.name);
           if (data && (data.logoUrl || data.logo || data.image || data.imageUrl)) {
             setFetchedShopLogo(formatImageUrl(data.logoUrl || data.logo || data.image || data.imageUrl));
+          }
+          if (data && data.active === false) {
+            setIsShopOffline(true);
           }
         })
         .catch(() => {});
@@ -321,6 +326,24 @@ const ProductDetailsScreen = () => {
             </Text>
           </View>
         </Animated.View>
+
+        {/* BLACK AND WHITE SHOP CLOSED BANNER */}
+        {isShopOffline && (
+          <Animated.View 
+            entering={FadeInDown.delay(50).duration(500)}
+            className="bg-zinc-900 border border-zinc-800 rounded-[24px] p-4 mb-4 flex-row items-center gap-3 shadow-md"
+          >
+            <View className="w-10 h-10 rounded-full bg-zinc-800 items-center justify-center border border-zinc-700">
+              <Ionicons name="time-outline" size={20} color="#F4B400" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-xs font-black text-white uppercase tracking-wider">TEMPORARILY CLOSED FOR NOW</Text>
+              <Text className="text-[11px] font-semibold text-zinc-300 mt-0.5 leading-4">
+                Shopkeeper is on a short break. Products are available for viewing and will reopen for orders soon!
+              </Text>
+            </View>
+          </Animated.View>
+        )}
 
         {/* PRODUCT INFO */}
         <Animated.View 
@@ -599,47 +622,47 @@ const ProductDetailsScreen = () => {
           <View className="flex-row w-full gap-4 pb-3">
           <TouchableOpacity
             activeOpacity={0.82}
-            disabled={!available}
+            disabled={!available || isShopOffline}
             className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center gap-2 ${
-              available
+              available && !isShopOffline
                 ? 'bg-gray-100'
-                : 'bg-gray-100 opacity-60'
+                : 'bg-gray-100 opacity-50'
             }`}
             onPress={handleAddToCart}
           >
             <Ionicons
               name="cart"
               size={22}
-              color={available ? "#1A1A1A" : "#9CA3AF"}
+              color={available && !isShopOffline ? "#1A1A1A" : "#9CA3AF"}
             />
-            <Text className={`text-[15px] font-black tracking-wide ${available ? 'text-ruvo-ink' : 'text-gray-400'}`}>
+            <Text className={`text-[15px] font-black tracking-wide ${available && !isShopOffline ? 'text-ruvo-ink' : 'text-gray-400'}`}>
               Add to Cart
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             activeOpacity={0.82}
-            disabled={!available || submitting}
+            disabled={!available || submitting || isShopOffline}
             className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center shadow-sm ${
-              !available || submitting
-                ? 'bg-gray-300'
+              !available || submitting || isShopOffline
+                ? 'bg-zinc-800'
                 : 'bg-ruvo-yellow'
             }`}
             onPress={handleBuyNow}
           >
             {submitting ? (
-              <ActivityIndicator size="small" color="#1A1A1A" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="flash" size={18} color={available ? "#1A1A1A" : "#9CA3AF"} />
+                <Ionicons name={isShopOffline ? "moon" : "flash"} size={18} color={available && !isShopOffline ? "#1A1A1A" : "#9CA3AF"} />
                 <Text
                   className={`font-black tracking-wide ml-1 ${
-                    !available
-                      ? 'text-gray-500'
+                    !available || isShopOffline
+                      ? 'text-zinc-400'
                       : 'text-ruvo-ink'
                   }`}
                 >
-                  Buy Now
+                  {isShopOffline ? 'Shop Closed' : 'Buy Now'}
                 </Text>
               </>
             )}

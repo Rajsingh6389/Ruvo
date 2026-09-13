@@ -288,15 +288,49 @@ export default function CustomerTrackingScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      {/* ─ HEADER ────────────────────────────────────────────────── */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+      {/* ── HEADER ────────────────────────────────────────────────── */}
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: '#FFFFFF' }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
+          <Ionicons name="arrow-back" size={24} color="#171A1F" />
         </TouchableOpacity>
-        <Text style={[typography.headingXL, styles.headerTitle, { color: colors.textPrimary }]}>Track Order</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={{ fontSize: 17, fontWeight: '900', color: '#171A1F' }}>
+            {order.shopName || 'Order Tracking'}
+          </Text>
+          <Text style={{ fontSize: 11, color: '#77736B', fontWeight: '600' }}>
+            Order #{order.id} • {order.items?.length || order.quantity || 1} Item(s)
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={handleRefresh}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF4E5', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="refresh" size={18} color="#FF7A00" />
+        </TouchableOpacity>
       </View>
+
+      {/* ── SWIGGY-STYLE LIVE ETA & STATUS BANNER ─────────────────── */}
+      {!isCancelled && (
+        <View style={{ backgroundColor: '#1E293B', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Animated.View style={[styles.liveDot, { backgroundColor: '#22C55E', transform: [{ scale: pulseAnim }] }]} />
+              <Text style={{ color: '#22C55E', fontSize: 11, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }}>
+                {isLive ? 'ON THE WAY' : order.orderStatus === 'DELIVERED' ? 'DELIVERED' : 'PREPARING ORDER'}
+              </Text>
+            </View>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
+              {isLive ? 'Arriving in 15-25 mins' : order.orderStatus === 'DELIVERED' ? 'Order Completed' : 'Shop is preparing your order'}
+            </Text>
+            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2, fontWeight: '600' }}>
+              {isLive ? 'Delivery partner is navigating to your destination' : 'We will update live once partner picks up'}
+            </Text>
+          </View>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF7A00', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name={isLive ? 'bicycle' : 'restaurant'} size={24} color="#FFFFFF" />
+          </View>
+        </View>
+      )}
 
       {/* Red Cancelled Banner */}
       {isCancelled && (
@@ -419,18 +453,34 @@ export default function CustomerTrackingScreen() {
 
         {/* Product & Shop Details Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-          {/* Shop Info Header */}
+          {/* Shop Info Header with Real Logo */}
           {order.shopName ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingBottom: 12, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="storefront" size={20} color="#D97706" />
-              </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 0.5, borderBottomColor: colors.border }}>
+              {/* Shop Logo */}
+              {formatProductImageUrl(order.shopLogoUrl) ? (
+                <Image
+                  source={{ uri: formatProductImageUrl(order.shopLogoUrl)! }}
+                  style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 0.5, borderColor: colors.border,
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: colors.primary }}>
+                    {(order.shopName ?? '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
               <View style={{ flex: 1 }}>
-                <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15, fontWeight: '800' }]}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800' }}>
                   {order.shopName}
                 </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                  RuVo Partner Store
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                  🛒 RuVo Partner Store
                 </Text>
               </View>
             </View>
@@ -544,36 +594,58 @@ export default function CustomerTrackingScreen() {
           </View>
         )}
 
-        {/* Delivery Partner Details Card */}
+        {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
         {partnerInfo && (
-          <View style={styles.partnerCard}>
-            <View style={styles.partnerIconBox}>
-              <Ionicons name="bicycle" size={22} color="#171A1F" />
+          <View style={[
+            styles.partnerCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}>
+            {/* Avatar */}
+            <View style={styles.partnerAvatar}>
+              <Text style={styles.partnerAvatarLetter}>
+                {(partnerInfo.name ?? '?').charAt(0).toUpperCase()}
+              </Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.partnerName}>{partnerInfo.name}</Text>
-                <View style={{ backgroundColor: '#FAF7F0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#E7E0D5' }}>
-                  <Text style={{ color: '#171A1F', fontSize: 10, fontWeight: '800' }}>DELIVERY PARTNER</Text>
+
+            <View style={{ flex: 1, gap: 4 }}>
+              {/* Name + badge row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.partnerName, { color: colors.textPrimary }]}>
+                  {partnerInfo.name}
+                </Text>
+                <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ color: '#1D4ED8', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>RIDER</Text>
                 </View>
               </View>
-              <Text style={styles.partnerPhone}>📞 {partnerInfo.phone}</Text>
-              {partnerInfo.locationName ? (
-                <Text style={{ color: '#77736B', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                  📍 {partnerInfo.locationName}
-                </Text>
-              ) : (
-                <Text style={{ color: '#18A957', fontSize: 12, marginTop: 2, fontWeight: '700' }}>
-                  ● Live Tracking Active
-                </Text>
-              )}
+
+              {/* Phone */}
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📞 {partnerInfo.phone}</Text>
+
+              {/* Live tracking indicator */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                <Animated.View style={[
+                  styles.livePulseDot,
+                  { transform: [{ scale: pulseAnim }] },
+                ]} />
+                <Text style={{ color: '#16A34A', fontSize: 12, fontWeight: '700' }}>Live Tracking Active</Text>
+              </View>
             </View>
-            <TouchableOpacity
-              style={styles.callBtn}
-              onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
-            >
-              <Ionicons name="call" size={18} color="#171A1F" />
-            </TouchableOpacity>
+
+            {/* Action buttons */}
+            <View style={{ gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.partnerActionBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
+              >
+                <Ionicons name="call" size={18} color="#16A34A" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.partnerActionBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
+                onPress={() => Linking.openURL(`sms:${partnerInfo.phone}`)}
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color="#2563EB" />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -717,7 +789,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#059669',
     padding: 8,
     borderRadius: 20,
-    borderWidth: 2,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#FFF',
   },
   liveBadge: {
@@ -738,7 +810,7 @@ const styles = StyleSheet.create({
   card: {
     marginHorizontal: 16,
     marginTop: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 16,
     elevation: 1,
@@ -771,22 +843,32 @@ const styles = StyleSheet.create({
   partnerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 14,
+    borderRadius: 16,
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    gap: 12,
+    padding: 16,
+    borderWidth: 0.5,
+    gap: 14,
+  },
+  partnerAvatar: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#1D4ED8',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  partnerAvatarLetter: { fontSize: 22, fontWeight: '900', color: '#FFF' },
+  livePulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' },
+  partnerActionBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 0.5,
   },
   partnerIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center' },
-  partnerName: { fontSize: 15, fontWeight: '700', color: '#1D4ED8' },
-  partnerPhone: { fontSize: 13, color: '#3B82F6', marginTop: 2 },
+  partnerName: { fontSize: 15, fontWeight: '800' },
+  partnerPhone: { fontSize: 13, marginTop: 2 },
   callBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#A7F3D0',
+    borderWidth: 0.5, borderColor: '#A7F3D0',
   },
 
   timelineRow: { flexDirection: 'row', minHeight: 44 },
@@ -804,7 +886,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 14,
     backgroundColor: '#FEF2F2',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#FCA5A5',
     borderRadius: 16,
     padding: 20,
@@ -821,7 +903,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     padding: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 12,
   },
   paymentText: { fontSize: 13, fontWeight: '600' },
@@ -835,7 +917,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#A7F3D0',
   },
   deliveredTitle: { fontSize: 15, fontWeight: '800', color: '#065F46' },

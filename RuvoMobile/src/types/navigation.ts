@@ -40,4 +40,5 @@ export type RootStackParamList = {
   Search: undefined;
   Help: undefined;
   RateOrder: { orderId: number; shopId: number; shopName: string };
+  Notifications: undefined;
 };

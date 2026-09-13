@@ -203,7 +203,7 @@ export const AddProductScreen = () => {
 
               <TouchableOpacity
                 onPress={pickImages}
-                className="border-2 border-dashed border-warm-400 rounded-xl py-lg items-center justify-center gap-sm flex-row"
+                className="border border-dashed border-warm-400 rounded-xl py-lg items-center justify-center gap-sm flex-row"
               >
                 <Ionicons name="camera-outline" size={22} color="#A79E92" />
                 <Text className="text-sm font-bold text-warm-600">

@@ -229,6 +229,12 @@ public class OrderController {
             if (items != null && !items.isEmpty()) {
                 o.setItems(items);
             }
+
+            // Enrich with shop name + logo
+            shopRepository.findById(o.getShopId()).ifPresent(shop -> {
+                o.setShopName(shop.getName());
+                o.setShopLogoUrl(shop.getLogoUrl());
+            });
             
             validOrders.add(o);
         }
@@ -254,6 +260,12 @@ public class OrderController {
         if (items != null && !items.isEmpty()) {
             finalOrder.setItems(items);
         }
+
+        // Enrich with shop name + logo
+        shopRepository.findById(finalOrder.getShopId()).ifPresent(shop -> {
+            finalOrder.setShopName(shop.getName());
+            finalOrder.setShopLogoUrl(shop.getLogoUrl());
+        });
         
         return ResponseEntity.ok(finalOrder);
     }
@@ -375,6 +387,25 @@ public class OrderController {
             "The shopkeeper had to cancel this order. If paid, your refund will be processed.", "CANCELLED_BY_SHOP");
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Order cancelled successfully"));
+    }
+
+    @PostMapping("/{orderId}/generate-pickup-otp")
+    public ResponseEntity<?> generatePickupOtp(@PathVariable Long orderId) {
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        if (!"PARTNER_ASSIGNED".equals(order.getOrderStatus()) && !"ACCEPTED".equals(order.getOrderStatus()) && !"SHOP_ACCEPTED".equals(order.getOrderStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Cannot generate pickup OTP for order in status: " + order.getOrderStatus()));
+        }
+
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new java.util.Random().nextInt(1000000));
+        order.setPickupOtp(otp);
+        order.setPickupOtpGeneratedAt(Instant.now());
+        order.setPickupOtpVerified(false);
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Map.of("success", true, "pickupOtp", otp, "message", "Pickup OTP generated successfully."));
     }
 
     @PostMapping("/{orderId}/cancel")

@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: '#18A957',
-    borderWidth: 2,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#FAF7F0',
   },
   wordmarkWrapper: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   logoutAllBtn: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',

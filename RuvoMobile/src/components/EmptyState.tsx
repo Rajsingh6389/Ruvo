@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   medallion: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
   },
   centered: {
     textAlign: 'center',

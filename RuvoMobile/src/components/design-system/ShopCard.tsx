@@ -42,7 +42,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         )}
 
         {/* Floating Rounded Shop Logo */}
-        <View className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border-2 border-white bg-white overflow-hidden shadow-md items-center justify-center">
+        <View className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border border-white bg-white overflow-hidden shadow-md items-center justify-center">
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}

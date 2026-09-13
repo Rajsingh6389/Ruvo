@@ -354,6 +354,7 @@ public class PartnerController {
     @PutMapping("/deliveries/{id}/pickup")
     public ResponseEntity<?> markPickedUp(
             @PathVariable Long id,
+            @RequestParam(required = false) String otp,
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
         DeliveryPartner dp = resolveDeliveryPartner(principal);
         User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
@@ -378,6 +379,18 @@ public class PartnerController {
         Optional<Order> orderOpt = orderRepository.findById(delivery.getOrderId());
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
+            
+            // Verify Pickup OTP
+            if (order.getPickupOtp() != null && !order.getPickupOtp().trim().isEmpty() && !Boolean.TRUE.equals(order.getPickupOtpVerified())) {
+                if (otp == null || otp.trim().isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Pickup OTP is required to mark this order as picked up."));
+                }
+                if (!order.getPickupOtp().equals(otp.trim())) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid Pickup OTP."));
+                }
+                order.setPickupOtpVerified(true);
+            }
+            
             order.setOrderStatus("PICKED_UP");
             orderRepository.save(order);
         }
@@ -535,6 +548,17 @@ public class PartnerController {
                     shopRepository.findById(order.getShopId()).ifPresent(shop -> {
                         item.put("shopName", shop.getName());
                     });
+                    
+                    // Add order items details
+                    List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+                    if (!items.isEmpty()) {
+                        item.put("items", items);
+                    } else {
+                        item.put("items", List.of(Map.of(
+                            "productName", order.getProductName() != null ? order.getProductName() : "Product",
+                            "quantity", order.getQuantity() != null ? order.getQuantity() : 1
+                        )));
+                    }
                 });
 
                 result.add(item);

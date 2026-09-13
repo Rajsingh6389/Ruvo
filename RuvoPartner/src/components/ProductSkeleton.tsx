@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Skeleton } from './Skeleton';
 import { useTheme } from '../context/ThemeContext';
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 10,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     width: '47%',
   },

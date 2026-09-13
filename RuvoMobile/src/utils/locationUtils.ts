@@ -56,18 +56,24 @@ async function callExpoReverseGeocode(lat: number, lon: number): Promise<Geocode
     if (!places || places.length === 0) return null;
 
     const p = places[0];
-    const house = [p.streetNumber, p.name && p.name !== p.street ? p.name : ''].filter(Boolean).join(' ');
+    const house = [
+      p.streetNumber,
+      p.name && p.name !== p.street && p.name !== p.district ? p.name : '',
+    ].filter(Boolean).join(' ');
+
     const street = p.street || p.subregion || '';
     const area = p.district || p.subregion || p.name || '';
     const city = p.city || p.subregion || p.region || '';
     const state = p.region || '';
     const pincode = p.postalCode || '';
-    const landmark = p.name && p.name !== p.street && p.name !== house ? p.name : '';
+    const landmark = p.name && p.name !== p.street && p.name !== house && p.name !== area ? p.name : '';
 
     const details = { house, street, area, city, state, pincode, landmark };
     const composed = composeFullAddress(details);
-    const fallbackParts = [p.name, p.street, p.subregion, p.city, p.region, p.postalCode].filter(Boolean).join(', ');
-    const short = [area || city, state].filter(Boolean).join(', ') || p.city || 'Current location';
+    const fallbackParts = [p.name, p.streetNumber, p.street, p.district, p.city, p.region, p.postalCode].filter(Boolean).join(', ');
+    
+    // Header short label: Priority to Building/House/Street or Area
+    const short = [house || street || area, city].filter(Boolean).join(', ') || fallbackParts || 'Current location';
 
     return {
       ...details,
@@ -91,19 +97,29 @@ async function callNominatim(lat: number, lon: number): Promise<GeocodedAddress 
     if (!data || !data.address) return null;
 
     const address = data.address;
-    const house = [address.house_number, address.building].filter(Boolean).join(' ');
-    const street = address.road || address.pedestrian || address.neighbourhood || '';
-    const area = address.suburb || address.village || address.hamlet || '';
-    const city = address.city || address.town || address.county || '';
+    const house = [
+      address.house_number,
+      address.building,
+      address.house,
+      address.apartment,
+      address.office,
+      address.complex,
+    ].filter(Boolean).join(' ') || address.amenity || address.shop || '';
+
+    const street = address.road || address.pedestrian || address.neighbourhood || address.residential || '';
+    const area = address.suburb || address.village || address.hamlet || address.quarter || '';
+    const city = address.city || address.town || address.county || address.municipality || '';
     const state = address.state || '';
     const pincode = address.postcode || '';
-    const landmark = address.amenity || address.shop || '';
-    const shortAddress = [area || city, state].filter(Boolean).join(', ');
+    const landmark = address.amenity || address.shop || address.historic || '';
 
     const details = { house, street, area, city, state, pincode, landmark };
+    const composed = composeFullAddress(details);
+    const shortAddress = [house || street || area, city].filter(Boolean).join(', ');
+
     return {
       ...details,
-      fullAddress: data.display_name || composeFullAddress(details),
+      fullAddress: data.display_name || composed,
       shortAddress: shortAddress || data.display_name.split(',').slice(0, 2).join(', '),
     };
   } catch {

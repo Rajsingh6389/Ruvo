@@ -11,9 +11,9 @@ import java.util.List;
 @Repository
 public interface ShopRepository extends JpaRepository<Shop, Long> {
 
-    // Only shops that are approved by an admin AND active.
-    // NULL-safe: treats approved/active IS NULL as true so legacy rows are included.
-    @Query("SELECT s FROM Shop s WHERE (s.approved IS NULL OR s.approved = true) AND (s.active IS NULL OR s.active = true)")
+    // Only shops that are approved by an admin.
+    // NULL-safe: treats approved IS NULL as true so legacy rows are included.
+    @Query("SELECT s FROM Shop s WHERE (s.approved IS NULL OR s.approved = true)")
     List<Shop> findAllApprovedAndActive();
 
     // All shops belonging to a given owner, regardless of approval status —
@@ -21,8 +21,8 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByOwnerId(String ownerId);
     List<Shop> findByAuthIdentityId(Long authIdentityId);
 
-    // Approved active shops filtered by category — NULL-safe
-    @Query("SELECT s FROM Shop s WHERE s.category = :category AND (s.approved IS NULL OR s.approved = true) AND (s.active IS NULL OR s.active = true)")
+    // Approved shops filtered by category — NULL-safe
+    @Query("SELECT s FROM Shop s WHERE s.category = :category AND (s.approved IS NULL OR s.approved = true)")
     List<Shop> findByCategoryAndApprovedTrue(@Param("category") String category);
 
     // Shops still waiting on admin review (for an admin dashboard).
@@ -35,7 +35,6 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     // Includes a bounding box pre-filter for fast spatial indexing and quick execution.
     @Query(value = "SELECT * FROM shops s WHERE " +
            "(s.approved IS NULL OR s.approved = true) AND " +
-           "(s.active IS NULL OR s.active = true) AND " +
            "(s.settlement_blocked IS NULL OR s.settlement_blocked = false) AND " +
            "s.latitude IS NOT NULL AND s.longitude IS NOT NULL AND " +
            "s.latitude BETWEEN (:userLat - (:radius / 111.0)) AND (:userLat + (:radius / 111.0)) AND " +

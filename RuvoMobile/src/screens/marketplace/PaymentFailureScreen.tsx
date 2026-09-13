@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FEF2F2',
     borderColor: '#FCA5A5',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 10,
     padding: 12,
     marginBottom: 24,

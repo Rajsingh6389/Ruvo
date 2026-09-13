@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     gap: 10,
     padding: 12,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     marginBottom: 12,
   },
   trackTitle: {
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 12,
     paddingVertical: 12,
     marginBottom: 10,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E5E7EB',
     borderRadius: 12,
     paddingHorizontal: 12,

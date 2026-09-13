@@ -272,8 +272,9 @@ public class PaymentController {
             order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
             Order savedOrder = orderRepository.save(order);
             if (savedOrder.getDeliveryOtpHash() == null) {
-                String otp = String.format("%04d", Math.abs(savedOrder.getId().hashCode()) % 9000 + 1000);
+                String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
                 savedOrder.setDeliveryOtpHash(otp);
+                savedOrder.setDeliveryOtpVerified(false);
                 savedOrder = orderRepository.save(savedOrder);
             }
 

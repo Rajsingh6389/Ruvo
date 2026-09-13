@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { StyleSheet, Text, View, ViewProps } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -13,6 +13,6 @@ export const RuVoAIInsight = ({ title, detail, style, ...props }: ViewProps & { 
 };
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 16, borderWidth: 1 }, spark: { color: '#715BC6', fontSize: 22, lineHeight: 24 },
+  card: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth }, spark: { color: '#715BC6', fontSize: 22, lineHeight: 24 },
   copy: { flex: 1 }, title: { fontSize: 14, fontWeight: '700', marginBottom: 2 }, detail: { fontSize: 12, lineHeight: 17 },
 });

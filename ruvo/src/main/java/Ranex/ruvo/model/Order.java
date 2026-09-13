@@ -130,6 +130,17 @@ public class Order {
     @Builder.Default
     private Boolean handoverVerified = false;
 
+    // Delivery Pickup OTP (Shopkeeper -> Partner handover)
+    @Column(name = "pickup_otp")
+    private String pickupOtp;
+
+    @Column(name = "pickup_otp_generated_at")
+    private Instant pickupOtpGeneratedAt;
+
+    @Column(name = "pickup_otp_verified")
+    @Builder.Default
+    private Boolean pickupOtpVerified = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -164,4 +175,10 @@ public class Order {
 
     @Transient
     private List<OrderItem> items;
+
+    @Transient
+    private String shopName;
+
+    @Transient
+    private String shopLogoUrl;
 }

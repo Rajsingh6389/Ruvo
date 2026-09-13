@@ -5,61 +5,61 @@
  */
 
 export const Colors = {
-  // ─── Brand Colors ─────────────────────────────────────────────────────────
+  // ─── Brand Colors (Swiggy Orange Theme) ──────────────────────────────────
   ai: '#B8A4FF',
-  primary: '#F4B400',
-  primaryLight: '#FFC72C',
-  primaryDark: '#D99B00',
-  primarySoft: '#FFF2C2',
+  primary: '#FF7A00',
+  primaryLight: '#FF9433',
+  primaryDark: '#E06B00',
+  primarySoft: '#FFF0E5',
   secondary: '#171A1F',
-  deep: '#202A3A',
-  accent: '#18A957',
-  gold: '#F4B400',
+  deep: '#1E293B',
+  accent: '#16A34A',
+  gold: '#FF7A00',
 
-  onPrimary: '#171A1F',
+  onPrimary: '#FFFFFF',
   onAccent: '#FFFFFF',
 
   // ─── Semantic Colors ──────────────────────────────────────────────────────
-  error: '#D94A4A',
-  warning: '#E99A16',
-  success: '#18A957',
-  info: '#3478C8',
+  error: '#DC2626',
+  warning: '#D97706',
+  success: '#16A34A',
+  info: '#2563EB',
 
-  // ─── Light Theme — RuVo Cream & White Surface ─────────────────────────────
+  // ─── Light Theme — Swiggy Orange & Pure White Surface ────────────────────
   light: {
-    onPrimary: '#171A1F',
-    background: '#FAF7F0',
+    onPrimary: '#FFFFFF',
+    background: '#F8FAFC',
     surface: '#FFFFFF',
     card: '#FFFFFF',
 
-    border: '#E7E0D5',
-    divider: '#F0EAE0',
+    border: '#E2E8F0',
+    divider: '#F1F5F9',
 
-    placeholder: '#77736B',
-    disabled: '#EFEAE0',
-    disabledText: '#A39D93',
+    placeholder: '#64748B',
+    disabled: '#F1F5F9',
+    disabledText: '#94A3B8',
 
-    textPrimary: '#171717',
-    textSecondary: '#77736B',
-    textHint: '#A39D93',
+    textPrimary: '#0F172A',
+    textSecondary: '#475569',
+    textHint: '#94A3B8',
 
-    overlay: 'rgba(23,26,31,0.42)',
+    overlay: 'rgba(15,23,42,0.42)',
 
     surfaceElevated: '#FFFFFF',
-    surfaceSunken: '#F5F1E8',
-    hairline: '#E7E0D5',
+    surfaceSunken: '#F1F5F9',
+    hairline: '#E2E8F0',
 
-    scrim: 'rgba(23,26,31,0.38)',
-    scrimStrong: 'rgba(23,26,31,0.68)',
+    scrim: 'rgba(15,23,42,0.38)',
+    scrimStrong: 'rgba(15,23,42,0.68)',
     translucent: 'rgba(255,255,255,0.86)',
     translucentBorder: 'rgba(255,255,255,0.72)',
 
-    primarySoftBg: '#FFF2C2',
-    accentSoft: '#E8F8EE',
-    successSoft: '#E8F8EE',
-    warningSoft: '#FEF5E7',
-    errorSoft: '#FDECEC',
-    infoSoft: '#EBF2FA',
+    primarySoftBg: '#FFF0E5',
+    accentSoft: '#DCFCE7',
+    successSoft: '#DCFCE7',
+    warningSoft: '#FEF3C7',
+    errorSoft: '#FEE2E2',
+    infoSoft: '#EFF6FF',
   },
 
   // ─── Dark Theme — Deep, Sophisticated ─────────────────────────────────────

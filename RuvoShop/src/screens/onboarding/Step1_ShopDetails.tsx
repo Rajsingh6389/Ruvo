@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RuvoShop Onboarding — Step 1: Shop Details
  * Collects shop name, category, phone, and address.
  * Posts to /api/shop/onboarding/register then advances to Aadhaar.
@@ -676,7 +676,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, height: 50, paddingHorizontal: 14,
     marginBottom: 12, overflow: 'hidden',
   },
-  phoneFocused: { borderWidth: 2 },
+  phoneFocused: { borderWidth: StyleSheet.hairlineWidth },
   prefixBox: {
     paddingRight: 10, borderRightWidth: 1, height: '60%', justifyContent: 'center', marginRight: 4,
   },

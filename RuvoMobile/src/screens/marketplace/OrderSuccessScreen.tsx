@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, ZoomIn, FadeInUp } from 'react-native-reanimated';
@@ -102,7 +102,7 @@ const OrderSuccessScreen = () => {
           </Text>
 
           <TouchableOpacity
-            style={[styles.homeButton, { backgroundColor: '#FFF3E0', borderColor: '#F57C00', borderWidth: 1 }]}
+            style={[styles.homeButton, { backgroundColor: '#FFF3E0', borderColor: '#F57C00', borderWidth: 0.5 }]}
             onPress={() => navigation.navigate(ROUTES.ORDER_HISTORY)}
           >
             <Text style={[styles.homeButtonText, { color: '#E65100' }]}>
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E7E0D5',
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
   },
   homeButton: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E7E0D5',
     paddingVertical: 16,
     borderRadius: 16,

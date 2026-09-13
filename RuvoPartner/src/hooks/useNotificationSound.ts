@@ -31,10 +31,7 @@ export const useDeliveryRequestSound = (hasIncomingRequest: boolean) => {
       Vibration.vibrate(800);
     }
 
-    try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-      // We will handle sound play if possible, for now initializing audio context ensures vibration + beep setup
-    } catch {}
+    // Vibration alert (no expo-av native module dependency)
 
     setPopupMessage('New delivery request!');
     setShowPopup(true);

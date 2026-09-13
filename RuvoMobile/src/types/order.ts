@@ -35,6 +35,7 @@ export interface Order {
   pickedUpAt?: string;
   deliveredAt?: string;
   shopName?: string;
+  shopLogoUrl?: string;
   shopLatitude?: number;
   shopLongitude?: number;
   createdAt?: string;

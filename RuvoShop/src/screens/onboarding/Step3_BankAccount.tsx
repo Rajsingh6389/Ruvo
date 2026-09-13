@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RuvoShop Onboarding — Step 3: Bank Account Details (DEMO)
  * Shop earnings are settled to this account.
  * Production: replace simulateVerify() with penny-drop / bank-validation API.
@@ -319,7 +319,7 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   bankDropdown: {
-    borderWidth: 1, marginTop: 4, marginBottom: 12, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, marginTop: 4, marginBottom: 12, overflow: 'hidden',
   },
   bankOption: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -333,5 +333,5 @@ const s = StyleSheet.create({
   successCard:  { alignItems: 'center', padding: 28, marginBottom: 16 },
   successIcon:  { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
   accountPill:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 8, marginTop: 12 },
-  spinnerCard:  { borderWidth: 1, padding: 28, alignItems: 'center', marginBottom: 16 },
+  spinnerCard:  { borderWidth: StyleSheet.hairlineWidth, padding: 28, alignItems: 'center', marginBottom: 16 },
 });

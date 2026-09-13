@@ -200,7 +200,7 @@ export const EditProductScreen = () => {
                     </View>
                   </View>
                 ) : (
-                  <View className="border-2 border-dashed border-warm-400 rounded-xl py-xl items-center justify-center gap-sm">
+                  <View className="border border-dashed border-warm-400 rounded-xl py-xl items-center justify-center gap-sm">
                     <Ionicons name="camera-outline" size={32} color="#A79E92" />
                     <Text className="text-sm font-bold text-warm-600">Tap to add product photo</Text>
                   </View>

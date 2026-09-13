@@ -1,4 +1,4 @@
-import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+﻿import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 
 interface Props {
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 24,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#FFD0D0',
   },
   debugLabel: {

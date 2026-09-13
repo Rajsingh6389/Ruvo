@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
   list: { padding: 16, paddingBottom: 40 },
   card: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeText: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
-  logo: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: '#E0E0E0' },
+  logo: { width: 50, height: 50, borderRadius: 25, borderWidth: 0.5, borderColor: '#E0E0E0' },
   logoPlaceholder: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   infoText: { fontSize: 13, marginBottom: 4 },
   actionRow: {

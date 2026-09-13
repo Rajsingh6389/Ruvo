@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   View,
   StyleSheet,
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   },
 
   productCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 10,
     overflow: 'hidden',
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 12,
     marginBottom: 10,
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   },
 
   orderCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   },
 
   tile: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 14,
     minHeight: 108,
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 22,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     marginBottom: 4,
   },
 
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   },
 
   railCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 8,
     overflow: 'hidden',
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
   },
 
   summary: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 14,
     marginTop: 4,
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   },
 
   infoCard: {
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: 16,
     padding: 14,
     overflow: 'hidden',

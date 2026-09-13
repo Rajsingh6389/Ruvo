@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -206,13 +206,13 @@ export const ProductCard = ({
 
 const styles = StyleSheet.create({
   gridCard: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     padding: 8,
     gap: 8,
     flex: 1,
   },
   rowCard: {
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     padding: 10,
     flexDirection: 'row',
     gap: 12,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     gap: 2,
     paddingHorizontal: 10,
     height: 32,
-    borderWidth: 1,
+    borderWidth: 0.5,
     flexShrink: 0,
   },
   unavailablePill: {

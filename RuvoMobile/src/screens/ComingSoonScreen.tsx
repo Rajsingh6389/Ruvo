@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 14,
     backgroundColor: COLORS.white,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.light,
     alignItems: 'center',
     justifyContent: 'center',
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH - 22,
     height: CARD_HEIGHT,
     borderRadius: 24,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.border,
   },
 
@@ -659,7 +659,7 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: 24,
     backgroundColor: COLORS.white,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#E8D79E',
     overflow: 'hidden',
     elevation: 12,
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
 
   orbit: {
     position: 'absolute',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#F0D77E',
     borderRadius: 999,
   },
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.white,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.light,
     paddingVertical: 10,
     paddingHorizontal: 4,

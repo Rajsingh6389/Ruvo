@@ -3,15 +3,15 @@
     "name": "Ruvo",
     "slug": "RuvoMobile",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "57.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/RuvoMobileLogo.png",
     "scheme": "ruvomobile",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.ruvo.mobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/RuvoIcon.png",
         "backgroundColor": "#173F35"
       },
       "config": {

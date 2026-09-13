@@ -7,6 +7,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { ROUTES } from '../../constants/routes';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
+import { useCart } from '../../context/CartContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { getNearbyShops, getShops } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
@@ -25,56 +27,92 @@ import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
 import { sw, sh, sf } from '../../utils/responsive';
 
-// ─── Design tokens ──────────────────────────────────────────
-const PRIMARY = '#F5B700';
-const ON_PRIMARY = '#1A1A1A';
-const LIGHT_ACCENT = '#FFF9E6';
-const BG = '#FBF8F2';
+// ─── Design Tokens ──────────────────────────────────────────
+const PRIMARY = '#FF8A00';
+const PRIMARY_LIGHT = '#FFF4E5';
+const BG = '#F8F9FA';
 const WHITE = '#FFFFFF';
-const TEXT_DARK = '#1A1A1A';
-const TEXT_SECONDARY = '#6B7280';
+const TEXT_DARK = '#171A1F';
+const TEXT_MUTED = '#6B7280';
 const BORDER = '#E5E7EB';
-const CARD_SHADOW = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.07,
-  shadowRadius: 6,
-  elevation: 3,
+
+// ─── Helper: Dynamic Icon Resolver for Backend Categories ────
+const getCategoryIcon = (catName: string): string => {
+  const lower = catName.toLowerCase();
+  if (lower.includes('veg') || lower.includes('fruit')) return 'leaf-outline';
+  if (lower.includes('dairy') || lower.includes('milk') || lower.includes('egg')) return 'nutrition-outline';
+  if (lower.includes('snack') || lower.includes('munch')) return 'pizza-outline';
+  if (lower.includes('drink') || lower.includes('beverage')) return 'beer-outline';
+  if (lower.includes('bakery') || lower.includes('bread')) return 'cafe-outline';
+  if (lower.includes('grocery') || lower.includes('store')) return 'storefront-outline';
+  return 'grid-outline';
 };
 
-// ─── Helper ─────────────────────────────────────────────────
-const buildCategoryList = (shops: Shop[]): string[] => {
-  const seen = new Set<string>();
-  shops.forEach(s => { if (s.category) seen.add(s.category); });
-  return ['All Shops', ...Array.from(seen).sort()];
-};
+// ─── Sub-Component: Product Item with Interactive Quantity Counter ────
+const GroceryProductCard = React.memo(({ product }: { product: Product }) => {
+  const { addToCart, updateQuantity, getQuantity } = useCart();
+  const qty = getQuantity(product.id);
 
-// ─── Sub-component: Product card ────────────────────────────
-const ProductCard = React.memo(({ product }: { product: Product }) => (
-  <View style={prodStyles.card}>
-    <View style={prodStyles.imageWrap}>
-      {product.imageUrl ? (
-        <Image source={{ uri: product.imageUrl }} style={prodStyles.image} resizeMode="cover" />
-      ) : (
-        <Text style={{ fontSize: 30 }}>📦</Text>
-      )}
-    </View>
-    <Text style={prodStyles.name} numberOfLines={2}>{product.name}</Text>
-    {product.unit ? <Text style={prodStyles.unit}>{product.unit}</Text> : null}
-    <View style={prodStyles.priceRow}>
-      <Text style={prodStyles.price}>₹{product.sellingPrice}</Text>
-      {product.actualPrice > product.sellingPrice && (
-        <Text style={prodStyles.strikePrice}>₹{product.actualPrice}</Text>
-      )}
-    </View>
-    <TouchableOpacity style={prodStyles.addBtn} activeOpacity={0.8}>
-      <Text style={prodStyles.addBtnText}>Add</Text>
-      <Ionicons name="add" size={14} color={ON_PRIMARY} />
-    </TouchableOpacity>
-  </View>
-));
+  return (
+    <View style={prodStyles.card}>
+      <View style={prodStyles.imageWrap}>
+        {product.imageUrl ? (
+          <Image source={{ uri: product.imageUrl }} style={prodStyles.image} resizeMode="cover" />
+        ) : (
+          <Ionicons name="basket-outline" size={28} color="#9CA3AF" />
+        )}
+        {product.actualPrice > product.sellingPrice && (
+          <View style={prodStyles.discountBadge}>
+            <Text style={prodStyles.discountText}>
+              {Math.round(((product.actualPrice - product.sellingPrice) / product.actualPrice) * 100)}% OFF
+            </Text>
+          </View>
+        )}
+      </View>
 
-// ─── Sub-component: Shop section (store card + products) ────
+      <Text style={prodStyles.name} numberOfLines={2}>{product.name}</Text>
+      {product.unit ? <Text style={prodStyles.unit}>{product.unit}</Text> : null}
+
+      <View style={prodStyles.bottomRow}>
+        <View style={prodStyles.priceWrap}>
+          <Text style={prodStyles.price}>₹{product.sellingPrice}</Text>
+          {product.actualPrice > product.sellingPrice && (
+            <Text style={prodStyles.strikePrice}>₹{product.actualPrice}</Text>
+          )}
+        </View>
+
+        {/* Quantity Counter Control */}
+        {qty === 0 ? (
+          <TouchableOpacity
+            style={prodStyles.addBtn}
+            activeOpacity={0.8}
+            onPress={() => addToCart(product, 1)}
+          >
+            <Text style={prodStyles.addBtnText}>ADD</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={prodStyles.counterContainer}>
+            <TouchableOpacity
+              style={prodStyles.counterBtn}
+              onPress={() => product.id && updateQuantity(product.id, qty - 1)}
+            >
+              <Ionicons name="remove" size={14} color={PRIMARY} />
+            </TouchableOpacity>
+            <Text style={prodStyles.counterValue}>{qty}</Text>
+            <TouchableOpacity
+              style={prodStyles.counterBtn}
+              onPress={() => product.id && updateQuantity(product.id, qty + 1)}
+            >
+              <Ionicons name="add" size={14} color={PRIMARY} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+});
+
+// ─── Sub-Component: Shop Section with Horizontal Products ───
 const ShopSection = React.memo(({
   shop,
   distance,
@@ -92,7 +130,7 @@ const ShopSection = React.memo(({
     mounted.current = true;
     setLoading(true);
     getProductsByShop(shop.id)
-      .then(data => { if (mounted.current) setProducts(data.filter(p => p.isAvailable !== false).slice(0, 8)); })
+      .then(data => { if (mounted.current) setProducts(data.filter(p => p.isAvailable !== false).slice(0, 10)); })
       .catch(() => {})
       .finally(() => { if (mounted.current) setLoading(false); });
     return () => { mounted.current = false; };
@@ -100,71 +138,64 @@ const ShopSection = React.memo(({
 
   return (
     <View style={secStyles.wrapper}>
-      {/* Store card */}
-      <View style={secStyles.storeCard}>
-        <View style={secStyles.storeLeft}>
-          <View style={secStyles.storeImageWrap}>
-            {shop.bannerUrl || shop.logoUrl ? (
-              <Image
-                source={{ uri: shop.bannerUrl ?? shop.logoUrl! }}
-                style={secStyles.storeImage}
-                resizeMode="cover"
-              />
+      {/* Store Header Card */}
+      <TouchableOpacity style={secStyles.storeHeader} onPress={onViewStore} activeOpacity={0.9}>
+        <View style={secStyles.storeImageWrap}>
+          {shop.bannerUrl || shop.logoUrl ? (
+            <Image
+              source={{ uri: shop.bannerUrl ?? shop.logoUrl! }}
+              style={secStyles.storeImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={secStyles.storePlaceholder}>
+              <Ionicons name="storefront-outline" size={24} color={PRIMARY} />
+            </View>
+          )}
+        </View>
+
+        <View style={secStyles.storeInfo}>
+          <View style={secStyles.nameRow}>
+            <Text style={secStyles.storeName} numberOfLines={1}>{shop.name}</Text>
+            {(shop as any).active === false ? (
+              <View style={[secStyles.expressBadge, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
+                <Ionicons name="lock-closed" size={10} color="#DC2626" />
+                <Text style={[secStyles.expressText, { color: '#DC2626' }]}>CLOSED</Text>
+              </View>
             ) : (
-              <View style={secStyles.storePlaceholder}>
-                <Ionicons name="storefront-outline" size={28} color={PRIMARY} />
+              <View style={secStyles.expressBadge}>
+                <Ionicons name="flash" size={10} color="#15803D" />
+                <Text style={secStyles.expressText}>EXPRESS</Text>
               </View>
             )}
           </View>
-          <View style={secStyles.storeInfo}>
-            <View style={secStyles.storeNameRow}>
-              <Text style={secStyles.storeName} numberOfLines={1}>{shop.name}</Text>
-              <View style={secStyles.openBadge}>
-                <Text style={secStyles.openText}>Open</Text>
+
+          <View style={secStyles.metaRow}>
+            {shop.rating != null && (
+              <View style={secStyles.ratingBadge}>
+                <Ionicons name="star" size={10} color="#FFFFFF" />
+                <Text style={secStyles.ratingText}>{shop.rating.toFixed(1)}</Text>
               </View>
-            </View>
-            <View style={secStyles.metaRow}>
-              {shop.rating != null && (
-                <>
-                  <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={secStyles.metaText}>{shop.rating.toFixed(1)}</Text>
-                  <Text style={secStyles.metaDot}>•</Text>
-                </>
-              )}
-              <Text style={secStyles.metaText}>20–25 mins</Text>
-              {distance && (
-                <>
-                  <Text style={secStyles.metaDot}>•</Text>
-                  <Text style={secStyles.metaText}>{distance}</Text>
-                </>
-              )}
-            </View>
-            {shop.address ? (
-              <Text style={secStyles.addressText} numberOfLines={1}>
-                Min. order ₹79 &nbsp;•&nbsp; Free delivery on ₹199
-              </Text>
-            ) : null}
+            )}
+            <Text style={secStyles.metaText}>Fast Local Delivery</Text>
+            {distance && (
+              <>
+                <Text style={secStyles.metaDot}>•</Text>
+                <Text style={secStyles.metaText}>{distance}</Text>
+              </>
+            )}
           </View>
         </View>
-        <TouchableOpacity style={secStyles.viewStoreBtn} onPress={onViewStore} activeOpacity={0.8}>
-          <Text style={secStyles.viewStoreBtnText}>View Store</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Items from this shop */}
-      <View style={secStyles.itemsHeader}>
-        <Text style={secStyles.itemsTitle}>Items from {shop.name}</Text>
-        {products.length > 0 && (
-          <TouchableOpacity onPress={onViewStore}>
-            <Text style={secStyles.seeAll}>
-              See all ({products.length > 7 ? '120' : products.length})
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        <View style={secStyles.viewBtn}>
+          <Text style={secStyles.viewBtnText}>Shop</Text>
+          <Ionicons name="chevron-forward" size={14} color={PRIMARY} />
+        </View>
+      </TouchableOpacity>
 
+      {/* Horizontal Inventory Scroll */}
       {loading ? (
-        <ActivityIndicator color={PRIMARY} style={{ marginVertical: 16, marginLeft: 16 }} />
+        <ActivityIndicator color={PRIMARY} style={{ marginVertical: 20 }} />
       ) : products.length === 0 ? (
         <Text style={secStyles.noItems}>No items listed yet</Text>
       ) : (
@@ -173,22 +204,23 @@ const ShopSection = React.memo(({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={secStyles.productsRow}
         >
-          {products.map(p => <ProductCard key={p.id} product={p} />)}
+          {products.map(p => <GroceryProductCard key={p.id} product={p} />)}
         </ScrollView>
       )}
     </View>
   );
 });
 
-// ─── Main screen ────────────────────────────────────────────
+// ─── Main Screen ─────────────────────────────────────────────
 export const GroceriesScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { location, isLoading: locationLoading, refreshFromGps } = useDeliveryLocation();
+  const { cartCount, cartTotal } = useCart();
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All Shops');
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
 
@@ -196,12 +228,21 @@ export const GroceriesScreen = () => {
     if (isRefresh) setIsRefreshing(true);
     else setIsLoading(true);
     try {
-      setShops(location
-        ? await getNearbyShops(location.latitude, location.longitude, 5)
-        : await getShops());
-      setLoadError(null);
-    } catch {
-      setLoadError('Could not load shops. Please try again.');
+      let fetched: Shop[] = [];
+      if (location) {
+        fetched = await getNearbyShops(location.latitude, location.longitude, 10);
+      }
+      // Fallback: If no nearby shops found within radius or location is off, load all approved shops
+      if (!fetched || fetched.length === 0) {
+        fetched = await getShops();
+      }
+      setShops(fetched || []);
+    } catch (e) {
+      console.warn('Failed to fetch shops in GroceriesScreen', e);
+      try {
+        const fallback = await getShops();
+        setShops(fallback || []);
+      } catch {}
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -210,109 +251,157 @@ export const GroceriesScreen = () => {
 
   useFocusEffect(useCallback(() => { loadShops(); }, [loadShops]));
 
-  const categories = useMemo(() => buildCategoryList(shops), [shops]);
+  const dynamicCategories = useMemo(() => {
+    const set = new Set<string>();
+    shops.forEach(s => {
+      if (s.category && s.category.trim()) {
+        set.add(s.category.trim());
+      }
+    });
+    const list = Array.from(set).map(catName => ({
+      id: catName.toLowerCase(),
+      name: catName,
+      icon: getCategoryIcon(catName),
+    }));
+    return [{ id: 'all', name: 'All Shops', icon: 'storefront-outline' }, ...list];
+  }, [shops]);
 
-  const visibleShops = useMemo(() => {
-    let list = activeCategory === 'All Shops'
+  const filteredShops = useMemo(() => {
+    let result = activeCategory === 'All Shops'
       ? shops
-      : shops.filter(s => s.category === activeCategory);
+      : shops.filter(s => s.category?.toLowerCase().includes(activeCategory.toLowerCase()));
 
-    if (!location) return list;
-    return [...list].sort((a, b) => {
+    if (searchQuery.trim()) {
+      result = result.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+
+    let list = [...result];
+    list.sort((a, b) => {
+      // Prioritize Online (active !== false) shops first, then Offline (active === false) shops
+      const aActive = (a as any).active !== false ? 1 : 0;
+      const bActive = (b as any).active !== false ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+
+      if (!location) return 0;
       const da = getDistanceInKm(location, a) ?? Infinity;
       const db = getDistanceInKm(location, b) ?? Infinity;
       return da - db;
     });
-  }, [activeCategory, location, shops]);
+    return list;
+  }, [activeCategory, location, searchQuery, shops]);
 
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar backgroundColor={WHITE} barStyle="dark-content" />
 
-      {/* ── Top bar ─────────────────────────────────────────── */}
+      {/* ── Header Bar ────────────────────────────────────────── */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
         </TouchableOpacity>
-        <Text style={styles.screenTitle}>Grocery</Text>
-        <View style={styles.topBarActions}>
-          <TouchableOpacity style={styles.topIconBtn}>
-            <Ionicons name="search-outline" size={22} color={TEXT_DARK} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.topIconBtn}
-            onPress={() => navigation.navigate(ROUTES.CART as never)}
-          >
-            <Ionicons name="bag-outline" size={22} color={TEXT_DARK} />
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>3</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+
+        <TouchableOpacity
+          style={styles.locationWrap}
+          onPress={() => setLocationPickerVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="location-sharp" size={16} color={PRIMARY} />
+          <View style={styles.locationTextWrap}>
+            <Text style={styles.deliverLabel}>DELIVERING TO</Text>
+            <Text style={styles.locationValue} numberOfLines={1}>
+              {locationLoading ? 'Locating...' : getDeliveryLocationLabel(location)}
+            </Text>
           </View>
-
-      {/* ── Location bar ────────────────────────────────────── */}
-      <TouchableOpacity
-        style={styles.locationBar}
-        onPress={() => setLocationPickerVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="location-sharp" size={14} color={PRIMARY} />
-        <View style={styles.locationTextWrap}>
-          <Text style={styles.deliverLabel}>Deliver to</Text>
-          <Text style={styles.locationValue} numberOfLines={1}>
-            {locationLoading ? 'Fetching location...' : getDeliveryLocationLabel(location)}
-          </Text>
-        </View>
-        <Ionicons name="chevron-down" size={14} color={TEXT_SECONDARY} />
-      </TouchableOpacity>
-
-      {/* ── Category filter chips ────────────────────────────── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipRow}
-        style={styles.chipScroll}
-      >
-        {categories.map(cat => {
-          const active = cat === activeCategory;
-          return (
-            <TouchableOpacity
-              key={cat}
-              style={[styles.chip, active && styles.chipActive]}
-              onPress={() => setActiveCategory(cat)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        {/* Filter button */}
-        <TouchableOpacity style={styles.filterBtn}>
-          <Ionicons name="filter" size={14} color={TEXT_SECONDARY} />
-          <Text style={styles.filterText}>Filter</Text>
+          <Ionicons name="chevron-down" size={14} color={TEXT_MUTED} />
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
-      {/* ── Content ─────────────────────────────────────────── */}
+      {/* ── Search Bar ───────────────────────────────────────── */}
+      <View style={styles.searchBarContainer}>
+        <View style={styles.searchInputWrap}>
+          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search groceries & stores near you..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* ── Sub-Category Quick Icons ──────────────────────────── */}
+      <View style={styles.chipScrollWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+        >
+          {dynamicCategories.map(cat => {
+            const active = cat.name === activeCategory;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setActiveCategory(cat.name)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={cat.icon as any}
+                  size={14}
+                  color={active ? '#FFFFFF' : TEXT_DARK}
+                />
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ── Shop List Content ─────────────────────────────────── */}
       {isLoading ? (
         <ActivityIndicator size="large" color={PRIMARY} style={{ marginTop: 60 }} />
-      ) : loadError ? (
-        <View style={styles.centerMessage}>
-          <Ionicons name="cloud-offline-outline" size={44} color={TEXT_SECONDARY} />
-          <Text style={styles.centerText}>{loadError}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => loadShops()}>
-            <Text style={styles.retryText}>Try again</Text>
-              </TouchableOpacity>
-            </View>
-      ) : visibleShops.length === 0 ? (
-        <View style={styles.centerMessage}>
-          <Ionicons name="storefront-outline" size={44} color={TEXT_SECONDARY} />
-          <Text style={styles.centerText}>
-            {shops.length === 0
-              ? 'No shops have been registered yet.'
-              : 'No shops in this category.'}
+      ) : filteredShops.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="storefront-outline" size={38} color="#FF8A00" />
+          </View>
+          <Text style={styles.emptyTitle}>
+            {searchQuery || activeCategory !== 'All Shops'
+              ? 'No Stores Match Your Filter'
+              : 'No Nearby Grocery Stores Registered'}
           </Text>
+          <Text style={styles.emptySubtitle}>
+            {searchQuery || activeCategory !== 'All Shops'
+              ? `We couldn't find any store for "${searchQuery || activeCategory}". Try searching for all stores.`
+              : 'Be the first store owner to register and start selling groceries in your area!'}
+          </Text>
+
+          {searchQuery || activeCategory !== 'All Shops' ? (
+            <TouchableOpacity
+              style={styles.resetFilterBtn}
+              onPress={() => {
+                setSearchQuery('');
+                setActiveCategory('All Shops');
+              }}
+            >
+              <Ionicons name="refresh-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.resetFilterText}>Show All Available Stores</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.registerShopBtn}
+              onPress={() => (navigation.navigate as any)(ROUTES.REGISTER_SHOP)}
+            >
+              <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.registerShopText}>Register Your Store Now</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <ScrollView
@@ -326,23 +415,44 @@ export const GroceriesScreen = () => {
             />
           }
         >
-          {visibleShops.map(shop => {
+          {filteredShops.map(shop => {
             const dist = location ? getDistanceInKm(location, shop) : null;
-            const distLabel = formatDistance(dist);
             return (
               <ShopSection
                 key={shop.id}
                 shop={shop}
-                distance={distLabel}
+                distance={formatDistance(dist)}
                 onViewStore={() =>
                   (navigation.navigate as any)(ROUTES.SHOP_DETAILS, { shopId: Number(shop.id) })
                 }
               />
             );
           })}
-          {/* Cart sticky footer placeholder */}
-          <View style={{ height: 20 }} />
+
+          <View style={{ height: cartCount > 0 ? 90 : 30 }} />
         </ScrollView>
+      )}
+
+      {/* ── Sticky Bottom Floating Cart Bar ───────────────────── */}
+      {cartCount > 0 && (
+        <View style={styles.floatingCartBar}>
+          <TouchableOpacity
+            style={styles.cartBarContent}
+            activeOpacity={0.9}
+            onPress={() => (navigation.navigate as any)(ROUTES.MAIN_TABS, { screen: ROUTES.CART })}
+          >
+            <View style={styles.cartBarLeft}>
+              <View style={styles.cartCountBadge}>
+                <Text style={styles.cartCountText}>{cartCount}</Text>
+              </View>
+              <Text style={styles.cartTotalText}>View Cart</Text>
+            </View>
+
+            <View style={styles.cartBarRight}>
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        </View>
       )}
 
       <LocationPickerModal
@@ -353,65 +463,97 @@ export const GroceriesScreen = () => {
   );
 };
 
-// ─── Product card styles ─────────────────────────────────────
+// ─── Product Card Styles ──────────────────────────────────────
 const prodStyles = StyleSheet.create({
   card: {
-    width: sw(114),
+    width: 140,
     backgroundColor: WHITE,
-    borderRadius: sw(12),
-    padding: sw(8),
-    marginRight: sw(10),
+    borderRadius: 16,
+    padding: 10,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: BORDER,
-    ...CARD_SHADOW,
+    borderColor: '#F3F4F6',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   imageWrap: {
-    height: sh(80),
-    borderRadius: sw(8),
+    height: 90,
+    borderRadius: 12,
     backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: sh(6),
+    marginBottom: 8,
+    position: 'relative',
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
-  name: { fontSize: sf(11.5), fontWeight: '600', color: TEXT_DARK, lineHeight: sf(15), minHeight: sh(30) },
-  unit: { fontSize: sf(10), color: TEXT_SECONDARY, marginTop: sh(2) },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginTop: sh(4) },
-  price: { fontSize: sf(13), fontWeight: '800', color: TEXT_DARK },
-  strikePrice: { fontSize: sf(10), color: TEXT_SECONDARY, textDecorationLine: 'line-through' },
-  addBtn: {
+  discountBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  discountText: { fontSize: 8, fontWeight: '900', color: '#FFFFFF' },
+  name: { fontSize: 12, fontWeight: '700', color: TEXT_DARK, minHeight: 32 },
+  unit: { fontSize: 10, color: TEXT_MUTED, marginBottom: 6 },
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: sh(6),
-    backgroundColor: PRIMARY,
-    borderRadius: sw(8),
-    paddingVertical: sh(6),
-    gap: sw(2),
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  addBtnText: { fontSize: sf(12), fontWeight: '800', color: ON_PRIMARY },
+  priceWrap: { flexDirection: 'column' },
+  price: { fontSize: 13, fontWeight: '900', color: TEXT_DARK },
+  strikePrice: { fontSize: 9, color: TEXT_MUTED, textDecorationLine: 'line-through' },
+  addBtn: {
+    backgroundColor: PRIMARY_LIGHT,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  addBtnText: { fontSize: 11, fontWeight: '900', color: PRIMARY },
+  counterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PRIMARY_LIGHT,
+    borderWidth: 1,
+    borderColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    gap: 6,
+  },
+  counterBtn: { padding: 2 },
+  counterValue: { fontSize: 11, fontWeight: '900', color: PRIMARY },
 });
 
-// ─── Shop section styles ─────────────────────────────────────
+// ─── Shop Section Styles ──────────────────────────────────────
 const secStyles = StyleSheet.create({
   wrapper: {
     backgroundColor: WHITE,
-    marginBottom: sh(8),
-  },
-  storeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(14),
+    marginBottom: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  storeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: sw(12) },
+  storeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   storeImageWrap: {
-    width: sw(64),
-    height: sw(64),
-    borderRadius: sw(10),
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: BORDER,
@@ -419,141 +561,168 @@ const secStyles = StyleSheet.create({
   storeImage: { width: '100%', height: '100%' },
   storePlaceholder: {
     flex: 1,
-    backgroundColor: LIGHT_ACCENT,
+    backgroundColor: PRIMARY_LIGHT,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  storeInfo: { flex: 1 },
-  storeNameRow: { flexDirection: 'row', alignItems: 'center', gap: sw(8), marginBottom: sh(3) },
-  storeName: { fontSize: sf(16), fontWeight: '800', color: TEXT_DARK, flexShrink: 1 },
-  openBadge: {
-    backgroundColor: LIGHT_ACCENT,
-    paddingHorizontal: sw(7),
-    paddingVertical: sh(2),
-    borderRadius: sw(6),
-  },
-  openText: { fontSize: sf(10), fontWeight: '800', color: TEXT_DARK },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: sw(4), marginBottom: sh(3) },
-  metaText: { fontSize: sf(11.5), color: TEXT_SECONDARY, fontWeight: '500' },
-  metaDot: { fontSize: sf(11), color: TEXT_SECONDARY },
-  addressText: { fontSize: sf(11), color: TEXT_SECONDARY },
-  viewStoreBtn: {
-    backgroundColor: BG,
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: sw(20),
-    paddingHorizontal: sw(14),
-    paddingVertical: sh(8),
-    marginLeft: sw(8),
-  },
-  viewStoreBtnText: { fontSize: sf(12), fontWeight: '800', color: TEXT_DARK },
-  itemsHeader: {
+  storeInfo: { flex: 1, marginLeft: 10 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  storeName: { fontSize: 15, fontWeight: '800', color: TEXT_DARK },
+  expressBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: sw(16),
-    paddingTop: sh(12),
-    paddingBottom: sh(8),
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 2,
   },
-  itemsTitle: { fontSize: sf(14), fontWeight: '700', color: TEXT_DARK },
-  seeAll: { fontSize: sf(12.5), fontWeight: '700', color: PRIMARY },
-  productsRow: { paddingLeft: sw(16), paddingRight: sw(8), paddingBottom: sh(16) },
-  noItems: { fontSize: sf(12), color: TEXT_SECONDARY, paddingHorizontal: sw(16), paddingBottom: sh(14) },
+  expressText: { fontSize: 8, fontWeight: '900', color: '#15803D' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+    gap: 2,
+  },
+  ratingText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
+  metaText: { fontSize: 11, color: TEXT_MUTED },
+  metaDot: { fontSize: 10, color: TEXT_MUTED },
+  viewBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  viewBtnText: { fontSize: 12, fontWeight: '800', color: PRIMARY },
+  productsRow: { paddingLeft: 16, paddingRight: 8 },
+  noItems: { fontSize: 12, color: TEXT_MUTED, paddingHorizontal: 16 },
 });
 
-// ─── Main screen styles ──────────────────────────────────────
+// ─── Main Screen Styles ───────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG },
-
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: WHITE,
-    paddingHorizontal: sw(12),
-    paddingVertical: sh(12),
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
   },
-  backBtn: { padding: 4, marginRight: sw(8) },
-  screenTitle: { flex: 1, fontSize: sf(20), fontWeight: '800', color: TEXT_DARK },
-  topBarActions: { flexDirection: 'row', gap: sw(10), alignItems: 'center' },
-  topIconBtn: { padding: 4 },
-  cartBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: '#EF4444',
-    width: sw(14),
-    height: sw(14),
-    borderRadius: sw(7),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cartBadgeText: { fontSize: sf(8), fontWeight: '800', color: WHITE },
-
-  locationBar: {
+  backBtn: { padding: 4 },
+  locationWrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: sw(8),
-    paddingHorizontal: sw(16),
-    paddingVertical: sh(10),
-    backgroundColor: WHITE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   locationTextWrap: { flex: 1 },
-  deliverLabel: { fontSize: sf(10), fontWeight: '500', color: TEXT_SECONDARY },
-  locationValue: { fontSize: sf(13), fontWeight: '700', color: TEXT_DARK },
-
-  chipScroll: { maxHeight: sh(52), backgroundColor: WHITE },
-  chipRow: {
-    paddingHorizontal: sw(12),
-    paddingVertical: sh(10),
-    gap: sw(8),
-    alignItems: 'center',
-  },
-  chip: {
-    paddingHorizontal: sw(14),
-    paddingVertical: sh(7),
-    borderRadius: sw(20),
-    borderWidth: 1.5,
-    borderColor: BORDER,
+  deliverLabel: { fontSize: 8, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 0.5 },
+  locationValue: { fontSize: 12, fontWeight: '800', color: TEXT_DARK },
+  searchBarContainer: {
     backgroundColor: WHITE,
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  chipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
-  },
-  chipText: { fontSize: sf(12.5), fontWeight: '600', color: TEXT_DARK },
-  chipTextActive: { color: ON_PRIMARY },
-  filterBtn: {
+  searchInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: sw(4),
-    paddingHorizontal: sw(12),
-    paddingVertical: sh(7),
-    borderRadius: sw(20),
-    borderWidth: 1.5,
-    borderColor: BORDER,
-    backgroundColor: WHITE,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  filterText: { fontSize: sf(12.5), fontWeight: '600', color: TEXT_SECONDARY },
-
-  scrollContent: { paddingTop: sh(6) },
-
-  centerMessage: {
-    flex: 1,
+  searchInput: { flex: 1, fontSize: 13, color: TEXT_DARK, padding: 0 },
+  chipScrollWrap: { backgroundColor: WHITE, borderBottomWidth: 1, borderBottomColor: BORDER },
+  chipRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: '#FFFFFF',
+    gap: 6,
+  },
+  chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
+  chipText: { fontSize: 12, fontWeight: '700', color: TEXT_DARK },
+  chipTextActive: { color: '#FFFFFF' },
+  scrollContent: { paddingTop: 8 },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFF4E5',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: sw(32),
-    gap: sh(12),
+    marginBottom: 16,
   },
-  centerText: { fontSize: sf(14), color: TEXT_SECONDARY, textAlign: 'center', lineHeight: sf(20) },
-  retryBtn: {
+  emptyTitle: { fontSize: 17, fontWeight: '900', color: TEXT_DARK, textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, color: TEXT_MUTED, marginTop: 6, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
+  resetFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: PRIMARY,
-    paddingHorizontal: sw(20),
-    paddingVertical: sh(10),
-    borderRadius: sw(10),
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
   },
-  retryText: { fontSize: sf(13), fontWeight: '800', color: ON_PRIMARY },
+  resetFilterText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  registerShopBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
+  },
+  registerShopText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  floatingCartBar: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    zIndex: 100,
+  },
+  cartBarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: PRIMARY,
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  cartBarLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  cartCountBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartCountText: { fontSize: 14, fontWeight: '900', color: '#FFFFFF' },
+  cartTotalText: { fontSize: 15, fontWeight: '900', color: '#FFFFFF' },
+  cartSubText: { fontSize: 9, color: 'rgba(255, 255, 255, 0.8)' },
+  cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewCartText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF' },
 });
+
+export default GroceriesScreen;

@@ -47,15 +47,26 @@ export const getDeliveryLocationLabel = (location: DeliveryLocation | null): str
   return preciseParts.join(', ') || location.fullAddress || location.shortLabel;
 };
 
+export type SavedAddress = {
+  id: string;
+  name: string; // e.g. Home, Office, Flat 402
+  details: AddressDetails;
+  latitude?: number;
+  longitude?: number;
+};
+
 type DeliveryLocationContextData = {
   location: DeliveryLocation | null;
+  savedAddresses: SavedAddress[];
   isLoading: boolean;
   isTracking: boolean;
   error: string | null;
   refreshFromGps: () => Promise<void>;
   startTracking: () => Promise<void>;
   stopTracking: () => void;
-  saveAddress: (details: AddressDetails) => Promise<boolean>;
+  saveAddress: (details: AddressDetails, customId?: string, labelName?: string) => Promise<boolean>;
+  deleteAddress: (id: string) => Promise<void>;
+  selectSavedAddress: (saved: SavedAddress) => Promise<void>;
 };
 
 const emptyDetails = (): AddressDetails => ({
@@ -98,8 +109,11 @@ async function getCurrentPosition(): Promise<{ latitude: number; longitude: numb
   };
 }
 
+const SAVED_ADDRESSES_KEY = '@ruvo_saved_addresses_list';
+
 export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) => {
   const [location, setLocation] = useState<DeliveryLocation | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +134,51 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       /* Safe storage handling */
     }
   }, []);
+
+  const persistSavedAddresses = useCallback(async (list: SavedAddress[]) => {
+    setSavedAddresses(list);
+    try {
+      await AsyncStorage.setItem(SAVED_ADDRESSES_KEY, JSON.stringify(list));
+    } catch {
+      /* Safe storage handling */
+    }
+  }, []);
+
+  const deleteAddress = useCallback(
+    async (id: string) => {
+      const updated = savedAddresses.filter(a => a.id !== id);
+      await persistSavedAddresses(updated);
+    },
+    [savedAddresses, persistSavedAddresses],
+  );
+
+  const stopTracking = useCallback(() => {
+    if (locationSubscription.current) {
+      locationSubscription.current.remove();
+      locationSubscription.current = null;
+    }
+    if (geocodeTimer.current) {
+      clearTimeout(geocodeTimer.current);
+      geocodeTimer.current = null;
+    }
+    setIsTracking(false);
+  }, []);
+
+  const selectSavedAddress = useCallback(
+    async (saved: SavedAddress) => {
+      const fullAddress = composeFullAddress(saved.details);
+      await persistLocation({
+        latitude: saved.latitude || locationRef.current?.latitude || 28.6139,
+        longitude: saved.longitude || locationRef.current?.longitude || 77.2090,
+        shortLabel: saved.name || saved.details.house || saved.details.area,
+        fullAddress,
+        isCustomAddress: true,
+        details: saved.details,
+      });
+      stopTracking();
+    },
+    [persistLocation, stopTracking],
+  );
 
   const applyGps = useCallback(
     async (latitude: number, longitude: number, keepManualFields = true) => {
@@ -172,20 +231,9 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     }
   }, [applyGps]);
 
-  const stopTracking = useCallback(() => {
-    if (locationSubscription.current) {
-      locationSubscription.current.remove();
-      locationSubscription.current = null;
-    }
-    if (geocodeTimer.current) {
-      clearTimeout(geocodeTimer.current);
-      geocodeTimer.current = null;
-    }
-    setIsTracking(false);
-  }, []);
+
 
   const startTracking = useCallback(async () => {
-    // If user saved a custom recipient address, do not track device movement
     if (locationRef.current?.isCustomAddress) {
       stopTracking();
       return;
@@ -233,7 +281,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
   }, [applyGps, stopTracking]);
 
   const saveAddress = useCallback(
-    async (details: AddressDetails) => {
+    async (details: AddressDetails, customId?: string, labelName?: string) => {
       const required = [details.house, details.area, details.city, details.pincode, details.phone];
       if (required.some(value => !value.trim())) {
         setError('Please fill house, area, city, pincode and phone.');
@@ -253,25 +301,35 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       const fullAddress = composeFullAddress(details);
       const coordinates = await geocodeAddress(fullAddress);
       
-      let finalLat: number;
-      let finalLng: number;
+      let finalLat: number = coordinates?.latitude || locationRef.current?.latitude || 28.6139;
+      let finalLng: number = coordinates?.longitude || locationRef.current?.longitude || 77.2090;
 
-      if (coordinates) {
-        finalLat = coordinates.latitude;
-        finalLng = coordinates.longitude;
-      } else if (locationRef.current?.latitude && locationRef.current?.longitude) {
-        // Fallback to current device coordinates if address forward-geocoding couldn't pinpoint exact building
-        finalLat = locationRef.current.latitude;
-        finalLng = locationRef.current.longitude;
+      const newAddressId = customId || Date.now().toString();
+      const name = labelName || details.house || details.street || 'Home';
+
+      const newSavedItem: SavedAddress = {
+        id: newAddressId,
+        name,
+        details,
+        latitude: finalLat,
+        longitude: finalLng,
+      };
+
+      const existingIndex = savedAddresses.findIndex(a => a.id === newAddressId);
+      let updatedList: SavedAddress[];
+      if (existingIndex >= 0) {
+        updatedList = [...savedAddresses];
+        updatedList[existingIndex] = newSavedItem;
       } else {
-        setError('Could not locate this address. Please check city and pincode, then try again.');
-        return false;
+        updatedList = [newSavedItem, ...savedAddresses];
       }
+
+      await persistSavedAddresses(updatedList);
 
       await persistLocation({
         latitude: finalLat,
         longitude: finalLng,
-        shortLabel: [details.house, details.street, details.area].filter(Boolean).join(', ') || details.city,
+        shortLabel: name,
         fullAddress,
         isCustomAddress: true,
         details,
@@ -281,16 +339,22 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       setError(null);
       return true;
     },
-    [persistLocation, stopTracking],
+    [persistLocation, stopTracking, savedAddresses, persistSavedAddresses],
   );
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadSavedLocation = async () => {
+    const loadSavedData = async () => {
       let shouldRefreshCurrentLocation = true;
 
       try {
+        const savedList = await AsyncStorage.getItem(SAVED_ADDRESSES_KEY);
+        if (savedList) {
+          const list = JSON.parse(savedList) as SavedAddress[];
+          setSavedAddresses(list);
+        }
+
         const saved = await AsyncStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved) as DeliveryLocation;
@@ -320,7 +384,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
       }
     };
 
-    loadSavedLocation();
+    loadSavedData();
     return () => {
       cancelled = true;
       stopTracking();
@@ -331,6 +395,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     <DeliveryLocationContext.Provider
       value={{
         location,
+        savedAddresses,
         isLoading,
         isTracking,
         error,
@@ -338,6 +403,8 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
         startTracking,
         stopTracking,
         saveAddress,
+        deleteAddress,
+        selectSavedAddress,
       }}
     >
       {children}

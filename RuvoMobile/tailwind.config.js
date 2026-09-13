@@ -36,7 +36,9 @@ module.exports = {
           'gold-light': '#FFD874',
           'gold-dark': '#D99B00',
           'gold-soft': '#FFF2C2',
-          'gold-border': '#E7E0D5',
+          // Border
+          'border': '#EDEAD4',
+          'gold-border': '#EDEAD4',
           
           // Feedback
           'error': '#D94A4A',
@@ -68,6 +70,14 @@ module.exports = {
         'xl': 24,
         '2xl': 32,
         '3xl': 40,
+      },
+      borderWidth: {
+        DEFAULT: 0.5,
+        0: '0px',
+        1: '1px',
+        2: '2px',
+        4: '4px',
+        8: '8px',
       },
       borderRadius: {
         'xs': 4,

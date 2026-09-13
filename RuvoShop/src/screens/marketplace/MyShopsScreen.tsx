@@ -151,281 +151,76 @@ export const MyShopsScreen = () => {
   const ShopCard = ({ item, index }: { item: Shop; index: number }) => {
     const shopData = item as Shop & { category?: string; address?: string; phone?: string; settlementBlocked?: boolean };
     const approved = Boolean(item.approved);
-    const isOverdue = Boolean(shopData.settlementBlocked);
-    const thumbUri = resolveImage(
-      item.logoUrl || item.bannerUrl || (item as any).imageUrl
-    );
-    const productsList = shopProducts[item.id] || [];
-    const recentProducts = productsList.slice(0, 3);
-
-    // Continuous Chamakti/Light Sweep Animation
-    const shineAnim = useRef(new RNAnimated.Value(0)).current;
-
-    useEffect(() => {
-      const loop = RNAnimated.loop(
-        RNAnimated.timing(shineAnim, {
-          toValue: 1,
-          duration: 2200,
-          easing: Easing.bezier(0.4, 0.0, 0.2, 1),
-          useNativeDriver: true,
-        })
-      );
-      loop.start();
-      return () => loop.stop();
-    }, [shineAnim]);
-
-    const translateX = shineAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [-250, 450],
-    });
+    const logoUri = resolveImage(item.logoUrl);
+    const bannerUri = resolveImage(item.bannerUrl || (item as any).imageUrl);
 
     return (
       <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
-        <Card
+        <TouchableOpacity
+          activeOpacity={0.9}
           onPress={() =>
             navigation.navigate(ROUTES.SHOPKEEPER_DASHBOARD, {
               shopId: item.id,
               shopName: item.name,
             })
           }
-          variant="default"
           className="mb-lg overflow-hidden border border-ruvo-border rounded-2xl bg-ruvo-surface shadow-sm"
         >
-          <View className="p-md">
-            {/* Overdue Alert Banner if settlementBlocked */}
-            {isOverdue && (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-sm mb-md flex-row items-center gap-xs">
-                <Ionicons name="alert-circle" size={18} color="#D94A4A" />
-                <View className="flex-1">
-                  <Text className="text-xs font-black text-red-900">Settlement Overdue Notice</Text>
-                  <Text className="text-[10px] text-red-700 font-medium">
-                    Order broadcast paused. Please clear your weekly settlement dues to resume.
-                  </Text>
-                </View>
+          {/* Shop Banner Image with Blurred Background Accent */}
+          <View className="h-28 w-full bg-warm-200/50 overflow-hidden relative">
+            {bannerUri ? (
+              <>
+                <Image source={{ uri: bannerUri }} className="absolute inset-0 w-full h-full opacity-40" blurRadius={15} resizeMode="cover" />
+                <Image source={{ uri: bannerUri }} className="w-full h-full" resizeMode="contain" />
+              </>
+            ) : (
+              <View className="w-full h-full bg-ruvo-yellow-soft/40 items-center justify-center">
+                <Ionicons name="storefront-outline" size={36} color="#F4B400" />
               </View>
             )}
 
-            {/* Shop Info Header */}
-            <View className="flex-row items-center gap-md">
-              <View className="w-14 h-14 bg-ruvo-bg rounded-xl border border-ruvo-border items-center justify-center overflow-hidden">
-                {thumbUri ? (
-                  <Image source={{ uri: thumbUri }} className="w-full h-full" resizeMode="cover" />
-                ) : (
-                  <Ionicons name="storefront" size={26} color="#F4B400" />
-                )}
-              </View>
-
-              <View className="flex-1 gap-1">
-                <View className="flex-row items-center justify-between">
-                  <Text className="flex-1 text-base font-extrabold text-ruvo-ink mr-xs" numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <View className="flex-row items-center gap-xs">
-                    {isOverdue ? (
-                      <Badge variant="error" size="sm">Overdue</Badge>
-                    ) : (
-                      <Badge variant={approved ? 'success' : 'warning'} size="sm">
-                        {approved ? 'Approved' : 'Pending'}
-                      </Badge>
-                    )}
-                  </View>
-                </View>
-
-                {(shopData.category || (item as any).categoryName) && (
-                  <View className="flex-row items-center gap-xs">
-                    <Ionicons name="pricetag" size={12} color="#F4B400" />
-                    <Text className="text-xs font-semibold text-warm-600" numberOfLines={1}>
-                      {shopData.category || (item as any).categoryName}
-                    </Text>
-                  </View>
-                )}
-
-                {(shopData.address || (item as any).fullAddress) && (
-                  <View className="flex-row items-start gap-xs mt-0.5">
-                    <Ionicons name="location" size={12} color="#77736B" style={{ marginTop: 2 }} />
-                    <Text className="flex-1 text-xs text-warm-600 leading-4" numberOfLines={1}>
-                      {shopData.address || (item as any).fullAddress}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <Ionicons name="chevron-forward" size={18} color="#77736B" />
-            </View>
-
-            {/* Premium Action Grid Menu */}
-            <View className="mt-md pt-md border-t border-ruvo-border">
-              <View className="flex-row items-center justify-between gap-1.5">
-                {/* Products Tile */}
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
-                  onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
-                >
-                  <View className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 items-center justify-center mb-1">
-                    <Ionicons name="cube" size={15} color="#F4B400" />
-                  </View>
-                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Products</Text>
-                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">{productsList.length} Items</Text>
-                </TouchableOpacity>
-
-                {/* Orders Tile */}
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
-                  onPress={() =>
-                    navigation.navigate(ROUTES.SHOP_ORDERS, {
-                      shopId: item.id,
-                      shopName: item.name,
-                    })
-                  }
-                >
-                  <View className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 items-center justify-center mb-1">
-                    <Ionicons name="receipt" size={15} color="#3478C8" />
-                  </View>
-                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Orders</Text>
-                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Manage</Text>
-                </TouchableOpacity>
-
-                {/* Add Item Tile */}
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
-                  onPress={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId: item.id })}
-                >
-                  <View className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 items-center justify-center mb-1">
-                    <Ionicons name="add" size={16} color="#18A957" />
-                  </View>
-                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Add Item</Text>
-                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">New</Text>
-                </TouchableOpacity>
-
-                {/* Edit Tile */}
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
-                  onPress={() => navigation.navigate('EditShop', { shop: item })}
-                >
-                  <View className="w-8 h-8 rounded-lg bg-ruvo-surface border border-ruvo-border items-center justify-center mb-1">
-                    <Ionicons name="create" size={15} color="#171A1F" />
-                  </View>
-                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Edit</Text>
-                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Info</Text>
-                </TouchableOpacity>
-
-                {/* Dues Tile */}
-                <TouchableOpacity
-                  activeOpacity={0.75}
-                  className="flex-1 items-center bg-ruvo-bg py-2 px-1 rounded-xl border border-ruvo-border shadow-xs"
-                  onPress={() => navigation.navigate('ShopSettlement', { shopId: item.id })}
-                >
-                  <View className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 items-center justify-center mb-1">
-                    <Ionicons name="wallet" size={15} color="#D94A4A" />
-                  </View>
-                  <Text className="text-[10px] font-bold text-ruvo-ink text-center" numberOfLines={1}>Dues</Text>
-                  <Text className="text-[9px] font-semibold text-warm-600 mt-0.5">Pay</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Recent Products Showcase */}
-            <View className="mt-md pt-md border-t border-ruvo-border">
-              <View className="flex-row items-center justify-between mb-sm">
-                <View className="flex-row items-center gap-xs">
-                  <Ionicons name="cube" size={15} color="#171A1F" />
-                  <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider">
-                    Recent Inventory
-                  </Text>
-                </View>
-                {productsList.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId: item.id })}
-                    className="flex-row items-center gap-xs"
-                  >
-                    <Text className="text-xs font-bold text-ruvo-ink">Browse All</Text>
-                    <Ionicons name="chevron-forward" size={12} color="#171A1F" />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {recentProducts.length === 0 ? (
-                <View className="bg-ruvo-bg p-sm rounded-xl items-center justify-center border border-dashed border-ruvo-border">
-                  <Text className="text-xs font-medium text-warm-600">No inventory products added yet</Text>
-                </View>
+            {/* Shop Logo Avatar overlay */}
+            <View className="absolute bottom-2 left-3 w-14 h-14 bg-white/95 rounded-xl border border-warm-200 p-0.5 shadow-md items-center justify-center overflow-hidden">
+              {logoUri ? (
+                <Image source={{ uri: logoUri }} className="w-full h-full" resizeMode="contain" />
               ) : (
-                <View className="gap-xs">
-                  {recentProducts.map((product: any) => {
-                    const pImg = resolveImage(product.imageUrl || product.image);
-                    const isAvailable = product.isAvailable !== false && product.stockQuantity > 0;
-                    const discount =
-                      product.discount ||
-                      (product.actualPrice > product.sellingPrice
-                        ? Math.round(((product.actualPrice - product.sellingPrice) / product.actualPrice) * 100)
-                        : 0);
-
-                    return (
-                      <View
-                        key={product.id}
-                        className="bg-ruvo-bg border border-ruvo-border rounded-xl p-2.5 flex-row items-center gap-2.5"
-                      >
-                        <View className="w-12 h-12 rounded-lg bg-white border border-ruvo-border items-center justify-center overflow-hidden relative">
-                          {pImg ? (
-                            <Image source={{ uri: pImg }} className="w-full h-full" resizeMode="contain" />
-                          ) : (
-                            <Ionicons name="image-outline" size={20} color="#77736B" />
-                          )}
-                          {discount > 0 && (
-                            <View className="absolute top-0 left-0 bg-ruvo-primary px-1 rounded-br-sm">
-                              <Text className="text-[8px] font-black text-ruvo-ink">{discount}%</Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <View className="flex-1">
-                          <View className="flex-row items-center justify-between">
-                            <Text className="text-xs font-extrabold text-ruvo-ink flex-1 mr-1" numberOfLines={1}>
-                              {product.name}
-                            </Text>
-                            <Badge variant={isAvailable ? 'success' : 'error'} size="sm">
-                              {isAvailable ? 'Active' : 'Stock Out'}
-                            </Badge>
-                          </View>
-
-                          <View className="flex-row items-baseline gap-1 mt-0.5">
-                            <Text className="text-xs font-extrabold text-ruvo-ink">₹{product.sellingPrice}</Text>
-                            {product.actualPrice > product.sellingPrice && (
-                              <Text className="text-[10px] text-warm-500 line-through">₹{product.actualPrice}</Text>
-                            )}
-                            {product.unit && (
-                              <Text className="text-[9px] text-warm-600 font-medium">/ {product.unit}</Text>
-                            )}
-                          </View>
-
-                          <Text className="text-[10px] text-warm-600 font-medium">
-                            Stock: {product.stockQuantity} units
-                          </Text>
-                        </View>
-
-                        <TouchableOpacity
-                          onPress={() =>
-                            navigation.navigate(ROUTES.EDIT_PRODUCT, {
-                              product,
-                              productId: product.id,
-                              shopId: item.id,
-                            })
-                          }
-                          className="bg-ruvo-surface p-2 rounded-lg border border-ruvo-border items-center justify-center"
-                        >
-                          <Ionicons name="create-outline" size={15} color="#171A1F" />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
+                <Ionicons name="storefront" size={24} color="#F4B400" />
               )}
             </View>
           </View>
-        </Card>
+
+          <View className="p-md pt-2">
+            {/* Shop Name & Status */}
+            <View className="flex-row items-center justify-between mb-xs">
+              <Text className="text-lg font-black text-ruvo-ink flex-1 mr-2" numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Badge variant={approved ? 'success' : 'warning'} size="sm">
+                {approved ? 'Approved' : 'Pending'}
+              </Badge>
+            </View>
+
+            {(shopData.category || (item as any).categoryName) && (
+              <Text className="text-xs font-bold text-warm-600">
+                {shopData.category || (item as any).categoryName}
+              </Text>
+            )}
+
+            {/* View Dashboard Button with RuVo Brand Yellow Theme */}
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate(ROUTES.SHOPKEEPER_DASHBOARD, {
+                  shopId: item.id,
+                  shopName: item.name,
+                })
+              }
+              className="mt-md bg-ruvo-yellow py-3 rounded-xl flex-row items-center justify-center gap-2 border border-amber-300 shadow-xs"
+            >
+              <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider">View Dashboard</Text>
+              <Ionicons name="arrow-forward" size={16} color="#231C10" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Animated.View>
     );
   };

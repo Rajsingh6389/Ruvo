@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, StyleSheet, ViewProps, Pressable, StyleProp, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -19,7 +19,7 @@ export const Card = ({ children, style, elevation = 'sm', onPress, ...props }: C
       borderRadius: 18,
       padding: spacing.lg,
       ...shadows[elevation],
-      borderWidth: 1,
+      borderWidth: 0.5,
       borderColor: colors.border,
     },
     style,

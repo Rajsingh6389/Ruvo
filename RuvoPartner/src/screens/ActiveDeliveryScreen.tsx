@@ -54,7 +54,7 @@ export const ActiveDeliveryScreen = () => {
   const [delivery, setDelivery] = useState<Delivery | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpModalMode, setOtpModalMode] = useState<'pickup' | 'delivery' | null>(null);
   const [otp, setOtp] = useState('');
 
   const load = useCallback(async () => {
@@ -82,17 +82,33 @@ export const ActiveDeliveryScreen = () => {
       showToast('Could not open maps app on this device.', 'warning')
     );
 
-  const update = async (action: 'pickup' | 'out-for-delivery') => {
+  const update = async (action: 'out-for-delivery') => {
     if (!token || !deliveryId) return;
     setBusy(true);
     try {
-      action === 'pickup'
-        ? await partnerService.pickup(token, deliveryId)
-        : await partnerService.startDelivery(token, deliveryId);
-      showToast(action === 'pickup' ? 'Order Picked Up!' : 'Delivery Started!', 'success');
+      await partnerService.startDelivery(token, deliveryId);
+      showToast('Delivery Started!', 'success');
       await load();
     } catch (e: any) {
       showToast(e.message || 'Update failed', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const verifyPickup = async () => {
+    if (!token || !deliveryId || otp.length < 4) {
+      return showToast('Enter 6-digit pickup OTP to complete', 'warning');
+    }
+    setBusy(true);
+    try {
+      await partnerService.pickup(token, deliveryId, otp);
+      setOtpModalMode(null);
+      setOtp('');
+      showToast('Order Picked Up successfully!', 'success');
+      await load();
+    } catch (e: any) {
+      showToast(e.message || 'Verification failed', 'error');
     } finally {
       setBusy(false);
     }
@@ -109,7 +125,8 @@ export const ActiveDeliveryScreen = () => {
         token,
         { method: 'PATCH' }
       );
-      setOtpOpen(false);
+      setOtpModalMode(null);
+      setOtp('');
       showToast('Delivery verified and completed!', 'success');
       navigation.popToTop();
     } catch (e: any) {
@@ -137,11 +154,11 @@ export const ActiveDeliveryScreen = () => {
   const index = states.indexOf(delivery.status);
   const action =
     delivery.status === 'ASSIGNED'
-      ? { label: 'ARRIVED AT SHOP & PICKED UP', handler: () => update('pickup'), color: 'bg-ruvo-primary text-ruvo-ink' }
+      ? { label: 'ARRIVED AT SHOP & PICKED UP', handler: () => setOtpModalMode('pickup'), color: 'bg-ruvo-primary text-ruvo-ink' }
       : delivery.status === 'PICKED_UP'
       ? { label: 'START DELIVERY TO CUSTOMER', handler: () => update('out-for-delivery'), color: 'bg-ruvo-primary text-ruvo-ink' }
       : delivery.status === 'OUT_FOR_DELIVERY'
-      ? { label: 'COMPLETE DELIVERY (ENTER OTP)', handler: () => setOtpOpen(true), color: 'bg-emerald-600 text-white' }
+      ? { label: 'COMPLETE DELIVERY (ENTER OTP)', handler: () => setOtpModalMode('delivery'), color: 'bg-emerald-600 text-white' }
       : null;
 
   return (
@@ -324,7 +341,7 @@ export const ActiveDeliveryScreen = () => {
       )}
 
       {/* OTP Verification Modal */}
-      <Modal visible={otpOpen} transparent animationType="slide">
+      <Modal visible={otpModalMode !== null} transparent animationType="slide">
         <View className="flex-1 bg-ruvo-ink/80 justify-end">
           <Animated.View
             entering={FadeInUp.duration(400)}
@@ -339,14 +356,18 @@ export const ActiveDeliveryScreen = () => {
           >
             {/* Modal Header */}
             <View className="flex-row items-center justify-between mb-lg">
-              <Text className="text-xl font-extrabold text-ruvo-ink">Verify Customer Delivery</Text>
-              <TouchableOpacity onPress={() => setOtpOpen(false)}>
+              <Text className="text-xl font-extrabold text-ruvo-ink">
+                {otpModalMode === 'pickup' ? 'Verify Order Pickup' : 'Verify Customer Delivery'}
+              </Text>
+              <TouchableOpacity onPress={() => setOtpModalMode(null)}>
                 <Ionicons name="close-circle-outline" size={26} color="#77736B" />
               </TouchableOpacity>
             </View>
 
             <Text className="text-sm text-warm-600 mb-lg leading-5">
-              Ask the customer for their 4-digit or 6-digit delivery OTP to complete this order.
+              {otpModalMode === 'pickup' 
+                ? 'Ask the shopkeeper for their 6-digit handover OTP to confirm order pickup.'
+                : 'Ask the customer for their 4-digit or 6-digit delivery OTP to complete this order.'}
             </Text>
 
             {/* OTP Input */}
@@ -363,12 +384,12 @@ export const ActiveDeliveryScreen = () => {
             {/* Verify Button */}
             <Button
               variant="primary"
-              onPress={verifyDelivery}
+              onPress={otpModalMode === 'pickup' ? verifyPickup : verifyDelivery}
               loading={busy}
               disabled={busy}
               icon="checkmark-circle"
             >
-              VERIFY & COMPLETE ORDER
+              {otpModalMode === 'pickup' ? 'VERIFY & PICKUP' : 'VERIFY & COMPLETE ORDER'}
             </Button>
           </Animated.View>
         </View>

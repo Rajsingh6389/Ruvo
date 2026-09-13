@@ -39,7 +39,7 @@ export const RuvoButton: React.FC<RuvoButtonProps> = ({
     primary: 'bg-ruvo-yellow',
     secondary: 'bg-warm-100 border border-warm-300',
     danger: 'bg-ruvo-error',
-    outline: 'bg-transparent border-2 border-ruvo-yellow',
+    outline: 'bg-transparent border border-ruvo-yellow',
   };
 
   const textColorClasses = {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RuVo Unified Design System
  * Shared components and patterns for RuvoPartner & RuvoShop
  * Modern, accessible, vibrant blue/purple palette (no dark green)
@@ -551,7 +551,7 @@ export const Header: React.FC<HeaderProps> = ({
 // Styles
 // ────────────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  card: { borderWidth: 1, padding: 16, overflow: 'hidden' },
+  card: { borderWidth: StyleSheet.hairlineWidth, padding: 16, overflow: 'hidden' },
 
   button: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: 'rgba(16, 185, 129, 0.4)',
     borderStyle: 'dashed',
     paddingHorizontal: 10,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,

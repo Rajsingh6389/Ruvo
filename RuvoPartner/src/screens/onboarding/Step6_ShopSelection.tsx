@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 6 — Shop Selection
  * Fetches nearby shops (by GPS or fallback mock), lets the partner
  * multi-select the shops they want to serve, then submits the list.
@@ -758,12 +758,12 @@ const s = StyleSheet.create({
   controlBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, marginBottom: 12,
+    borderWidth: StyleSheet.hairlineWidth, marginBottom: 12,
   },
   countBadge: { flexDirection: 'row', alignItems: 'baseline' },
   controlBtns: { flexDirection: 'row', gap: 8 },
   ctrlBtn: {
-    paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 6, borderWidth: StyleSheet.hairlineWidth,
   },
   shopList: { gap: 10, marginBottom: 4 },
   shopCard: {

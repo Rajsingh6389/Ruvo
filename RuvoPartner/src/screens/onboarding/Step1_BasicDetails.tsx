@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 1 — Basic Details
  * Collects full name, DOB, and current address.
  * Posts to /api/partner/verification then advances to VehicleType.

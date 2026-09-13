@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RuvoShop Onboarding — Step 2: Aadhaar Verification (DEMO)
  * Accepts Aadhaar + name, simulates a verification delay, then proceeds.
  * Production: replace simulateVerification() with UIDAI / Digilocker API.
@@ -197,5 +197,5 @@ const s = StyleSheet.create({
   successCard:  { alignItems: 'center', padding: 28, marginBottom: 16 },
   successIcon:  { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
   maskRow:      { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginTop: 8 },
-  spinnerCard:  { borderWidth: 1, padding: 28, alignItems: 'center', marginBottom: 16 },
+  spinnerCard:  { borderWidth: StyleSheet.hairlineWidth, padding: 28, alignItems: 'center', marginBottom: 16 },
 });

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Onboarding Step 3 — Aadhaar Verification (DEMO)
  * Accepts Aadhaar number, shows a "Verifying…" animation, then auto-proceeds.
  * Production: replace simulateVerification() with a real UIDAI/Digilocker API call.
@@ -177,6 +177,6 @@ const s = StyleSheet.create({
   scroll: { paddingBottom: 32 },
   successCard: { alignItems: 'center', padding: 28, marginBottom: 16 },
   successIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  spinnerCard: { borderWidth: 1, padding: 28, alignItems: 'center', marginBottom: 16 },
+  spinnerCard: { borderWidth: StyleSheet.hairlineWidth, padding: 28, alignItems: 'center', marginBottom: 16 },
   maskRow: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginTop: 8 },
 });

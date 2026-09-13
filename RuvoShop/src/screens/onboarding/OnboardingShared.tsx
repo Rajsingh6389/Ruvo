@@ -126,7 +126,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({ children, style }) => 
   <View style={[{
     backgroundColor: '#FFFFFF',
     borderColor: '#EDE4D8',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderRadius: RADIUS.card,
     padding: 16,
     marginBottom: 12,
@@ -299,7 +299,7 @@ export const ErrorBox: React.FC<ErrorBoxProps> = ({ message, error }) => {
       flexDirection: 'row', alignItems: 'flex-start', gap: 10,
       backgroundColor: '#FEE2E2', borderRadius: 10,
       padding: 12, marginVertical: 8,
-      borderWidth: 1, borderColor: '#FCA5A5',
+      borderWidth: 0.5, borderColor: '#FCA5A5',
     }}>
       <Ionicons name="alert-circle" size={16} color="#DC2626" style={{ marginTop: 1 }} />
       <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontWeight: '600', lineHeight: 19 }}>
@@ -325,7 +325,7 @@ export const InfoBox: React.FC<InfoBoxProps> = ({ message, text, icon = 'informa
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
     backgroundColor: ACCENT_SOFT, borderRadius: 10,
     padding: 12, marginVertical: 8,
-    borderWidth: 1, borderColor: '#FDE68A',
+    borderWidth:0.5, borderColor: '#FDE68A',
   }}>
     <Ionicons name={icon} size={16} color="#A07800" style={{ marginTop: 1 }} />
     <Text style={{ flex: 1, color: '#78350F', fontSize: 13, fontWeight: '500', lineHeight: 19 }}>

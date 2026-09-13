@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 38,
     height: 38,
-    borderWidth: 1,
+    borderWidth: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   stepDot: { width: 8, height: 8, borderRadius: 4 },
   title: { textAlign: 'center', marginBottom: 6 },
   subtitle: { textAlign: 'center', marginBottom: 28, lineHeight: 20, paddingHorizontal: 12 },
-  formCard: { borderWidth: 1, marginBottom: 20 },
+  formCard: { borderWidth: 0.5, marginBottom: 20 },
   label: { marginBottom: 8, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 },
   inputWrap: {
     flexDirection: 'row',
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     gap: 10,
   },
-  inputFocused: { borderWidth: 2 },
+  inputFocused: { borderWidth: StyleSheet.hairlineWidth },
   prefixBox: { paddingRight: 10, borderRightWidth: 1, height: '60%', justifyContent: 'center' },
   inputIcon: { flexShrink: 0 },
   input: { flex: 1 },

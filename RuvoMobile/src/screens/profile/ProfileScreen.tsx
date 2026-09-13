@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -178,7 +178,7 @@ export const ProfileScreen = () => {
         
         {/* ─ LOGOUT ────────────────────────────────────────────────────── */}
         <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: colors.errorSoft, borderRadius: radius.card, borderColor: colors.error + '30', borderWidth: 1 }]}
+          style={[styles.logoutBtn, { backgroundColor: colors.errorSoft, borderRadius: radius.card, borderColor: colors.error + '30', borderWidth: 0.5 }]}
           onPress={handleLogout}
           activeOpacity={0.8}
         >
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.lg,
-    borderWidth: 1,
+    borderWidth: 0.5,
     gap: SPACING.md,
   },
   avatarWrap: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   section: {
     marginHorizontal: SPACING.gutter,
     marginBottom: SPACING.md,
-    borderWidth: 1,
+    borderWidth: 0.5,
     overflow: 'hidden',
   },
   sectionTitle: {

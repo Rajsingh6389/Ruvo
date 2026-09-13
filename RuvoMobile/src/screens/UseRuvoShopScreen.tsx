@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   Alert,
   Animated,
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 38,
     height: 38,
-    borderWidth: 1,
+    borderWidth: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     gap: 14,
   },
   featureIcon: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderWidth: 1,
+    borderWidth: 0.5,
     gap: 14,
   },
   playBtn: {

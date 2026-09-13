@@ -23,7 +23,7 @@ const ENV_URL =
 // const DEV_FALLBACK = 'http://192.168.1.10:8080';
 // const DEV_FALLBACK = 'http://10.12.231.159:8080';
 
-const DEV_FALLBACK = 'http://192.168.31.21:8080';
+const DEV_FALLBACK = 'http://10.120.64.159:8080';
 
 export const API_BASE_URL: string = __DEV__
   ? (ENV_URL || DEV_FALLBACK)

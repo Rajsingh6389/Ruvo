@@ -1,18 +1,16 @@
-/**
+﻿/**
  * Step4_Success - RuvoShop Onboarding (Redesigned)
  * Awaiting admin approval screen with premium UI.
  * All polling, request-review, and navigation logic preserved.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
+import { StyleSheet, View,
   Text,
   ScrollView,
   TouchableOpacity,
   Animated,
-  Easing,
-} from 'react-native';
+  Easing, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -189,7 +187,7 @@ export const Step4_Success = () => {
 
           {/* Completion Summary */}
           <View style={{
-            backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1,
+            backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
             borderColor: '#EDE4D8', padding: 16, marginBottom: 16,
             shadowColor: '#2E2313', shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,

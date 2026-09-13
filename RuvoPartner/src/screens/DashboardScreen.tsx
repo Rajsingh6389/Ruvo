@@ -361,16 +361,16 @@ export const DashboardScreen = () => {
         {/* Hero Header */}
         <Animated.View
           entering={FadeInDown.duration(500)}
-          className="bg-[#171A1F] px-lg pb-3xl"
-          style={{ paddingTop: insets.top + 12 }}
+          className="bg-white px-lg pb-md border-b border-ruvo-border"
+          style={{ paddingTop: insets.top + 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 }}
         >
-          <View className="flex-row items-center justify-between mb-lg">
+          <View className="flex-row items-center justify-between mb-sm">
             <View className="flex-1">
               <View className="flex-row items-center gap-xs mb-1">
-                <Text className="text-warm-400 text-[11px] font-extrabold uppercase tracking-widest">RUVO PARTNER</Text>
+                <Text className="text-emerald-700 text-[11px] font-extrabold uppercase tracking-widest">RUVO PARTNER</Text>
               </View>
-              <Text className="text-white text-2xl font-black tracking-tight">{user?.name || 'Partner'}</Text>
-              <Text className="text-warm-300 text-xs font-semibold mt-1">
+              <Text className="text-ruvo-ink text-2xl font-black tracking-tight">{user?.name || 'Partner'}</Text>
+              <Text className="text-warm-500 text-xs font-semibold mt-1">
                 🛵 {user?.vehicle?.vehicleType || 'Bike'} • {user?.vehicle?.vehicleNumber || 'NOT_REQUIRED'}
               </Text>
             </View>
@@ -378,75 +378,71 @@ export const DashboardScreen = () => {
             <TouchableOpacity
               onPress={onRefresh}
               activeOpacity={0.7}
-              className="w-11 h-11 bg-[#222731] rounded-full items-center justify-center border border-white/10 shadow-sm"
+              className="w-11 h-11 bg-ruvo-bg rounded-full items-center justify-center border border-ruvo-border"
+              style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}
             >
-              <Ionicons name="refresh" size={18} color="#F4B400" />
+              <Ionicons name="refresh" size={18} color="#171A1F" />
             </TouchableOpacity>
-          </View>
-
-          {/* Status Toggle Header Strip */}
-          <View className="flex-row items-center justify-between bg-[#1E232D] rounded-2xl px-lg py-3.5 border border-stone-800">
-            <View className="flex-row items-center gap-3">
-              <View className={`w-2.5 h-2.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-stone-500'}`} />
-              <Text className={`text-xs font-black tracking-wider ${online ? 'text-emerald-400' : 'text-stone-400'}`}>
-                {online ? 'ONLINE • ACCEPTING ORDERS' : 'OFFLINE • RESTING'}
-              </Text>
-            </View>
-            <Switch
-              value={online}
-              disabled={changing}
-              onValueChange={changeAvailability}
-              trackColor={{ false: '#3E4249', true: '#18A957' }}
-              thumbColor="#FFFFFF"
-            />
           </View>
         </Animated.View>
 
-        <View className="px-lg" style={{ marginTop: -24 }}>
-          {/* GO ONLINE/OFFLINE Action Button */}
+        <View className="px-lg pt-lg">
+          {/* Main Availability Action Card */}
           <Animated.View entering={FadeInUp.delay(100).duration(500)}>
             <TouchableOpacity
               disabled={changing}
               onPress={() => changeAvailability(!online)}
-              activeOpacity={0.85}
-              className={`rounded-full py-4 px-xl flex-row items-center justify-center gap-3 ${
-                online
-                  ? 'bg-white border-2 border-emerald-500 shadow-md'
-                  : 'bg-ruvo-primary shadow-lg shadow-amber-500/25 border-2 border-amber-400'
-              }`}
-              style={{
-                elevation: 4,
-              }}
+              activeOpacity={0.9}
             >
-              <Ionicons
-                name={online ? 'radio-button-on' : 'power'}
-                size={22}
-                color={online ? '#18A957' : '#171A1F'}
-              />
-              <Text className={`text-base font-black tracking-wider ${online ? 'text-emerald-700' : 'text-ruvo-ink'}`}>
-                {online ? 'GO OFFLINE' : 'GO ONLINE'}
-              </Text>
+              <View
+                className={`rounded-3xl p-md flex-row items-center gap-md border ${
+                  online
+                    ? 'bg-emerald-50 border-emerald-300'
+                    : 'bg-white border-ruvo-border'
+                }`}
+                style={{ shadowColor: online ? '#18A957' : '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: online ? 0.12 : 0.04, shadowRadius: 12, elevation: online ? 4 : 2 }}
+              >
+                <View className={`w-14 h-14 rounded-2xl items-center justify-center ${online ? 'bg-emerald-500 shadow-sm' : 'bg-ruvo-bg border border-ruvo-border'}`}>
+                  <Ionicons name={online ? 'radio-button-on' : 'power'} size={28} color={online ? '#FFFFFF' : '#A39D93'} />
+                </View>
+                
+                <View className="flex-1">
+                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-1 ${online ? 'text-emerald-700' : 'text-warm-500'}`}>
+                    {online ? 'STATUS: ONLINE' : 'STATUS: OFFLINE'}
+                  </Text>
+                  <Text className={`text-base font-black tracking-tight leading-5 ${online ? 'text-emerald-900' : 'text-ruvo-ink'}`}>
+                    {online ? 'Ready for requests' : 'You are resting'}
+                  </Text>
+                </View>
+
+                <View className={`px-4 py-2.5 rounded-full ${online ? 'bg-white' : 'bg-ruvo-primary'}`} style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
+                  <Text className={`text-xs font-black uppercase tracking-wider ${online ? 'text-emerald-700' : 'text-ruvo-ink'}`}>
+                    {online ? 'REST' : 'START'}
+                  </Text>
+                </View>
+              </View>
             </TouchableOpacity>
           </Animated.View>
 
           {/* Live Location Card */}
           {online && (
             <Animated.View entering={FadeInUp.delay(200).duration(500)} className="mt-md">
-              <View className="bg-white rounded-3xl p-4 border border-[#EDE7DE] shadow-sm flex-row items-center gap-3">
-                <View className="w-11 h-11 bg-emerald-50 rounded-full items-center justify-center border border-emerald-100">
+              <View className="bg-white rounded-3xl p-4 flex-row items-center gap-3" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
+                <View className="w-11 h-11 bg-emerald-50 rounded-full items-center justify-center">
                   <Ionicons name="location" size={20} color="#18A957" />
                 </View>
-                <View className="flex-1">
+                <View className="flex-1 pr-2">
                   <Text className="text-[10px] font-black text-emerald-600 uppercase tracking-wider mb-0.5">
                     LIVE LOCATION
                   </Text>
-                  <Text className="text-sm text-ruvo-ink font-bold leading-tight" numberOfLines={2}>
+                  <Text className="text-sm text-ruvo-ink font-bold leading-tight" numberOfLines={3} style={{ flexShrink: 1 }}>
                     {currentLocationName || 'Fetching live location...'}
                   </Text>
                 </View>
                 <TouchableOpacity
                   onPress={getAndUpdateLiveLocation}
-                  className="w-10 h-10 bg-white rounded-full border border-warm-200 items-center justify-center shadow-xs"
+                  className="w-10 h-10 bg-white rounded-full items-center justify-center"
+                  style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}
                 >
                   <Ionicons name="refresh" size={16} color="#171A1F" />
                 </TouchableOpacity>
@@ -466,31 +462,42 @@ export const DashboardScreen = () => {
                   onPress={() => active && navigation.navigate('ActiveDelivery', { deliveryId: active.id })}
                   activeOpacity={0.9}
                 >
-                  <View className={`rounded-3xl p-4 border shadow-sm flex-row items-center gap-3.5 ${
-                    active ? 'bg-amber-50/70 border-amber-300' : 'bg-white border-[#EDE7DE]'
-                  }`}>
+                  <View
+                    className={`rounded-3xl p-4 flex-row items-center gap-3.5 border ${
+                      active
+                        ? 'bg-orange-50/90 border-orange-300'
+                        : 'bg-white border-gray-100'
+                    }`}
+                    style={{
+                      shadowColor: active ? '#FF7A00' : '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: active ? 0.15 : 0.04,
+                      shadowRadius: 10,
+                      elevation: active ? 4 : 2,
+                    }}
+                  >
                     <View className={`w-12 h-12 rounded-2xl items-center justify-center ${
-                      active ? 'bg-amber-100' : 'bg-emerald-50 border border-emerald-100'
+                      active ? 'bg-[#FF7A00]' : 'bg-emerald-50'
                     }`}>
                       <Ionicons
                         name={active ? 'bicycle' : 'checkmark-circle'}
                         size={24}
-                        color={active ? '#D97706' : '#18A957'}
+                        color={active ? '#FFFFFF' : '#18A957'}
                       />
                     </View>
 
                     <View className="flex-1">
                       <View className="flex-row items-center gap-2 mb-0.5">
-                        <Text className="text-base font-black text-ruvo-ink">
+                        <Text className="text-base font-black text-gray-900">
                           {active ? 'Active Delivery Run' : 'Ready for Deliveries'}
                         </Text>
                         {active && (
-                          <View className="bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
-                            <Text className="text-[10px] font-black text-amber-800 uppercase">IN PROGRESS</Text>
+                          <View className="bg-[#FF7A00] px-2 py-0.5 rounded-full">
+                            <Text className="text-[10px] font-black text-white uppercase tracking-wider">IN PROGRESS</Text>
                           </View>
                         )}
                       </View>
-                      <Text className="text-xs text-warm-600 font-medium leading-4">
+                      <Text className={`text-xs font-bold leading-4 ${active ? 'text-orange-950' : 'text-gray-600'}`}>
                         {active
                           ? `Order #${active.orderId} • ${active.status.replaceAll('_', ' ')}`
                           : 'Stay online to receive automated delivery assignments.'}
@@ -498,7 +505,9 @@ export const DashboardScreen = () => {
                     </View>
 
                     {active && (
-                      <Ionicons name="chevron-forward" size={20} color="#A8A29E" />
+                      <View className="w-8 h-8 rounded-full bg-orange-100 items-center justify-center">
+                        <Ionicons name="chevron-forward" size={18} color="#FF7A00" />
+                      </View>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -509,8 +518,8 @@ export const DashboardScreen = () => {
                 <Text className="text-base font-black text-ruvo-ink mb-3 tracking-tight">Today's Earnings & Balance</Text>
                 <View className={`flex-row gap-2.5 ${isTablet ? 'flex-wrap' : ''}`}>
                   <View className="flex-1 min-w-[95px]">
-                    <View className="bg-white rounded-3xl p-3.5 border border-[#EDE7DE] shadow-sm items-start">
-                      <View className="w-9 h-9 bg-amber-50 rounded-xl items-center justify-center mb-2.5 border border-amber-200">
+                    <View className="bg-white rounded-3xl p-3.5 items-start" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 }}>
+                      <View className="w-9 h-9 bg-amber-50 rounded-xl items-center justify-center mb-2.5">
                         <Ionicons name="today-outline" size={16} color="#F4B400" />
                       </View>
                       <Text className="text-xl font-black text-ruvo-ink">₹{earnings?.todayEarnings ?? 0}</Text>
@@ -519,8 +528,8 @@ export const DashboardScreen = () => {
                   </View>
 
                   <View className="flex-1 min-w-[95px]">
-                    <View className="bg-white rounded-3xl p-3.5 border border-[#EDE7DE] shadow-sm items-start">
-                      <View className="w-9 h-9 bg-blue-50 rounded-xl items-center justify-center mb-2.5 border border-blue-200">
+                    <View className="bg-white rounded-3xl p-3.5 items-start" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 }}>
+                      <View className="w-9 h-9 bg-blue-50 rounded-xl items-center justify-center mb-2.5">
                         <Ionicons name="wallet-outline" size={16} color="#3478C8" />
                       </View>
                       <Text className="text-xl font-black text-ruvo-ink">₹{earnings?.walletBalance ?? 0}</Text>
@@ -529,8 +538,8 @@ export const DashboardScreen = () => {
                   </View>
 
                   <View className="flex-1 min-w-[95px]">
-                    <View className="bg-white rounded-3xl p-3.5 border border-[#EDE7DE] shadow-sm items-start">
-                      <View className="w-9 h-9 bg-emerald-50 rounded-xl items-center justify-center mb-2.5 border border-emerald-200">
+                    <View className="bg-white rounded-3xl p-3.5 items-start" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 4}, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 }}>
+                      <View className="w-9 h-9 bg-emerald-50 rounded-xl items-center justify-center mb-2.5">
                         <Ionicons name="trending-up-outline" size={16} color="#18A957" />
                       </View>
                       <Text className="text-xl font-black text-ruvo-ink">₹{earnings?.totalEarnings ?? 0}</Text>
@@ -549,7 +558,7 @@ export const DashboardScreen = () => {
                     className="flex-1"
                     activeOpacity={0.8}
                   >
-                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl border border-[#EDE7DE] shadow-sm">
+                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl shadow-sm" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 }}>
                       <Ionicons name="bicycle-outline" size={22} color="#171A1F" />
                       <Text className="text-xs font-bold text-ruvo-ink mt-2">Deliveries</Text>
                     </View>
@@ -560,7 +569,7 @@ export const DashboardScreen = () => {
                     className="flex-1"
                     activeOpacity={0.8}
                   >
-                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl border border-[#EDE7DE] shadow-sm">
+                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl shadow-sm" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 }}>
                       <Ionicons name="time-outline" size={22} color="#171A1F" />
                       <Text className="text-xs font-bold text-ruvo-ink mt-2">History</Text>
                     </View>
@@ -571,7 +580,7 @@ export const DashboardScreen = () => {
                     className="flex-1"
                     activeOpacity={0.8}
                   >
-                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl border border-[#EDE7DE] shadow-sm">
+                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl shadow-sm" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 }}>
                       <Ionicons name="cash-outline" size={22} color="#171A1F" />
                       <Text className="text-xs font-bold text-ruvo-ink mt-2">Earnings</Text>
                     </View>
@@ -582,7 +591,7 @@ export const DashboardScreen = () => {
                     className="flex-1"
                     activeOpacity={0.8}
                   >
-                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl border border-[#EDE7DE] shadow-sm">
+                    <View className="items-center py-3.5 px-2 bg-white rounded-2xl shadow-sm" style={{ shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 }}>
                       <Ionicons name="person-outline" size={22} color="#171A1F" />
                       <Text className="text-xs font-bold text-ruvo-ink mt-2">Profile</Text>
                     </View>

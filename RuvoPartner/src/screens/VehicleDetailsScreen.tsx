@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pickerBtn: {
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,

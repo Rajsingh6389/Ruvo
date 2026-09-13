@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import {
   Animated,
   DimensionValue,
@@ -110,6 +110,6 @@ const styles = StyleSheet.create({
   fallback: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
 });

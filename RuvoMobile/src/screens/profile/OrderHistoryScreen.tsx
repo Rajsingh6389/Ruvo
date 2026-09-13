@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -21,14 +22,58 @@ import { OrderSkeleton } from '../../components/OrderSkeleton';
 import { OfflineBar } from '../../components/OfflineBar';
 import { SPACING } from '../../theme/spacing';
 
+// ─── Status groups ────────────────────────────────────────────────────────────
 const ACTIVE_STATUSES = [
   'SHOP_PENDING', 'SHOP_ACCEPTED', 'DELIVERY_ASSIGNMENT',
   'DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY',
 ];
 
-const DONE_STATUSES = ['DELIVERED', 'SHOP_REJECTED', 'CANCELLED', 'SHOP_TIMEOUT',
-  'CANCELLED_SHOP_TIMEOUT', 'CANCELLED_BY_SHOP', 'CANCELLED_NO_PARTNER_FOUND', 'REJECTED'];
+const CANCELLED_STATUSES = [
+  'CANCELLED', 'SHOP_REJECTED', 'SHOP_TIMEOUT',
+  'CANCELLED_SHOP_TIMEOUT', 'CANCELLED_BY_SHOP',
+  'CANCELLED_NO_PARTNER_FOUND', 'REJECTED',
+];
 
+// ─── Status colour palette ────────────────────────────────────────────────────
+// GREEN  → Delivered
+// ORANGE → In-progress / active
+// RED    → Cancelled / rejected
+type StatusTheme = {
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  pillBg: string;
+  pillText: string;
+  cardLeft: string;   // left accent bar colour
+  badgeBg: string;    // subtle card tint
+};
+
+const STATUS_MAP: Record<string, StatusTheme> = {
+  // ── Active / in-progress (RuVo Orange theme) ──────────────────────────────
+  SHOP_PENDING:        { label: 'Pending',        icon: 'time-outline',                pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  SHOP_ACCEPTED:       { label: 'Accepted',        icon: 'checkmark-circle-outline',    pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  DELIVERY_ASSIGNMENT: { label: 'Finding Rider',   icon: 'search-outline',              pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  DELIVERY_ASSIGNED:   { label: 'Rider Assigned',  icon: 'bicycle-outline',             pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  PICKED_UP:           { label: 'Picked Up',       icon: 'bag-handle-outline',          pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  OUT_FOR_DELIVERY:    { label: 'On the Way',      icon: 'navigate-outline',            pillBg: '#FFF0DC', pillText: '#B44D00', cardLeft: '#FF7A00', badgeBg: '#FFF8F0' },
+  // ── Delivered (green) ─────────────────────────────────────────────────────
+  DELIVERED:           { label: 'Delivered',       icon: 'checkmark-done-circle-outline', pillBg: '#D1FAE5', pillText: '#065F46', cardLeft: '#16A34A', badgeBg: '#F0FDF4' },
+  // ── Cancelled / rejected (red) ────────────────────────────────────────────
+  CANCELLED:           { label: 'Cancelled',       icon: 'close-circle-outline',        pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  SHOP_REJECTED:       { label: 'Rejected',        icon: 'close-circle-outline',        pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  SHOP_TIMEOUT:        { label: 'Timed Out',       icon: 'timer-outline',               pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  CANCELLED_SHOP_TIMEOUT:       { label: 'Cancelled',  icon: 'close-circle-outline',   pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  CANCELLED_BY_SHOP:            { label: 'Cancelled by Shop', icon: 'close-circle-outline', pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  CANCELLED_NO_PARTNER_FOUND:   { label: 'No Rider Found', icon: 'close-circle-outline', pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+  REJECTED:            { label: 'Rejected',        icon: 'close-circle-outline',        pillBg: '#FEE2E2', pillText: '#991B1B', cardLeft: '#DC2626', badgeBg: '#FFF5F5' },
+};
+
+const getStatusTheme = (status: string): StatusTheme =>
+  STATUS_MAP[status.toUpperCase()] ?? {
+    label: status, icon: 'ellipse-outline',
+    pillBg: '#F3F4F6', pillText: '#6B7280', cardLeft: '#9CA3AF', badgeBg: '#FAFAFA',
+  };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 const formatProductImageUrl = (url?: string): string | null => {
   if (!url) return null;
   const trimmed = url.trim();
@@ -37,32 +82,280 @@ const formatProductImageUrl = (url?: string): string | null => {
 };
 
 const formatDate = (iso?: string): string => {
-  if (!iso) return 'N/A';
+  if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
 };
 
-// Map raw status string → display config
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = {
-  SHOP_PENDING:      { label: 'Pending',       bg: '#FEF3C7', text: '#92400E', icon: 'time-outline' },
-  SHOP_ACCEPTED:     { label: 'Accepted',      bg: '#DBEAFE', text: '#1E40AF', icon: 'checkmark-circle-outline' },
-  DELIVERY_ASSIGNMENT:{ label: 'Finding Rider', bg: '#EDE9FE', text: '#5B21B6', icon: 'search-outline' },
-  DELIVERY_ASSIGNED: { label: 'Rider Assigned',bg: '#EDE9FE', text: '#5B21B6', icon: 'bicycle-outline' },
-  PICKED_UP:         { label: 'Picked Up',     bg: '#DBEAFE', text: '#1E40AF', icon: 'bag-handle-outline' },
-  OUT_FOR_DELIVERY:  { label: 'On the Way',    bg: '#FEF3C7', text: '#92400E', icon: 'navigate-outline' },
-  DELIVERED:         { label: 'Delivered',     bg: '#D1FAE5', text: '#065F46', icon: 'checkmark-done-circle-outline' },
-  CANCELLED:         { label: 'Cancelled',     bg: '#FEE2E2', text: '#991B1B', icon: 'close-circle-outline' },
-  SHOP_REJECTED:     { label: 'Rejected',      bg: '#FEE2E2', text: '#991B1B', icon: 'close-circle-outline' },
-};
+// ─── Item row inside an expanded card ─────────────────────────────────────────
+function ItemRow({ name, qty, price, imageUrl, colors, typography, radius }: any) {
+  const uri = formatProductImageUrl(imageUrl);
+  return (
+    <View style={itemStyles.row}>
+      {uri ? (
+        <Image source={{ uri }} style={[itemStyles.img, { borderRadius: radius.thumb }]} />
+      ) : (
+        <View style={[itemStyles.img, { borderRadius: radius.thumb, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' }]}>
+          <Ionicons name="cube-outline" size={16} color={colors.primary} />
+        </View>
+      )}
+      <Text style={[typography.body, { color: colors.textPrimary, flex: 1, fontSize: 13 }]} numberOfLines={2}>{name}</Text>
+      <Text style={[typography.caption, { color: colors.textSecondary, marginRight: 8 }]}>×{qty}</Text>
+      {price != null && (
+        <Text style={[typography.captionStrong, { color: colors.textPrimary }]}>₹{price}</Text>
+      )}
+    </View>
+  );
+}
 
-const getStatusConfig = (status: string) =>
-  STATUS_CONFIG[status.toUpperCase()] ?? { label: status, bg: '#F3F4F6', text: '#6B7280', icon: 'ellipse-outline' as const };
+const itemStyles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  img: { width: 36, height: 36 },
+});
 
+// ─── Single order card ────────────────────────────────────────────────────────
+function OrderCard({ item, colors, typography, radius, shadows, navigation }: any) {
+  const [expanded, setExpanded] = useState(false);
+  const isActive = ACTIVE_STATUSES.includes(item.orderStatus || '');
+  const isCancelled = CANCELLED_STATUSES.includes(item.orderStatus || '');
+  const isDelivered = (item.orderStatus || '').toUpperCase() === 'DELIVERED';
+
+  const st = getStatusTheme(item.orderStatus || '');
+
+  const hasItems = item.items && item.items.length > 0;
+  const itemCount = hasItems ? item.items.length : item.quantity;
+
+  const shopName: string = item.shopName || 'RuVo Store';
+  const shopInitials = shopName.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
+  const shopLogoUri = formatProductImageUrl((item as any).shopLogoUrl);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.96}
+      onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
+      style={[
+        cardStyles.card,
+        {
+          backgroundColor: st.badgeBg,
+          borderRadius: radius.card,
+          borderColor: st.cardLeft + '40',
+        },
+        shadows.md,
+      ]}
+    >
+      {/* Left accent bar */}
+      <View style={[cardStyles.accentBar, { backgroundColor: st.cardLeft }]} />
+
+      <View style={cardStyles.inner}>
+        {/* ─ Row 1: Status pill only (no order ID) ─────────────────── */}
+        <View style={[cardStyles.pill, { backgroundColor: st.pillBg, borderRadius: radius.xs, alignSelf: 'flex-start' }]}>
+          <Ionicons name={st.icon} size={12} color={st.pillText} />
+          <Text style={[typography.overline, { color: st.pillText, fontSize: 10, marginLeft: 4 }]}>{st.label}</Text>
+        </View>
+
+        {/* ─ Row 2: Shop logo + name ───────────────────────────────────── */}
+        <View style={[cardStyles.shopRow, { backgroundColor: colors.surface, borderRadius: radius.sm, borderColor: colors.border }]}>
+          {shopLogoUri ? (
+            <Image
+              source={{ uri: shopLogoUri }}
+              style={[cardStyles.shopLogoImg, { borderRadius: 20 }]}
+            />
+          ) : (
+            <View style={[cardStyles.shopLogoImg, { borderRadius: 20, backgroundColor: st.cardLeft, alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{shopInitials}</Text>
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.overline, { color: colors.textHint, fontSize: 10 }]}>SHOP</Text>
+            <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 14 }]} numberOfLines={1}>
+              {shopName}
+            </Text>
+          </View>
+          <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>{formatDate(item.createdAt)}</Text>
+        </View>
+
+        {/* ─ Row 3: Items section header ───────────────────────────────── */}
+        <TouchableOpacity
+          style={[cardStyles.itemsHeader, { backgroundColor: colors.surface, borderRadius: radius.sm, borderColor: colors.border }]}
+          onPress={() => hasItems && setExpanded(e => !e)}
+          activeOpacity={hasItems ? 0.7 : 1}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <Ionicons name="cart-outline" size={16} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              {hasItems ? (
+                <>
+                  <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
+                    {item.items[0].productName}
+                    {item.items.length > 1 ? ` + ${item.items.length - 1} more` : ''}
+                  </Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                    {itemCount} item{itemCount > 1 ? 's' : ''} · Tap to {expanded ? 'hide' : 'view all'}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
+                    {item.productName}
+                  </Text>
+                  <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                    Qty: {item.quantity}
+                  </Text>
+                </>
+              )}
+            </View>
+          </View>
+          {hasItems && (
+            <Ionicons
+              name={expanded ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.textSecondary}
+            />
+          )}
+        </TouchableOpacity>
+
+        {/* ─ Expanded items list ───────────────────────────────────────── */}
+        {expanded && hasItems && (
+          <View style={[cardStyles.itemsList, { backgroundColor: colors.surface, borderRadius: radius.sm, borderColor: colors.border }]}>
+            {item.items.map((it: any, idx: number) => (
+              <React.Fragment key={idx}>
+                <ItemRow
+                  name={it.productName}
+                  qty={it.quantity}
+                  price={it.price}
+                  imageUrl={it.productImageUrl}
+                  colors={colors}
+                  typography={typography}
+                  radius={radius}
+                />
+                {idx < item.items.length - 1 && (
+                  <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 2 }} />
+                )}
+              </React.Fragment>
+            ))}
+          </View>
+        )}
+
+        {/* ─ Row 4: billing summary ────────────────────────────────────── */}
+        <View style={[cardStyles.bill, { backgroundColor: colors.surface, borderRadius: radius.sm, borderColor: colors.border }]}>
+          {item.subtotal != null && (
+            <View style={cardStyles.billRow}>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>Subtotal</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary }]}>₹{item.subtotal}</Text>
+            </View>
+          )}
+          {item.deliveryFee != null && (
+            <View style={cardStyles.billRow}>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>Delivery</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary }]}>₹{item.deliveryFee}</Text>
+            </View>
+          )}
+          {item.platformFee != null && (
+            <View style={cardStyles.billRow}>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>Platform fee</Text>
+              <Text style={[typography.caption, { color: colors.textPrimary }]}>₹{item.platformFee}</Text>
+            </View>
+          )}
+          <View style={[cardStyles.divider, { backgroundColor: colors.border }]} />
+          <View style={cardStyles.billRow}>
+            <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>Total</Text>
+            <Text style={[typography.headingS, { color: st.pillText, fontSize: 15 }]}>₹{item.totalAmount}</Text>
+          </View>
+        </View>
+
+        {/* ─ Row 5: payment + CTA ──────────────────────────────────────── */}
+        <View style={cardStyles.footer}>
+          <View style={[cardStyles.payBadge, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.xs }]}>
+            <Ionicons
+              name={item.paymentMethod === 'ONLINE' ? 'card-outline' : 'cash-outline'}
+              size={13}
+              color={colors.textSecondary}
+            />
+            <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600', fontSize: 11 }]}>
+              {item.paymentMethod === 'ONLINE' ? 'Online' : 'COD'}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {isDelivered && (
+              <TouchableOpacity
+                style={[cardStyles.btn, { borderColor: '#F59E0B', borderWidth: 1.5, backgroundColor: '#FFFBEB', borderRadius: radius.button }]}
+                onPress={() => navigation.navigate('RateOrder', {
+                  orderId: item.id,
+                  shopId: item.shopId || 1,
+                  shopName: item.shopName || 'Shop',
+                })}
+              >
+                <Ionicons name="star" size={13} color="#D97706" />
+                <Text style={[typography.bodyStrong, { color: '#D97706', fontSize: 12 }]}>Rate</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[
+                cardStyles.btn,
+                {
+                  backgroundColor: isActive ? colors.primary : isCancelled ? '#FEE2E2' : '#D1FAE5',
+                  borderRadius: radius.button,
+                },
+                isActive && shadows.brand,
+              ]}
+              onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
+            >
+              <Ionicons
+                name={isActive ? 'navigate' : 'eye-outline'}
+                size={13}
+                color={isActive ? colors.onPrimary : isCancelled ? '#991B1B' : '#065F46'}
+              />
+              <Text style={[
+                typography.bodyStrong,
+                {
+                  color: isActive ? colors.onPrimary : isCancelled ? '#991B1B' : '#065F46',
+                  fontSize: 12,
+                },
+              ]}>
+                {isActive ? 'Track Order' : 'Details'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const cardStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    borderWidth: 0.5,
+    overflow: 'hidden',
+    marginBottom: 2,
+  },
+  accentBar: { width: 4 },
+  inner: { flex: 1, padding: 14, gap: 10 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  pill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 9, paddingVertical: 5 },
+  shopRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    padding: 10, borderWidth: 0.5,
+  },
+  shopLogoImg: { width: 40, height: 40 },
+  itemsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderWidth: 0.5 },
+  itemsList: { padding: 10, borderWidth: 0.5 },
+  bill: { padding: 10, borderWidth: 0.5, gap: 2 },
+  billRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
+  divider: { height: 1, marginVertical: 5 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 },
+  payBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 0.5 },
+  btn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8 },
+});
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 export default function OrderHistoryScreen() {
   const navigation = useNavigation<any>();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
+  const { colors, typography, radius, shadows } = useTheme();
   const { userId, token } = useAuth();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -104,158 +397,6 @@ export default function OrderHistoryScreen() {
   const pastOrders   = orders.filter(o => !ACTIVE_STATUSES.includes(o.orderStatus || ''));
   const displayOrders = activeTab === 'active' ? activeOrders : pastOrders;
 
-  // ─ ORDER CARD ─────────────────────────────────────────────────────────
-  const renderOrder = ({ item }: { item: Order }) => {
-    const isActive = ACTIVE_STATUSES.includes(item.orderStatus || '');
-    const statusCfg = getStatusConfig(item.orderStatus || '');
-    const imgUri = formatProductImageUrl(item.productImageUrl);
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.card,
-          {
-            backgroundColor: colors.card,
-            borderColor: isActive ? colors.primary + '40' : colors.border,
-            borderRadius: radius.card,
-          },
-          shadows.md,
-          isActive && { borderWidth: 1.5 },
-        ]}
-        activeOpacity={0.9}
-        onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
-      >
-        {/* Active shimmer stripe */}
-        {isActive && (
-          <View style={[styles.activeStripe, { backgroundColor: colors.primary }]} />
-        )}
-
-        {/* Card header */}
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={[typography.overline, { color: colors.textHint, fontSize: 10 }]}>Order</Text>
-            <Text style={[typography.headingS, { color: colors.textPrimary }]}>#{item.id}</Text>
-          </View>
-          <View>
-            <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg, borderRadius: radius.xs }]}>
-              <Ionicons name={statusCfg.icon} size={12} color={statusCfg.text} />
-              <Text style={[typography.overline, { color: statusCfg.text, fontSize: 10 }]}>{statusCfg.label}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Shop Name & Date */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="storefront-outline" size={14} color={colors.primary} />
-            <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 13 }]} numberOfLines={1}>
-              {(item as any).shopName || 'RuVo Store'}
-            </Text>
-          </View>
-          <Text style={[typography.caption, { color: colors.textHint }]}>
-            {formatDate(item.createdAt)}
-          </Text>
-        </View>
-
-        {/* Product row */}
-        <View style={[styles.productRow, { backgroundColor: colors.surfaceSunken, borderRadius: radius.image }]}>
-          {imgUri ? (
-            <Image source={{ uri: imgUri }} style={[styles.productImg, { borderRadius: radius.thumb }]} />
-          ) : (
-            <View style={[styles.productImg, { backgroundColor: colors.primarySoft, borderRadius: radius.thumb, alignItems: 'center', justifyContent: 'center' }]}>
-              <Ionicons name="cart" size={20} color={colors.primary} />
-            </View>
-          )}
-          <View style={{ flex: 1 }}>
-            <Text style={[typography.bodyStrong, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.productName}
-              {item.items && item.items.length > 1 ? ` (+${item.items.length - 1} more items)` : ''}
-            </Text>
-            <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 3 }]}>
-              {item.items && item.items.length > 0 ? `${item.items.length} items` : `Qty: ${item.quantity}`}
-            </Text>
-          </View>
-          <Text style={[typography.headingS, { color: colors.textPrimary }]}>₹{item.subtotal || item.totalAmount}</Text>
-        </View>
-
-        {/* Billing summary */}
-        <View style={[styles.billBox, { backgroundColor: colors.surfaceSunken, borderRadius: radius.md, marginTop: 12 }]}>
-          {[
-            { label: 'Subtotal', value: `₹${item.subtotal || item.totalAmount}` },
-            ...(item.deliveryFee ? [{ label: 'Delivery', value: `₹${item.deliveryFee}` }] : []),
-            ...(item.platformFee ? [{ label: 'Platform fee', value: `₹${item.platformFee}` }] : []),
-          ].map((row, i) => (
-            <View key={i} style={styles.billRow}>
-              <Text style={[typography.caption, { color: colors.textSecondary }]}>{row.label}</Text>
-              <Text style={[typography.captionStrong, { color: colors.textPrimary }]}>{row.value}</Text>
-            </View>
-          ))}
-          <View style={[styles.billDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.billRow}>
-            <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>Total</Text>
-            <Text style={[typography.headingS, { color: colors.primary }]}>₹{item.totalAmount}</Text>
-          </View>
-        </View>
-
-        {/* Footer */}
-        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
-          <View style={{ gap: 2 }}>
-            <Text style={[typography.caption, { color: colors.textHint, fontSize: 10 }]}>Payment</Text>
-            <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 13 }]}>
-              {item.paymentMethod === 'ONLINE' ? 'Online' : 'Cash on Delivery'}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {item.orderStatus === 'DELIVERED' && (
-              <TouchableOpacity
-                style={[
-                  styles.trackBtn,
-                  {
-                    backgroundColor: colors.card,
-                    borderRadius: radius.button,
-                    borderColor: '#FFB300',
-                    borderWidth: 1,
-                  }
-                ]}
-                onPress={() => navigation.navigate('RateOrder', { 
-                  orderId: item.id, 
-                  shopId: (item as any).shopId || 1, // Fallback if shopId is missing
-                  shopName: (item as any).shopName || 'Shop'
-                })}
-              >
-                <Ionicons name="star" size={14} color="#FFB300" />
-                <Text style={[typography.bodyStrong, { color: '#FFB300', fontSize: 13 }]}>Rate</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={[
-                styles.trackBtn,
-                {
-                  backgroundColor: isActive ? colors.primary : colors.surfaceSunken,
-                  borderRadius: radius.button,
-                },
-                isActive && shadows.brand,
-              ]}
-              onPress={() => navigation.navigate('CustomerTracking', { orderId: item.id })}
-            >
-              <Ionicons
-                name={isActive ? 'navigate' : 'eye-outline'}
-                size={14}
-                color={isActive ? colors.onPrimary : colors.textSecondary}
-              />
-              <Text style={[typography.bodyStrong, {
-                color: isActive ? colors.onPrimary : colors.textSecondary,
-                fontSize: 13,
-              }]}>
-                {isActive ? 'Track Order' : 'Details'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
       <OfflineBar />
@@ -265,10 +406,24 @@ export default function OrderHistoryScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={[typography.headingL, { color: colors.textPrimary }]}>Order History</Text>
+        <Text style={[typography.headingL, { color: colors.textPrimary }]}>My Orders</Text>
         <TouchableOpacity onPress={() => fetchOrders(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="refresh" size={22} color={colors.primary} />
         </TouchableOpacity>
+      </View>
+
+      {/* ─ LEGEND ──────────────────────────────────────────────────────── */}
+      <View style={[styles.legend, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        {[
+          { color: '#16A34A', label: 'Delivered' },
+          { color: '#F97316', label: 'In Progress' },
+          { color: '#DC2626', label: 'Cancelled' },
+        ].map(item => (
+          <View key={item.label} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+            <Text style={[typography.caption, { color: colors.textSecondary, fontSize: 11 }]}>{item.label}</Text>
+          </View>
+        ))}
       </View>
 
       {/* ─ TAB BAR ─────────────────────────────────────────────────────── */}
@@ -287,15 +442,15 @@ export default function OrderHistoryScreen() {
           >
             <Text style={[
               typography.bodyStrong,
-              {
-                color: activeTab === tab.key ? colors.primary : colors.textSecondary,
-                fontSize: 14,
-              },
+              { color: activeTab === tab.key ? colors.primary : colors.textSecondary, fontSize: 14 },
             ]}>
               {tab.label}
             </Text>
             {tab.count > 0 && (
-              <View style={[styles.tabBadge, { backgroundColor: activeTab === tab.key ? colors.primary : colors.surfaceSunken, borderRadius: 10 }]}>
+              <View style={[styles.tabBadge, {
+                backgroundColor: activeTab === tab.key ? colors.primary : colors.surfaceSunken,
+                borderRadius: 10,
+              }]}>
                 <Text style={[typography.overline, {
                   color: activeTab === tab.key ? colors.onPrimary : colors.textSecondary,
                   fontSize: 9,
@@ -345,7 +500,16 @@ export default function OrderHistoryScreen() {
         <FlatList
           data={displayOrders}
           keyExtractor={item => String(item.id)}
-          renderItem={renderOrder}
+          renderItem={({ item }) => (
+            <OrderCard
+              item={item}
+              colors={colors}
+              typography={typography}
+              radius={radius}
+              shadows={shadows}
+              navigation={navigation}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -365,96 +529,29 @@ export default function OrderHistoryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 56,
-    paddingHorizontal: SPACING.gutter,
-    borderBottomWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    height: 56, paddingHorizontal: SPACING.gutter, borderBottomWidth: 1,
   },
+  legend: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    paddingHorizontal: SPACING.gutter, paddingVertical: 8, borderBottomWidth: 1,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
   tabRow: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.gutter,
-    borderBottomWidth: 1,
+    flexDirection: 'row', paddingHorizontal: SPACING.gutter, borderBottomWidth: 1,
   },
   tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    marginRight: SPACING.xxxl,
-    borderBottomWidth: 2.5,
-    borderBottomColor: 'transparent',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 14, marginRight: SPACING.xxxl,
+    borderBottomWidth: 2.5, borderBottomColor: 'transparent',
   },
   tabBadge: {
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minWidth: 18, height: 18, paddingHorizontal: 5,
+    alignItems: 'center', justifyContent: 'center',
   },
   loaderWrap: { padding: SPACING.gutter },
-  listContent: {
-    padding: SPACING.gutter,
-    paddingBottom: SPACING.massive,
-    gap: SPACING.md,
-  },
-  card: {
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  activeStripe: {
-    height: 3,
-    width: '100%',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: SPACING.lg,
-    paddingBottom: 6,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    marginHorizontal: SPACING.lg,
-  },
-  productImg: {
-    width: 48,
-    height: 48,
-  },
-  billBox: { marginHorizontal: SPACING.lg, padding: 12 },
-  billRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 3,
-  },
-  billDivider: { height: 1, marginVertical: 6 },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    margin: SPACING.lg,
-    marginTop: 12,
-    paddingTop: 12,
-  },
-  trackBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
+  listContent: { padding: SPACING.gutter, paddingBottom: SPACING.massive, gap: SPACING.md },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xxxl },
   errorIcon: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center' },
   emptyIcon: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
