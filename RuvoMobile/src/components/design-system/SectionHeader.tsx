@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SectionHeaderProps {
   title: string;
@@ -15,14 +16,16 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   showViewAll = false,
   onViewAllPress,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <View className="flex-row items-center justify-between px-md py-lg">
       <View className="flex-1">
-        <Text className="text-lg font-bold text-ruvo-ink">
+        <Text style={{ color: colors.textPrimary }} className="text-lg font-bold">
           {title}
         </Text>
         {subtitle && (
-          <Text className="text-sm text-warm-600 mt-xs">
+          <Text style={{ color: colors.textSecondary }} className="text-sm mt-xs">
             {subtitle}
           </Text>
         )}

@@ -69,6 +69,48 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
+const RUVO_FACTS = [
+  {
+    id: '1',
+    icon: 'flash-outline' as const,
+    title: 'RuVo Express Promise ⚡',
+    subtitle: '10 to 15 mins direct delivery straight from your closest neighborhood shopkeeper!',
+    badge: '10-15 MINS',
+    bg: '#FFF2EC',
+    border: '#FFE0D3',
+    iconBg: '#FF6B35',
+  },
+  {
+    id: '2',
+    icon: 'storefront-outline' as const,
+    title: 'Support Local Sellers 🏪',
+    subtitle: 'Every order directly empowers real shopkeepers in your own colony & city.',
+    badge: 'LOCAL FIRST',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    iconBg: '#059669',
+  },
+  {
+    id: '3',
+    icon: 'shield-checkmark-outline' as const,
+    title: 'Zero Surge Pricing Ever 🛡️',
+    subtitle: 'No rain fees or unexpected surge price hikes. Fair & honest delivery charges always.',
+    badge: 'FAIR PRICE',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    iconBg: '#2563EB',
+  },
+  {
+    id: '4',
+    icon: 'leaf-outline' as const,
+    title: '100% Fresh Guaranteed 🌿',
+    subtitle: 'Fresh dairy, fruits, vegetables and essentials packed right before dispatch.',
+    badge: 'SUPER FRESH',
+    bg: '#FEF3C7',
+    border: '#FDE68A',
+    iconBg: '#D97706',
+  },
+];
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
@@ -85,6 +127,9 @@ export default function CustomerTrackingScreen() {
   const [refreshing, setRefreshing]   = useState(false);
   const [partnerLocation, setPartnerLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [partnerInfo, setPartnerInfo] = useState<{ id?: number; name: string; phone: string; locationName?: string; latitude?: number; longitude?: number } | null>(null);
+
+  // Map expansion toggle state
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
 
   const stepAnims = useRef(TIMELINE_STEPS.map(() => new Animated.Value(0))).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -252,8 +297,8 @@ export default function CustomerTrackingScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Loading order…</Text>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text style={{ color: colors.textSecondary, marginTop: 12, fontWeight: '700' }}>Loading live tracking...</Text>
       </SafeAreaView>
     );
   }
@@ -262,9 +307,9 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
         <Ionicons name="alert-circle-outline" size={52} color="#EF4444" />
-        <Text style={{ color: colors.textPrimary, marginTop: 12 }}>Order not found.</Text>
+        <Text style={{ color: colors.textPrimary, marginTop: 12, fontWeight: '800' }}>Order not found.</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={{ color: '#FFF', fontWeight: '700' }}>Go Back</Text>
+          <Text style={{ color: '#FFF', fontWeight: '800' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -287,50 +332,65 @@ export default function CustomerTrackingScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-      {/* ── HEADER ────────────────────────────────────────────────── */}
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: '#FFFFFF' }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={24} color="#171A1F" />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={{ fontSize: 17, fontWeight: '900', color: '#171A1F' }}>
-            {order.shopName || 'Order Tracking'}
-          </Text>
-          <Text style={{ fontSize: 11, color: '#77736B', fontWeight: '600' }}>
-            Order #{order.id} • {order.items?.length || order.quantity || 1} Item(s)
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={handleRefresh}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF4E5', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Ionicons name="refresh" size={18} color="#FF7A00" />
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
 
-      {/* ── SWIGGY-STYLE LIVE ETA & STATUS BANNER ─────────────────── */}
-      {!isCancelled && (
-        <View style={{ backgroundColor: '#1E293B', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <Animated.View style={[styles.liveDot, { backgroundColor: '#22C55E', transform: [{ scale: pulseAnim }] }]} />
-              <Text style={{ color: '#22C55E', fontSize: 11, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }}>
-                {isLive ? 'ON THE WAY' : order.orderStatus === 'DELIVERED' ? 'DELIVERED' : 'PREPARING ORDER'}
+      {/* ── BLINKIT-STYLE HEADER BANNER ─────────────────────────────── */}
+      <View style={{ backgroundColor: '#FF6B35', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, elevation: 6 }} className="px-4 pt-3 pb-4 shadow-md">
+        <View className="flex-row items-center justify-between mb-2">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+            className="w-10 h-10 rounded-full items-center justify-center"
+          >
+            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <View className="items-center flex-1">
+            <Text style={{ color: '#FFFFFF' }} className="text-lg font-black">
+              {order.shopName || 'Live Tracking'}
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.88)' }} className="text-xs font-semibold">
+              Order #{order.id} • {order.items?.length || order.quantity || 1} Item(s)
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleRefresh}
+            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+            className="w-10 h-10 rounded-full items-center justify-center"
+          >
+            <Ionicons name="refresh" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Live ETA Box */}
+        {!isCancelled && (
+          <View style={{ backgroundColor: '#FFFFFF', elevation: 4 }} className="flex-row items-center justify-between rounded-2xl p-3 mt-1 shadow-sm">
+            <View className="flex-1">
+              <View className="flex-row items-center gap-1.5 mb-0.5">
+                <Animated.View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', transform: [{ scale: pulseAnim }] }} />
+                <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }} className="uppercase">
+                  {isLive ? 'RIDER DISPATCHED' : order.orderStatus === 'DELIVERED' ? 'DELIVERED' : 'SHOP PREPARING'}
+                </Text>
+              </View>
+              <Text style={{ color: '#171A1F' }} className="text-base font-black">
+                {isLive ? 'Arriving in 10-15 mins' : order.orderStatus === 'DELIVERED' ? 'Order Delivered' : 'Preparing fresh items'}
               </Text>
             </View>
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>
-              {isLive ? 'Arriving in 15-25 mins' : order.orderStatus === 'DELIVERED' ? 'Order Completed' : 'Shop is preparing your order'}
-            </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2, fontWeight: '600' }}>
-              {isLive ? 'Delivery partner is navigating to your destination' : 'We will update live once partner picks up'}
-            </Text>
+
+            <TouchableOpacity
+              onPress={() => setIsMapExpanded(!isMapExpanded)}
+              style={{ backgroundColor: '#FF6B35' }}
+              className="px-3.5 h-9 rounded-full flex-row items-center gap-1 shadow-sm"
+            >
+              <Ionicons name={isMapExpanded ? "contract" : "map-outline"} size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
+                {isMapExpanded ? 'Minimize' : 'View Map'}
+              </Text>
+            </TouchableOpacity>
           </View>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF7A00', alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name={isLive ? 'bicycle' : 'restaurant'} size={24} color="#FFFFFF" />
-          </View>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Red Cancelled Banner */}
       {isCancelled && (
@@ -360,33 +420,16 @@ export default function CustomerTrackingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.primary}
+            tintColor="#FF6B35"
           />
         }
       >
-        {/* ─ ORDER DETAILS ───────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad }, shadows.sm]}>
-          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Order Details</Text>
-          <View style={styles.billingRow}>
-            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Items</Text>
-            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>{order.quantity || 1}</Text>
-          </View>
-          <View style={styles.billingRow}>
-            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Total</Text>
-            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.totalAmount}</Text>
-          </View>
-          <View style={styles.billingRow}>
-            <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Payment</Text>
-            <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>{order.paymentMethod || 'COD'}</Text>
-          </View>
-        </View>
-
-        {/* Map Section */}
-        <View style={styles.mapContainer}>
+        {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
+        <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
           {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
             <MapView
               style={StyleSheet.absoluteFill}
-              initialRegion={{ ...destination, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+              initialRegion={{ ...destination, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
             >
               {/* User Location Marker */}
               <Marker coordinate={destination} title="Delivery Address" pinColor="#059669" />
@@ -397,7 +440,7 @@ export default function CustomerTrackingScreen() {
                   coordinate={{ latitude: order.shopLatitude, longitude: order.shopLongitude }}
                   title={order.shopName || "Store"}
                 >
-                  <View style={[styles.partnerMarker, { backgroundColor: '#F5B700' }]}>
+                  <View style={[styles.partnerMarker, { backgroundColor: '#FF6B35' }]}>
                     <Ionicons name="storefront" size={18} color="#FFF" />
                   </View>
                 </Marker>
@@ -417,7 +460,7 @@ export default function CustomerTrackingScreen() {
                 <Polyline
                   coordinates={[partnerLocation, destination]}
                   strokeColor="#059669"
-                  strokeWidth={3.5}
+                  strokeWidth={4}
                   lineDashPattern={[6, 4]}
                 />
               ) : (order.shopLatitude && order.shopLongitude) ? (
@@ -426,8 +469,8 @@ export default function CustomerTrackingScreen() {
                     { latitude: order.shopLatitude, longitude: order.shopLongitude },
                     destination,
                   ]}
-                  strokeColor="#F5B700"
-                  strokeWidth={3}
+                  strokeColor="#FF6B35"
+                  strokeWidth={3.5}
                   lineDashPattern={[8, 5]}
                 />
               ) : null}
@@ -435,13 +478,25 @@ export default function CustomerTrackingScreen() {
           ) : (
             <View style={[styles.mapPlaceholder, { backgroundColor: colors.card }]}>
               <Ionicons name="map" size={48} color={isCancelled ? '#FCA5A5' : '#D1D5DB'} />
-              <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24 }}>
+              <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24, fontWeight: '700' }}>
                 {isCancelled
                   ? 'Order was cancelled. No delivery in progress.'
                   : 'Order delivered successfully.'}
               </Text>
             </View>
           )}
+
+          {/* Floating Map Toggle Button */}
+          <TouchableOpacity
+            onPress={() => setIsMapExpanded(!isMapExpanded)}
+            style={{ backgroundColor: 'rgba(23, 26, 31, 0.85)' }}
+            className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-md"
+          >
+            <Ionicons name={isMapExpanded ? "contract" : "expand"} size={14} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              {isMapExpanded ? 'Minimize Map' : 'Tap to Expand'}
+            </Text>
+          </TouchableOpacity>
 
           {isLive && (
             <Animated.View style={[styles.liveBadge, { transform: [{ scale: pulseAnim }] }]}>
@@ -450,6 +505,60 @@ export default function CustomerTrackingScreen() {
             </Animated.View>
           )}
         </View>
+
+        {/* ── RuVo DID-YOU-KNOW / VALUE PROPOSITION CAROUSEL ─────────── */}
+        {!isMapExpanded && (
+          <View className="mt-4 px-4">
+            <View className="flex-row items-center justify-between mb-2 px-1">
+              <Text style={{ color: colors.textPrimary }} className="text-xs font-black uppercase tracking-wider">
+                Why RuVo Local? ⚡
+              </Text>
+              <Text style={{ color: '#FF6B35' }} className="text-[11px] font-bold">
+                Local Stores • Zero Surge
+              </Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingRight: 8 }}
+            >
+              {RUVO_FACTS.map((fact) => (
+                <View
+                  key={fact.id}
+                  style={{
+                    backgroundColor: fact.bg,
+                    borderColor: fact.border,
+                    borderWidth: 1.5,
+                    borderRadius: 20,
+                    padding: 14,
+                    width: 260,
+                    elevation: 1,
+                  }}
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <View
+                      style={{ backgroundColor: fact.iconBg }}
+                      className="w-8 h-8 rounded-full items-center justify-center shadow-sm"
+                    >
+                      <Ionicons name={fact.icon} size={18} color="#FFFFFF" />
+                    </View>
+                    <View style={{ backgroundColor: fact.iconBg }} className="px-2 py-0.5 rounded-full">
+                      <Text className="text-[9px] font-black text-white">{fact.badge}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={{ color: '#171A1F' }} className="text-sm font-black mb-1">
+                    {fact.title}
+                  </Text>
+                  <Text style={{ color: '#555149' }} className="text-xs font-semibold leading-snug">
+                    {fact.subtitle}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Product & Shop Details Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>

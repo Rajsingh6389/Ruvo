@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, DimensionValue } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface LoadingStateProps {
   message?: string;
@@ -15,12 +16,14 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   subtitle,
   size = 'large',
 }) => {
+  const { colors } = useTheme();
   const displayText = message || title || subtitle;
+
   return (
-    <View className="flex-1 items-center justify-center px-lg py-3xl">
-      <ActivityIndicator size={size} color="#F5B700" />
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 }}>
+      <ActivityIndicator size={size} color={colors.primary} />
       {displayText && (
-        <Text className="text-base text-warm-600 mt-lg text-center">
+        <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 16, textAlign: 'center' }}>
           {displayText}
         </Text>
       )}
@@ -39,13 +42,15 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height = 16,
   borderRadius = 8,
 }) => {
+  const { colors } = useTheme();
+
   return (
     <View
-      className="bg-warm-200 animate-pulse"
       style={{
         width,
         height,
         borderRadius,
+        backgroundColor: colors.border + '60',
       }}
     />
   );

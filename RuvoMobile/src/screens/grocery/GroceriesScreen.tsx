@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ROUTES } from '../../constants/routes';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
 import { useCart } from '../../context/CartContext';
+import { useTheme } from '../../context/ThemeContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { getNearbyShops, getShops } from '../../services/shopService';
 import { getProductsByShop } from '../../services/productService';
@@ -29,12 +30,7 @@ import { sw, sh, sf } from '../../utils/responsive';
 
 // ─── Design Tokens ──────────────────────────────────────────
 const PRIMARY = '#FF8A00';
-const PRIMARY_LIGHT = '#FFF4E5';
-const BG = '#F8F9FA';
-const WHITE = '#FFFFFF';
-const TEXT_DARK = '#171A1F';
-const TEXT_MUTED = '#6B7280';
-const BORDER = '#E5E7EB';
+const PRIMARY_LIGHT = 'rgba(255, 138, 0, 0.15)';
 
 // ─── Helper: Dynamic Icon Resolver for Backend Categories ────
 const getCategoryIcon = (catName: string): string => {
@@ -50,16 +46,17 @@ const getCategoryIcon = (catName: string): string => {
 
 // ─── Sub-Component: Product Item with Interactive Quantity Counter ────
 const GroceryProductCard = React.memo(({ product }: { product: Product }) => {
+  const { colors } = useTheme();
   const { addToCart, updateQuantity, getQuantity } = useCart();
   const qty = getQuantity(product.id);
 
   return (
-    <View style={prodStyles.card}>
-      <View style={prodStyles.imageWrap}>
+    <View style={[prodStyles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[prodStyles.imageWrap, { backgroundColor: colors.surface }]}>
         {product.imageUrl ? (
           <Image source={{ uri: product.imageUrl }} style={prodStyles.image} resizeMode="cover" />
         ) : (
-          <Ionicons name="basket-outline" size={28} color="#9CA3AF" />
+          <Ionicons name="basket-outline" size={28} color={colors.textSecondary} />
         )}
         {product.actualPrice > product.sellingPrice && (
           <View style={prodStyles.discountBadge}>
@@ -70,14 +67,14 @@ const GroceryProductCard = React.memo(({ product }: { product: Product }) => {
         )}
       </View>
 
-      <Text style={prodStyles.name} numberOfLines={2}>{product.name}</Text>
-      {product.unit ? <Text style={prodStyles.unit}>{product.unit}</Text> : null}
+      <Text style={[prodStyles.name, { color: colors.textPrimary }]} numberOfLines={2}>{product.name}</Text>
+      {product.unit ? <Text style={[prodStyles.unit, { color: colors.textSecondary }]}>{product.unit}</Text> : null}
 
       <View style={prodStyles.bottomRow}>
         <View style={prodStyles.priceWrap}>
-          <Text style={prodStyles.price}>₹{product.sellingPrice}</Text>
+          <Text style={[prodStyles.price, { color: colors.textPrimary }]}>₹{product.sellingPrice}</Text>
           {product.actualPrice > product.sellingPrice && (
-            <Text style={prodStyles.strikePrice}>₹{product.actualPrice}</Text>
+            <Text style={[prodStyles.strikePrice, { color: colors.textSecondary }]}>₹{product.actualPrice}</Text>
           )}
         </View>
 
@@ -122,6 +119,7 @@ const ShopSection = React.memo(({
   distance: string | null;
   onViewStore: () => void;
 }) => {
+  const { colors } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
@@ -137,10 +135,10 @@ const ShopSection = React.memo(({
   }, [shop.id]);
 
   return (
-    <View style={secStyles.wrapper}>
+    <View style={[secStyles.wrapper, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
       {/* Store Header Card */}
       <TouchableOpacity style={secStyles.storeHeader} onPress={onViewStore} activeOpacity={0.9}>
-        <View style={secStyles.storeImageWrap}>
+        <View style={[secStyles.storeImageWrap, { borderColor: colors.border }]}>
           {shop.bannerUrl || shop.logoUrl ? (
             <Image
               source={{ uri: shop.bannerUrl ?? shop.logoUrl! }}
@@ -156,7 +154,7 @@ const ShopSection = React.memo(({
 
         <View style={secStyles.storeInfo}>
           <View style={secStyles.nameRow}>
-            <Text style={secStyles.storeName} numberOfLines={1}>{shop.name}</Text>
+            <Text style={[secStyles.storeName, { color: colors.textPrimary }]} numberOfLines={1}>{shop.name}</Text>
             {(shop as any).active === false ? (
               <View style={[secStyles.expressBadge, { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' }]}>
                 <Ionicons name="lock-closed" size={10} color="#DC2626" />
@@ -177,11 +175,11 @@ const ShopSection = React.memo(({
                 <Text style={secStyles.ratingText}>{shop.rating.toFixed(1)}</Text>
               </View>
             )}
-            <Text style={secStyles.metaText}>Fast Local Delivery</Text>
+            <Text style={[secStyles.metaText, { color: colors.textSecondary }]}>Fast Local Delivery</Text>
             {distance && (
               <>
-                <Text style={secStyles.metaDot}>•</Text>
-                <Text style={secStyles.metaText}>{distance}</Text>
+                <Text style={[secStyles.metaDot, { color: colors.textSecondary }]}>•</Text>
+                <Text style={[secStyles.metaText, { color: colors.textSecondary }]}>{distance}</Text>
               </>
             )}
           </View>
@@ -197,7 +195,7 @@ const ShopSection = React.memo(({
       {loading ? (
         <ActivityIndicator color={PRIMARY} style={{ marginVertical: 20 }} />
       ) : products.length === 0 ? (
-        <Text style={secStyles.noItems}>No items listed yet</Text>
+        <Text style={[secStyles.noItems, { color: colors.textSecondary }]}>No items listed yet</Text>
       ) : (
         <ScrollView
           horizontal
@@ -213,6 +211,7 @@ const ShopSection = React.memo(({
 
 // ─── Main Screen ─────────────────────────────────────────────
 export const GroceriesScreen = () => {
+  const { colors, theme } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { location, isLoading: locationLoading, refreshFromGps } = useDeliveryLocation();
   const { cartCount, cartTotal } = useCart();
@@ -232,7 +231,6 @@ export const GroceriesScreen = () => {
       if (location) {
         fetched = await getNearbyShops(location.latitude, location.longitude, 10);
       }
-      // Fallback: If no nearby shops found within radius or location is off, load all approved shops
       if (!fetched || fetched.length === 0) {
         fetched = await getShops();
       }
@@ -277,7 +275,6 @@ export const GroceriesScreen = () => {
 
     let list = [...result];
     list.sort((a, b) => {
-      // Prioritize Online (active !== false) shops first, then Offline (active === false) shops
       const aActive = (a as any).active !== false ? 1 : 0;
       const bActive = (b as any).active !== false ? 1 : 0;
       if (aActive !== bActive) return bActive - aActive;
@@ -291,52 +288,52 @@ export const GroceriesScreen = () => {
   }, [activeCategory, location, searchQuery, shops]);
 
   return (
-    <SafeAreaView style={styles.root}>
-      <StatusBar backgroundColor={WHITE} barStyle="dark-content" />
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]}>
+      <StatusBar backgroundColor={colors.surface} barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
 
       {/* ── Header Bar ────────────────────────────────────────── */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { backgroundColor: colors.surface }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={TEXT_DARK} />
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.locationWrap}
+          style={[styles.locationWrap, { backgroundColor: colors.background }]}
           onPress={() => setLocationPickerVisible(true)}
           activeOpacity={0.8}
         >
           <Ionicons name="location-sharp" size={16} color={PRIMARY} />
           <View style={styles.locationTextWrap}>
-            <Text style={styles.deliverLabel}>DELIVERING TO</Text>
-            <Text style={styles.locationValue} numberOfLines={1}>
+            <Text style={[styles.deliverLabel, { color: colors.textSecondary }]}>DELIVERING TO</Text>
+            <Text style={[styles.locationValue, { color: colors.textPrimary }]} numberOfLines={1}>
               {locationLoading ? 'Locating...' : getDeliveryLocationLabel(location)}
             </Text>
           </View>
-          <Ionicons name="chevron-down" size={14} color={TEXT_MUTED} />
+          <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
       {/* ── Search Bar ───────────────────────────────────────── */}
-      <View style={styles.searchBarContainer}>
-        <View style={styles.searchInputWrap}>
-          <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+      <View style={[styles.searchBarContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.searchInputWrap, { backgroundColor: colors.background }]}>
+          <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.textPrimary }]}
             placeholder="Search groceries & stores near you..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {/* ── Sub-Category Quick Icons ──────────────────────────── */}
-      <View style={styles.chipScrollWrap}>
+      <View style={[styles.chipScrollWrap, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -347,16 +344,19 @@ export const GroceriesScreen = () => {
             return (
               <TouchableOpacity
                 key={cat.id}
-                style={[styles.chip, active && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  { backgroundColor: active ? PRIMARY : colors.card, borderColor: active ? PRIMARY : colors.border }
+                ]}
                 onPress={() => setActiveCategory(cat.name)}
                 activeOpacity={0.8}
               >
                 <Ionicons
                   name={cat.icon as any}
                   size={14}
-                  color={active ? '#FFFFFF' : TEXT_DARK}
+                  color={active ? '#FFFFFF' : colors.textPrimary}
                 />
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat.name}</Text>
+                <Text style={[styles.chipText, { color: active ? '#FFFFFF' : colors.textPrimary }]}>{cat.name}</Text>
               </TouchableOpacity>
             );
           })}
@@ -371,12 +371,12 @@ export const GroceriesScreen = () => {
           <View style={styles.emptyIconCircle}>
             <Ionicons name="storefront-outline" size={38} color="#FF8A00" />
           </View>
-          <Text style={styles.emptyTitle}>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
             {searchQuery || activeCategory !== 'All Shops'
               ? 'No Stores Match Your Filter'
               : 'No Nearby Grocery Stores Registered'}
           </Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
             {searchQuery || activeCategory !== 'All Shops'
               ? `We couldn't find any store for "${searchQuery || activeCategory}". Try searching for all stores.`
               : 'Be the first store owner to register and start selling groceries in your area!'}
@@ -467,12 +467,10 @@ export const GroceriesScreen = () => {
 const prodStyles = StyleSheet.create({
   card: {
     width: 140,
-    backgroundColor: WHITE,
     borderRadius: 16,
     padding: 10,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -482,7 +480,6 @@ const prodStyles = StyleSheet.create({
   imageWrap: {
     height: 90,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -500,8 +497,8 @@ const prodStyles = StyleSheet.create({
     borderRadius: 6,
   },
   discountText: { fontSize: 8, fontWeight: '900', color: '#FFFFFF' },
-  name: { fontSize: 12, fontWeight: '700', color: TEXT_DARK, minHeight: 32 },
-  unit: { fontSize: 10, color: TEXT_MUTED, marginBottom: 6 },
+  name: { fontSize: 12, fontWeight: '700', minHeight: 32 },
+  unit: { fontSize: 10, marginBottom: 6 },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -509,8 +506,8 @@ const prodStyles = StyleSheet.create({
     marginTop: 4,
   },
   priceWrap: { flexDirection: 'column' },
-  price: { fontSize: 13, fontWeight: '900', color: TEXT_DARK },
-  strikePrice: { fontSize: 9, color: TEXT_MUTED, textDecorationLine: 'line-through' },
+  price: { fontSize: 13, fontWeight: '900' },
+  strikePrice: { fontSize: 9, textDecorationLine: 'line-through' },
   addBtn: {
     backgroundColor: PRIMARY_LIGHT,
     borderWidth: 1,
@@ -538,11 +535,9 @@ const prodStyles = StyleSheet.create({
 // ─── Shop Section Styles ──────────────────────────────────────
 const secStyles = StyleSheet.create({
   wrapper: {
-    backgroundColor: WHITE,
     marginBottom: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   storeHeader: {
     flexDirection: 'row',
@@ -556,7 +551,6 @@ const secStyles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: BORDER,
   },
   storeImage: { width: '100%', height: '100%' },
   storePlaceholder: {
@@ -567,7 +561,7 @@ const secStyles = StyleSheet.create({
   },
   storeInfo: { flex: 1, marginLeft: 10 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  storeName: { fontSize: 15, fontWeight: '800', color: TEXT_DARK },
+  storeName: { fontSize: 15, fontWeight: '800' },
   expressBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -589,21 +583,20 @@ const secStyles = StyleSheet.create({
     gap: 2,
   },
   ratingText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
-  metaText: { fontSize: 11, color: TEXT_MUTED },
-  metaDot: { fontSize: 10, color: TEXT_MUTED },
+  metaText: { fontSize: 11 },
+  metaDot: { fontSize: 10 },
   viewBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   viewBtnText: { fontSize: 12, fontWeight: '800', color: PRIMARY },
   productsRow: { paddingLeft: 16, paddingRight: 8 },
-  noItems: { fontSize: 12, color: TEXT_MUTED, paddingHorizontal: 16 },
+  noItems: { fontSize: 12, paddingHorizontal: 16 },
 });
 
 // ─── Main Screen Styles ───────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+  root: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: WHITE,
     paddingHorizontal: 16,
     paddingVertical: 10,
     gap: 12,
@@ -614,30 +607,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F3F4F6',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
   },
   locationTextWrap: { flex: 1 },
-  deliverLabel: { fontSize: 8, fontWeight: '800', color: TEXT_MUTED, letterSpacing: 0.5 },
-  locationValue: { fontSize: 12, fontWeight: '800', color: TEXT_DARK },
+  deliverLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
+  locationValue: { fontSize: 12, fontWeight: '800' },
   searchBarContainer: {
-    backgroundColor: WHITE,
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
   searchInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
     borderRadius: 14,
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 13, color: TEXT_DARK, padding: 0 },
-  chipScrollWrap: { backgroundColor: WHITE, borderBottomWidth: 1, borderBottomColor: BORDER },
+  searchInput: { flex: 1, fontSize: 13, padding: 0 },
+  chipScrollWrap: { borderBottomWidth: 1 },
   chipRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   chip: {
     flexDirection: 'row',
@@ -646,12 +636,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: '#FFFFFF',
     gap: 6,
   },
   chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  chipText: { fontSize: 12, fontWeight: '700', color: TEXT_DARK },
+  chipText: { fontSize: 12, fontWeight: '700' },
   chipTextActive: { color: '#FFFFFF' },
   scrollContent: { paddingTop: 8 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -659,13 +647,13 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#FFF4E5',
+    backgroundColor: 'rgba(255, 138, 0, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
   },
-  emptyTitle: { fontSize: 17, fontWeight: '900', color: TEXT_DARK, textAlign: 'center' },
-  emptySubtitle: { fontSize: 13, color: TEXT_MUTED, marginTop: 6, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
+  emptyTitle: { fontSize: 17, fontWeight: '900', textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, marginTop: 6, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
   resetFilterBtn: {
     flexDirection: 'row',
     alignItems: 'center',

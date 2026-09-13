@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -78,10 +78,14 @@ export const ProductCard = ({
         isRow ? styles.rowCard : styles.gridCard,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border,
+          borderColor: '#FFE4D6',
           borderRadius: radius.md,
+          shadowColor: '#FF6B35',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.12,
+          shadowRadius: 6,
+          elevation: 4,
         },
-        shadows.sm,
         !isAvailable && styles.dimmed,
         style,
       ]}
@@ -179,13 +183,14 @@ export const ProductCard = ({
                 style={[
                   styles.addButton,
                   {
-                    backgroundColor: colors.primary || '#F4B400',
+                    backgroundColor: '#FF6B35',
+                    borderColor: '#FF5722',
                     borderRadius: radius.pill || 999,
                   },
                 ]}
               >
-                <Ionicons name="cart-outline" size={14} color="#171A1F" />
-                <Text style={[typography.overline, { color: '#171A1F', fontWeight: '800' }]}>ADD</Text>
+                <Ionicons name="cart-outline" size={14} color="#FFFFFF" />
+                <Text style={[typography.overline, { color: '#FFFFFF', fontWeight: '900' }]}>ADD</Text>
               </PressableScale>
             ) : null
           ) : (
@@ -239,7 +244,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   stockOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

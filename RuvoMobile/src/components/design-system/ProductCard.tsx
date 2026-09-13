@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ProductCardProps {
   product: Product;
@@ -26,6 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   showDiscount = true,
   disabled = false,
 }) => {
+  const { colors } = useTheme();
   const [isFavorite, setIsFavorite] = useState(false);
   const [animating, setAnimating] = useState(false);
 
@@ -112,10 +114,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      className="flex-1 ruvo-card mx-xs mb-md overflow-visible"
+      style={{ backgroundColor: colors.card, borderColor: colors.border }}
+      className="flex-1 ruvo-card mx-xs mb-md overflow-visible border rounded-2xl"
     >
       {/* Image Container */}
-      <View className="w-full h-28 bg-warm-200 mb-md relative overflow-hidden rounded-lg">
+      <View style={{ backgroundColor: colors.surfaceSunken }} className="w-full h-28 mb-md relative overflow-hidden rounded-lg">
         {product.image ? (
           <Image
             source={{ uri: product.image }}
@@ -123,20 +126,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             resizeMode="cover"
           />
         ) : (
-          <View className="w-full h-full bg-warm-300 items-center justify-center">
-            <Ionicons name="image" size={32} color="#A79E92" />
+          <View style={{ backgroundColor: colors.surfaceSunken }} className="w-full h-full items-center justify-center">
+            <Ionicons name="image" size={32} color={colors.textHint} />
           </View>
         )}
 
         {/* Favorite Button */}
         <Pressable
           onPress={() => setIsFavorite(!isFavorite)}
-          className="absolute top-xs right-xs bg-ruvo-surface rounded-full p-xs"
+          style={{ backgroundColor: colors.surface }}
+          className="absolute top-xs right-xs rounded-full p-xs"
         >
           <Ionicons
             name={isFavorite ? 'heart' : 'heart-outline'}
             size={18}
-            color={isFavorite ? '#DC2626' : '#A79E92'}
+            color={isFavorite ? '#DC2626' : colors.textHint}
           />
         </Pressable>
 
@@ -154,11 +158,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <View className="px-md pb-md flex-1 justify-between">
         {/* Name & Category */}
         <View className="mb-xs">
-          <Text className="text-sm font-semibold text-ruvo-ink" numberOfLines={2}>
+          <Text style={{ color: colors.textPrimary }} className="text-sm font-semibold" numberOfLines={2}>
             {product.name}
           </Text>
           {product.variant && (
-            <Text className="text-xs text-warm-600 mt-xs">
+            <Text style={{ color: colors.textSecondary }} className="text-xs mt-xs">
               {product.variant}
             </Text>
           )}
@@ -168,7 +172,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {rating > 0 && (
           <View className="flex-row items-center mb-xs">
             <Ionicons name="star" size={14} color="#F5B700" />
-            <Text className="text-xs text-warm-700 ml-xs">
+            <Text style={{ color: colors.textSecondary }} className="text-xs ml-xs">
               {rating.toFixed(1)} ({reviewCount})
             </Text>
           </View>
@@ -176,11 +180,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Price */}
         <View className="flex-row items-center mb-md">
-          <Text className="text-lg font-bold text-ruvo-ink">
+          <Text style={{ color: colors.textPrimary }} className="text-lg font-bold">
             ₹{product.price.toFixed(0)}
           </Text>
           {originalPrice > product.price && (
-            <Text className="text-sm text-warm-500 line-through ml-sm">
+            <Text style={{ color: colors.textHint }} className="text-sm line-through ml-sm">
               ₹{originalPrice.toFixed(0)}
             </Text>
           )}

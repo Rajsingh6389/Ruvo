@@ -7,14 +7,14 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
-import { ROUTES } from '../../constants/routes';
+import { useTheme } from '../../context/ThemeContext';
 import { API_BASE_URL } from '../../config/api';
 
 const formatImageUrl = (url?: string) => {
@@ -54,13 +54,21 @@ const Benefit = ({
   icon,
   title,
   subtitle,
+  textColorPrimary,
+  textColorSecondary,
+  surfaceBg,
+  borderColor,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle: string;
+  textColorPrimary: string;
+  textColorSecondary: string;
+  surfaceBg: string;
+  borderColor: string;
 }) => (
   <View className="flex-1 flex-row items-center justify-center gap-2">
-    <View className="w-8 h-8 rounded-full bg-ruvo-yellow-soft border border-ruvo-border items-center justify-center">
+    <View style={{ backgroundColor: surfaceBg, borderColor }} className="w-8 h-8 rounded-full border items-center justify-center">
       <Ionicons
         name={icon}
         size={16}
@@ -68,10 +76,10 @@ const Benefit = ({
       />
     </View>
     <View>
-      <Text className="text-xs font-bold text-ruvo-ink">
+      <Text style={{ color: textColorPrimary }} className="text-xs font-bold">
         {title}
       </Text>
-      <Text className="text-[10px] text-ruvo-muted mt-0.5">
+      <Text style={{ color: textColorSecondary }} className="text-[10px] mt-0.5">
         {subtitle}
       </Text>
     </View>
@@ -82,24 +90,33 @@ const Spec = ({
   icon,
   title,
   value,
+  cardBg,
+  borderColor,
+  textColorPrimary,
+  textColorSecondary,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   value: string;
+  cardBg: string;
+  borderColor: string;
+  textColorPrimary: string;
+  textColorSecondary: string;
 }) => (
   <View className="flex-1 items-center">
-    <View className="w-10 h-10 rounded-xl bg-ruvo-card flex items-center justify-center mb-2 border border-ruvo-border">
+    <View style={{ backgroundColor: cardBg, borderColor }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 border">
       <Ionicons
         name={icon}
         size={18}
-        color="#171A1F"
+        color={textColorPrimary}
       />
     </View>
-    <Text className="text-xs text-ruvo-muted font-medium">
+    <Text style={{ color: textColorSecondary }} className="text-xs font-medium">
       {title}
     </Text>
     <Text
-      className="text-xs font-black text-ruvo-ink mt-0.5 text-center"
+      style={{ color: textColorPrimary }}
+      className="text-xs font-black mt-0.5 text-center"
       numberOfLines={1}
     >
       {value}
@@ -118,19 +135,18 @@ const parseUnit = (unit: string) => {
 const ProductDetailsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const { theme, colors } = useTheme();
 
-  // Expected navigation: navigation.navigate(ROUTES.PRODUCT_DETAILS, { product: item, isShopOffline: boolean })
   const product: Product | undefined = route.params?.product;
   const initialIsShopOffline: boolean = route.params?.isShopOffline ?? false;
 
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting] = useState(false);
   const [fetchedShopName, setFetchedShopName] = useState<string | null>(null);
   const [fetchedShopLogo, setFetchedShopLogo] = useState<string | null>(null);
   const [isShopOffline, setIsShopOffline] = useState<boolean>(initialIsShopOffline);
 
-  // Fetch shop details dynamically if product has a shopId
   React.useEffect(() => {
     if (product?.shopId) {
       fetch(`${API_BASE_URL}/api/shops/${product.shopId}`)
@@ -148,8 +164,7 @@ const ProductDetailsScreen = () => {
     }
   }, [product?.shopId, product?.shopName]);
 
-  // BUSINESS LOGIC: Authentication and cart management
-  const { isAuthenticated, userId, token, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
 
@@ -199,8 +214,8 @@ const ProductDetailsScreen = () => {
 
   if (!product) {
     return (
-      <View className="flex-1 bg-ruvo-bg items-center justify-center px-6">
-        <View className="w-16 h-16 rounded-full bg-ruvo-yellow-soft items-center justify-center border border-ruvo-border mb-3">
+      <View style={{ backgroundColor: colors.background }} className="flex-1 items-center justify-center px-6">
+        <View style={{ backgroundColor: colors.surface, borderColor: colors.border }} className="w-16 h-16 rounded-full items-center justify-center border mb-3">
           <Ionicons
             name="alert-circle-outline"
             size={36}
@@ -208,7 +223,7 @@ const ProductDetailsScreen = () => {
           />
         </View>
 
-        <Text className="text-lg font-black text-ruvo-ink mt-2">
+        <Text style={{ color: colors.textPrimary }} className="text-lg font-black mt-2">
           Product not found
         </Text>
 
@@ -216,7 +231,7 @@ const ProductDetailsScreen = () => {
           className="bg-ruvo-yellow px-6 py-3 rounded-xl mt-5 shadow-sm active:bg-ruvo-yellow-dark"
           onPress={() => navigation.goBack()}
         >
-          <Text className="text-ruvo-ink font-black text-center text-sm">
+          <Text className="text-black font-black text-center text-sm">
             Go Back
           </Text>
         </TouchableOpacity>
@@ -241,43 +256,46 @@ const ProductDetailsScreen = () => {
   };
 
   return (
-    <View className="flex-1 bg-ruvo-bg">
+    <View style={{ backgroundColor: colors.background }} className="flex-1">
 
       {/* HEADER */}
-      <View className="h-14 px-3 bg-white flex-row items-center justify-between">
+      <View style={{ backgroundColor: colors.surface }} className="h-14 px-3 flex-row items-center justify-between border-b border-transparent">
         <TouchableOpacity
-          className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
+          style={{ backgroundColor: colors.background }}
+          className="w-10 h-10 rounded-full items-center justify-center"
           activeOpacity={0.75}
           onPress={() => navigation.goBack()}
         >
           <Ionicons
             name="arrow-back"
             size={22}
-            color="#1A1A1A"
+            color={colors.textPrimary}
           />
         </TouchableOpacity>
 
         <View className="flex-row gap-2">
           <TouchableOpacity
-            className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
+            style={{ backgroundColor: colors.background }}
+            className="w-10 h-10 rounded-full items-center justify-center"
             activeOpacity={0.75}
             onPress={() => setFavorite(prev => !prev)}
           >
             <Ionicons
               name={favorite ? 'heart' : 'heart-outline'}
               size={23}
-              color={favorite ? '#D32F2F' : '#1A1A1A'}
+              color={favorite ? '#D32F2F' : colors.textPrimary}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="w-10 h-10 rounded-full bg-ruvo-bg items-center justify-center"
+            style={{ backgroundColor: colors.background }}
+            className="w-10 h-10 rounded-full items-center justify-center"
             activeOpacity={0.75}
           >
             <Ionicons
               name="share-social-outline"
               size={22}
-              color="#1A1A1A"
+              color={colors.textPrimary}
             />
           </TouchableOpacity>
         </View>
@@ -287,11 +305,15 @@ const ProductDetailsScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5 }}
       >
-        {/* PRODUCT IMAGE - 3D FLOATING */}
+        {/* PRODUCT IMAGE */}
         <Animated.View 
           entering={FadeInDown.duration(700).springify()} 
-          className="h-[360px] bg-white rounded-[40px] overflow-hidden relative items-center justify-center mb-6 border-4 border-white"
-          style={{ shadowColor: '#F5B700', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 12, transform: [{ perspective: 1000 }, { rotateX: '2deg' }] }}
+          style={{
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            shadowColor: '#F5B700', shadowOffset: { width: 0, height: 18 }, shadowOpacity: 0.15, shadowRadius: 30, elevation: 12, transform: [{ perspective: 1000 }, { rotateX: '2deg' }]
+          }}
+          className="h-[360px] rounded-[40px] overflow-hidden relative items-center justify-center mb-6 border-4"
         >
           {(product.imageUrl || product.image) ? (
             <Image
@@ -304,9 +326,9 @@ const ProductDetailsScreen = () => {
               <Ionicons
                 name="image-outline"
                 size={65}
-                color="#E5E7EB"
+                color={colors.textSecondary}
               />
-              <Text className="text-xs text-gray-400 mt-2 font-medium">
+              <Text style={{ color: colors.textSecondary }} className="text-xs mt-2 font-medium">
                 No product image
               </Text>
             </View>
@@ -327,7 +349,7 @@ const ProductDetailsScreen = () => {
           </View>
         </Animated.View>
 
-        {/* BLACK AND WHITE SHOP CLOSED BANNER */}
+        {/* SHOP CLOSED BANNER */}
         {isShopOffline && (
           <Animated.View 
             entering={FadeInDown.delay(50).duration(500)}
@@ -348,17 +370,17 @@ const ProductDetailsScreen = () => {
         {/* PRODUCT INFO */}
         <Animated.View 
           entering={FadeInDown.delay(100).duration(600).springify()} 
-          className="bg-white rounded-[28px] p-6 mb-4 border border-gray-50/50"
-          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          style={{ backgroundColor: colors.card, borderColor: colors.border, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          className="rounded-[28px] p-6 mb-4 border"
         >
           <View className="flex-row items-start justify-between mb-3">
             <View className="flex-1 pr-2">
-              <Text className="text-2xl font-black text-ruvo-ink">
+              <Text style={{ color: colors.textPrimary }} className="text-2xl font-black">
                 {product.name}
               </Text>
 
               {product.unit && (
-                <Text className="text-sm text-gray-600 mt-0.5">
+                <Text style={{ color: colors.textSecondary }} className="text-sm mt-0.5">
                   {product.unit}
                 </Text>
               )}
@@ -367,15 +389,15 @@ const ProductDetailsScreen = () => {
             <View
               className={`px-3 py-1.5 rounded-full border ${
                 available
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
+                  ? 'bg-green-500/10 border-green-500/30'
+                  : 'bg-red-500/10 border-red-500/30'
               }`}
             >
               <Text
                 className={`text-[10px] uppercase tracking-widest font-black ${
                   available
-                    ? 'text-green-700'
-                    : 'text-red-700'
+                    ? 'text-green-600'
+                    : 'text-red-500'
                 }`}
               >
                 {available
@@ -399,7 +421,7 @@ const ProductDetailsScreen = () => {
                 </Text>
               </View>
 
-              <Text className="text-gray-600 text-xs ml-2">
+              <Text style={{ color: colors.textSecondary }} className="text-xs ml-2">
                 {product.reviewsCount || 0} reviews
               </Text>
             </View>
@@ -409,20 +431,20 @@ const ProductDetailsScreen = () => {
 
           {/* PRICE */}
           <View className="flex-row items-end mb-3 gap-2">
-            <Text className="text-3xl font-black text-ruvo-ink tracking-tight">
+            <Text style={{ color: colors.textPrimary }} className="text-3xl font-black tracking-tight">
               ₹{product.sellingPrice || product.price || 0}
             </Text>
 
             {(product.actualPrice || product.originalPrice || 0) >
               (product.sellingPrice || product.price || 0) && (
-              <Text className="text-gray-400 text-base font-semibold mb-1 line-through">
+              <Text style={{ color: colors.textSecondary }} className="text-base font-semibold mb-1 line-through">
                 ₹{product.actualPrice || product.originalPrice}
               </Text>
             )}
 
             {discount > 0 && (
-              <View className="bg-red-50 px-2 py-1 rounded border border-red-100 mb-1.5">
-                <Text className="text-red-600 text-[10px] font-black uppercase">
+              <View className="bg-red-500/10 px-2 py-1 rounded border border-red-500/20 mb-1.5">
+                <Text className="text-red-500 text-[10px] font-black uppercase">
                   Save {discount}%
                 </Text>
               </View>
@@ -430,7 +452,7 @@ const ProductDetailsScreen = () => {
           </View>
 
           {product.unit && (product.sellingPrice || product.price) ? (
-            <Text className="text-gray-600 text-xs">
+            <Text style={{ color: colors.textSecondary }} className="text-xs">
               ₹
               {(
                 (product.sellingPrice || product.price || 0) /
@@ -440,28 +462,40 @@ const ProductDetailsScreen = () => {
             </Text>
           ) : null}
 
-          {/* BENEFITS - GLASS/CHIPS */}
-          <View className="bg-gray-50/70 border border-gray-100 rounded-[20px] mt-4 px-2 py-4 flex-row items-center shadow-sm">
+          {/* BENEFITS */}
+          <View style={{ backgroundColor: colors.surface, borderColor: colors.border }} className="border rounded-[20px] mt-4 px-2 py-4 flex-row items-center shadow-sm">
             <Benefit
               icon="shield-checkmark-outline"
               title="100%"
               subtitle="Original"
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
+              surfaceBg={colors.background}
+              borderColor={colors.border}
             />
 
-            <View className="w-px h-10 bg-gray-200/60 mx-1" />
+            <View style={{ backgroundColor: colors.border }} className="w-px h-10 mx-1" />
 
             <Benefit
               icon="ribbon-outline"
               title="Quality"
               subtitle="Guaranteed"
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
+              surfaceBg={colors.background}
+              borderColor={colors.border}
             />
 
-            <View className="w-px h-10 bg-gray-200/60 mx-1" />
+            <View style={{ backgroundColor: colors.border }} className="w-px h-10 mx-1" />
 
             <Benefit
               icon="flash-outline"
               title="Fast"
               subtitle="Delivery"
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
+              surfaceBg={colors.background}
+              borderColor={colors.border}
             />
           </View>
         </Animated.View>
@@ -469,10 +503,10 @@ const ProductDetailsScreen = () => {
         {/* SHOP */}
         <Animated.View 
           entering={FadeInDown.delay(200).duration(600).springify()} 
-          className="bg-white rounded-[28px] p-5 mb-4 border border-gray-50/50 flex-row items-center"
-          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          style={{ backgroundColor: colors.card, borderColor: colors.border, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          className="rounded-[28px] p-5 mb-4 border flex-row items-center"
         >
-          <View className="w-14 h-14 rounded-full bg-ruvo-bg items-center justify-center mr-4 overflow-hidden shadow-sm border border-gray-100">
+          <View style={{ backgroundColor: colors.background, borderColor: colors.border }} className="w-14 h-14 rounded-full items-center justify-center mr-4 overflow-hidden shadow-sm border">
             {fetchedShopLogo ? (
               <Image
                 source={{ uri: fetchedShopLogo }}
@@ -487,11 +521,11 @@ const ProductDetailsScreen = () => {
           </View>
 
           <View className="flex-1">
-            <Text className="text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+            <Text style={{ color: colors.textSecondary }} className="text-[10px] font-bold uppercase tracking-wider">
               Sold by
             </Text>
 
-            <Text className="text-ruvo-ink text-base font-black mt-0.5">
+            <Text style={{ color: colors.textPrimary }} className="text-base font-black mt-0.5">
               {product.shopName || fetchedShopName || (product.shopId ? `Shop #${product.shopId}` : 'RuVo Store')}
             </Text>
 
@@ -499,19 +533,19 @@ const ProductDetailsScreen = () => {
               <Ionicons
                 name="location"
                 size={12}
-                color="#6B7280"
+                color={colors.textSecondary}
               />
 
-              <Text className="text-gray-600 text-xs ml-1 font-medium">
+              <Text style={{ color: colors.textSecondary }} className="text-xs ml-1 font-medium">
                 Nearby shop
               </Text>
             </View>
           </View>
 
-
           <TouchableOpacity
             activeOpacity={0.8}
-            className="bg-gray-100 px-4 py-2 rounded-full"
+            style={{ backgroundColor: colors.surface }}
+            className="px-4 py-2 rounded-full border border-transparent"
             onPress={() => {
               if (product.shopId) {
                 navigation.navigate('ShopDetails', {
@@ -520,7 +554,7 @@ const ProductDetailsScreen = () => {
               }
             }}
           >
-            <Text className="text-ruvo-ink text-xs font-black">
+            <Text style={{ color: colors.textPrimary }} className="text-xs font-black">
               Visit
             </Text>
           </TouchableOpacity>
@@ -529,39 +563,51 @@ const ProductDetailsScreen = () => {
         {/* PRODUCT DETAILS */}
         <Animated.View 
           entering={FadeInDown.delay(300).duration(600).springify()} 
-          className="bg-white rounded-[28px] p-6 mb-4 border border-gray-50/50"
-          style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          style={{ backgroundColor: colors.card, borderColor: colors.border, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+          className="rounded-[28px] p-6 mb-4 border"
         >
-          <Text className="text-sm font-black text-ruvo-ink uppercase tracking-wider mb-2">
+          <Text style={{ color: colors.textPrimary }} className="text-sm font-black uppercase tracking-wider mb-2">
             Product Details
           </Text>
 
-          <Text className="text-gray-600 text-sm leading-6 mb-4">
+          <Text style={{ color: colors.textSecondary }} className="text-sm leading-6 mb-4">
             {product.description ||
               'Quality product available from your nearby local shop on RuVo. Guaranteed authentic.'}
           </Text>
 
-          <View className="flex-row items-stretch pt-2 border-t border-gray-100">
+          <View style={{ borderTopColor: colors.border }} className="flex-row items-stretch pt-2 border-t">
             <Spec
               icon="pricetag-outline"
               title="Brand"
               value={product.brandName || 'N/A'}
+              cardBg={colors.surface}
+              borderColor={colors.border}
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
             />
 
-            <View className="w-[1px] bg-gray-100 rounded-full mx-2" />
+            <View style={{ backgroundColor: colors.border }} className="w-[1px] rounded-full mx-2" />
 
             <Spec
               icon="cube-outline"
               title="Category"
               value={product.category || 'General'}
+              cardBg={colors.surface}
+              borderColor={colors.border}
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
             />
 
-            <View className="w-[1px] bg-gray-100 rounded-full mx-2" />
+            <View style={{ backgroundColor: colors.border }} className="w-[1px] rounded-full mx-2" />
 
             <Spec
               icon="layers-outline"
               title="Stock"
               value={`${product.stockQuantity}`}
+              cardBg={colors.surface}
+              borderColor={colors.border}
+              textColorPrimary={colors.textPrimary}
+              textColorSecondary={colors.textSecondary}
             />
           </View>
         </Animated.View>
@@ -570,27 +616,28 @@ const ProductDetailsScreen = () => {
         {available && (
           <Animated.View 
             entering={FadeInDown.delay(400).duration(600).springify()} 
-            className="bg-white rounded-[28px] p-5 mb-8 border border-gray-50/50 flex-row items-center justify-between"
-            style={{ shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+            style={{ backgroundColor: colors.card, borderColor: colors.border, shadowColor: '#1A1A1A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.06, shadowRadius: 16, elevation: 5 }}
+            className="rounded-[28px] p-5 mb-8 border flex-row items-center justify-between"
           >
-            <Text className="text-ruvo-ink font-black text-base uppercase tracking-widest pl-2">
+            <Text style={{ color: colors.textPrimary }} className="font-black text-base uppercase tracking-widest pl-2">
               Quantity
             </Text>
 
-            <View className="flex-row items-center bg-gray-50 rounded-full border border-gray-200 p-1.5 min-w-[120px] justify-between shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            <View style={{ backgroundColor: colors.surface, borderColor: colors.border }} className="flex-row items-center rounded-full border p-1.5 min-w-[120px] justify-between">
               <TouchableOpacity
                 activeOpacity={0.7}
-                className="w-8 h-8 rounded-full bg-white items-center justify-center shadow-sm"
+                style={{ backgroundColor: colors.card }}
+                className="w-8 h-8 rounded-full items-center justify-center shadow-sm"
                 onPress={decreaseQuantity}
               >
                 <Ionicons
                   name="remove"
                   size={18}
-                  color="#1A1A1A"
+                  color={colors.textPrimary}
                 />
               </TouchableOpacity>
 
-              <Text className="w-10 text-center text-ruvo-ink font-bold">
+              <Text style={{ color: colors.textPrimary }} className="w-10 text-center font-bold">
                 {quantity}
               </Text>
 
@@ -612,30 +659,31 @@ const ProductDetailsScreen = () => {
         <View className="h-28" />
       </ScrollView>
 
-      {/* BOTTOM ACTIONS - 3D FROSTED GLASS */}
+      {/* BOTTOM ACTIONS */}
       <Animated.View 
         entering={FadeInDown.delay(300).duration(500).springify()}
-        className="absolute left-0 right-0 bottom-0 overflow-hidden rounded-t-[40px] border-t border-white/80"
-        style={{ shadowColor: '#000', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 20 }}
+        style={{ borderColor: colors.border }}
+        className="absolute left-0 right-0 bottom-0 overflow-hidden rounded-t-[40px] border-t"
       >
-        <BlurView intensity={80} tint="light" className="px-5 pt-5 pb-safe items-center bg-white/70">
+        <BlurView intensity={80} tint={theme === 'dark' ? 'dark' : 'light'} className="px-5 pt-5 pb-safe items-center">
           <View className="flex-row w-full gap-4 pb-3">
           <TouchableOpacity
             activeOpacity={0.82}
             disabled={!available || isShopOffline}
+            style={{ backgroundColor: colors.surface }}
             className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center gap-2 ${
               available && !isShopOffline
-                ? 'bg-gray-100'
-                : 'bg-gray-100 opacity-50'
+                ? 'opacity-100'
+                : 'opacity-50'
             }`}
             onPress={handleAddToCart}
           >
             <Ionicons
               name="cart"
               size={22}
-              color={available && !isShopOffline ? "#1A1A1A" : "#9CA3AF"}
+              color={available && !isShopOffline ? colors.textPrimary : colors.textSecondary}
             />
-            <Text className={`text-[15px] font-black tracking-wide ${available && !isShopOffline ? 'text-ruvo-ink' : 'text-gray-400'}`}>
+            <Text style={{ color: available && !isShopOffline ? colors.textPrimary : colors.textSecondary }} className="text-[15px] font-black tracking-wide">
               Add to Cart
             </Text>
           </TouchableOpacity>
@@ -659,7 +707,7 @@ const ProductDetailsScreen = () => {
                   className={`font-black tracking-wide ml-1 ${
                     !available || isShopOffline
                       ? 'text-zinc-400'
-                      : 'text-ruvo-ink'
+                      : 'text-black'
                   }`}
                 >
                   {isShopOffline ? 'Shop Closed' : 'Buy Now'}

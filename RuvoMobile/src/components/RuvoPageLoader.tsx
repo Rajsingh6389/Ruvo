@@ -1,4 +1,4 @@
-﻿import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { sf, sh, sw } from '../utils/responsive';
@@ -38,8 +38,8 @@ export const PageLoaderProvider: React.FC<PageLoaderProviderProps> = ({ children
   const [message, setMessage] = useState<string | undefined>(undefined);
 
   const showTimeRef = useRef<number>(0);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showLoader = useCallback((msg?: string) => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -195,7 +195,7 @@ export const RuvoPageLoader: React.FC = () => {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     alignItems: 'center',
     justifyContent: 'center',

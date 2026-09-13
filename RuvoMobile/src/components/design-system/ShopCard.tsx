@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Shop } from '../../types';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ShopCardProps {
   shop: Shop;
@@ -16,6 +17,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   showDistance = true,
   distance,
 }) => {
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const rating = shop.rating || 0;
   const ratingText = `${rating.toFixed(1)} (${shop.reviewCount || 0})`;
 
@@ -25,10 +28,19 @@ export const ShopCard: React.FC<ShopCardProps> = ({
   return (
     <Pressable
       onPress={onPress}
-      className="ruvo-card mb-md overflow-hidden bg-ruvo-surface border border-warm-300 rounded-2xl"
+      style={{
+        backgroundColor: colors.card,
+        borderColor: isDark ? colors.border : '#FFE4D6',
+        shadowColor: '#FF6B35',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: isDark ? 0.3 : 0.12,
+        shadowRadius: 8,
+        elevation: 5,
+      }}
+      className="ruvo-card mb-md overflow-hidden border-2 rounded-2xl"
     >
       {/* Banner Image */}
-      <View className="w-full h-32 bg-warm-200 relative">
+      <View style={{ backgroundColor: colors.surfaceSunken }} className="w-full h-32 relative">
         {bannerUrl ? (
           <Image
             source={{ uri: bannerUrl }}
@@ -36,13 +48,13 @@ export const ShopCard: React.FC<ShopCardProps> = ({
             resizeMode="cover"
           />
         ) : (
-          <View className="w-full h-full bg-warm-300 items-center justify-center">
-            <Ionicons name="storefront" size={40} color="#A79E92" />
+          <View style={{ backgroundColor: colors.surfaceSunken }} className="w-full h-full items-center justify-center">
+            <Ionicons name="storefront" size={40} color={colors.textHint} />
           </View>
         )}
 
         {/* Floating Rounded Shop Logo */}
-        <View className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border border-white bg-white overflow-hidden shadow-md items-center justify-center">
+        <View style={{ borderColor: colors.border, backgroundColor: colors.surface }} className="absolute -bottom-5 left-4 w-12 h-12 rounded-full border overflow-hidden shadow-md items-center justify-center">
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
@@ -74,15 +86,15 @@ export const ShopCard: React.FC<ShopCardProps> = ({
       <View className="pt-6 px-md pb-md">
         <View className="flex-row items-start justify-between">
           <View className="flex-1 pr-xs">
-            <Text className="text-base font-extrabold text-ruvo-ink leading-tight" numberOfLines={1}>
+            <Text style={{ color: colors.textPrimary }} className="text-base font-extrabold leading-tight" numberOfLines={1}>
               {shop.name}
             </Text>
 
             {/* Category Tag */}
             <View className="mt-xs flex-row items-center">
-              <View className="bg-ruvo-yellow/20 px-sm py-[2px] rounded-md flex-row items-center gap-xs">
+              <View style={{ backgroundColor: 'rgba(245,183,0,0.18)' }} className="px-sm py-[2px] rounded-md flex-row items-center gap-xs">
                 <Ionicons name="pricetag" size={10} color="#F5B700" />
-                <Text className="text-xs font-bold text-ruvo-ink">
+                <Text style={{ color: colors.textPrimary }} className="text-xs font-bold">
                   {shop.category || 'General Store'}
                 </Text>
               </View>
@@ -95,11 +107,11 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         </View>
 
         {/* Rating, Distance & Delivery Fee Row */}
-        <View className="flex-row items-center justify-between mt-md pt-md border-t border-warm-200">
+        <View style={{ borderTopColor: colors.border }} className="flex-row items-center justify-between mt-md pt-md border-t">
           {/* Rating */}
           <View className="flex-row items-center">
             <Ionicons name="star" size={14} color="#F5B700" />
-            <Text className="text-xs font-extrabold text-ruvo-ink ml-xs">
+            <Text style={{ color: colors.textPrimary }} className="text-xs font-extrabold ml-xs">
               {ratingText}
             </Text>
           </View>
@@ -107,8 +119,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           {/* Distance */}
           {showDistance && (
             <View className="flex-row items-center">
-              <Ionicons name="location-outline" size={13} color="#6B7280" />
-              <Text className="text-xs font-semibold text-warm-700 ml-[2px]">
+              <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+              <Text style={{ color: colors.textSecondary }} className="text-xs font-semibold ml-[2px]">
                 {distance !== undefined && distance > 0 ? `${distance < 1 ? Math.round(distance * 10) / 10 : distance.toFixed(1)} km away` : '0 km away'}
               </Text>
             </View>
@@ -117,7 +129,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           {/* Dynamic Delivery Fee based on distance */}
           <View className="flex-row items-center">
             <Ionicons name="bicycle" size={14} color="#10B981" />
-            <Text className="text-xs font-bold text-emerald-700 ml-xs">
+            <Text className="text-xs font-bold text-emerald-500 ml-xs">
               {(() => {
                 const dist = distance ?? 0;
                 if (dist <= 1) return 'FREE Delivery';
@@ -132,12 +144,8 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {/* Status Badge */}
         {shop.status && (
           <View className="mt-md">
-            <View className={`px-sm py-xs rounded-md self-start ${
-              shop.status === 'open' ? 'bg-ruvo-accent-soft' : 'bg-warm-100'
-            }`}>
-              <Text className={`text-xs font-semibold ${
-                shop.status === 'open' ? 'text-ruvo-accent' : 'text-warm-600'
-              }`}>
+            <View style={{ backgroundColor: shop.status === 'open' ? 'rgba(34,197,94,0.15)' : colors.surfaceSunken }} className="px-sm py-xs rounded-md self-start">
+              <Text style={{ color: shop.status === 'open' ? '#22C55E' : colors.textSecondary }} className="text-xs font-semibold">
                 {shop.status === 'open' ? '🕐 Open now' : 'Closed'}
               </Text>
             </View>

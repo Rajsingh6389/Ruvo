@@ -249,29 +249,29 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.overlay}
+        style={[styles.overlay, { backgroundColor: colors.background }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
           {/* HEADER */}
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={onClose} style={styles.backBtn} hitSlop={10}>
-              <Ionicons name="arrow-back" size={24} color="#171A1F" />
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Select Your Location</Text>
+            <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Select Your Location</Text>
             <View style={{ width: 24 }} />
           </View>
 
           {/* SEARCH BAR */}
-          <View style={styles.searchBar}>
+          <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TextInput
               placeholder="Search an area or address"
-              placeholderTextColor="#A39D93"
+              placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.textPrimary }]}
             />
-            <Ionicons name="search" size={20} color="#77736B" />
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
@@ -338,45 +338,45 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                 {/* 2 TOP QUICK ACTION CARDS */}
                 <View style={styles.cardsRow}>
                   {/* Current Location */}
-                  <TouchableOpacity style={styles.actionCard} onPress={handleUseGps} activeOpacity={0.7}>
-                    <View style={[styles.iconCircle, { backgroundColor: '#FFF0ED' }]}>
-                      <Ionicons name="navigate-outline" size={20} color="#FF6B35" />
+                  <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleUseGps} activeOpacity={0.7}>
+                    <View style={[styles.iconCircle, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="navigate-outline" size={20} color={colors.primary} />
                     </View>
-                    <Text style={styles.cardTitle}>Use Current Location</Text>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Use Current Location</Text>
                   </TouchableOpacity>
 
                   {/* Add New Address */}
-                  <TouchableOpacity style={styles.actionCard} onPress={() => { setEditingId(null); setForm(emptyForm()); setShowAddNewView(true); }} activeOpacity={0.7}>
-                    <View style={[styles.iconCircle, { backgroundColor: '#FFF0ED' }]}>
-                      <Ionicons name="add-circle-outline" size={22} color="#FF6B35" />
+                  <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => { setEditingId(null); setForm(emptyForm()); setShowAddNewView(true); }} activeOpacity={0.7}>
+                    <View style={[styles.iconCircle, { backgroundColor: colors.primary + '18' }]}>
+                      <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
                     </View>
-                    <Text style={styles.cardTitle}>Add New Address</Text>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Add New Address</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* SAVED ADDRESSES SECTION */}
-                <Text style={styles.sectionHeader}>SAVED ADDRESSES ({displayAddresses.length})</Text>
+                <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SAVED ADDRESSES ({displayAddresses.length})</Text>
 
-                <View style={styles.savedCardBox}>
+                <View style={[styles.savedCardBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   {displayAddresses.map((item, index) => {
                     const isSelected = location?.shortLabel && (location.shortLabel.includes(item.name) || (location.details && location.details.house === item.details.house));
                     return (
                       <View key={item.id}>
-                        {index > 0 && <View style={styles.divider} />}
+                        {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
                         <View style={styles.addressRow}>
                           <TouchableOpacity
                             style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
                             onPress={() => handleSelectAddressItem(item)}
                             activeOpacity={0.7}
                           >
-                            <View style={styles.addressIconBox}>
-                              <Ionicons name={item.isSavedUserItem ? "bookmark" : "location"} size={20} color="#FF5722" />
-                              <Text style={styles.distBadge}>{item.distance}</Text>
+                            <View style={[styles.addressIconBox, { backgroundColor: colors.surface }]}>
+                              <Ionicons name={item.isSavedUserItem ? "bookmark" : "location"} size={20} color={colors.primary} />
+                              <Text style={[styles.distBadge, { color: colors.textSecondary }]}>{item.distance}</Text>
                             </View>
 
                             <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={styles.addressName} numberOfLines={1}>
+                                <Text style={[styles.addressName, { color: colors.textPrimary }]} numberOfLines={1}>
                                   {item.name}
                                 </Text>
                                 {isSelected && (
@@ -385,7 +385,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                                   </View>
                                 )}
                               </View>
-                              <Text style={styles.addressFullText} numberOfLines={2}>
+                              <Text style={[styles.addressFullText, { color: colors.textSecondary }]} numberOfLines={2}>
                                 {item.address}
                               </Text>
                             </View>

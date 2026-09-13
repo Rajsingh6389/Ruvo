@@ -111,6 +111,8 @@ export async function getShopById(id: number | string): Promise<Shop> {
   return parseOrThrow(res);
 }
 
+export const getShopDetails = getShopById;
+
 export async function getNearbyShops(
   latitude: number,
   longitude: number,

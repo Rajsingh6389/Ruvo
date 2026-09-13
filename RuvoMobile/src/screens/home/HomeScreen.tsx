@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { getMyOrders } from '../../services/orderService';
 import { Order } from '../../types/order';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
@@ -47,6 +48,8 @@ const FETCHING_LABEL = 'Fetching location...';
 export const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, userId, token } = useAuth();
+  const { colors, theme: activeTheme } = useTheme();
+  const isDark = activeTheme === 'dark';
   const { location, isLoading: locationLoading } = useDeliveryLocation();
 
   const [searchText, setSearchText] = useState('');
@@ -124,37 +127,52 @@ export const HomeScreen = () => {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top', 'left', 'right']}>
-      <StatusBar backgroundColor="#FFFFFF" barStyle="dark-content" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
+      <StatusBar backgroundColor={isDark ? colors.surface : '#FFFFFF'} barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* ── Header ─────────────────────────────────────────── */}
-      <View className="bg-ruvo-surface border-b border-ruvo-border px-3 pt-2 pb-3">
+      {/* ── Header with U-Shaped Orange Rounded Background ─────────────────────────────────────────── */}
+      <View 
+        style={{ 
+          backgroundColor: '#FF6B35', 
+          borderBottomLeftRadius: 32, 
+          borderBottomRightRadius: 32,
+          paddingHorizontal: 14,
+          paddingTop: 8,
+          paddingBottom: 16,
+          elevation: 8,
+          shadowColor: '#FF6B35',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+        }}
+      >
         {/* Logo and Location Row */}
         <View className="flex-row items-center justify-between mb-sm">
           {/* Prominent Large Top-Left RuVo Icon */}
-          <View style={{ marginRight: 8 }}>
+          <View style={{ marginRight: 8, backgroundColor: '#FFFFFF', padding: 2, borderRadius: 16, elevation: 4 }}>
             <Image
               source={ruvoIcon}
-              style={{ width: 54, height: 54, borderRadius: 14, resizeMode: 'contain' }}
+              style={{ width: 50, height: 50, borderRadius: 14, resizeMode: 'contain' }}
             />
           </View>
 
           {/* Location Pill */}
           <Pressable
             onPress={() => setLocationPickerVisible(true)}
-            className="flex-row items-center gap-xs px-md py-2 bg-ruvo-bg border border-ruvo-border rounded-xl flex-1 mx-sm"
+            style={{ backgroundColor: '#FFFFFF', borderColor: '#FFE4D6' }}
+            className="flex-row items-center gap-xs px-md py-2 border rounded-full flex-1 mx-sm shadow-sm"
           >
-            <Ionicons name="location-sharp" size={16} color="#FF8A00" />
+            <Ionicons name="location-sharp" size={18} color="#FF6B35" />
             <View className="flex-1">
-              <Text className="text-[10px] text-warm-600 font-medium">Deliver to</Text>
+              <Text style={{ color: '#77736B' }} className="text-[10px] font-semibold">Deliver to</Text>
               <View className="flex-row items-center gap-xs">
                 {isFetchingLocation && (
-                  <ActivityIndicator size="small" color="#FF8A00" />
+                  <ActivityIndicator size="small" color="#FF6B35" />
                 )}
-                <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                <Text style={{ color: '#171A1F' }} className="text-xs font-extrabold flex-1" numberOfLines={1}>
                   {locationText}
                 </Text>
-                <Ionicons name="chevron-down" size={12} color="#77736B" />
+                <Ionicons name="chevron-down" size={14} color="#77736B" />
               </View>
             </View>
           </Pressable>
@@ -165,20 +183,21 @@ export const HomeScreen = () => {
             onPress={() => (navigation.navigate as any)(ROUTES.NOTIFICATIONS)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="notifications-outline" size={24} color="#171A1F" />
-            <View className="absolute top-1 right-1 bg-red-500 rounded-full w-4 h-4 items-center justify-center">
-              <Text className="text-white text-[9px] font-bold">3</Text>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
+            </View>
+            <View className="absolute top-1 right-1 bg-white rounded-full w-4 h-4 items-center justify-center border border-orange-600">
+              <Text style={{ color: '#FF6B35' }} className="text-[9px] font-black">3</Text>
             </View>
           </Pressable>
         </View>
 
-        {/* ── Top Navigator Tabs (Groceries, Accessories, Dineout, Scenes with Cloudinary Images) ── */}
-        {/* Swiggy-Style 3D Tilted Vertical Category Cards */}
+        {/* ── Top Navigator Tabs (Food, Groceries, Accessories, Dineout) ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="mb-2 mt-2"
-          contentContainerStyle={{ gap: 14, paddingHorizontal: 4, paddingVertical: 8 }}
+          className="mb-3 mt-1"
+          contentContainerStyle={{ gap: 14, paddingHorizontal: 4, paddingVertical: 6 }}
         >
           {/* Food & Dining */}
           <Pressable
@@ -190,28 +209,28 @@ export const HomeScreen = () => {
           >
             <View
               style={{
-                width: 68,
-                height: 68,
+                width: 66,
+                height: 66,
                 borderRadius: 20,
-                backgroundColor: '#FFF4E5',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderWidth: 1.5,
-                borderColor: '#FF8A00',
+                borderWidth: 2,
+                borderColor: '#FFE0D3',
                 elevation: 4,
-                shadowColor: '#FF8A00',
+                shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.25,
+                shadowOpacity: 0.15,
                 shadowRadius: 6,
-                transform: [{ perspective: 400 }, { rotateX: '12deg' }, { rotateY: '-6deg' }],
+                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '-6deg' }],
               }}
             >
               <Image
                 source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessorybag.jpg' }}
-                style={{ width: 56, height: 56, borderRadius: 16, resizeMode: 'cover' }}
+                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#171A1F', fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Food
             </Text>
           </Pressable>
@@ -226,31 +245,31 @@ export const HomeScreen = () => {
           >
             <View
               style={{
-                width: 68,
-                height: 68,
+                width: 66,
+                height: 66,
                 borderRadius: 20,
-                backgroundColor: '#E8F8EE',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: '#22C55E',
+                borderWidth: 2,
+                borderColor: '#DCFCE7',
                 elevation: 4,
-                shadowColor: '#22C55E',
+                shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
+                shadowOpacity: 0.15,
                 shadowRadius: 6,
-                transform: [{ perspective: 400 }, { rotateX: '12deg' }, { rotateY: '-4deg' }],
+                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '-4deg' }],
               }}
             >
               <Image
                 source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessoriesbasket.jpg' }}
-                style={{ width: 56, height: 56, borderRadius: 16, resizeMode: 'cover' }}
+                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
               <View style={{ position: 'absolute', bottom: -6, backgroundColor: '#22C55E', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
                 <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 8 }}>EXPRESS</Text>
               </View>
             </View>
-            <Text numberOfLines={1} style={{ color: '#171A1F', fontWeight: '800', fontSize: 11, marginTop: 10, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
               Groceries
             </Text>
           </Pressable>
@@ -265,28 +284,28 @@ export const HomeScreen = () => {
           >
             <View
               style={{
-                width: 68,
-                height: 68,
+                width: 66,
+                height: 66,
                 borderRadius: 20,
-                backgroundColor: '#F3F4F6',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: '#E5E7EB',
-                elevation: 3,
-                shadowColor: '#171A1F',
+                borderWidth: 2,
+                borderColor: '#F3F4F6',
+                elevation: 4,
+                shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.12,
+                shadowOpacity: 0.15,
                 shadowRadius: 5,
                 transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '4deg' }],
               }}
             >
               <Image
                 source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787657146/ce1254b8-af09-41a6-b5a7-003d3db58941.png' }}
-                style={{ width: 56, height: 56, borderRadius: 16, resizeMode: 'cover' }}
+                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#171A1F', fontWeight: '700', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Accessories
             </Text>
           </Pressable>
@@ -301,16 +320,16 @@ export const HomeScreen = () => {
           >
             <View
               style={{
-                width: 68,
-                height: 68,
+                width: 66,
+                height: 66,
                 borderRadius: 20,
-                backgroundColor: '#FFF0F5',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderWidth: 1,
+                borderWidth: 2,
                 borderColor: '#FBCFE8',
-                elevation: 3,
-                shadowColor: '#EC4899',
+                elevation: 4,
+                shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 3 },
                 shadowOpacity: 0.15,
                 shadowRadius: 5,
@@ -319,10 +338,10 @@ export const HomeScreen = () => {
             >
               <Image
                 source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787828141/0858b8b6-7274-4c08-9d69-5256a5d3ce9b.png' }}
-                style={{ width: 56, height: 56, borderRadius: 16, resizeMode: 'cover' }}
+                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#171A1F', fontWeight: '700', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Dineout
             </Text>
           </Pressable>
@@ -331,10 +350,11 @@ export const HomeScreen = () => {
         {/* Search Bar Button */}
         <Pressable 
           onPress={() => (navigation.navigate as any)(ROUTES.SEARCH)}
-          className="flex-row items-center bg-ruvo-bg border border-ruvo-border rounded-xl px-md py-2 gap-sm"
+          style={{ backgroundColor: '#FFFFFF', borderColor: '#FFE4D6', elevation: 4 }}
+          className="flex-row items-center border rounded-2xl px-md py-3 gap-sm shadow-sm"
         >
-          <Ionicons name="search-outline" size={18} color="#77736B" />
-          <Text className="flex-1 text-sm text-warm-600">
+          <Ionicons name="search-outline" size={20} color="#FF6B35" />
+          <Text style={{ color: '#77736B' }} className="flex-1 text-sm font-semibold">
             Search shops, products...
           </Text>
         </Pressable>
@@ -356,30 +376,92 @@ export const HomeScreen = () => {
           data={getOnboardBanners()}
         />
 
-          <SectionHeader
-          title="Shop by Category"
-          showViewAll
-          onViewAllPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS)}
-        />
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 12 }}
+        {/* ── Shop by Category (White Background Container with Rounded Selection Items) ──── */}
+        <View 
+          style={{ 
+            backgroundColor: isDark ? colors.surface : '#FFFFFF', 
+            borderColor: isDark ? colors.border : '#EAF0F6',
+            borderWidth: 1.5,
+            borderRadius: 24, 
+            marginVertical: 14,
+            paddingVertical: 16,
+            paddingHorizontal: 14,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.05,
+            shadowRadius: 10,
+            elevation: 2,
+          }}
         >
-          {CATEGORIES.map(cat => (
-            <Pressable
-              key={cat.id}
-              onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS, { category: cat.label })}
+          {/* Header Inside White Box */}
+          <View className="flex-row items-center justify-between mb-3.5 px-1">
+            <View>
+              <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '900' }}>
+                Shop by Category
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 1 }}>
+                Explore top categories near you
+              </Text>
+            </View>
+
+            <Pressable 
+              onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS)}
+              style={{ backgroundColor: '#FF6B35' }}
+              className="flex-row items-center gap-1 px-3.5 py-1.5 rounded-full shadow-sm"
             >
-              <CategoryCard
-                name={cat.label}
-                image={cat.image}
-                onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS, { category: cat.label })}
-              />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>View All</Text>
+              <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
             </Pressable>
-          ))}
-        </ScrollView>
+          </View>
+
+          {/* 3D Tilted Category List inside White Background */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 14, paddingHorizontal: 2, paddingVertical: 4 }}
+          >
+            {CATEGORIES.map((cat, index) => {
+              const rotateYVal = index % 2 === 0 ? '-6deg' : '6deg';
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS, { category: cat.label })}
+                  style={{ alignItems: 'center', width: 76 }}
+                >
+                  <View
+                    style={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: 35,
+                      backgroundColor: isDark ? colors.surfaceSunken : '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2.5,
+                      borderColor: '#FF6B35',
+                      overflow: 'hidden',
+                      elevation: 4,
+                      shadowColor: '#FF6B35',
+                      shadowOffset: { width: 0, height: 3 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 5,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: cat.image }}
+                      style={{ width: '100%', height: '100%', borderRadius: 35, resizeMode: 'cover' }}
+                    />
+                  </View>
+                  <Text 
+                    numberOfLines={1} 
+                    style={{ color: colors.textPrimary, fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}
+                  >
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         {/* ── First Order Offer ───────────────────────────── */}
        

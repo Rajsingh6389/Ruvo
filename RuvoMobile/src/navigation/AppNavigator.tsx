@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import { NavigationContainer, Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -141,14 +141,15 @@ interface AppNavigatorProps { theme: Theme; }
 
 export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { colors } = useTheme();
   const [launchComplete, setLaunchComplete] = React.useState(false);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, position: 'relative' }}>
       <NavigationContainer theme={theme}>
         {/* Do not render auth-dependent navigator until initial token check completes */}
         {isLoading ? (
-          <View style={{ flex: 1, backgroundColor: '#FAF7F0' }} />
+          <View style={{ flex: 1, backgroundColor: colors.background }} />
         ) : (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {!isAuthenticated ? (
@@ -183,11 +184,13 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
       </NavigationContainer>
 
       {!launchComplete && (
-        <RuvoLaunchScreen
-          isReady={!isLoading}
-          roleSubtitle="LOCAL • CONNECTED • MOVING"
-          onFinish={() => setLaunchComplete(true)}
-        />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: colors.background }}>
+          <RuvoLaunchScreen
+            isReady={!isLoading}
+            roleSubtitle="LOCAL • CONNECTED • MOVING"
+            onFinish={() => setLaunchComplete(true)}
+          />
+        </View>
       )}
     </View>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { RuvoButton } from './RuvoButton';
+import { useTheme } from '../../context/ThemeContext';
 
 interface EmptyStateProps {
   icon?: string;
@@ -19,21 +20,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   subtitle,
   action,
 }) => {
+  const { colors } = useTheme();
+
   return (
-    <View className="flex-1 items-center justify-center px-lg py-3xl">
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 }}>
       {/* Icon */}
-      <View className="w-20 h-20 rounded-full bg-ruvo-yellow-soft items-center justify-center mb-xl">
-        <Ionicons name={icon as any} size={40} color="#F5B700" />
+      <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+        <Ionicons name={icon as any} size={40} color={colors.primary} />
       </View>
 
       {/* Title */}
-      <Text className="text-xl font-bold text-ruvo-ink text-center mb-sm">
+      <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
         {title}
       </Text>
 
       {/* Subtitle */}
       {subtitle && (
-        <Text className="text-base text-warm-600 text-center mb-2xl">
+        <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
           {subtitle}
         </Text>
       )}
