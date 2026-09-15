@@ -109,7 +109,7 @@ export const VerificationStatusScreen = () => {
 
         <View style={styles.actions}>
           <TouchableOpacity style={[styles.refreshBtn, { borderColor: colors.border }]} onPress={checkStatus}>
-            <Text style={{ color: colors.primary, fontWeight: 'bold' }}>Refresh Status</Text>
+            <Text style={{ color: colors.primary, fontFamily: 'Poppins_700Bold' }}>Refresh Status</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 24,
   },
   statusBox: {
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   description: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     borderLeftColor: '#E53935',
   },
   reasonLabel: {
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#B71C1C',
     fontSize: 13,
     marginBottom: 4,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   },
   resubmitText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 15,
   },
   actions: {
@@ -214,6 +214,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#757575',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
 });

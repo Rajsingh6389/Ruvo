@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Onboarding Step 6 — Shop Selection
  * Fetches nearby shops (by GPS or fallback mock), lets the partner
  * multi-select the shops they want to serve, then submits the list.
@@ -140,7 +140,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
             onPress={() => { onToggle(shop.id); onClose(); }}
           >
             <Ionicons name={isSelected ? 'checkmark-circle' : 'add-circle-outline'} size={16} color="#FFF" />
-            <Text style={[typography.caption, { color: '#FFF', fontWeight: '700', marginLeft: 4 }]}>
+            <Text style={[typography.caption, { color: '#FFF', fontFamily: 'Poppins_700Bold', marginLeft: 4 }]}>
               {isSelected ? 'Selected' : 'Select Shop'}
             </Text>
           </TouchableOpacity>
@@ -155,7 +155,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
         ) : (
           <MapView
             ref={mapRef}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             provider={PROVIDER_GOOGLE}
             region={region}
             showsUserLocation
@@ -181,13 +181,13 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
             )}
             <View style={{ flex: 1, marginLeft: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '800', fontSize: 16 }]}>
+                <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_800ExtraBold', fontSize: 16 }]}>
                   {shop.name}
                 </Text>
                 {shop.rating && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                     <Ionicons name="star" size={12} color="#D97706" />
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E', marginLeft: 3 }}>{shop.rating}</Text>
+                    <Text style={{ fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: '#92400E', marginLeft: 3 }}>{shop.rating}</Text>
                   </View>
                 )}
               </View>
@@ -195,7 +195,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
                 📍 {shop.fullAddress || shop.address}
               </Text>
               {shop.phone && (
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginTop: 4 }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginTop: 4 }]}>
                   📞 {shop.phone}
                 </Text>
               )}
@@ -205,7 +205,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
           {/* Shop Photo Gallery */}
           {shop.gallery && shop.gallery.length > 0 && (
             <View style={{ marginTop: 14 }}>
-              <Text style={[typography.caption, { color: colors.textPrimary, fontWeight: '800', marginBottom: 8, letterSpacing: 0.5 }]}>
+              <Text style={[typography.caption, { color: colors.textPrimary, fontFamily: 'Poppins_800ExtraBold', marginBottom: 8, letterSpacing: 0.5 }]}>
                 STORE GALLERY & PREVIEW
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -237,7 +237,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
             }}
           >
             <Ionicons name="navigate" size={18} color="#FFF" />
-            <Text style={[typography.body, { color: '#FFF', fontWeight: '800' }]}>
+            <Text style={[typography.body, { color: '#FFF', fontFamily: 'Poppins_800ExtraBold' }]}>
               Open Navigation / Location Tracing
             </Text>
           </TouchableOpacity>
@@ -500,13 +500,13 @@ export const Step6_ShopSelection = () => {
         {/* Info */}
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]} numberOfLines={1}>
+            <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]} numberOfLines={1}>
               {item.name}
             </Text>
             {item.rating && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                 <Ionicons name="star" size={12} color="#D97706" />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>{item.rating}</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Poppins_700Bold', color: colors.textSecondary }}>{item.rating}</Text>
               </View>
             )}
           </View>
@@ -520,7 +520,7 @@ export const Step6_ShopSelection = () => {
             {item.distanceKm != null && (
               <View style={[s.distTag, { backgroundColor: colors.accentSoft, borderRadius: RADIUS.pill }]}>
                 <Ionicons name="navigate-outline" size={10} color={colors.warning} />
-                <Text style={[typography.caption, { color: colors.warning, fontSize: 10, fontWeight: '700' }]}>
+                <Text style={[typography.caption, { color: colors.warning, fontSize: 10, fontFamily: 'Poppins_700Bold' }]}>
                   {item.distanceKm} km
                 </Text>
               </View>
@@ -605,7 +605,7 @@ export const Step6_ShopSelection = () => {
                 {' '}/ {MAX_SHOPS} shops
               </Text>
               {selected.size >= MAX_SHOPS && (
-                <Text style={[typography.caption, { color: colors.warning, fontWeight: '700', marginLeft: 6 }]}>MAX</Text>
+                <Text style={[typography.caption, { color: colors.warning, fontFamily: 'Poppins_700Bold', marginLeft: 6 }]}>MAX</Text>
               )}
             </View>
             <View style={s.controlBtns}>
@@ -618,13 +618,13 @@ export const Step6_ShopSelection = () => {
                 onPress={selectAll}
                 disabled={selected.size >= MAX_SHOPS}
               >
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}>Top {MAX_SHOPS}</Text>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold' }]}>Top {MAX_SHOPS}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.ctrlBtn, { borderColor: colors.border, borderRadius: RADIUS.sm }]}
                 onPress={clearAll}
               >
-                <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600' }]}>Clear</Text>
+                <Text style={[typography.caption, { color: colors.textSecondary, fontFamily: 'Poppins_600SemiBold' }]}>Clear</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -648,7 +648,7 @@ export const Step6_ShopSelection = () => {
               style={[s.retryBtn, { borderColor: colors.primary, borderRadius: RADIUS.sm }]}
               onPress={() => loadShops()}
             >
-              <Text style={[typography.body, { color: colors.primary, fontWeight: '700' }]}>Try Again</Text>
+              <Text style={[typography.body, { color: colors.primary, fontFamily: 'Poppins_700Bold' }]}>Try Again</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -708,7 +708,7 @@ export const Step6_ShopSelection = () => {
           {HOW_ITEMS.map(h => (
             <View key={h.text} style={s.howRow}>
               <View style={[s.howNum, { backgroundColor: colors.primarySoft, borderRadius: RADIUS.pill }]}>
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '800' }]}>{h.num}</Text>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_800ExtraBold' }]}>{h.num}</Text>
               </View>
               <Text style={[typography.body, { color: colors.textSecondary, flex: 1, lineHeight: 20 }]}>
                 {h.text}

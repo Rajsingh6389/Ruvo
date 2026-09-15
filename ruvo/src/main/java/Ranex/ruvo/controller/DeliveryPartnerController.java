@@ -131,4 +131,13 @@ public class DeliveryPartnerController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<?> getShopRiders(@PathVariable Long shopId) {
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        List<DeliveryPartner> shopRiders = deliveryPartnerRepository.findByShopId(shopId);
+        return ResponseEntity.ok(shopRiders);
+    }
 }

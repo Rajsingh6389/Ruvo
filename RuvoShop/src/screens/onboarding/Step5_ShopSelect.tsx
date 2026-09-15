@@ -104,13 +104,13 @@ export const Step5_ShopSelect = () => {
           {HOW_IT_WORKS.map((item) => (
             <View key={item.num} style={s.stepRow}>
               <View style={[s.stepNumBadge, { backgroundColor: colors.primary, borderRadius: RADIUS.pill }]}>
-                <Text style={[typography.caption, { color: colors.onPrimary, fontWeight: '800' }]}>{item.num}</Text>
+                <Text style={[typography.caption, { color: colors.onPrimary, fontFamily: 'Poppins_800ExtraBold' }]}>{item.num}</Text>
               </View>
               <View style={[s.stepIcon, { backgroundColor: colors.surfaceSunken, borderRadius: RADIUS.sm }]}>
                 <Ionicons name={item.icon} size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]}>{item.title}</Text>
+                <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]}>{item.title}</Text>
                 <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2, lineHeight: 16 }]}>{item.desc}</Text>
               </View>
             </View>

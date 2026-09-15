@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   label: {
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     textAlign: 'center',
   },
 });

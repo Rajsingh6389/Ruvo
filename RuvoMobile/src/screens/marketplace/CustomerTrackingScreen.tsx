@@ -69,49 +69,6 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
-const RUVO_FACTS = [
-  {
-    id: '1',
-    icon: 'flash-outline' as const,
-    title: 'RuVo Express Promise ⚡',
-    subtitle: '10 to 15 mins direct delivery straight from your closest neighborhood shopkeeper!',
-    badge: '10-15 MINS',
-    bg: '#FFF2EC',
-    border: '#FFE0D3',
-    iconBg: '#FF6B35',
-  },
-  {
-    id: '2',
-    icon: 'storefront-outline' as const,
-    title: 'Support Local Sellers 🏪',
-    subtitle: 'Every order directly empowers real shopkeepers in your own colony & city.',
-    badge: 'LOCAL FIRST',
-    bg: '#ECFDF5',
-    border: '#A7F3D0',
-    iconBg: '#059669',
-  },
-  {
-    id: '3',
-    icon: 'shield-checkmark-outline' as const,
-    title: 'Zero Surge Pricing Ever 🛡️',
-    subtitle: 'No rain fees or unexpected surge price hikes. Fair & honest delivery charges always.',
-    badge: 'FAIR PRICE',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-    iconBg: '#2563EB',
-  },
-  {
-    id: '4',
-    icon: 'leaf-outline' as const,
-    title: '100% Fresh Guaranteed 🌿',
-    subtitle: 'Fresh dairy, fruits, vegetables and essentials packed right before dispatch.',
-    badge: 'SUPER FRESH',
-    bg: '#FEF3C7',
-    border: '#FDE68A',
-    iconBg: '#D97706',
-  },
-];
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
   const navigation  = useNavigation<any>();
@@ -298,7 +255,7 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#FF6B35" />
-        <Text style={{ color: colors.textSecondary, marginTop: 12, fontWeight: '700' }}>Loading live tracking...</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 12, fontFamily: 'Poppins_700Bold' }}>Loading live tracking...</Text>
       </SafeAreaView>
     );
   }
@@ -307,9 +264,9 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
         <Ionicons name="alert-circle-outline" size={52} color="#EF4444" />
-        <Text style={{ color: colors.textPrimary, marginTop: 12, fontWeight: '800' }}>Order not found.</Text>
+        <Text style={{ color: colors.textPrimary, marginTop: 12, fontFamily: 'Poppins_800ExtraBold' }}>Order not found.</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={{ color: '#FFF', fontWeight: '800' }}>Go Back</Text>
+          <Text style={{ color: '#FFF', fontFamily: 'Poppins_800ExtraBold' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -330,528 +287,185 @@ export default function CustomerTrackingScreen() {
 
   const productImgUri = formatProductImageUrl(order.productImageUrl);
 
+  const formatETA = () => {
+    if (order.orderStatus === 'DELIVERED') return '✅ Delivered successfully';
+    if (isLive) return '🚴 Arriving in 10-15 min';
+    if (order.orderStatus === 'SHOP_ACCEPTED' || order.orderStatus === 'PREPARING' || order.orderStatus === 'READY') return '🧑‍🍳 Shop is preparing your order';
+    if (order.orderStatus === 'ORDER_PLACED' || order.orderStatus === 'SHOP_PENDING') return '🛍️ Order placed successfully';
+    if (order.orderStatus === 'CANCELLED' || isCancelled) return '❌ Order Cancelled';
+    return '🚀 Processing your order';
+  };
+
+  const formatSubtitle = () => {
+    if (order.orderStatus === 'DELIVERED') return 'Thank you for ordering with RuVo!';
+    if (isLive) return 'Your order is on the way';
+    if (isCancelled) return 'This order was cancelled and will not be delivered.';
+    return 'We will notify you when it ships';
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F9FAFB' }]} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 
-      {/* ── BLINKIT-STYLE HEADER BANNER ─────────────────────────────── */}
-      <View style={{ backgroundColor: '#FF6B35', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, elevation: 6 }} className="px-4 pt-3 pb-4 shadow-md">
-        <View className="flex-row items-center justify-between mb-2">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-            className="w-10 h-10 rounded-full items-center justify-center"
-          >
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <View className="items-center flex-1">
-            <Text style={{ color: '#FFFFFF' }} className="text-lg font-black">
-              {order.shopName || 'Live Tracking'}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.88)' }} className="text-xs font-semibold">
-              Order #{order.id} • {order.items?.length || order.quantity || 1} Item(s)
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleRefresh}
-            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-            className="w-10 h-10 rounded-full items-center justify-center"
-          >
-            <Ionicons name="refresh" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Live ETA Box */}
-        {!isCancelled && (
-          <View style={{ backgroundColor: '#FFFFFF', elevation: 4 }} className="flex-row items-center justify-between rounded-2xl p-3 mt-1 shadow-sm">
-            <View className="flex-1">
-              <View className="flex-row items-center gap-1.5 mb-0.5">
-                <Animated.View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', transform: [{ scale: pulseAnim }] }} />
-                <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }} className="uppercase">
-                  {isLive ? 'RIDER DISPATCHED' : order.orderStatus === 'DELIVERED' ? 'DELIVERED' : 'SHOP PREPARING'}
-                </Text>
-              </View>
-              <Text style={{ color: '#171A1F' }} className="text-base font-black">
-                {isLive ? 'Arriving in 10-15 mins' : order.orderStatus === 'DELIVERED' ? 'Order Delivered' : 'Preparing fresh items'}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setIsMapExpanded(!isMapExpanded)}
-              style={{ backgroundColor: '#FF6B35' }}
-              className="px-3.5 h-9 rounded-full flex-row items-center gap-1 shadow-sm"
-            >
-              <Ionicons name={isMapExpanded ? "contract" : "map-outline"} size={16} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
-                {isMapExpanded ? 'Minimize' : 'View Map'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {/* ── HEADER (Wireframe: [<] Track Order   Help) ───────────────────────── */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Track Order</Text>
+        <TouchableOpacity style={styles.helpBtn}>
+          <Text style={styles.helpBtnText}>Help</Text>
+        </TouchableOpacity>
       </View>
-
-      {/* Red Cancelled Banner */}
-      {isCancelled && (
-        <View style={styles.cancelBanner}>
-          <Ionicons name="close-circle" size={26} color="#FFF" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.cancelBannerTitle}>Order Cancelled</Text>
-            <Text style={styles.cancelBannerSub}>
-              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
-                ? 'Shop did not accept the order within 10 minutes.'
-                : order.orderStatus === 'SHOP_REJECTED'
-                ? 'The shopkeeper rejected this order.'
-                : order.orderStatus === 'CANCELLED_NO_PARTNER_FOUND'
-                ? 'No delivery partner could be assigned.'
-                : order.orderStatus === 'CANCELLED_BY_SHOP'
-                ? 'Cancelled by the shopkeeper.'
-                : 'This order has been cancelled.'}
-            </Text>
-          </View>
-        </View>
-      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FF6B35"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />
         }
       >
-        {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
-        <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
+        {/* ── STATUS BLOCK (Wireframe: Arriving in 12 min) ────────────────── */}
+        <View style={styles.statusBox}>
+          <Text style={styles.statusTitle}>{formatETA()}</Text>
+          <Text style={styles.statusSub}>{formatSubtitle()}</Text>
+        </View>
+
+        {/* ── LIVE MAP ───────────────────────────────────────────────────── */}
+        <View style={styles.mapContainer}>
           {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
             <MapView
               style={StyleSheet.absoluteFill}
               initialRegion={{ ...destination, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
             >
               {/* User Location Marker */}
-              <Marker coordinate={destination} title="Delivery Address" pinColor="#059669" />
+              <Marker coordinate={destination} title="Home">
+                <View style={[styles.markerBase, { backgroundColor: '#FF7A00' }]}>
+                  <Ionicons name="home" size={16} color="#FFF" />
+                </View>
+              </Marker>
 
-              {/* Shop Location Marker */}
-              {order.shopLatitude && order.shopLongitude && (
-                <Marker
-                  coordinate={{ latitude: order.shopLatitude, longitude: order.shopLongitude }}
-                  title={order.shopName || "Store"}
-                >
-                  <View style={[styles.partnerMarker, { backgroundColor: '#FF6B35' }]}>
-                    <Ionicons name="storefront" size={18} color="#FFF" />
+              {/* Shop Marker */}
+              {validDestLat !== shopLat && (
+                <Marker coordinate={{ latitude: shopLat, longitude: shopLng }} title="Store">
+                  <View style={[styles.markerBase, { backgroundColor: '#111827' }]}>
+                    <Ionicons name="storefront" size={16} color="#FFF" />
                   </View>
                 </Marker>
               )}
 
-              {/* Delivery Partner Marker */}
+              {/* Rider Marker */}
               {partnerLocation && (
-                <Marker coordinate={partnerLocation} title="Delivery Partner">
-                  <View style={styles.partnerMarker}>
-                    <Ionicons name="bicycle" size={20} color="#FFF" />
+                <Marker coordinate={partnerLocation} title="Rider">
+                  <View style={[styles.markerBase, { backgroundColor: '#3478C8' }]}>
+                    <Ionicons name="bicycle" size={18} color="#FFF" />
                   </View>
                 </Marker>
               )}
 
-              {/* Polyline Route */}
+              {/* Route */}
               {partnerLocation ? (
-                <Polyline
-                  coordinates={[partnerLocation, destination]}
-                  strokeColor="#059669"
-                  strokeWidth={4}
-                  lineDashPattern={[6, 4]}
-                />
-              ) : (order.shopLatitude && order.shopLongitude) ? (
-                <Polyline
-                  coordinates={[
-                    { latitude: order.shopLatitude, longitude: order.shopLongitude },
-                    destination,
-                  ]}
-                  strokeColor="#FF6B35"
-                  strokeWidth={3.5}
-                  lineDashPattern={[8, 5]}
-                />
+                <Polyline coordinates={[partnerLocation, destination]} strokeColor="#3478C8" strokeWidth={4} />
+              ) : (shopLat && shopLng) ? (
+                <Polyline coordinates={[{ latitude: shopLat, longitude: shopLng }, destination]} strokeColor="#D1D5DB" strokeWidth={4} lineDashPattern={[6, 4]} />
               ) : null}
             </MapView>
           ) : (
-            <View style={[styles.mapPlaceholder, { backgroundColor: colors.card }]}>
-              <Ionicons name="map" size={48} color={isCancelled ? '#FCA5A5' : '#D1D5DB'} />
-              <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24, fontWeight: '700' }}>
-                {isCancelled
-                  ? 'Order was cancelled. No delivery in progress.'
-                  : 'Order delivered successfully.'}
+            <View style={styles.mapPlaceholder}>
+              <Ionicons name={isCancelled ? "close-circle" : "checkmark-circle"} size={48} color={isCancelled ? '#F87171' : '#34D399'} />
+              <Text style={styles.mapPlaceholderText}>
+                {isCancelled ? 'Delivery Cancelled' : 'Delivery Completed'}
               </Text>
             </View>
           )}
 
-          {/* Floating Map Toggle Button */}
-          <TouchableOpacity
-            onPress={() => setIsMapExpanded(!isMapExpanded)}
-            style={{ backgroundColor: 'rgba(23, 26, 31, 0.85)' }}
-            className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-md"
-          >
-            <Ionicons name={isMapExpanded ? "contract" : "expand"} size={14} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-              {isMapExpanded ? 'Minimize Map' : 'Tap to Expand'}
-            </Text>
-          </TouchableOpacity>
-
-          {isLive && (
-            <Animated.View style={[styles.liveBadge, { transform: [{ scale: pulseAnim }] }]}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </Animated.View>
-          )}
-        </View>
-
-        {/* ── RuVo DID-YOU-KNOW / VALUE PROPOSITION CAROUSEL ─────────── */}
-        {!isMapExpanded && (
-          <View className="mt-4 px-4">
-            <View className="flex-row items-center justify-between mb-2 px-1">
-              <Text style={{ color: colors.textPrimary }} className="text-xs font-black uppercase tracking-wider">
-                Why RuVo Local? ⚡
-              </Text>
-              <Text style={{ color: '#FF6B35' }} className="text-[11px] font-bold">
-                Local Stores • Zero Surge
-              </Text>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12, paddingRight: 8 }}
-            >
-              {RUVO_FACTS.map((fact) => (
-                <View
-                  key={fact.id}
-                  style={{
-                    backgroundColor: fact.bg,
-                    borderColor: fact.border,
-                    borderWidth: 1.5,
-                    borderRadius: 20,
-                    padding: 14,
-                    width: 260,
-                    elevation: 1,
-                  }}
-                >
-                  <View className="flex-row items-center justify-between mb-2">
-                    <View
-                      style={{ backgroundColor: fact.iconBg }}
-                      className="w-8 h-8 rounded-full items-center justify-center shadow-sm"
-                    >
-                      <Ionicons name={fact.icon} size={18} color="#FFFFFF" />
-                    </View>
-                    <View style={{ backgroundColor: fact.iconBg }} className="px-2 py-0.5 rounded-full">
-                      <Text className="text-[9px] font-black text-white">{fact.badge}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={{ color: '#171A1F' }} className="text-sm font-black mb-1">
-                    {fact.title}
-                  </Text>
-                  <Text style={{ color: '#555149' }} className="text-xs font-semibold leading-snug">
-                    {fact.subtitle}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Product & Shop Details Card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-          {/* Shop Info Header with Real Logo */}
-          {order.shopName ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 0.5, borderBottomColor: colors.border }}>
-              {/* Shop Logo */}
-              {formatProductImageUrl(order.shopLogoUrl) ? (
-                <Image
-                  source={{ uri: formatProductImageUrl(order.shopLogoUrl)! }}
-                  style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={{
-                  width: 48, height: 48, borderRadius: 12,
-                  backgroundColor: colors.primarySoft,
-                  alignItems: 'center', justifyContent: 'center',
-                  borderWidth: 0.5, borderColor: colors.border,
-                }}>
-                  <Text style={{ fontSize: 18, fontWeight: '900', color: colors.primary }}>
-                    {(order.shopName ?? '?').charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800' }}>
-                  {order.shopName}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                  🛒 RuVo Partner Store
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>
-            Order Items ({order.items && order.items.length > 0 ? order.items.length : order.quantity || 1})
-          </Text>
-
-          {order.items && order.items.length > 0 ? (
-            order.items.map((item, index) => {
-              const itemImg = formatProductImageUrl(item.productImageUrl) || productImgUri;
-              const itemPrice = item.price ?? Math.round(order.totalAmount / order.items!.length);
-
-              return (
-                <View key={item.id || item.productId || index} style={[styles.productRow, { marginBottom: index === order.items!.length - 1 ? 0 : 12 }]}>
-                  {itemImg ? (
-                    <Image source={{ uri: itemImg }} style={styles.productImg} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
-                      <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
-                      {item.productName}
-                    </Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                      ₹{itemPrice} × {item.quantity}
-                    </Text>
-                  </View>
-                  <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
-                    ₹{itemPrice * item.quantity}
-                  </Text>
-                </View>
-              );
-            })
-          ) : (
-            <View style={styles.productRow}>
-              {productImgUri ? (
-                <Image source={{ uri: productImgUri }} style={styles.productImg} resizeMode="cover" />
-              ) : (
-                <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
-                  <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
-                  {order.productName || 'Your Order'}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                  Qty: {order.quantity}
-                </Text>
-              </View>
-              <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
-                ₹{order.subtotal || order.totalAmount}
-              </Text>
-            </View>
-          )}
-
-          <View style={[styles.billingBox, { borderTopColor: colors.border, padding: spacing.cardPad }]}>
-            {!!order.subtotal && (
-              <View style={styles.billingRow}>
-                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Item Total</Text>
-                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.subtotal}</Text>
-              </View>
-            )}
-            {!!order.deliveryFee && (
-              <View style={styles.billingRow}>
-                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Delivery Fee</Text>
-                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.deliveryFee}</Text>
-              </View>
-            )}
-            {!!order.platformFee && (
-              <View style={styles.billingRow}>
-                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
-                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.platformFee}</Text>
-              </View>
-            )}
-            <View style={[styles.billingRow, { marginTop: 6 }]}>
-              <Text style={[typography.bodyStrong, styles.billingLabel, { color: colors.textPrimary, fontWeight: '700' }]}>Grand Total</Text>
-              <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.primary, fontWeight: '800' }]}>₹{order.totalAmount}</Text>
-            </View>
+          <View style={styles.liveMapOverlay}>
+            <Text style={styles.liveMapLabel}>LIVE MAP</Text>
           </View>
         </View>
 
-        {/* Delivery Verification OTP Card - Only shown when OUT_FOR_DELIVERY */}
-        {!isCancelled && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'PICKED_UP') && (
-          <View style={styles.otpBox}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="key-outline" size={18} color="#171A1F" />
-              <Text style={styles.otpLabel}>Delivery Verification OTP</Text>
-            </View>
-            <Text style={styles.otpCode}>
-              {order.deliveryOtpHash || '...'}
-            </Text>
-            <Text style={styles.otpSub}>
-              Give this {order.deliveryOtpHash?.length || 4}-digit OTP code to your delivery partner when receiving your order.
-            </Text>
-          </View>
-        )}
-
-        {/* Delivered & Verified Badge */}
-        {order.orderStatus === 'DELIVERED' && (
-          <View style={styles.deliveredBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#18A957" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.deliveredTitle}>Order Delivered & Verified</Text>
-              <Text style={styles.deliveredSub}>OTP verified. Thank you for ordering with RuVo!</Text>
-            </View>
-          </View>
-        )}
-
-        {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
+        {/* ── RIDER DETAILS (Wireframe: Rider is nearby) ──────────────────── */}
         {partnerInfo && (
-          <View style={[
-            styles.partnerCard,
-            { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}>
-            {/* Avatar */}
-            <View style={styles.partnerAvatar}>
-              <Text style={styles.partnerAvatarLetter}>
-                {(partnerInfo.name ?? '?').charAt(0).toUpperCase()}
-              </Text>
+          <View style={styles.riderBox}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }] }]} />
+              <Text style={styles.riderStatusLabel}>Rider is nearby</Text>
             </View>
-
-            <View style={{ flex: 1, gap: 4 }}>
-              {/* Name + badge row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={[styles.partnerName, { color: colors.textPrimary }]}>
-                  {partnerInfo.name}
-                </Text>
-                <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
-                  <Text style={{ color: '#1D4ED8', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>RIDER</Text>
-                </View>
+            <View style={styles.riderInfoRow}>
+              <View style={styles.riderAvatar}>
+                <Ionicons name="person" size={24} color="#FFF" />
               </View>
-
-              {/* Phone */}
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📞 {partnerInfo.phone}</Text>
-
-              {/* Live tracking indicator */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                <Animated.View style={[
-                  styles.livePulseDot,
-                  { transform: [{ scale: pulseAnim }] },
-                ]} />
-                <Text style={{ color: '#16A34A', fontSize: 12, fontWeight: '700' }}>Live Tracking Active</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.riderName}>{partnerInfo.name} • ★ 4.8</Text>
+                <Text style={styles.riderPhone}>{partnerInfo.phone}</Text>
               </View>
-            </View>
-
-            {/* Action buttons */}
-            <View style={{ gap: 8 }}>
-              <TouchableOpacity
-                style={[styles.partnerActionBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
-                onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
-              >
-                <Ionicons name="call" size={18} color="#16A34A" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.partnerActionBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
-                onPress={() => Linking.openURL(`sms:${partnerInfo.phone}`)}
-              >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#2563EB" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={styles.riderActionBtn} onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}>
+                  <Ionicons name="call" size={20} color="#111827" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
 
-        {/* Animated Timeline or Red Cancel Card */}
-        {!isCancelled ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-            <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Delivery Progress</Text>
-            {TIMELINE_STEPS.map((step, i) => {
-              const active = isStepActive(step.key, order.orderStatus || '');
-              const isLast = i === TIMELINE_STEPS.length - 1;
-              const nextActive = !isLast && isStepActive(TIMELINE_STEPS[i + 1].key, order.orderStatus || '');
-
-              const scale   = stepAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] });
-              const opacity = stepAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
-
-              return (
-                <View key={step.key} style={styles.timelineRow}>
-                  <View style={styles.timelineDotCol}>
-                    <Animated.View
-                      style={[
-                        styles.timelineDot,
-                        { backgroundColor: active ? '#171A1F' : colors.border, transform: [{ scale }], opacity },
-                      ]}
-                    >
-                      {active && <Ionicons name="checkmark" size={10} color="#F4B400" />}
-                    </Animated.View>
-                    {!isLast && (
-                      <Animated.View
-                        style={[styles.timelineLine, { backgroundColor: nextActive ? '#171A1F' : colors.border }]}
-                      />
-                    )}
-                  </View>
-                  <Animated.View style={{ flex: 1, paddingBottom: isLast ? 0 : 18, opacity }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name={step.icon} size={16} color={active ? '#171A1F' : colors.textSecondary} />
-                      <Text style={[typography.bodyStrong, styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '800' : '500' }]}>
-                        {step.label}
-                      </Text>
-                      {i === 1 && active && (order.orderStatus === 'DELIVERY_ASSIGNMENT' || order.orderStatus === 'DELIVERY_ASSIGNED') && (
-                        <View style={styles.findingBadge}>
-                          <Text style={styles.findingText}>Finding Partner</Text>
-                        </View>
-                      )}
-                    </View>
-                  </Animated.View>
-                </View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.cancelCard}>
-            <Ionicons name="close-circle" size={40} color="#D94A4A" />
-            <Text style={styles.cancelCardTitle}>
-              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
-                ? 'Order Timed Out'
-                : 'Order Not Accepted'}
-            </Text>
-            <Text style={styles.cancelCardSub}>
-              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
-                ? 'The shopkeeper did not accept your order in time. Your order has been automatically cancelled.'
-                : order.orderStatus === 'SHOP_REJECTED'
-                ? 'The shopkeeper rejected this order. Any payment made will be refunded.'
-                : order.orderStatus === 'CANCELLED_NO_PARTNER_FOUND'
-                ? 'We could not find a delivery partner in time. Order cancelled.'
-                : order.orderStatus === 'CANCELLED_BY_SHOP'
-                ? 'The shopkeeper cancelled this order.'
-                : order.orderStatus === 'CANCELLED_BY_USER'
-                ? 'You cancelled this order.'
-                : 'This order was cancelled.'}
-            </Text>
+        {/* ── OTP VERIFICATION ───────────────────────────────────────────── */}
+        {order.orderStatus === 'OUT_FOR_DELIVERY' && order.deliveryOtpHash && (
+          <View style={styles.otpBox}>
+            <Text style={styles.otpPrefix}>Share OTP to verify delivery</Text>
+            <Text style={styles.otpHash}>{order.deliveryOtpHash}</Text>
           </View>
         )}
 
-        {/* Payment Method */}
-        <View style={[styles.paymentRow, { borderColor: colors.border, padding: spacing.cardPad }]}>
-          <Ionicons
-            name={order.paymentMethod === 'ONLINE' ? 'card-outline' : 'cash-outline'}
-            size={18}
-            color={colors.textSecondary}
-          />
-          <Text style={[typography.body, styles.paymentText, { color: colors.textSecondary }]}>
-            {order.paymentMethod === 'ONLINE' ? 'Paid Online' : 'Cash on Delivery'}
-          </Text>
+        {/* ── PROMO / AD BOX (Wireframe: SPECIAL FOR YOU) ────────────────── */}
+        <View style={styles.promoBox}>
+          <Text style={styles.promoBoxTitle}>🎁 SPECIAL FOR YOU</Text>
+          <View style={styles.promoBoxInner}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.promoTextMain}>10% OFF next order</Text>
+              <Text style={styles.promoTextSub}>Use RUVO10</Text>
+            </View>
+            <TouchableOpacity style={styles.promoBtn} onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.promoBtnText}>Order</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Customer Cancel Order Button (Allowed if not picked up yet) */}
-        {!isCancelled &&
-         order.orderStatus !== 'PICKED_UP' &&
-         order.orderStatus !== 'OUT_FOR_DELIVERY' &&
-         order.orderStatus !== 'DELIVERED' && (
-          <TouchableOpacity
-            style={[styles.cancelBtn, { backgroundColor: '#FDECEC', borderColor: '#F8B4B4', borderRadius: radius.button }, shadows.sm]}
-            onPress={handleCancelOrder}
-          >
-            <Text style={[typography.button, styles.cancelBtnText, { color: '#D94A4A' }]}>Cancel Order</Text>
-          </TouchableOpacity>
-        )}
+        {/* ── BILL DETAILS (Wireframe: Your Order) ────────────────────────── */}
+        <View style={styles.billBox}>
+          <Text style={styles.billTitle}>Your Order</Text>
+          
+          <View style={styles.billItemsWrapper}>
+            {order.items && order.items.length > 0 ? (
+              order.items.map((item, index) => {
+                const price = item.price ?? Math.round(order.totalAmount / order.items!.length);
+                return (
+                  <View key={item.id || index} style={styles.billItemRow}>
+                    <Text style={styles.billItemName} numberOfLines={1}>{item.quantity} × {item.productName}</Text>
+                    <Text style={styles.billItemPrice}>₹{price * item.quantity}</Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.billItemRow}>
+                <Text style={styles.billItemName} numberOfLines={1}>{order.quantity} × {order.productName || 'Order Items'}</Text>
+                <Text style={styles.billItemPrice}>₹{order.subtotal || order.totalAmount}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.billTotalRow}>
+            <Text style={styles.billTotalTitle}>Total</Text>
+            <Text style={styles.billTotalValue}>₹{order.totalAmount}</Text>
+          </View>
+
+          {/* Cancel Logic */}
+          {!isCancelled && order.orderStatus !== 'PICKED_UP' && order.orderStatus !== 'OUT_FOR_DELIVERY' && order.orderStatus !== 'DELIVERED' && (
+            <TouchableOpacity style={styles.cancelLink} onPress={handleCancelOrder} disabled={cancelling}>
+              <Text style={styles.cancelLinkText}>{cancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -859,6 +473,123 @@ export default function CustomerTrackingScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  container: { flex: 1 },
+  loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  retryBtn: { marginTop: 16, backgroundColor: '#111827', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    zIndex: 10,
+  },
+  backBtn: { width: 40, height: 40, justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#111827', textAlign: 'center', marginRight: 0 },
+  helpBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#F3F4F6', borderRadius: 20 },
+  helpBtnText: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#111827' },
+
+  statusBox: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  statusTitle: { fontSize: 22, fontFamily: 'Poppins_900Black', color: '#111827', marginBottom: 4 },
+  statusSub: { fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: '#6B7280' },
+
+  mapContainer: {
+    height: 250,
+    width: '100%',
+    backgroundColor: '#E5E7EB',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  markerBase: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF', elevation: 4 },
+  mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F3F4F6' },
+  mapPlaceholderText: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#6B7280', marginTop: 12 },
+  liveMapOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  liveMapLabel: { fontSize: 10, fontFamily: 'Poppins_800ExtraBold', color: '#374151', letterSpacing: 1 },
+
+  riderBox: {
+    margin: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 3,
+  },
+  pulseDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' },
+  riderStatusLabel: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#059669' },
+  riderInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
+  riderAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
+  riderName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  riderPhone: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#6B7280', marginTop: 2 },
+  riderActionBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+
+  otpBox: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#FEF9C3',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FEF08A',
+    alignItems: 'center',
+  },
+  otpPrefix: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#B45309', marginBottom: 4 },
+  otpHash: { fontSize: 28, fontFamily: 'Poppins_900Black', color: '#D97706', letterSpacing: 4 },
+
+  promoBox: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    padding: 16,
+  },
+  promoBoxTitle: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: '#FF7A00', letterSpacing: 0.5, marginBottom: 12 },
+  promoBoxInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF7ED', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FFEDD5' },
+  promoTextMain: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#9A3412', marginBottom: 2 },
+  promoTextSub: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#C2410C' },
+  promoBtn: { backgroundColor: '#FF7A00', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  promoBtnText: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
+
+  billBox: {
+    marginHorizontal: 16,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  billTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#111827', borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12, marginBottom: 16 },
+  billItemsWrapper: { gap: 12, marginBottom: 16 },
+  billItemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  billItemName: { fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: '#4B5563', flex: 1, paddingRight: 16 },
+  billItemPrice: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  billTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 16 },
+  billTotalTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  billTotalValue: { fontSize: 18, fontFamily: 'Poppins_900Black', color: '#111827' },
+
+  cancelLink: { alignSelf: 'center', marginTop: 24, paddingVertical: 8 },
+  cancelLinkText: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#EF4444', textDecorationLine: 'underline' },
+});
   container: { flex: 1 },
   loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
 
@@ -879,7 +610,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backBtn: { padding: 8, marginRight: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', flex: 1 },
+  headerTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', flex: 1 },
 
   cancelBanner: {
     backgroundColor: '#EF4444',
@@ -889,7 +620,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  cancelBannerTitle: { color: '#FFF', fontWeight: '800', fontSize: 15 },
+  cancelBannerTitle: { color: '#FFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 15 },
   cancelBannerSub: { color: '#FEE2E2', fontSize: 12, marginTop: 2 },
 
   mapContainer: { height: 220, backgroundColor: '#F1F5F9' },
@@ -914,7 +645,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFF' },
-  liveText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
+  liveText: { color: '#FFF', fontSize: 11, fontFamily: 'Poppins_800ExtraBold' },
 
   card: {
     marginHorizontal: 16,
@@ -924,13 +655,13 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 1,
   },
-  cardTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12 },
+  cardTitle: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12 },
 
   productRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   productImg: { width: 64, height: 64, borderRadius: 10 },
   productImgBox: { width: 64, height: 64, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  productName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
-  productPrice: { fontSize: 17, fontWeight: '800' },
+  productName: { fontSize: 15, fontFamily: 'Poppins_700Bold', flexShrink: 1 },
+  productPrice: { fontSize: 17, fontFamily: 'Poppins_800ExtraBold' },
   billingBox: { marginTop: 14, borderTopWidth: 1, paddingTop: 12, gap: 4 },
   billingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   billingLabel: { fontSize: 13 },
@@ -945,8 +676,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  otpLabel: { fontSize: 13, color: '#92400E', fontWeight: '700', marginTop: 4 },
-  otpCode: { fontSize: 34, fontWeight: '900', color: '#D97706', letterSpacing: 10 },
+  otpLabel: { fontSize: 13, color: '#92400E', fontFamily: 'Poppins_700Bold', marginTop: 4 },
+  otpCode: { fontSize: 34, fontFamily: 'Poppins_800ExtraBold', color: '#D97706', letterSpacing: 10 },
   otpSub: { fontSize: 12, color: '#B45309', textAlign: 'center' },
 
   partnerCard: {
@@ -964,7 +695,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1D4ED8',
     alignItems: 'center', justifyContent: 'center',
   },
-  partnerAvatarLetter: { fontSize: 22, fontWeight: '900', color: '#FFF' },
+  partnerAvatarLetter: { fontSize: 22, fontFamily: 'Poppins_800ExtraBold', color: '#FFF' },
   livePulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' },
   partnerActionBtn: {
     width: 40, height: 40, borderRadius: 20,
@@ -972,7 +703,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
   },
   partnerIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center' },
-  partnerName: { fontSize: 15, fontWeight: '800' },
+  partnerName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold' },
   partnerPhone: { fontSize: 13, marginTop: 2 },
   callBtn: {
     width: 40, height: 40, borderRadius: 20,
@@ -989,7 +720,7 @@ const styles = StyleSheet.create({
   timelineLine: { width: 2, flex: 1, marginTop: 4, borderRadius: 2 },
   timelineLabel: { fontSize: 15, marginTop: 1 },
   findingBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  findingText: { color: '#D97706', fontSize: 10, fontWeight: '700' },
+  findingText: { color: '#D97706', fontSize: 10, fontFamily: 'Poppins_700Bold' },
 
   cancelCard: {
     marginHorizontal: 16,
@@ -1002,7 +733,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  cancelCardTitle: { fontSize: 17, fontWeight: '800', color: '#EF4444' },
+  cancelCardTitle: { fontSize: 17, fontFamily: 'Poppins_800ExtraBold', color: '#EF4444' },
   cancelCardSub: { fontSize: 13, color: '#EF4444', textAlign: 'center', opacity: 0.85 },
 
   paymentRow: {
@@ -1015,7 +746,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderRadius: 12,
   },
-  paymentText: { fontSize: 13, fontWeight: '600' },
+  paymentText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold' },
 
   deliveredBox: {
     backgroundColor: '#ECFDF5',
@@ -1029,7 +760,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#A7F3D0',
   },
-  deliveredTitle: { fontSize: 15, fontWeight: '800', color: '#065F46' },
+  deliveredTitle: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#065F46' },
   deliveredSub: { fontSize: 12, color: '#047857', marginTop: 2 },
 
   cancelBtn: {
@@ -1049,6 +780,6 @@ const styles = StyleSheet.create({
   cancelBtnText: {
     color: '#EF4444',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
 });

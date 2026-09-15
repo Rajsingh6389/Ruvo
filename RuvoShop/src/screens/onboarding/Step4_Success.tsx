@@ -177,7 +177,7 @@ export const Step4_Success = () => {
               )}
             </Animated.View>
 
-            <Text style={{ fontSize: 26, fontWeight: '800', color: '#231C10', textAlign: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 26, fontFamily: 'Poppins_800ExtraBold', color: '#231C10', textAlign: 'center', marginBottom: 8 }}>
               {statusTitle}
             </Text>
             <Text style={{ fontSize: 15, color: '#6B5E52', textAlign: 'center', lineHeight: 22, maxWidth: 300 }}>
@@ -192,7 +192,7 @@ export const Step4_Success = () => {
             shadowColor: '#2E2313', shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
           }}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: '#A79E92', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#A79E92', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>
               Registration Summary
             </Text>
             {STEPS_SUMMARY.map((step, idx) => {
@@ -207,9 +207,9 @@ export const Step4_Success = () => {
                   }}>
                     <Ionicons name={stepDone ? 'checkmark' : 'time'} size={16} color={stepDone ? '#A07800' : '#D97706'} />
                   </View>
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#231C10' }}>{step.label}</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: '#231C10' }}>{step.label}</Text>
                   {isLast && !isApproved && checking && (
-                    <Text style={{ fontSize: 11, color: '#D97706', fontWeight: '600' }}>Checking…</Text>
+                    <Text style={{ fontSize: 11, color: '#D97706', fontFamily: 'Poppins_600SemiBold' }}>Checking…</Text>
                   )}
                 </View>
               );
@@ -228,7 +228,7 @@ export const Step4_Success = () => {
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, marginBottom: 8 }}
             >
               <Ionicons name="refresh" size={16} color="#A07800" />
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#A07800' }}>
+              <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#A07800' }}>
                 {checking ? 'Checking…' : 'Check approval status'}
               </Text>
             </TouchableOpacity>
@@ -248,7 +248,7 @@ export const Step4_Success = () => {
                 paddingVertical: 14, alignItems: 'center', marginTop: 8,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#6B5E52' }}>
+              <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#6B5E52' }}>
                 {requestingReview ? 'Requesting…' : 'Request Admin Review Again'}
               </Text>
             </TouchableOpacity>
@@ -259,7 +259,7 @@ export const Step4_Success = () => {
               onPress={editAndSubmitAgain}
               style={{ paddingVertical: 14, alignItems: 'center', marginTop: 8 }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#A07800' }}>
+              <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#A07800' }}>
                 Edit & Submit Again
               </Text>
             </TouchableOpacity>

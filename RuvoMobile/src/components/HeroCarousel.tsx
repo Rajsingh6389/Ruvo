@@ -192,7 +192,7 @@ export const HeroCarousel = ({
                         typography.overline,
                         {
                           color: isGoldBadge ? '#173F35' : colors.onAccent,
-                          fontWeight: '800',
+                          fontFamily: 'Poppins_800ExtraBold',
                           letterSpacing: 0.5,
                         },
                       ]}
@@ -330,10 +330,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   subTitle: {
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   body: {
     color: 'rgba(255,255,255,0.88)',
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   ctaText: {
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   dots: {
     position: 'absolute',

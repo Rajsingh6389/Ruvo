@@ -73,12 +73,12 @@ const styles = StyleSheet.create({
   text: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   retry: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     textDecorationLine: 'underline',
   },
 });

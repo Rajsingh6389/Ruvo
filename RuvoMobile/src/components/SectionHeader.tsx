@@ -125,6 +125,6 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   actionText: {
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
 });

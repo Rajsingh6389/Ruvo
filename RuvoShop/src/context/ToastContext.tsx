@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   toastText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     flex: 1,
   },
 });

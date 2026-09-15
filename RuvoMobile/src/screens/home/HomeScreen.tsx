@@ -106,7 +106,7 @@ export const HomeScreen = () => {
       for (const s of (result || []).slice(0, 6)) {
         const prods = await getProductsByShop(s.id);
         if (Array.isArray(prods)) {
-          allProducts.push(...prods.filter(p => p.isAvailable !== false));
+          allProducts.push(...prods.filter(p => p.isAvailable !== false).map(p => ({ ...p, shopName: s.name })));
         }
       }
       setNearbyProducts(allProducts.slice(0, 10));
@@ -230,7 +230,7 @@ export const HomeScreen = () => {
                 style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Food
             </Text>
           </Pressable>
@@ -266,10 +266,10 @@ export const HomeScreen = () => {
                 style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
               <View style={{ position: 'absolute', bottom: -6, backgroundColor: '#22C55E', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 8 }}>EXPRESS</Text>
+                <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 8 }}>EXPRESS</Text>
               </View>
             </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
               Groceries
             </Text>
           </Pressable>
@@ -305,7 +305,7 @@ export const HomeScreen = () => {
                 style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Accessories
             </Text>
           </Pressable>
@@ -341,7 +341,7 @@ export const HomeScreen = () => {
                 style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
               />
             </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
+            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
               Dineout
             </Text>
           </Pressable>
@@ -396,10 +396,10 @@ export const HomeScreen = () => {
           {/* Header Inside White Box */}
           <View className="flex-row items-center justify-between mb-3.5 px-1">
             <View>
-              <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '900' }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 18, fontFamily: 'Poppins_800ExtraBold' }}>
                 Shop by Category
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '600', marginTop: 1 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontFamily: 'Poppins_600SemiBold', marginTop: 1 }}>
                 Explore top categories near you
               </Text>
             </View>
@@ -409,7 +409,7 @@ export const HomeScreen = () => {
               style={{ backgroundColor: '#FF6B35' }}
               className="flex-row items-center gap-1 px-3.5 py-1.5 rounded-full shadow-sm"
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>View All</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'Poppins_800ExtraBold' }}>View All</Text>
               <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
             </Pressable>
           </View>
@@ -453,7 +453,7 @@ export const HomeScreen = () => {
                   </View>
                   <Text 
                     numberOfLines={1} 
-                    style={{ color: colors.textPrimary, fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}
+                    style={{ color: colors.textPrimary, fontFamily: 'Poppins_800ExtraBold', fontSize: 11, marginTop: 8, textAlign: 'center' }}
                   >
                     {cat.label}
                   </Text>
@@ -591,21 +591,21 @@ export const HomeScreen = () => {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  <Text style={{ color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     Active Order #{activeOrder.id}
                   </Text>
                   <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 10 }}>
-                    <Text style={{ color: '#FF7A00', fontWeight: '900', fontSize: 9 }}>LIVE</Text>
+                    <Text style={{ color: '#FF7A00', fontFamily: 'Poppins_800ExtraBold', fontSize: 9 }}>LIVE</Text>
                   </View>
                 </View>
-                <Text style={{ color: 'rgba(255,255,255,0.92)', fontWeight: '700', fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+                <Text style={{ color: 'rgba(255,255,255,0.92)', fontFamily: 'Poppins_700Bold', fontSize: 12, marginTop: 1 }} numberOfLines={1}>
                   {activeOrder.orderStatus?.replace(/_/g, ' ') || 'Order in progress'} • ₹{activeOrder.totalAmount}
                 </Text>
               </View>
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14 }}>
-              <Text style={{ color: '#FF7A00', fontWeight: '900', fontSize: 12 }}>Track</Text>
+              <Text style={{ color: '#FF7A00', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 }}>Track</Text>
               <Ionicons name="chevron-forward" size={14} color="#FF7A00" />
             </View>
           </Pressable>

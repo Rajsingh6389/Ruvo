@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
 
   title: {
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 0.5,
     marginBottom: 14,
   },
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#6C63FF',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
 
   button: {

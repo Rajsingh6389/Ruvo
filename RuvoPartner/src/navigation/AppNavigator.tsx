@@ -92,7 +92,7 @@ const TabNavigator = () => {
         tabBarItemStyle: {
           paddingHorizontal: 0,
         },
-        tabBarLabelStyle: { fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 10.5, fontFamily: 'Poppins_700Bold', marginTop: 2 },
         tabBarIcon: ({ focused, color }) => {
           const icons: Record<string, [string, string]> = {
             Home:          ['home',          'home-outline'],

@@ -306,7 +306,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="location" size={18} color="#FF6B35" />
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#FF6B35', flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#FF6B35', flex: 1 }}>
                     Use Current Location (Pin on Map)
                   </Text>
                   {isLoading && <ActivityIndicator size="small" color="#FF6B35" />}
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
   },
   searchBar: {
@@ -601,13 +601,13 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#333333',
     lineHeight: 16,
   },
   sectionHeader: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#77736B',
     letterSpacing: 0.8,
     marginBottom: 12,
@@ -639,13 +639,13 @@ const styles = StyleSheet.create({
   },
   distBadge: {
     fontSize: 9,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#77736B',
     marginTop: 1,
   },
   addressName: {
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     flexShrink: 1,
   },
@@ -657,7 +657,7 @@ const styles = StyleSheet.create({
   },
   selectedBadgeText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#059669',
   },
   addressFullText: {
@@ -681,26 +681,26 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
   },
   cancelText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#FF5722',
   },
   errorText: {
     color: '#DC2626',
     fontSize: 12,
     marginBottom: 10,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   field: {
     marginBottom: 12,
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#374151',
     marginBottom: 4,
   },
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
   confirmBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
 
   // Map Modal Styles
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   },
   currentLocPillText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#171A1F',
   },
   mapBottomCard: {
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
   },
   mapSubtitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#77736B',
     marginBottom: 12,
   },
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   },
   mapLocTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     flex: 1,
   },
@@ -842,7 +842,7 @@ const styles = StyleSheet.create({
   confirmProceedText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
 });
 

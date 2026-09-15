@@ -166,6 +166,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {product.variant}
             </Text>
           )}
+          {(product as any).shopName && (
+            <View className="flex-row items-center mt-xs">
+               <Ionicons name="storefront-outline" size={10} color="#FF6B35" />
+               <Text style={{ color: '#FF6B35' }} className="text-[10px] font-bold ml-1" numberOfLines={1}>
+                 {(product as any).shopName}
+               </Text>
+            </View>
+          )}
         </View>
 
         {/* Rating */}
@@ -276,7 +284,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#231C10',
   },
   flyDot: {

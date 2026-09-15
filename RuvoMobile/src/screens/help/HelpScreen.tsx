@@ -263,11 +263,11 @@ const styles = StyleSheet.create({
     paddingVertical: sh(12),
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: sf(18), fontWeight: '700' },
+  headerTitle: { fontSize: sf(18), fontFamily: 'Poppins_700Bold' },
   content: { flex: 1 },
   contentContainer: { padding: sw(16), paddingBottom: sh(32) },
   section: { marginBottom: sh(24) },
-  sectionTitle: { fontSize: sf(16), fontWeight: '600', marginBottom: sh(12) },
+  sectionTitle: { fontSize: sf(16), fontFamily: 'Poppins_600SemiBold', marginBottom: sh(12) },
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -294,13 +294,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryLabel: { fontSize: sf(13), fontWeight: '800', textAlign: 'center' },
+  categoryLabel: { fontSize: sf(13), fontFamily: 'Poppins_800ExtraBold', textAlign: 'center' },
   input: {
     borderWidth: 0.5,
     borderRadius: 16,
     padding: sw(16),
     fontSize: sf(15),
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   textArea: {
     borderWidth: 0.5,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     alignItems: 'center',
   },
-  priorityLabel: { fontSize: sf(13), fontWeight: '600' },
+  priorityLabel: { fontSize: sf(13), fontFamily: 'Poppins_600SemiBold' },
   submitButton: {
     flexDirection: 'row',
     padding: sw(16),
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     gap: sw(8),
     marginBottom: sh(20),
   },
-  submitButtonText: { color: '#FFFFFF', fontSize: sf(16), fontWeight: '700' },
+  submitButtonText: { color: '#FFFFFF', fontSize: sf(16), fontFamily: 'Poppins_700Bold' },
   infoCard: {
     flexDirection: 'row',
     padding: sw(14),

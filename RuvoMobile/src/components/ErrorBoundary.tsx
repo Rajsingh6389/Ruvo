@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#1A1A1A',
     marginBottom: 8,
     textAlign: 'center',
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   debugLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     color: '#CC0000',
     marginBottom: 6,
     textTransform: 'uppercase',
@@ -127,6 +127,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
 });

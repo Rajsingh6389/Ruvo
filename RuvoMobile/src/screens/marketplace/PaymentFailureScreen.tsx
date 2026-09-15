@@ -34,7 +34,7 @@ export const PaymentFailureScreen: React.FC = () => {
         {orderId && (
           <View style={[styles.orderTag, { backgroundColor: colors.surface }]}>
             <Text style={[styles.orderTagText, { color: colors.textSecondary }]}>
-              Order ID: <Text style={{ color: colors.textPrimary, fontWeight: '800' }}>#{orderId}</Text>
+              Order ID: <Text style={{ color: colors.textPrimary, fontFamily: 'Poppins_800ExtraBold' }}>#{orderId}</Text>
             </Text>
           </View>
         )}
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     marginBottom: 8,
   },
   subtitle: {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   reasonText: {
     fontSize: 13,
     color: '#991B1B',
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     marginLeft: 8,
     flex: 1,
   },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     fontSize: 15,
   },
   secondaryBtn: {
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryBtnText: {
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 15,
   },
 });

@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700' },
+  headerTitle: { fontSize: 17, fontFamily: 'Poppins_700Bold' },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   container: {
     flex: 1,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  locationButtonText: { fontWeight: '700', fontSize: 14 },
+  locationButtonText: { fontFamily: 'Poppins_700Bold', fontSize: 14 },
   locationHint: { fontSize: 12, lineHeight: 17, marginBottom: 16 },
   row: {
     flexDirection: 'row',
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 16,
   },
 });

@@ -87,7 +87,7 @@ const MockPhone: React.FC = () => {
         <Text style={[styles.phoneAmount, { color: colors.textPrimary }]}>₹48,650</Text>
         <View style={[styles.phoneTrendRow, { backgroundColor: '#E8F5E9', borderRadius: 6, padding: 4, marginTop: 4 }]}>
           <Ionicons name="trending-up" size={12} color="#16A34A" />
-          <Text style={{ color: '#16A34A', fontSize: 11, fontWeight: '700', marginLeft: 4 }}>+24.5%</Text>
+          <Text style={{ color: '#16A34A', fontSize: 11, fontFamily: 'Poppins_700Bold', marginLeft: 4 }}>+24.5%</Text>
         </View>
 
         <View style={[styles.phoneDivider, { backgroundColor: colors.border }]} />
@@ -103,8 +103,8 @@ const MockPhone: React.FC = () => {
           <View key={i} style={[styles.phoneProdRow, { borderTopColor: colors.border, borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth }]}>
             <View style={[styles.phoneProdImg, { backgroundColor: colors.surfaceSunken, borderRadius: 6 }]} />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.textPrimary, fontSize: 10, fontWeight: '600' }} numberOfLines={1}>{item.name}</Text>
-              <Text style={{ color: '#F5B700', fontSize: 10, fontWeight: '700' }}>{item.price}</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 10, fontFamily: 'Poppins_600SemiBold' }} numberOfLines={1}>{item.name}</Text>
+              <Text style={{ color: '#F5B700', fontSize: 10, fontFamily: 'Poppins_700Bold' }}>{item.price}</Text>
             </View>
             <Text style={{ color: colors.textHint, fontSize: 9 }}>{item.sold}</Text>
           </View>
@@ -246,8 +246,8 @@ export const UseRuvoShopScreen = () => {
             >
               <Ionicons name="logo-google-playstore" size={18} color="#FFFFFF" />
               <View>
-                <Text style={{ color: '#A5A5A5', fontSize: 9, fontWeight: '600' }}>GET IT ON</Text>
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Google Play</Text>
+                <Text style={{ color: '#A5A5A5', fontSize: 9, fontFamily: 'Poppins_600SemiBold' }}>GET IT ON</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontFamily: 'Poppins_700Bold' }}>Google Play</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 32,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     lineHeight: 38,
     letterSpacing: -0.5,
   },
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   },
   phoneAppName: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#231C10',
   },
   phoneBody: {
@@ -354,13 +354,13 @@ const styles = StyleSheet.create({
   },
   phoneGreeting: {
     fontSize: 9,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   phoneAmount: {
     fontSize: 20,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: -0.5,
     marginTop: 2,
   },
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   phoneOrderCount: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     marginTop: 2,
     marginBottom: 8,
   },

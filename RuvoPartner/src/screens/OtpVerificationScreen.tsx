@@ -115,7 +115,7 @@ export const OtpVerificationScreen = () => {
           </Text>
           <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
             Enter the 6-digit code sent to{'\n'}
-            <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+            <Text style={{ color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }}>
               ••••••{shortNumber}
             </Text>
           </Text>
@@ -193,7 +193,7 @@ export const OtpVerificationScreen = () => {
               {!canResend ? (
                 <Text style={[typography.body, { color: colors.textSecondary, fontSize: 13 }]}>
                   Resend OTP in{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                  <Text style={{ color: colors.primary, fontFamily: 'Poppins_700Bold' }}>
                     {`00:${timer < 10 ? '0' : ''}${timer}`}
                   </Text>
                 </Text>

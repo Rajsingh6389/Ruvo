@@ -199,13 +199,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     marginBottom: 12,
     textAlign: 'center',
   },
   orderNumber: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   badgeContainer: {
@@ -220,11 +220,11 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#171A1F',
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   totalText: {
     fontSize: 28,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     marginBottom: 16,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   trackButtonText: {
     color: '#171A1F',
     fontSize: 16,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   homeButton: {
     backgroundColor: '#FFFFFF',
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   homeButtonText: {
     color: '#171A1F',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
 });
 

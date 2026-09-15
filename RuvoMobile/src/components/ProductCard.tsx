@@ -146,7 +146,7 @@ export const ProductCard = ({
               <Ionicons name="navigate-outline" size={10} color={colors.primary || '#F4B400'} />
               <Text
                 numberOfLines={1}
-                style={[typography.caption, { color: colors.textPrimary, fontSize: sf(10.5), fontWeight: '700' }]}
+                style={[typography.caption, { color: colors.textPrimary, fontSize: sf(10.5), fontFamily: 'Poppins_700Bold' }]}
               >
                 {distanceLabel}
               </Text>
@@ -190,7 +190,7 @@ export const ProductCard = ({
                 ]}
               >
                 <Ionicons name="cart-outline" size={14} color="#FFFFFF" />
-                <Text style={[typography.overline, { color: '#FFFFFF', fontWeight: '900' }]}>ADD</Text>
+                <Text style={[typography.overline, { color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold' }]}>ADD</Text>
               </PressableScale>
             ) : null
           ) : (
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   offerBadgeText: {
     color: '#171A1F',
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     fontSize: 9.5,
     letterSpacing: 0.3,
   },
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   name: {
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   footer: {
     flexDirection: 'row',

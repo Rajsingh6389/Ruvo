@@ -97,6 +97,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     paddingVertical: 0,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
 });

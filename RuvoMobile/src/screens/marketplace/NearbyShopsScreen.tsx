@@ -313,7 +313,7 @@ export const NearbyShopsScreen = () => {
             }}
             className="px-4 h-8 rounded-full flex-row items-center gap-1.5"
           >
-            <Text style={{ color: !categoryFilter ? '#FF6B35' : '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
+            <Text style={{ color: !categoryFilter ? '#FF6B35' : '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 }}>
               All
             </Text>
           </Pressable>
@@ -328,7 +328,7 @@ export const NearbyShopsScreen = () => {
                 }}
                 className="px-3.5 h-8 rounded-full flex-row items-center gap-1.5"
               >
-                <Text style={{ color: isSelected ? '#FF6B35' : '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
+                <Text style={{ color: isSelected ? '#FF6B35' : '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 }}>
                   {cat.label}
                 </Text>
               </Pressable>
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
   productName: {
     color: '#111827',
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     lineHeight: 18,
   },
   productUnit: {
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   productPrice: {
     color: '#111827',
     fontSize: 17,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
   },
 });
 

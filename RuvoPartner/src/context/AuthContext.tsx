@@ -176,47 +176,77 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    headers['X-Skip-Global-401'] = 'true';
     options.headers = headers;
 
     let res = await fetch(url, options);
 
     // If 401 Unauthorized, token might have expired, try refreshing
-    if (res.status === 401 && refreshTokenStr) {
-      try {
-        const refreshRes = await fetch(`${API_BASE_URL}/api/partner/auth/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refreshToken: refreshTokenStr }),
-        });
+    if (res.status === 401) {
+      if (refreshTokenStr) {
+        try {
+          const refreshRes = await fetch(`${API_BASE_URL}/api/partner/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Skip-Global-401': 'true',
+            },
+            body: JSON.stringify({ refreshToken: refreshTokenStr }),
+          });
 
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          const newAccessToken = refreshData.data.accessToken;
-          const newRefreshToken = refreshData.data.refreshToken;
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            const newAccessToken = refreshData.data.accessToken;
+            const newRefreshToken = refreshData.data.refreshToken;
 
-          // Save new tokens
-          await SecureStore.setItemAsync('authToken', newAccessToken);
-          await SecureStore.setItemAsync('refreshToken', newRefreshToken);
-          setToken(newAccessToken);
-          setRefreshTokenStr(newRefreshToken);
+            // Save new tokens
+            await SecureStore.setItemAsync('authToken', newAccessToken);
+            await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+            setToken(newAccessToken);
+            setRefreshTokenStr(newRefreshToken);
 
-          // Retry request with new token
-          headers['Authorization'] = `Bearer ${newAccessToken}`;
-          options.headers = headers;
-          res = await fetch(url, options);
-        } else {
-          // Refresh token expired or invalid, force logout
+            // Retry request with new token
+            headers['Authorization'] = `Bearer ${newAccessToken}`;
+            options.headers = headers;
+            res = await fetch(url, options);
+          } else {
+            // Refresh token expired or invalid, force logout
+            await logout();
+          }
+        } catch (err) {
           await logout();
         }
-      } catch (err) {
+      } else {
         await logout();
       }
     }
 
     return res;
   };
+
+  // =========================================================
+  // GLOBAL FETCH INTERCEPTOR FOR 401
+  // =========================================================
+  const logoutRef = React.useRef(logout);
+  useEffect(() => {
+    logoutRef.current = logout;
+  }, [logout]);
+
+  useEffect(() => {
+    const originalFetch = global.fetch;
+    global.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      const initInfo = args[1] as RequestInit | undefined;
+      const skipGlobal = initInfo?.headers && (initInfo.headers as any)['X-Skip-Global-401'];
+      if (response.status === 401 && !skipGlobal) {
+        logoutRef.current();
+      }
+      return response;
+    };
+    return () => {
+      global.fetch = originalFetch;
+    };
+  }, []);
 
   return (
     <AuthContext.Provider

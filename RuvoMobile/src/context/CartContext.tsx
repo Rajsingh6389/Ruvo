@@ -254,7 +254,7 @@ const modalStyles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     marginBottom: 8,
     textAlign: 'center',
@@ -280,7 +280,7 @@ const modalStyles = StyleSheet.create({
   },
   cancelText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#4B5563',
   },
   confirmBtn: {
@@ -292,7 +292,7 @@ const modalStyles = StyleSheet.create({
   },
   confirmText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#FFFFFF',
   },
 });

@@ -101,7 +101,7 @@ export default function NotificationsScreen() {
         </View>
         {unread > 0 && (
           <TouchableOpacity onPress={markAllRead} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}>Mark all read</Text>
+            <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold' }]}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>

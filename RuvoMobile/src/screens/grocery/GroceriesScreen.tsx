@@ -496,8 +496,8 @@ const prodStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  discountText: { fontSize: 8, fontWeight: '900', color: '#FFFFFF' },
-  name: { fontSize: 12, fontWeight: '700', minHeight: 32 },
+  discountText: { fontSize: 8, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
+  name: { fontSize: 12, fontFamily: 'Poppins_700Bold', minHeight: 32 },
   unit: { fontSize: 10, marginBottom: 6 },
   bottomRow: {
     flexDirection: 'row',
@@ -506,7 +506,7 @@ const prodStyles = StyleSheet.create({
     marginTop: 4,
   },
   priceWrap: { flexDirection: 'column' },
-  price: { fontSize: 13, fontWeight: '900' },
+  price: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold' },
   strikePrice: { fontSize: 9, textDecorationLine: 'line-through' },
   addBtn: {
     backgroundColor: PRIMARY_LIGHT,
@@ -516,7 +516,7 @@ const prodStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
-  addBtnText: { fontSize: 11, fontWeight: '900', color: PRIMARY },
+  addBtnText: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: PRIMARY },
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -529,7 +529,7 @@ const prodStyles = StyleSheet.create({
     gap: 6,
   },
   counterBtn: { padding: 2 },
-  counterValue: { fontSize: 11, fontWeight: '900', color: PRIMARY },
+  counterValue: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: PRIMARY },
 });
 
 // ─── Shop Section Styles ──────────────────────────────────────
@@ -561,7 +561,7 @@ const secStyles = StyleSheet.create({
   },
   storeInfo: { flex: 1, marginLeft: 10 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  storeName: { fontSize: 15, fontWeight: '800' },
+  storeName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold' },
   expressBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -571,7 +571,7 @@ const secStyles = StyleSheet.create({
     borderRadius: 6,
     gap: 2,
   },
-  expressText: { fontSize: 8, fontWeight: '900', color: '#15803D' },
+  expressText: { fontSize: 8, fontFamily: 'Poppins_800ExtraBold', color: '#15803D' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   ratingBadge: {
     flexDirection: 'row',
@@ -582,11 +582,11 @@ const secStyles = StyleSheet.create({
     borderRadius: 4,
     gap: 2,
   },
-  ratingText: { fontSize: 9, fontWeight: '900', color: '#FFFFFF' },
+  ratingText: { fontSize: 9, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
   metaText: { fontSize: 11 },
   metaDot: { fontSize: 10 },
   viewBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  viewBtnText: { fontSize: 12, fontWeight: '800', color: PRIMARY },
+  viewBtnText: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: PRIMARY },
   productsRow: { paddingLeft: 16, paddingRight: 8 },
   noItems: { fontSize: 12, paddingHorizontal: 16 },
 });
@@ -612,8 +612,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   locationTextWrap: { flex: 1 },
-  deliverLabel: { fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
-  locationValue: { fontSize: 12, fontWeight: '800' },
+  deliverLabel: { fontSize: 8, fontFamily: 'Poppins_800ExtraBold', letterSpacing: 0.5 },
+  locationValue: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold' },
   searchBarContainer: {
     paddingHorizontal: 16,
     paddingBottom: 10,
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  chipText: { fontSize: 12, fontWeight: '700' },
+  chipText: { fontSize: 12, fontFamily: 'Poppins_700Bold' },
   chipTextActive: { color: '#FFFFFF' },
   scrollContent: { paddingTop: 8 },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  emptyTitle: { fontSize: 17, fontWeight: '900', textAlign: 'center' },
+  emptyTitle: { fontSize: 17, fontFamily: 'Poppins_800ExtraBold', textAlign: 'center' },
   emptySubtitle: { fontSize: 13, marginTop: 6, textAlign: 'center', lineHeight: 18, maxWidth: 280 },
   resetFilterBtn: {
     flexDirection: 'row',
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 8,
   },
-  resetFilterText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  resetFilterText: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
   registerShopBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 8,
   },
-  registerShopText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  registerShopText: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
   floatingCartBar: {
     position: 'absolute',
     bottom: 16,
@@ -706,11 +706,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cartCountText: { fontSize: 14, fontWeight: '900', color: '#FFFFFF' },
-  cartTotalText: { fontSize: 15, fontWeight: '900', color: '#FFFFFF' },
+  cartCountText: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
+  cartTotalText: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
   cartSubText: { fontSize: 9, color: 'rgba(255, 255, 255, 0.8)' },
   cartBarRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  viewCartText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF' },
+  viewCartText: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
 });
 
 export default GroceriesScreen;

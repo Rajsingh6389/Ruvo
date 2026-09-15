@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { updateShop, Shop } from '../../services/shopService';
 import { CategoryDropdown } from '../../components/CategoryDropdown';
 import { Button } from '../../components/ui/Button';
+import { SuccessPopup } from '../../components/ui/SuccessPopup';
 import { API_BASE_URL } from '../../config/api';
 
 function resolveImage(url?: string): string | null {
@@ -33,6 +34,35 @@ function maskAccount(num?: string): string {
   if (!num || num.length < 4) return num || '—';
   return '•'.repeat(Math.max(0, num.length - 4)) + num.slice(-4);
 }
+
+const InputField = ({ label, icon, value, onChangeText, placeholder, errorText, isMultiline = false, keyboardType = 'default', ...props }: any) => {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <View className="mb-4">
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className={`text-xs font-black uppercase tracking-wider ${isFocused ? 'text-[#FF7A00]' : 'text-gray-500'}`}>{label}</Text>
+        {errorText && <Text className="text-[10px] font-bold text-red-500 uppercase">{errorText}</Text>}
+      </View>
+      <View className={`flex-row items-start border-[1.5px] rounded-2xl px-4 py-2 flex-1 bg-white shadow-sm ${
+        errorText ? 'border-red-400' : isFocused ? 'border-[#FF7A00]' : 'border-gray-100'
+      }`} style={{ minHeight: isMultiline ? 100 : 56 }}>
+        <Ionicons name={icon} size={20} color={errorText ? '#F87171' : isFocused ? '#FF7A00' : '#9CA3AF'} className={`mr-3 ${isMultiline ? 'mt-2' : 'mt-2.5'}`} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          multiline={isMultiline}
+          keyboardType={keyboardType}
+          style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 13, flex: 1, paddingVertical: 10, textAlignVertical: isMultiline ? 'top' : 'center', minHeight: isMultiline ? 80 : 0 }}
+          {...props}
+        />
+      </View>
+    </View>
+  );
+};
 
 export const EditShopScreen = () => {
   const route      = useRoute<any>();
@@ -60,6 +90,7 @@ export const EditShopScreen = () => {
   const [bannerAsset, setBannerAsset] = useState<any>(null);
   const [loading,     setLoading]     = useState(false);
   const [errors,      setErrors]      = useState<{ name?: string; address?: string; phone?: string }>({});
+  const [saved,       setSaved]       = useState(false);
 
   // ── Bank details — read directly from the shop object (set during onboarding) ──
   const bankAccountNumber = (existingShop as any).bankAccountNumber || '';
@@ -98,24 +129,17 @@ export const EditShopScreen = () => {
         if (geocode && geocode.length > 0) {
           const place = geocode[0];
           const addressParts = [
-            place.name,
-            place.street,
-            place.district,
-            place.city || place.subregion,
-            place.region,
-            place.postalCode,
-            place.country
-          ].filter(Boolean); // removes null, undefined, empty strings
+            place.name, place.street, place.district,
+            place.city || place.subregion, place.region,
+            place.postalCode, place.country
+          ].filter(Boolean);
           
-          if (addressParts.length > 0) {
-            setAddress(addressParts.join(', '));
-          }
+          if (addressParts.length > 0) setAddress(addressParts.join(', '));
         }
       } catch (geocodeError) {
         console.warn("Reverse geocode failed:", geocodeError);
       }
-
-      Alert.alert('Location Captured!', 'Your new GPS coordinates have been captured and the address was updated. Don\'t forget to click "Save Shop Details" to save it permanently.');
+      Alert.alert('Location Captured!', 'Your new GPS coordinates have been securely captured.');
     } catch (error) {
       console.warn("Failed to get location:", error);
       Alert.alert('Error', 'Unable to fetch your GPS coordinates. Please ensure GPS is turned on.');
@@ -143,7 +167,6 @@ export const EditShopScreen = () => {
     return Object.keys(errs).length === 0;
   };
 
-  // ── Save — only basic shop fields, no bank fields ─────────────
   const handleSave = async () => {
     if (!validate()) return;
     if (!token) {
@@ -159,9 +182,8 @@ export const EditShopScreen = () => {
         bannerAsset,
         token,
       );
-      Alert.alert('Success', 'Shop updated successfully!', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      setSaved(true);
+      setTimeout(() => navigation.goBack(), 1800);
     } catch (err: any) {
       Alert.alert('Update Failed', err?.message || 'Failed to update shop. Please try again.');
     } finally {
@@ -173,66 +195,65 @@ export const EditShopScreen = () => {
   const currentBannerUri = bannerAsset ? bannerAsset.uri : resolveImage(existingShop.bannerUrl);
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={['top']}>
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center"
-        >
-          <Ionicons name="arrow-back" size={20} color="#231C10" />
+      <View className="bg-white border-b border-gray-100 px-6 py-4 flex-row items-center gap-4 shadow-sm z-10">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:opacity-70">
+          <Ionicons name="arrow-back" size={20} color="#111827" />
         </TouchableOpacity>
-        <Text className="flex-1 text-xl font-extrabold text-ruvo-ink">Edit Shop</Text>
+        <View className="flex-1">
+          <Text className="text-xl font-black text-gray-900 tracking-tight">Edit Shop Profile</Text>
+          <Text className="text-[11px] text-[#FF7A00] font-black uppercase tracking-widest mt-0.5">Manage Details</Text>
+        </View>
       </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerClassName="px-lg pt-lg pb-2xl"
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 250 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           {/* ── Images ──────────────────────────────────────────── */}
           <Animated.View entering={FadeInUp.duration(400)}>
-            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
-              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">
-                Shop Images
-              </Text>
+            <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6 relative overflow-hidden">
+              <View className="flex-row items-center gap-2 mb-6 border-b border-gray-50 pb-4">
+                <View className="w-8 h-8 rounded-full bg-orange-50 border border-orange-100 items-center justify-center">
+                  <Ionicons name="images" size={14} color="#FF7A00" />
+                </View>
+                <Text className="text-sm font-black text-gray-900 uppercase tracking-widest">Shop Branding</Text>
+              </View>
 
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Banner Image</Text>
+              <Text className="text-xs font-bold text-gray-900 mb-2">Banner Image</Text>
               <TouchableOpacity
                 onPress={pickBanner}
-                className="relative w-full h-36 bg-warm-200 rounded-xl overflow-hidden mb-md border border-warm-300 items-center justify-center"
+                className="relative w-full h-36 bg-gray-50 rounded-2xl overflow-hidden mb-5 border border-gray-200 items-center justify-center"
               >
                 {currentBannerUri
                   ? <Image source={{ uri: currentBannerUri }} className="w-full h-full" resizeMode="cover" />
                   : (
-                    <View className="items-center gap-xs">
-                      <Ionicons name="image-outline" size={28} color="#A79E92" />
-                      <Text className="text-xs text-warm-600 font-semibold">Tap to select Banner</Text>
+                    <View className="items-center gap-2">
+                      <Ionicons name="image-outline" size={28} color="#9CA3AF" />
+                      <Text className="text-xs text-gray-400 font-semibold">Tap to select Banner</Text>
                     </View>
                   )}
-                <View className="absolute bottom-xs right-xs bg-ruvo-ink/70 px-md py-xs rounded-lg flex-row items-center gap-xs">
+                <View className="absolute bottom-2 right-2 bg-gray-900/80 px-3 py-1.5 rounded-lg flex-row items-center gap-1.5 shadow-md">
                   <Ionicons name="camera" size={14} color="#FFF" />
-                  <Text className="text-xs font-bold text-white">Change Banner</Text>
+                  <Text className="text-[10px] font-black uppercase tracking-widest text-white">Change Cover</Text>
                 </View>
               </TouchableOpacity>
 
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Logo / Avatar</Text>
-              <View className="flex-row items-center gap-md">
+              <Text className="text-xs font-bold text-gray-900 mb-2">Shop Logo / Avatar</Text>
+              <View className="flex-row items-center gap-4">
                 <TouchableOpacity
                   onPress={pickLogo}
-                  className="relative w-20 h-20 bg-warm-200 rounded-xl overflow-hidden border border-warm-300 items-center justify-center"
+                  className="relative w-24 h-24 bg-gray-50 rounded-2xl overflow-hidden border border-gray-200 items-center justify-center shadow-sm"
                 >
                   {currentLogoUri
                     ? <Image source={{ uri: currentLogoUri }} className="w-full h-full" resizeMode="cover" />
-                    : <Ionicons name="storefront" size={32} color="#A79E92" />}
-                  <View className="absolute bottom-0 inset-x-0 bg-ruvo-ink/70 py-0.5 items-center">
-                    <Ionicons name="camera" size={10} color="#FFF" />
+                    : <Ionicons name="storefront" size={32} color="#9CA3AF" />}
+                  <View className="absolute bottom-0 inset-x-0 bg-gray-900/70 py-1 items-center">
+                    <Ionicons name="camera" size={12} color="#FFF" />
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={pickLogo} className="bg-warm-200 px-md py-sm rounded-lg">
-                  <Text className="text-xs font-bold text-ruvo-ink">Select New Logo</Text>
+                <TouchableOpacity onPress={pickLogo} className="bg-[#FF7A00]/10 px-4 py-2 rounded-xl">
+                  <Text className="text-xs font-black text-[#FF7A00] uppercase tracking-widest">Select New Logo</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -240,136 +261,110 @@ export const EditShopScreen = () => {
 
           {/* ── General Details ──────────────────────────────────── */}
           <Animated.View entering={FadeInUp.delay(100).duration(400)}>
-            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
-              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">
-                General Details
-              </Text>
-
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Shop Name *</Text>
-              <TextInput
-                value={name}
-                onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
-                placeholder="e.g. Ruvo Fresh Mart"
-                placeholderTextColor="#A79E92"
-                className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink mb-xs ${errors.name ? 'border-red-400' : 'border-warm-300'}`}
-              />
-              {errors.name && <Text className="text-xs text-red-500 mb-sm">{errors.name}</Text>}
-
-              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Category</Text>
-              <CategoryDropdown value={category} onChange={setCategory} />
-
-              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Address *</Text>
-              <TextInput
-                value={address}
-                onChangeText={t => { setAddress(t); setErrors(e => ({ ...e, address: undefined })); }}
-                placeholder="Shop physical address"
-                placeholderTextColor="#A79E92"
-                multiline
-                numberOfLines={2}
-                className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink mb-xs ${errors.address ? 'border-red-400' : 'border-warm-300'}`}
-              />
-              {errors.address && <Text className="text-xs text-red-500 mb-sm">{errors.address}</Text>}
-
-              <Text className="text-xs font-bold text-warm-700 mt-sm mb-xs">Phone Number *</Text>
-              <TextInput
-                value={phone}
-                onChangeText={t => { setPhone(t); setErrors(e => ({ ...e, phone: undefined })); }}
-                placeholder="10-digit mobile"
-                placeholderTextColor="#A79E92"
-                keyboardType="phone-pad"
-                className={`bg-warm-100 border rounded-lg px-md py-sm text-sm text-ruvo-ink mb-xs ${errors.phone ? 'border-red-400' : 'border-warm-300'}`}
-              />
-              {errors.phone && <Text className="text-xs text-red-500 mb-sm">{errors.phone}</Text>}
-
-              <View className="flex-row items-center justify-between mt-md pt-md border-t border-warm-200">
-                <View>
-                  <Text className="text-sm font-extrabold text-ruvo-ink">Home Delivery</Text>
-                  <Text className="text-xs text-warm-600 font-medium mt-xs">Enable delivery for this shop</Text>
+            <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
+              <View className="flex-row items-center justify-between mb-6 border-b border-gray-50 pb-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 items-center justify-center">
+                    <Ionicons name="document-text" size={14} color="#3B82F6" />
+                  </View>
+                  <Text className="text-sm font-black text-gray-900 uppercase tracking-widest">General Info</Text>
                 </View>
-                <Switch
-                  value={deliveryAvailable}
-                  onValueChange={setDeliveryAvailable}
-                  trackColor={{ false: '#D1C7BA', true: '#F5B700' }}
-                  thumbColor="#FFF"
-                />
               </View>
 
-              <View className="flex-row items-center justify-between mt-md pt-md border-t border-warm-200">
-                <View className="flex-1 mr-md">
-                  <Text className="text-sm font-extrabold text-ruvo-ink">GPS Location</Text>
+              <InputField label="Shop Name *" icon="storefront-outline" value={name} onChangeText={(t: string) => { setName(t); setErrors(e => ({ ...e, name: undefined })); }} placeholder="e.g. Ruvo Fresh Mart" errorText={errors.name} />
+              
+              <View className="mb-4">
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className={`text-xs font-black uppercase tracking-wider text-gray-500`}>Category *</Text>
+                </View>
+                <CategoryDropdown value={category} onChange={setCategory} />
+              </View>
+
+              <InputField label="Address *" icon="location-outline" value={address} onChangeText={(t: string) => { setAddress(t); setErrors(e => ({ ...e, address: undefined })); }} placeholder="Shop physical address" isMultiline={true} errorText={errors.address} />
+              <InputField label="Phone Number *" icon="call-outline" value={phone} onChangeText={(t: string) => { setPhone(t); setErrors(e => ({ ...e, phone: undefined })); }} placeholder="10-digit mobile number" keyboardType="phone-pad" errorText={errors.phone} />
+
+              <View className="flex-row items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <View>
+                  <Text className="text-sm font-black text-gray-900">Home Delivery</Text>
+                  <Text className="text-xs text-gray-500 font-semibold mt-1">Enable local RuVo delivery</Text>
+                </View>
+                <Switch value={deliveryAvailable} onValueChange={setDeliveryAvailable} trackColor={{ false: '#E5E7EB', true: '#FF7A00' }} thumbColor="#FFF" />
+              </View>
+
+              <View className="flex-row items-center justify-between mt-6 pt-6 border-t border-dashed border-gray-200">
+                <View className="flex-1 mr-4">
+                  <Text className="text-sm font-black text-gray-900">GPS Location</Text>
                   {latitude && longitude ? (
-                    <Text className="text-xs font-bold text-green-600 mt-xs">Coordinates set: {latitude.toFixed(4)}, {longitude.toFixed(4)}</Text>
+                    <Text className="text-[11px] font-black text-green-600 uppercase tracking-widest mt-1">Found: {latitude.toFixed(4)}, {longitude.toFixed(4)}</Text>
                   ) : (
-                    <Text className="text-xs text-warm-500 mt-xs">GPS accuracy is recommended for delivery reliability</Text>
+                    <Text className="text-xs text-gray-400 mt-1">Required for accurate delivery pairing</Text>
                   )}
                 </View>
-                <TouchableOpacity 
-                  disabled={locationFetching}
-                  className={`px-md py-sm rounded-lg flex-row items-center gap-xs ${locationFetching ? 'bg-warm-200' : 'bg-ruvo-yellow-soft border border-ruvo-yellow'}`}
-                  onPress={handleUpdateLocation}
-                >
-                  <Ionicons name="navigate" size={14} color={locationFetching ? '#A79E92' : '#231C10'} />
-                  <Text className={`text-xs font-bold ${locationFetching ? 'text-warm-500' : 'text-ruvo-ink'}`}>
-                    {locationFetching ? 'Fetching...' : 'Update GPS'}
+                <TouchableOpacity disabled={locationFetching} className={`px-4 py-3 rounded-xl flex-row items-center gap-2 ${locationFetching ? 'bg-gray-100' : 'bg-green-50 border border-green-200'}`} onPress={handleUpdateLocation}>
+                  <Ionicons name="navigate" size={16} color={locationFetching ? '#9CA3AF' : '#16A34A'} />
+                  <Text className={`text-xs font-black uppercase tracking-widest ${locationFetching ? 'text-gray-400' : 'text-green-700'}`}>
+                    {locationFetching ? 'Fetching' : 'Update GPS'}
                   </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
 
-          {/* ── Bank & Settlement (read-only, from shop object) ───── */}
+          {/* ── Bank & Settlement ───── */}
           <Animated.View entering={FadeInUp.delay(200).duration(400)}>
-            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
-              <View className="flex-row items-center justify-between mb-md">
-                <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider">
-                  Bank & Settlement
-                </Text>
-                <View className="flex-row items-center gap-xs bg-green-100 px-sm py-xs rounded-full">
+            <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
+              <View className="flex-row items-center justify-between mb-6 border-b border-gray-50 pb-4">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-8 h-8 rounded-full bg-purple-50 border border-purple-100 items-center justify-center">
+                    <Ionicons name="card" size={14} color="#A855F7" />
+                  </View>
+                  <Text className="text-sm font-black text-gray-900 uppercase tracking-widest">Bank Details</Text>
+                </View>
+                <View className="flex-row items-center gap-1.5 bg-green-50 px-2 py-1 rounded-md border border-green-100">
                   <Ionicons name="lock-closed" size={10} color="#16A34A" />
-                  <Text className="text-xs font-bold text-green-700">Secured</Text>
+                  <Text className="text-[10px] font-black uppercase tracking-widest text-green-700">Secured</Text>
                 </View>
               </View>
 
               {hasBankDetails ? (
                 <View>
                   {bankAccountNumber ? (
-                    <View className="flex-row items-center justify-between py-sm border-b border-warm-100">
-                      <Text className="text-xs text-warm-600 font-medium">Account No.</Text>
-                      <Text className="text-sm font-bold text-ruvo-ink">{maskAccount(bankAccountNumber)}</Text>
+                    <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
+                      <Text className="text-xs text-gray-500 font-bold tracking-widest uppercase">Account No.</Text>
+                      <Text className="text-sm font-black text-gray-900">{maskAccount(bankAccountNumber)}</Text>
                     </View>
                   ) : null}
                   {ifscCode ? (
-                    <View className="flex-row items-center justify-between py-sm border-b border-warm-100">
-                      <Text className="text-xs text-warm-600 font-medium">IFSC</Text>
-                      <Text className="text-sm font-bold text-ruvo-ink">{ifscCode}</Text>
+                    <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
+                      <Text className="text-xs text-gray-500 font-bold tracking-widest uppercase">IFSC</Text>
+                      <Text className="text-sm font-black text-gray-900">{ifscCode}</Text>
                     </View>
                   ) : null}
                   {upiId ? (
-                    <View className="flex-row items-center justify-between py-sm border-b border-warm-100">
-                      <Text className="text-xs text-warm-600 font-medium">UPI ID</Text>
-                      <Text className="text-sm font-bold text-ruvo-ink">{upiId}</Text>
+                    <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
+                      <Text className="text-xs text-gray-500 font-bold tracking-widest uppercase">UPI ID</Text>
+                      <Text className="text-sm font-black text-gray-900">{upiId}</Text>
                     </View>
                   ) : null}
-                  <Text className="text-xs text-warm-400 mt-sm">
-                    To update bank details, tap below. Changes require re-verification.
+                  <Text className="text-[11px] text-gray-400 font-semibold mt-3 text-center">
+                    Tap below to update payout routing. Subject to re-verification.
                   </Text>
                 </View>
               ) : (
-                <View className="items-center py-md">
-                  <Ionicons name="wallet-outline" size={32} color="#D1C7BA" />
-                  <Text className="text-sm text-warm-500 mt-sm text-center">
-                    {'No bank account linked yet.\nTap below to add one.'}
-                  </Text>
+                <View className="items-center py-6 bg-gray-50 rounded-2xl border border-gray-100 mt-2">
+                  <Ionicons name="wallet-outline" size={36} color="#D1D5DB" />
+                  <Text className="text-sm font-black text-gray-900 mt-3 text-center">No Account Attached</Text>
+                  <Text className="text-xs text-gray-500 mt-1 text-center px-4">Link a bank to receive same-day vendor payouts securely.</Text>
                 </View>
               )}
 
               <TouchableOpacity
                 onPress={() => navigation.navigate('EditBankAccount')}
-                className="mt-md flex-row items-center justify-center gap-sm bg-warm-100 border border-warm-300 rounded-lg py-sm"
+                className="mt-5 flex-row items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-xl py-3 active:bg-gray-100"
               >
-                <Ionicons name="create-outline" size={16} color="#6B5E52" />
-                <Text className="text-sm font-bold text-warm-700">
-                  {hasBankDetails ? 'Update Bank Details' : 'Add Bank Details'}
+                <Ionicons name="create-outline" size={16} color="#4B5563" />
+                <Text className="text-xs font-black uppercase tracking-widest text-gray-700">
+                  {hasBankDetails ? 'Update Payout Details' : 'Attach Bank Account'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -377,13 +372,25 @@ export const EditShopScreen = () => {
 
           {/* ── Save Button ──────────────────────────────────────── */}
           <Animated.View entering={FadeInUp.delay(300).duration(400)}>
-            <Button variant="primary" onPress={handleSave} loading={loading} icon="checkmark-circle">
-              Save Shop Details
-            </Button>
+            <TouchableOpacity onPress={handleSave} disabled={loading} className={`w-full py-4 rounded-2xl flex-row items-center justify-center shadow-lg ${loading ? 'bg-gray-300' : 'bg-[#FF7A00]'}`}>
+              {loading ? (
+                <Text className="text-white text-sm font-black uppercase tracking-widest">Saving...</Text>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                  <Text className="text-white text-sm font-black uppercase tracking-widest">Update Shop</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </Animated.View>
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SuccessPopup 
+        visible={saved} 
+        message="Your shop details have been beautifully verified and published." 
+      />
     </SafeAreaView>
   );
 };

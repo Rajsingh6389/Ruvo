@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   title: {
     color: '#FFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   subtitle: {
     color: 'rgba(255,255,255,0.8)',

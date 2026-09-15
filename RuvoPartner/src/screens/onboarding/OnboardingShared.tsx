@@ -63,7 +63,7 @@ export const StepBar: React.FC<StepBarProps> = ({ current }) => (
               }
             </View>
             <Text style={{
-              fontSize: 9, fontWeight: '600', textAlign: 'center', letterSpacing: 0.3,
+              fontSize: 9, fontFamily: 'Poppins_600SemiBold', textAlign: 'center', letterSpacing: 0.3,
               color: active ? ACCENT : done ? '#6B5E52' : '#A79E92',
             }} numberOfLines={1}>
               {step.label}
@@ -104,8 +104,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, onB
       </TouchableOpacity>
     )}
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 18, fontWeight: '800', color: '#231C10' }}>{title}</Text>
-      {subtitle && <Text style={{ fontSize: 12, color: '#6B5E52', marginTop: 2, fontWeight: '500' }}>{subtitle}</Text>}
+      <Text style={{ fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#231C10' }}>{title}</Text>
+      {subtitle && <Text style={{ fontSize: 12, color: '#6B5E52', marginTop: 2, fontFamily: 'Poppins_500Medium' }}>{subtitle}</Text>}
     </View>
   </View>
 );
@@ -146,7 +146,7 @@ interface FieldLabelProps {
 }
 
 export const FieldLabel: React.FC<FieldLabelProps> = ({ text, required }) => (
-  <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B5E52', marginBottom: 6, marginTop: 4, letterSpacing: 0.4 }}>
+  <Text style={{ fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#6B5E52', marginBottom: 6, marginTop: 4, letterSpacing: 0.4 }}>
     {text}
     {required && <Text style={{ color: '#DC2626' }}> *</Text>}
   </Text>
@@ -180,7 +180,7 @@ export const StyledInput: React.FC<StyledInputProps> = ({
     <TextInput
       {...rest}
       placeholderTextColor="#C4B9B0"
-      style={[{ flex: 1, padding: 0, fontSize: 15, color: '#231C10', fontWeight: '500' }, style]}
+      style={[{ flex: 1, padding: 0, fontSize: 15, color: '#231C10', fontFamily: 'Poppins_500Medium' }, style]}
     />
   </View>
 );
@@ -230,7 +230,7 @@ export const CtaBtn: React.FC<CtaBtnProps> = ({ label, onPress, loading, disable
           <ActivityIndicator color="#FFFFFF" />
         ) : (
           <>
-            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 16, fontFamily: 'Poppins_800ExtraBold', letterSpacing: 0.3 }}>
               {label}
             </Text>
             {icon && <Ionicons name={icon} size={18} color="#FFFFFF" />}
@@ -262,7 +262,7 @@ export const ErrorBox: React.FC<ErrorBoxProps> = ({ message, error }) => {
       borderWidth: StyleSheet.hairlineWidth, borderColor: '#FCA5A5',
     }}>
       <Ionicons name="alert-circle" size={16} color="#DC2626" style={{ marginTop: 1 }} />
-      <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontWeight: '600', lineHeight: 19 }}>
+      <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontFamily: 'Poppins_600SemiBold', lineHeight: 19 }}>
         {text}
       </Text>
     </View>
@@ -292,7 +292,7 @@ export const InfoBox: React.FC<InfoBoxProps> = ({ message, text, icon = 'informa
     borderWidth: StyleSheet.hairlineWidth, borderColor: '#BBF7D0',
   }}>
     <Ionicons name={icon} size={16} color={ACCENT} style={{ marginTop: 1 }} />
-    <Text style={{ flex: 1, color: '#14532D', fontSize: 13, fontWeight: '500', lineHeight: 19 }}>
+    <Text style={{ flex: 1, color: '#14532D', fontSize: 13, fontFamily: 'Poppins_500Medium', lineHeight: 19 }}>
       {content}
     </Text>
   </View>

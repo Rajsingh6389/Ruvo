@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   label: {
     marginTop: 14,
     textAlign: 'center',
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
 
   overlay: {
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   sheetLabel: {
     marginTop: 20,
     textAlign: 'center',
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 16,
   },
 

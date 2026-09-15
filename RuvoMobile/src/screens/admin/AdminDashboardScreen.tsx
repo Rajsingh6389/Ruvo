@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: '700' },
+  headerTitle: { fontSize: 20, fontFamily: 'Poppins_700Bold' },
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#666666',
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 14,
   },
   tabActiveText: {
     color: '#2E7D32',
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   list: { padding: 16, paddingBottom: 40 },
   card: {
@@ -415,14 +415,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerTitleContainer: { flex: 1, paddingRight: 8 },
-  shopName: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  shopName: { fontSize: 18, fontFamily: 'Poppins_700Bold', marginBottom: 4 },
   badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
   },
-  badgeText: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
+  badgeText: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', textTransform: 'uppercase' },
   logo: { width: 50, height: 50, borderRadius: 25, borderWidth: 0.5, borderColor: '#E0E0E0' },
   logoPlaceholder: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   infoText: { fontSize: 13, marginBottom: 4 },
@@ -449,11 +449,11 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 250 },
   centerText: { fontSize: 14, textAlign: 'center', marginTop: 8 },
-  emptyText: { fontSize: 18, fontWeight: '700', marginTop: 12 },
+  emptyText: { fontSize: 18, fontFamily: 'Poppins_700Bold', marginTop: 12 },
   retryBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  retryBtnText: { color: '#FFFFFF', fontWeight: '600' },
+  retryBtnText: { color: '#FFFFFF', fontFamily: 'Poppins_600SemiBold' },
 });

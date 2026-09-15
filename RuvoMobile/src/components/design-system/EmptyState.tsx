@@ -30,7 +30,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       </View>
 
       {/* Title */}
-      <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
+      <Text style={{ fontSize: 18, fontFamily: 'Poppins_700Bold', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
         {title}
       </Text>
 

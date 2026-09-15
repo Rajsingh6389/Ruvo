@@ -311,18 +311,18 @@ const styles = StyleSheet.create({
   promoBadgeText: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 0.5,
   },
   mainHeading: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     lineHeight: 22,
   },
   highlightText: {
     color: '#FBBF24',
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   subHeading: {
     color: '#A7F3D0',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     color: '#34D399',
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     fontSize: 13,
     letterSpacing: 0.8,
   },
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   copyButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 12,
   },
   mascotWrapper: {
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   compactBadgeText: {
     color: '#FBBF24',
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   compactSubBadge: {
     color: '#9CA3AF',
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   compactTitle: {
     color: '#FFF',
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 12,
     marginTop: 2,
   },
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   copyBtnTextCompact: {
     color: '#FFF',
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     fontSize: 11,
   },
 });

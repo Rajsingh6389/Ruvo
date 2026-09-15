@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   closeIcon: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   body: {
     flex: 1,

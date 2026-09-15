@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     marginBottom: SPACING.md,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   profileCard: {
     flexDirection: 'row',
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 22,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#231C10',
   },
   profileInfo: { flex: 1 },

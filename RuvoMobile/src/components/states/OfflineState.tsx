@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   bannerAction: {
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     paddingHorizontal: 4,
     paddingVertical: 2,
   },

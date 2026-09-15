@@ -187,14 +187,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   iconBtn: { padding: 8 },
-  title: { fontSize: 18, fontWeight: '700' },
+  title: { fontSize: 18, fontFamily: 'Poppins_700Bold' },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
-  emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 16 },
+  emptyTitle: { fontSize: 18, fontFamily: 'Poppins_700Bold', marginTop: 16 },
   emptySubtitle: { fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 },
   addBtn: {
     flexDirection: 'row',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     gap: 8,
   },
-  addBtnText: { fontWeight: '700', fontSize: 15 },
+  addBtnText: { fontFamily: 'Poppins_700Bold', fontSize: 15 },
   listContent: { padding: 12 },
   imageCard: {
     flex: 0.5,

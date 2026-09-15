@@ -109,7 +109,7 @@ const tabMatches = (tab: FilterTab, order?: Order): boolean => {
 export default function ShopOrdersScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { token, user } = useAuth();
+  const { token, user, userId } = useAuth();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
 
@@ -132,9 +132,10 @@ export default function ShopOrdersScreen() {
     if (!token) { setLoading(false); return; }
     let currentShopId = shopId || routeShopId;
 
-    if (!currentShopId && user) {
+    if (!currentShopId && (userId || user)) {
       try {
-        const shopRes = await fetch(`${API_BASE_URL}/api/shops/mine`, {
+        const ownerId = userId || user?.email || '';
+        const shopRes = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
           headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
         });
         if (shopRes.ok) {
@@ -165,7 +166,7 @@ export default function ShopOrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, shopId, routeShopId, user]);
+  }, [token, shopId, routeShopId, user, userId]);
 
   useEffect(() => {
     fetchOrders();
@@ -376,16 +377,16 @@ export default function ShopOrdersScreen() {
   };
 
   return (
-    <View className="flex-1 bg-ruvo-bg" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-[#F9FAFB]" style={{ paddingTop: insets.top }}>
       <OfflineBar />
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-sm flex-row items-center justify-between">
-        <View className="flex-row items-center gap-sm flex-1">
+      <View className="bg-white border-b border-gray-100 px-6 py-4 flex-row items-center justify-between z-10 shadow-sm">
+        <View className="flex-row items-center gap-4 flex-1">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            className="w-10 h-10 rounded-xl bg-ruvo-bg items-center justify-center border border-ruvo-border"
+            className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 items-center justify-center active:opacity-70"
           >
-            <Ionicons name="arrow-back" size={18} color="#171A1F" />
+            <Ionicons name="arrow-back" size={20} color="#111827" />
           </TouchableOpacity>
           <View className="flex-1">
             <View className="flex-row items-center gap-2">
@@ -405,20 +406,20 @@ export default function ShopOrdersScreen() {
           </View>
         </View>
 
-        <View className="flex-row items-center gap-xs">
+        <View className="flex-row items-center gap-2">
           {/* Shop Open / Close Toggle Button */}
           {!!shopId && (
             <TouchableOpacity
               onPress={toggleShopStatus}
               disabled={togglingStatus}
-              className={`px-3 py-1.5 rounded-xl flex-row items-center gap-1.5 border ${
+              className={`px-3 py-2 rounded-xl flex-row items-center gap-1.5 border ${
                 isShopActive
-                  ? 'bg-emerald-50 border-emerald-300'
-                  : 'bg-red-50 border-red-300'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
               }`}
             >
-              <View className={`w-2.5 h-2.5 rounded-full ${isShopActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
-              <Text className={`text-xs font-black ${isShopActive ? 'text-emerald-800' : 'text-red-800'}`}>
+              <View className={`w-2.5 h-2.5 rounded-full ${isShopActive ? 'bg-[#16A34A]' : 'bg-red-500'}`} />
+              <Text className={`text-xs font-black tracking-wider ${isShopActive ? 'text-green-800' : 'text-red-800'}`}>
                 {togglingStatus ? '...' : isShopActive ? 'OPEN' : 'CLOSED'}
               </Text>
             </TouchableOpacity>
@@ -427,23 +428,23 @@ export default function ShopOrdersScreen() {
           {!!shopId && (
             <TouchableOpacity
               onPress={() => navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true })}
-              className="px-md py-2 bg-[#FF7A00] rounded-xl flex-row items-center gap-xs shadow-sm active:opacity-90"
+              className="px-4 py-2 bg-[#FF7A00] rounded-xl flex-row items-center gap-1.5 shadow-sm active:opacity-80"
             >
-              <Ionicons name="bicycle" size={15} color="#FFFFFF" />
+              <Ionicons name="bicycle" size={16} color="#FFFFFF" />
               <Text className="text-xs font-black text-white">Riders</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={() => fetchOrders(true)}
-            className="w-10 h-10 rounded-xl bg-ruvo-bg items-center justify-center border border-ruvo-border"
+            className="w-10 h-10 rounded-xl bg-gray-50 items-center justify-center border border-gray-100"
           >
-            <Ionicons name="refresh" size={18} color="#171A1F" />
+            <Ionicons name="refresh" size={18} color="#111827" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Filter Tabs */}
-      <View className="bg-ruvo-surface border-b border-gray-100 py-xs">
+      <View className="bg-white border-b border-gray-100 py-3 shadow-sm z-0">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
           <View className="flex-row gap-xs py-1">
             {TABS.map(tab => {
@@ -487,8 +488,8 @@ export default function ShopOrdersScreen() {
           <View className="w-24 h-24 bg-red-50 border border-red-200 rounded-3xl items-center justify-center mb-lg">
             <Ionicons name="alert-circle-outline" size={44} color="#D94A4A" />
           </View>
-          <Text className="text-xl font-extrabold text-ruvo-ink mb-sm">Couldn't Load Orders</Text>
-          <Text className="text-sm text-warm-600 text-center mb-xl">{error}</Text>
+          <Text className="text-xl font-extrabold text-gray-900 mb-sm">Couldn't Load Orders</Text>
+          <Text className="text-sm text-gray-600 text-center mb-xl">{error}</Text>
           <Button variant="primary" onPress={() => fetchOrders()} icon="refresh">Retry</Button>
         </Animated.View>
       ) : (
@@ -522,14 +523,14 @@ export default function ShopOrdersScreen() {
 
             return (
               <Animated.View entering={FadeInDown.delay(index * 60).duration(400)}>
-                <View className="bg-ruvo-surface rounded-2xl p-lg shadow-sm" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
+                <View className="bg-white rounded-2xl p-lg shadow-sm" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
                   {/* Order Header */}
                   <View className="flex-row items-start justify-between mb-md">
                     <View className="flex-1 pr-sm flex-row items-center gap-md">
                       {mainImg ? (
                         <Image 
                           source={{ uri: mainImg }} 
-                          className="w-14 h-14 rounded-xl bg-warm-100 border border-ruvo-border" 
+                          className="w-14 h-14 rounded-xl bg-gray-50 border border-gray-100" 
                         />
                       ) : (
                         <View className="w-14 h-14 rounded-xl bg-amber-50 border border-amber-200 items-center justify-center">
@@ -537,15 +538,15 @@ export default function ShopOrdersScreen() {
                         </View>
                       )}
                       <View className="flex-1">
-                        <Text className="text-base font-extrabold text-ruvo-ink" numberOfLines={2}>
+                        <Text className="text-base font-extrabold text-gray-900" numberOfLines={2}>
                           {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
                         </Text>
-                        <Text className="text-xs text-warm-600 font-medium mt-0.5">
+                        <Text className="text-xs text-gray-600 font-medium mt-0.5">
                           {item.distanceKm != null ? `📍 ${item.distanceKm} km away` : '📍 Store Order'}
                         </Text>
                       </View>
                     </View>
-                    <View className="px-3 py-1 rounded-full border border-ruvo-border" style={{ backgroundColor: cfg.bg }}>
+                    <View className="px-3 py-1 rounded-full border border-gray-100" style={{ backgroundColor: cfg.bg }}>
                       <Text className="text-[11px] font-extrabold" style={{ color: cfg.color }}>{cfg.label}</Text>
                     </View>
                   </View>
@@ -554,30 +555,30 @@ export default function ShopOrdersScreen() {
                   <View className={`rounded-xl p-md gap-sm mb-sm ${
                     ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) 
                       ? 'bg-red-50' 
-                      : 'bg-ruvo-bg'
+                      : 'bg-[#F9FAFB]'
                   }`} style={{ borderWidth: 0.5, borderColor: ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status) ? '#FECACA' : '#EEE7DA' }}>
                     {/* Customer Info */}
                     {item.customerName || item.customerPhone ? (
                       <View className="flex-row items-center justify-between pb-xs mb-xs" style={{ borderBottomWidth: 0.5, borderBottomColor: '#EEE7DA' }}>
                         <View className="flex-row items-center gap-1.5">
                           <Ionicons name="person-circle" size={16} color="#171A1F" />
-                          <Text className="text-sm font-extrabold text-ruvo-ink">{item.customerName || 'Customer'}</Text>
+                          <Text className="text-sm font-extrabold text-gray-900">{item.customerName || 'Customer'}</Text>
                         </View>
                         {item.customerPhone ? (
-                          <TouchableOpacity className="flex-row items-center gap-1 bg-ruvo-surface px-3 py-1 rounded-full border border-ruvo-border">
+                          <TouchableOpacity className="flex-row items-center gap-1 bg-white px-3 py-1 rounded-full border border-gray-100">
                             <Ionicons name="call" size={12} color="#171A1F" />
-                            <Text className="text-xs font-bold text-ruvo-ink">{item.customerPhone}</Text>
+                            <Text className="text-xs font-bold text-gray-900">{item.customerPhone}</Text>
                           </TouchableOpacity>
                         ) : null}
                       </View>
                     ) : null}
 
                     {/* Complete Address section */}
-                    <View className="flex-row items-start gap-2 mb-xs bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
+                    <View className="flex-row items-start gap-2 mb-xs bg-white p-sm rounded-xl border border-gray-100">
                       <Ionicons name="location" size={16} color="#3478C8" className="mt-0.5" />
                       <View className="flex-1">
-                        <Text className="text-[10px] font-extrabold text-warm-600 uppercase tracking-wider mb-0.5">Delivery Address</Text>
-                        <Text className="text-xs text-ruvo-ink font-semibold leading-5">
+                        <Text className="text-[10px] font-extrabold text-gray-600 uppercase tracking-wider mb-0.5">Delivery Address</Text>
+                        <Text className="text-xs text-gray-900 font-semibold leading-5">
                           {item.deliveryAddress || 'No delivery address provided'}
                         </Text>
                       </View>
@@ -586,22 +587,22 @@ export default function ShopOrdersScreen() {
                     {/* Multi-Item Breakdown */}
                     {item.items && item.items.length > 0 ? (
                       <View className="gap-xs my-xs">
-                        <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider mb-xs">
+                        <Text className="text-xs font-extrabold text-gray-900 uppercase tracking-wider mb-xs">
                           Order Items ({item.items.length})
                         </Text>
                         {item.items.map((it, idx) => {
                           const itImg = formatImgUrl(it.productImageUrl) || mainImg;
                           return (
-                            <View key={it.id || idx} className="flex-row justify-between items-center bg-ruvo-surface p-sm rounded-xl border border-ruvo-border gap-sm">
+                            <View key={it.id || idx} className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-gray-100 gap-sm">
                               {itImg ? (
-                                <Image source={{ uri: itImg }} className="w-11 h-11 rounded-lg bg-warm-100 border border-ruvo-border" />
+                                <Image source={{ uri: itImg }} className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-100" />
                               ) : (
                                 <View className="w-11 h-11 rounded-lg bg-amber-50 border border-amber-200 items-center justify-center">
                                   <Ionicons name="basket-outline" size={18} color="#F4B400" />
                                 </View>
                               )}
                               <View className="flex-1 pr-xs">
-                                <Text className="text-xs font-extrabold text-ruvo-ink" numberOfLines={1}>
+                                <Text className="text-xs font-extrabold text-gray-900" numberOfLines={1}>
                                   {it.productName}
                                 </Text>
                                 <View className="bg-amber-50 self-start px-2 py-0.5 rounded-md mt-1 border border-amber-200">
@@ -610,7 +611,7 @@ export default function ShopOrdersScreen() {
                                   </Text>
                                 </View>
                               </View>
-                              <Text className="text-sm font-extrabold text-ruvo-ink">
+                              <Text className="text-sm font-extrabold text-gray-900">
                                 ₹{it.priceAtOrder ? (it.priceAtOrder * it.quantity) : (item.subtotal || item.totalAmount)}
                               </Text>
                             </View>
@@ -618,14 +619,14 @@ export default function ShopOrdersScreen() {
                         })}
                       </View>
                     ) : (
-                      <View className="flex-row justify-between items-center bg-ruvo-surface p-sm rounded-xl border border-ruvo-border">
-                        <Text className="text-xs text-warm-600 font-medium">Item Price</Text>
-                        <Text className="text-sm font-extrabold text-ruvo-ink">₹{item.subtotal || item.totalAmount}</Text>
+                      <View className="flex-row justify-between items-center bg-white p-sm rounded-xl border border-gray-100">
+                        <Text className="text-xs text-gray-600 font-medium">Item Price</Text>
+                        <Text className="text-sm font-extrabold text-gray-900">₹{item.subtotal || item.totalAmount}</Text>
                       </View>
                     )}
 
                     {/* Total & Payment Method (Detailed Breakdown) */}
-                    <View className="mt-xs bg-ruvo-surface p-sm rounded-xl" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
+                    <View className="mt-xs bg-white p-sm rounded-xl" style={{ borderWidth: 0.5, borderColor: '#EEE7DA' }}>
                       
                       {/* Breakdown Rows */}
                       <View className="gap-1.5 mb-2 pb-2" style={{ borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' }}>
@@ -727,7 +728,7 @@ export default function ShopOrdersScreen() {
                       >
                         {processing ? <ActivityIndicator color="#171A1F" size="small" /> : 'Generate Handover OTP'}
                       </Button>
-                      <Text className="text-[10px] text-warm-500 text-center">
+                      <Text className="text-[10px] text-gray-500 text-center">
                         Generate and share this 6-digit OTP to confirm order pickup.
                       </Text>
                     </View>
@@ -756,8 +757,8 @@ export default function ShopOrdersScreen() {
                             {/* Live Active Request Info */}
                             {liveBroadcastData && liveBroadcastData.status === 'PENDING' && (
                               <Animated.View entering={FadeIn.duration(400)} className="bg-white px-md py-xs rounded-lg border border-blue-200 mb-2 items-center">
-                                <Text className="text-[10px] text-warm-500 font-bold mb-0.5">Currently Asking:</Text>
-                                <Text className="text-sm font-black text-ruvo-ink">{liveBroadcastData.partnerName || 'Partner'}</Text>
+                                <Text className="text-[10px] text-gray-500 font-bold mb-0.5">Currently Asking:</Text>
+                                <Text className="text-sm font-black text-gray-900">{liveBroadcastData.partnerName || 'Partner'}</Text>
                                 {liveBroadcastData.distanceKm != null && (
                                   <Text className="text-[9px] text-blue-600 font-bold mt-0.5">{liveBroadcastData.distanceKm} km away</Text>
                                 )}
@@ -793,7 +794,7 @@ export default function ShopOrdersScreen() {
                       >
                         {processing ? <ActivityIndicator color="#FFF" size="small" /> : 'Cancel Order'}
                       </Button>
-                      <Text className="text-[10px] text-warm-500 text-center">
+                      <Text className="text-[10px] text-gray-500 text-center">
                         Use only if you are unable to fulfill this order.
                       </Text>
                     </View>

@@ -112,7 +112,7 @@ export const Step2_VehicleType = () => {
                     activeOpacity={0.8}
                   >
                     <Ionicons name={opt.icon} size={26} color={active ? colors.primary : colors.textHint} />
-                    <Text style={[typography.caption, { color: active ? colors.primary : colors.textSecondary, fontWeight: '700', marginTop: 6 }]}>
+                    <Text style={[typography.caption, { color: active ? colors.primary : colors.textSecondary, fontFamily: 'Poppins_700Bold', marginTop: 6 }]}>
                       {opt.label}
                     </Text>
                     {active && (

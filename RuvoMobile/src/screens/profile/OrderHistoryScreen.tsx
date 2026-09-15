@@ -164,7 +164,7 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
             />
           ) : (
             <View style={[cardStyles.shopLogoImg, { borderRadius: 20, backgroundColor: st.cardLeft, alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{shopInitials}</Text>
+              <Text style={{ color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 14 }}>{shopInitials}</Text>
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -273,7 +273,7 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
               size={13}
               color={colors.textSecondary}
             />
-            <Text style={[typography.caption, { color: colors.textSecondary, fontWeight: '600', fontSize: 11 }]}>
+            <Text style={[typography.caption, { color: colors.textSecondary, fontFamily: 'Poppins_600SemiBold', fontSize: 11 }]}>
               {item.paymentMethod === 'ONLINE' ? 'Online' : 'COD'}
             </Text>
           </View>

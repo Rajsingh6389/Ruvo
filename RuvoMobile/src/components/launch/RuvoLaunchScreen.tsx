@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   wordmarkLetterPrimary: {
     fontSize: 34,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     letterSpacing: 4,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-black',
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   taglineText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#77736B',
     letterSpacing: 1.8,
     textTransform: 'uppercase',
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   },
   bottomBrandText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#77736B',
     letterSpacing: 1.5,
   },

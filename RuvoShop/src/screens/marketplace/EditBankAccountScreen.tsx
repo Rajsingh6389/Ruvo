@@ -34,22 +34,44 @@ const BANKS = [
   'Canara Bank', 'Union Bank of India', 'Other',
 ];
 
+const InputField = ({ label, icon, value, onChangeText, placeholder, ...props }: any) => {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <View className="mb-4">
+      <Text className={`text-xs font-black uppercase tracking-wider mb-2 ${isFocused ? 'text-[#FF7A00]' : 'text-gray-500'}`}>{label}</Text>
+      <View className={`flex-row items-center border-[1.5px] rounded-2xl px-4 py-1 flex-1 bg-white shadow-sm ${
+        isFocused ? 'border-[#FF7A00]' : 'border-gray-100'
+      }`} style={{ minHeight: 56 }}>
+        <Ionicons name={icon} size={20} color={isFocused ? '#FF7A00' : '#9CA3AF'} className="mr-3" />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#9CA3AF"
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 13, flex: 1, paddingVertical: 14 }}
+          {...props}
+        />
+      </View>
+    </View>
+  );
+};
+
 export const EditBankAccountScreen = () => {
   const navigation = useNavigation<any>();
   const { token, userId } = useAuth();
 
-  const [accountHolder, setAccountHolder] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [confirmAccount, setConfirmAccount] = useState('');
-  const [ifsc, setIfsc] = useState('');
-  const [bankName, setBankName] = useState('');
-  const [upiId, setUpiId] = useState('');
+  const [{ accountHolder, accountNumber, confirmAccount, ifsc, bankName, upiId }, setForm] = useState({
+    accountHolder: '', accountNumber: '', confirmAccount: '', ifsc: '', bankName: '', upiId: ''
+  });
+
+  const [activeField, setActiveField] = useState<string | null>(null);
   const [showBankList, setShowBankList] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -63,12 +85,14 @@ export const EditBankAccountScreen = () => {
           const shops = await res.json();
           if (Array.isArray(shops) && shops.length > 0) {
             const shop = shops[0];
-            setAccountHolder(shop.accountHolder || shop.owner || '');
-            setAccountNumber(shop.bankAccountNumber || '');
-            setConfirmAccount(shop.bankAccountNumber || '');
-            setIfsc(shop.ifscCode || '');
-            setBankName(shop.bankName || '');
-            setUpiId(shop.upiId || '');
+            setForm({
+              accountHolder: shop.accountHolder || shop.owner || '',
+              accountNumber: shop.bankAccountNumber || '',
+              confirmAccount: shop.bankAccountNumber || '',
+              ifsc: shop.ifscCode || '',
+              bankName: shop.bankName || '',
+              upiId: shop.upiId || ''
+            });
           }
         }
       } catch {} finally {
@@ -130,137 +154,134 @@ export const EditBankAccountScreen = () => {
 
   if (fetching) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg items-center justify-center">
-        <ActivityIndicator size="large" color="#F5B700" />
-        <Text className="text-sm text-warm-600 mt-md font-medium">Loading bank details…</Text>
+      <SafeAreaView className="flex-1 bg-white items-center justify-center">
+        <ActivityIndicator size="large" color="#FF7A00" />
+        <Text className="text-sm text-gray-500 mt-4 font-bold tracking-widest uppercase">Fetching Details...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={['top']}>
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center gap-md">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="w-9 h-9 bg-warm-200 rounded-lg items-center justify-center">
-          <Ionicons name="arrow-back" size={20} color="#231C10" />
+      <View className="bg-white border-b border-gray-100 px-6 py-4 flex-row items-center gap-4 shadow-sm z-10">
+        <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:opacity-70">
+          <Ionicons name="arrow-back" size={20} color="#111827" />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="text-xl font-extrabold text-ruvo-ink">Bank Account Details</Text>
-          <Text className="text-xs text-warm-600 font-medium mt-xs">Settlement payouts go to this account</Text>
+          <Text className="text-xl font-black text-gray-900 tracking-tight">Payout Account</Text>
+          <Text className="text-[11px] text-[#FF7A00] font-black uppercase tracking-widest mt-0.5">Secure Banking</Text>
         </View>
-        <View className="w-9 h-9 bg-ruvo-yellow rounded-lg items-center justify-center">
-          <Ionicons name="wallet" size={18} color="#231C10" />
+        <View className="w-10 h-10 bg-green-50 rounded-full border border-green-100 items-center justify-center">
+          <Ionicons name="shield-checkmark" size={20} color="#16A34A" />
         </View>
       </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerClassName="px-lg pt-lg pb-2xl"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Success Banner */}
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 250 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {saved && (
-            <Animated.View style={{ opacity: fadeAnim }} className="bg-green-100 border border-green-400 rounded-xl p-md mb-lg flex-row items-center gap-md">
+            <Animated.View style={{ opacity: fadeAnim }} className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6 shadow-sm flex-row items-center gap-3">
               <Ionicons name="checkmark-circle" size={24} color="#16A34A" />
-              <Text className="flex-1 text-sm font-bold text-green-800">Bank details saved successfully!</Text>
+              <Text className="flex-1 text-sm font-black text-green-800">Payout details strictly saved & verified!</Text>
             </Animated.View>
           )}
 
-          {/* Account Info Section */}
           <AnimatedRN.View entering={FadeInUp.duration(500)}>
-            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
-              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">Account Information</Text>
+            {/* Account Details */}
+            <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
+              <View className="flex-row items-center gap-2 mb-6 border-b border-gray-50 pb-4">
+                <View className="w-8 h-8 rounded-full bg-blue-50 border border-blue-100 items-center justify-center">
+                  <Ionicons name="person" size={14} color="#2563EB" />
+                </View>
+                <Text className="text-sm font-black text-gray-900 uppercase tracking-widest">Account Details</Text>
+              </View>
 
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Account Holder Name *</Text>
-              <TextInput value={accountHolder} onChangeText={setAccountHolder} placeholder="Full name as on bank account" placeholderTextColor="#A79E92" className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink mb-md" />
+              <InputField label="Account Holder Name" icon="text-outline" value={accountHolder} onChangeText={(t: string) => setForm(f => ({ ...f, accountHolder: t }))} placeholder="Exact name as passbook" />
+              
+              <View className="mb-4">
+                <Text className={`text-xs font-black uppercase tracking-wider mb-2 ${activeField === 'Bank Name' ? 'text-[#FF7A00]' : 'text-gray-500'}`}>Bank Name</Text>
+                <TouchableOpacity
+                  onPress={() => setShowBankList(true)}
+                  className={`flex-row items-center border-[1.5px] rounded-2xl px-4 py-1 flex-1 bg-white shadow-sm ${showBankList ? 'border-[#FF7A00]' : 'border-gray-100'}`}
+                  style={{ minHeight: 56 }}
+                >
+                  <Ionicons name="business" size={20} color={bankName ? '#FF7A00' : '#9CA3AF'} className="mr-3" />
+                  <Text className={`flex-1 text-[13px] ${bankName ? 'text-gray-900' : 'text-gray-400'}`} style={{ fontFamily: 'Poppins_600SemiBold' }}>
+                    {bankName || 'Select your bank inside'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
 
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Bank Name *</Text>
-              <TouchableOpacity
-                onPress={() => setShowBankList(true)}
-                className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm flex-row items-center justify-between mb-md"
-              >
-                <Text className={`text-sm ${bankName ? 'text-ruvo-ink font-semibold' : 'text-warm-500'}`}>
-                  {bankName || 'Select your bank'}
-                </Text>
-                <Ionicons name="chevron-down" size={16} color="#A79E92" />
-              </TouchableOpacity>
-
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Account Number *</Text>
-              <TextInput value={accountNumber} onChangeText={setAccountNumber} placeholder="Bank account number" placeholderTextColor="#A79E92" keyboardType="number-pad" secureTextEntry className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink mb-md" />
-
-              <Text className="text-xs font-bold text-warm-700 mb-xs">Confirm Account Number *</Text>
-              <TextInput value={confirmAccount} onChangeText={setConfirmAccount} placeholder="Re-enter account number" placeholderTextColor="#A79E92" keyboardType="number-pad" className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink mb-md" />
-
-              <Text className="text-xs font-bold text-warm-700 mb-xs">IFSC Code *</Text>
-              <TextInput
-                value={ifsc}
-                onChangeText={t => setIfsc(t.toUpperCase())}
-                placeholder="e.g. HDFC0001234"
-                placeholderTextColor="#A79E92"
-                autoCapitalize="characters"
-                maxLength={11}
-                className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink font-mono"
+              <InputField label="Account Number" icon="keypad" value={accountNumber} onChangeText={(t: string) => setForm(f => ({ ...f, accountNumber: t }))} placeholder="Current or Savings A/C" keyboardType="number-pad" secureTextEntry />
+              <InputField label="Confirm Account Number" icon="checkbox" value={confirmAccount} onChangeText={(t: string) => setForm(f => ({ ...f, confirmAccount: t }))} placeholder="Re-enter to verify" keyboardType="number-pad" />
+              
+              <InputField 
+                label="IFSC Code" icon="barcode" value={ifsc} 
+                onChangeText={(t: string) => setForm(f => ({ ...f, ifsc: t.toUpperCase() }))} 
+                placeholder="e.g. HDFC0001234" autoCapitalize="characters" maxLength={11} 
               />
             </View>
           </AnimatedRN.View>
 
-          {/* UPI Section */}
           <AnimatedRN.View entering={FadeInUp.delay(100).duration(500)}>
-            <View className="bg-ruvo-surface border border-warm-300 rounded-xl p-lg mb-lg">
-              <Text className="text-xs font-extrabold text-warm-700 uppercase tracking-wider mb-md">UPI (Optional)</Text>
-              <Text className="text-xs font-bold text-warm-700 mb-xs">UPI ID</Text>
-              <TextInput value={upiId} onChangeText={setUpiId} placeholder="name@okhdfcbank" placeholderTextColor="#A79E92" keyboardType="email-address" autoCapitalize="none" className="bg-warm-100 border border-warm-300 rounded-lg px-md py-sm text-sm text-ruvo-ink" />
-              <Text className="text-xs text-warm-500 mt-xs">Example: yourname@okhdfc, yourvpa@upi</Text>
+            {/* Payment UPI */}
+            <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
+              <View className="flex-row items-center gap-2 mb-6 border-b border-gray-50 pb-4">
+                <View className="w-8 h-8 rounded-full bg-purple-50 border border-purple-100 items-center justify-center">
+                  <Ionicons name="flash" size={16} color="#9333EA" />
+                </View>
+                <Text className="text-sm font-black text-gray-900 uppercase tracking-widest">Fast UPI (Optional)</Text>
+              </View>
+              <InputField label="UPI ID" icon="at-circle" value={upiId} onChangeText={(t: string) => setForm(f => ({ ...f, upiId: t }))} placeholder="name@bankname" keyboardType="email-address" autoCapitalize="none" />
             </View>
           </AnimatedRN.View>
 
-          {/* Error */}
           {error && (
-            <AnimatedRN.View entering={FadeIn.duration(200)} className="bg-red-100 border border-red-300 rounded-xl p-md mb-lg flex-row items-start gap-sm">
-              <Ionicons name="alert-circle" size={18} color="#DC2626" />
-              <Text className="flex-1 text-sm text-red-700 font-semibold">{error}</Text>
+            <AnimatedRN.View entering={FadeIn.duration(200)} className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6 shadow-sm flex-row items-start gap-3">
+              <Ionicons name="warning" size={20} color="#DC2626" />
+              <Text className="flex-1 text-[13px] text-red-700 font-extrabold pb-1">{error}</Text>
             </AnimatedRN.View>
           )}
 
-          {/* Save */}
           <AnimatedRN.View entering={FadeInUp.delay(200).duration(500)}>
-            <Button variant="primary" onPress={handleSave} loading={saving} icon="checkmark-circle">
-              Save Bank Details
-            </Button>
+            <TouchableOpacity onPress={handleSave} disabled={saving} className="bg-[#FF7A00] rounded-[20px] py-4 items-center justify-center flex-row shadow-lg active:opacity-[0.85]" style={{ shadowColor: '#FF7A00' }}>
+              {saving ? <ActivityIndicator color="#FFF" size="small" /> : (
+                <>
+                  <Ionicons name="lock-closed" size={18} color="#FFF" style={{ marginRight: 8 }} />
+                  <Text className="text-base font-black text-white uppercase tracking-widest">Save Settings</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            
+            <View className="flex-row items-start gap-2 mt-6 px-2 justify-center opacity-70">
+              <Ionicons name="information-circle" size={14} color="#6B7280" />
+              <Text className="text-[11px] font-bold text-gray-500 text-center">Settlements are processed automatically daily at midnight.</Text>
+            </View>
           </AnimatedRN.View>
-
-          {/* Info note */}
-          <View className="flex-row items-start gap-sm mt-lg">
-            <Ionicons name="lock-closed-outline" size={14} color="#A79E92" />
-            <Text className="flex-1 text-xs text-warm-500 leading-4">
-              Your bank details are encrypted and used only for settlement payouts. We do not share this information with third parties.
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Bank Picker Modal */}
       <Modal visible={showBankList} transparent animationType="slide">
-        <View className="flex-1 bg-warm-900/60 justify-end">
-          <View className="bg-ruvo-surface rounded-t-3xl p-lg pb-2xl">
-            <View className="flex-row items-center justify-between mb-lg">
-              <Text className="text-lg font-extrabold text-ruvo-ink">Select Bank</Text>
-              <TouchableOpacity onPress={() => setShowBankList(false)}>
-                <Ionicons name="close" size={24} color="#A79E92" />
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-[32px] p-6 pb-12 shadow-2xl">
+            <View className="flex-row items-center justify-between mb-6 pb-4 border-b border-gray-100">
+              <Text className="text-xl font-black text-gray-900 tracking-tight">Select Bank</Text>
+              <TouchableOpacity onPress={() => setShowBankList(false)} className="w-10 h-10 bg-gray-50 rounded-full items-center justify-center border border-gray-200">
+                <Ionicons name="close" size={20} color="#374151" />
               </TouchableOpacity>
             </View>
             <FlatList
               data={BANKS}
               keyExtractor={item => item}
-              ItemSeparatorComponent={() => <View className="h-px bg-warm-200" />}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  onPress={() => { setBankName(item); setShowBankList(false); }}
-                  className={`py-md px-sm flex-row items-center justify-between ${bankName === item ? 'bg-ruvo-yellow/20 rounded-lg' : ''}`}
+                  onPress={() => { setForm(f => ({ ...f, bankName: item })); setShowBankList(false); }}
+                  className={`py-4 px-4 flex-row items-center justify-between rounded-2xl mb-2 ${bankName === item ? 'bg-[#FFF7ED] border border-[#FF7A00]' : 'border border-gray-50'}`}
                 >
-                  <Text className={`text-sm font-semibold ${bankName === item ? 'text-ruvo-ink font-extrabold' : 'text-warm-800'}`}>{item}</Text>
-                  {bankName === item && <Ionicons name="checkmark" size={18} color="#F5B700" />}
+                  <Text className={`text-sm ${bankName === item ? 'text-[#FF7A00] font-black' : 'text-gray-700 font-bold'}`}>{item}</Text>
+                  {bankName === item && <Ionicons name="checkmark-circle" size={20} color="#FF7A00" />}
                 </TouchableOpacity>
               )}
             />

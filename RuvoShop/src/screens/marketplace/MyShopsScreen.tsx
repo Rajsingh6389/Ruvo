@@ -206,19 +206,30 @@ export const MyShopsScreen = () => {
               </Text>
             )}
 
-            {/* View Dashboard Button with RuVo Brand Yellow Theme */}
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate(ROUTES.SHOPKEEPER_DASHBOARD, {
-                  shopId: item.id,
-                  shopName: item.name,
-                })
-              }
-              className="mt-md bg-ruvo-yellow py-3 rounded-xl flex-row items-center justify-center gap-2 border border-amber-300 shadow-xs"
-            >
-              <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider">View Dashboard</Text>
-              <Ionicons name="arrow-forward" size={16} color="#231C10" />
-            </TouchableOpacity>
+            {/* Actions Row */}
+            <View className="mt-md flex-row items-center gap-2">
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate(ROUTES.SHOPKEEPER_DASHBOARD, {
+                    shopId: item.id,
+                    shopName: item.name,
+                  })
+                }
+                className="flex-1 bg-ruvo-yellow py-3 rounded-xl flex-row items-center justify-center gap-2 border border-amber-300 shadow-xs"
+              >
+                <Text className="text-xs font-extrabold text-ruvo-ink uppercase tracking-wider">View Dashboard</Text>
+                <Ionicons name="arrow-forward" size={16} color="#231C10" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate('EditShop', { shop: item })
+                }
+                className="bg-white px-4 py-3 rounded-xl flex-row items-center justify-center border border-ruvo-border shadow-xs"
+              >
+                <Ionicons name="create-outline" size={18} color="#231C10" />
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Animated.View>
@@ -248,18 +259,12 @@ export const MyShopsScreen = () => {
       >
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-md flex-1">
-            <View
-              className="w-10 h-10 bg-ruvo-yellow-soft rounded-xl items-center justify-center"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 4,
-                elevation: 2,
-              }}
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              className="w-10 h-10 bg-warm-200 rounded-xl items-center justify-center active:opacity-70"
             >
-              <Ionicons name="storefront" size={20} color="#171A1F" />
-            </View>
+              <Ionicons name="arrow-back" size={20} color="#171A1F" />
+            </TouchableOpacity>
             <View className="flex-1">
               <Text className="text-xl font-extrabold text-ruvo-ink">Manage My Shops</Text>
               <Text className="text-xs text-warm-600 font-medium">Control inventory, orders & shop status</Text>
