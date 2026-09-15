@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   label: {
     marginTop: sh(14),
     fontSize: sf(13),
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     textAlign: 'center',
   },
 });

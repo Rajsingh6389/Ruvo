@@ -1,15 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Keyboard,
+  Animated,
   Image,
   StyleSheet,
   Dimensions,
@@ -19,22 +20,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+<<<<<<< HEAD
 
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
 
+<<<<<<< HEAD
 const { width: SW } = Dimensions.get('window');
+=======
+/* RuVo Shop Login */
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 
 interface AuthToken {
   accessToken: string;
   tokenType: string;
   userId: number | string;
   role: string;
-  refreshToken?: string | null;
-  verificationStatus?: string | null;
 }
-
 interface ApiResponse<T> {
   message: string;
   data: T;
@@ -42,6 +48,7 @@ interface ApiResponse<T> {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
+<<<<<<< HEAD
 const PHONE_LENGTH = 10;
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
@@ -101,17 +108,18 @@ const BackgroundShapes = () => {
   );
 };
 
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 export const LoginScreen = ({ navigation }: Props) => {
   const { login, requiredRole } = useAuth();
+  const { colors, typography, radius, shadows, spacing } = useTheme();
   const insets = useSafeAreaInsets();
-
-  const phoneInputRef = useRef<TextInput>(null);
-  const otpInputRef = useRef<TextInput>(null);
 
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [resendLoading, setResendLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -199,9 +207,48 @@ export const LoginScreen = ({ navigation }: Props) => {
       setError('Could not reach the server. Please check your internet connection.');
     } finally {
       setLoading(false);
-    }
+=======
+  const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Subtle button press scale
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const pressBtnIn = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const pressBtnOut = () => Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+
+  const formatMobileNumber = (raw: string) => {
+    const clean = raw.replace(/[^0-9]/g, '');
+    if (clean.length === 10) return `+91${clean}`;
+    if (clean.length === 12 && clean.startsWith('91')) return `+${clean}`;
+    return raw.trim();
   };
 
+  const handleSendOtp = async () => {
+    const formatted = formatMobileNumber(mobile);
+    if (!formatted || formatted.length < 10) {
+      setError('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/send`;
+    try {
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobileNumber: formatted }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
+      setStep(2);
+    } catch (err: any) {
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
+    }
+    finally { setLoading(false); }
+  };
+
+<<<<<<< HEAD
   /* =========================================================
      VERIFY OTP
   ========================================================= */
@@ -275,9 +322,35 @@ export const LoginScreen = ({ navigation }: Props) => {
       setError('Could not reach the server. Please check your internet connection.');
     } finally {
       setResendLoading(false);
+=======
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || otp.trim().length !== 6) { setError('Please enter the 6-digit OTP code'); return; }
+    setError(null);
+    setLoading(true);
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/verify`;
+    try {
+      const formatted = formatMobileNumber(mobile);
+      const res = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mobileNumber: formatted,
+          otpCode: otp.trim(),
+          ...(requiredRole === 'USER' ? {} : { role: requiredRole }),
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
+      const { data } = body as ApiResponse<AuthToken>;
+      await login(data.accessToken, String(data.userId), data.role);
+    } catch (err: any) {
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
     }
+    finally { setLoading(false); }
   };
 
+<<<<<<< HEAD
   /* =========================================================
      CHANGE NUMBER
   ========================================================= */
@@ -514,12 +587,184 @@ export const LoginScreen = ({ navigation }: Props) => {
           </View>
 
           <View style={{ height: 24 }} />
+=======
+  const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
+
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      {/* Full-screen theme-aware gradient */}
+      <LinearGradient
+        colors={[
+          colors.primary + '30',
+          colors.primary + '10',
+          colors.background
+        ]}
+        style={styles.fullScreenGradient}
+      />
+
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+        <ScrollView
+          contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 32 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand mark */}
+          <View style={styles.brandRow}>
+            <Image
+              source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798727/RuvoShop.png' }}
+              style={{ width: 140, height: 60, resizeMode: 'contain' }}
+            />
+          </View>
+          <Text style={[{ fontFamily: 'Poppins_800ExtraBold', fontSize: 18, textAlign: 'center', marginBottom: 20 }]}>RuVo Shop</Text>
+
+          {/* Step indicator */}
+          <View style={styles.stepRow}>
+            {[1, 2].map(s => (
+              <View
+                key={s}
+                style={[
+                  styles.stepDot,
+                  { backgroundColor: step >= s ? colors.primary : colors.border },
+                  step >= s && { width: 24 },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Heading */}
+          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
+            {step === 1 ? 'Welcome back' : 'Verify OTP'}
+          </Text>
+          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
+            {step === 1
+              ? 'Sign in to manage your shop and orders.'
+              : `We've sent a 6-digit code to +91 ${phoneDigits}`}
+          </Text>
+
+          {/* Form card */}
+          <View style={[
+            styles.formCard,
+            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad },
+            shadows.md,
+          ]}>
+            {step === 1 ? (
+              <>
+                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>Mobile Number</Text>
+                <View style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: focusedField === 'mobile' ? colors.background : colors.surfaceSunken,
+                    borderColor: focusedField === 'mobile' ? colors.primary : colors.border,
+                    borderRadius: radius.input,
+                  },
+                  focusedField === 'mobile' && styles.inputFocused,
+                ]}>
+                  <View style={[styles.prefixBox, { borderRightColor: colors.border }]}>
+                    <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15 }]}>🇮🇳  +91</Text>
+                  </View>
+                  <TextInput
+                    style={[typography.body, styles.input, { color: colors.textPrimary }]}
+                    placeholder="10-digit number"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={mobile}
+                    onChangeText={t => { setMobile(t); setError(null); }}
+                    onFocus={() => setFocusedField('mobile')}
+                    onBlur={() => setFocusedField(null)}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  {mobile.length === 10 && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success || '#18A957'} />
+                  )}
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>6-Digit OTP</Text>
+                <View style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: focusedField === 'otp' ? colors.background : colors.surfaceSunken,
+                    borderColor: focusedField === 'otp' ? colors.primary : colors.border,
+                    borderRadius: radius.input,
+                  },
+                  focusedField === 'otp' && styles.inputFocused,
+                ]}>
+                  <Ionicons name="key-outline" size={20} color={colors.textHint} style={styles.inputIcon} />
+                  <TextInput
+                    style={[typography.body, styles.input, { color: colors.textPrimary, letterSpacing: 6, fontSize: 20 }]}
+                    placeholder="• • • • • •"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={t => { setOtp(t); setError(null); }}
+                    onFocus={() => setFocusedField('otp')}
+                    onBlur={() => setFocusedField(null)}
+                    returnKeyType="done"
+                    onSubmitEditing={handleVerifyOtp}
+                    autoFocus
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Error */}
+            {error ? (
+              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft || '#FEE2E2', borderRadius: radius.sm }]}>
+                <Ionicons name="alert-circle" size={15} color={colors.error || '#DC2626'} />
+                <Text style={[typography.caption, { color: colors.error || '#DC2626', flex: 1 }]}>{error}</Text>
+              </View>
+            ) : null}
+
+            {/* CTA */}
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
+                onPressIn={pressBtnIn}
+                onPressOut={pressBtnOut}
+                disabled={loading}
+                activeOpacity={1}
+                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+              >
+                {loading
+                  ? <ActivityIndicator color={colors.onPrimary} />
+                  : <>
+                      <Text style={[typography.button, { color: colors.onPrimary }]}>
+                        {step === 1 ? 'Get OTP' : 'Verify & Login'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+                    </>
+                }
+              </TouchableOpacity>
+            </Animated.View>
+
+            {step === 2 && (
+              <TouchableOpacity onPress={() => { setStep(1); setOtp(''); setError(null); }} style={styles.changePhoneBtn}>
+                <Ionicons name="chevron-back" size={14} color={colors.primary} />
+                <Text style={[typography.bodyStrong, { color: colors.primary, fontSize: 13 }]}>Change Mobile Number</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          <View style={styles.trustRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textHint} />
+            <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>
+               Secure Local Business Portal
+            </Text>
+          </View>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 };
 
+<<<<<<< HEAD
 /* ===========================================================
    BENEFIT CARD
 =========================================================== */
@@ -736,3 +981,103 @@ const styles = StyleSheet.create({
 });
 
 export default LoginScreen;
+=======
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  screen: { flex: 1 },
+  fullScreenGradient: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+  },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingBottom: 40,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 4,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 20,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  subtitle: {
+    textAlign: 'center',
+    marginBottom: 28,
+    lineHeight: 20,
+  },
+  formCard: {
+    borderWidth: 0.5,
+    marginBottom: 20,
+  },
+  label: {
+    marginBottom: 8,
+    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 11,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    height: 52,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  inputFocused: {
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  prefixBox: {
+    paddingRight: 10,
+    borderRightWidth: 1,
+    height: '60%',
+    justifyContent: 'center',
+  },
+  inputIcon: { flexShrink: 0 },
+  input: { flex: 1 },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    padding: 10,
+    marginBottom: 14,
+  },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    gap: 8,
+  },
+  changePhoneBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    gap: 4,
+  },
+  trustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+  },
+});
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7

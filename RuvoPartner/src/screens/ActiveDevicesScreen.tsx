@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   headerSubtitle: {
@@ -191,12 +191,12 @@ const styles = StyleSheet.create({
   },
   deviceName: {
     fontSize: 15,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   badge: {
     color: '#4CAF50',
     fontSize: 12,
-    fontWeight: 'normal',
+    fontFamily: 'Poppins_400Regular',
   },
   deviceMeta: {
     fontSize: 12,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   logoutAllText: {
     color: '#E53935',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 15,
   },
 });

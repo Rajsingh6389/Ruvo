@@ -1,804 +1,273 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Keyboard,
+  Animated,
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  FadeInUp,
-} from 'react-native-reanimated';
-
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
+/* RuVo Partner Login - Premium UI Redesign */
+
 interface AuthToken {
   accessToken: string;
-  refreshToken?: string | null;
   tokenType: string;
   userId: number | string;
   role: string;
-  verificationStatus?: string | null;
 }
-
 interface ApiResponse<T> {
   message: string;
   data: T;
 }
 
-const OTP_LENGTH = 6;
-const PHONE_LENGTH = 10;
-const RESEND_SECONDS = 30;
+type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-export const LoginScreen = () => {
+export const LoginScreen = ({ navigation }: Props) => {
   const { login } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const phoneInputRef = useRef<TextInput>(null);
-  const otpInputRef = useRef<TextInput>(null);
+  
+  // Hardcoded for Partners
+  const requiredRole = 'DELIVERY_PARTNER';
 
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
-
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const [resendTimer, setResendTimer] = useState(0);
+  // Subtle button press scale
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const pressBtnIn = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const pressBtnOut = () => Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
-  /* -------------------------------------------------------
-   * Clean phone input
-   * ----------------------------------------------------- */
-
-  const handleMobileChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, '').slice(0, PHONE_LENGTH);
-
-    setMobile(digitsOnly);
-
-    if (error) {
-      setError(null);
-    }
+  const formatMobileNumber = (raw: string) => {
+    const clean = raw.replace(/[^0-9]/g, '');
+    if (clean.length === 10) return `+91${clean}`;
+    if (clean.length === 12 && clean.startsWith('91')) return `+${clean}`;
+    return raw.trim();
   };
-
-  /* -------------------------------------------------------
-   * Clean OTP input
-   * ----------------------------------------------------- */
-
-  const handleOtpChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, '').slice(0, OTP_LENGTH);
-
-    setOtp(digitsOnly);
-
-    if (error) {
-      setError(null);
-    }
-  };
-
-  /* -------------------------------------------------------
-   * Format phone for backend
-   * ----------------------------------------------------- */
-
-  const formattedMobile = `+91${mobile}`;
-
-  /* -------------------------------------------------------
-   * Validate Indian mobile number
-   * ----------------------------------------------------- */
-
-  const isValidMobile = () => {
-    if (mobile.length !== PHONE_LENGTH) {
-      return false;
-    }
-
-    // Indian mobile numbers normally start with 6, 7, 8 or 9.
-    return /^[6-9]\d{9}$/.test(mobile);
-  };
-
-  /* -------------------------------------------------------
-   * Send OTP
-   * ----------------------------------------------------- */
 
   const handleSendOtp = async () => {
-    Keyboard.dismiss();
-
-    if (!isValidMobile()) {
-      setError('Enter a valid 10-digit mobile number');
-      phoneInputRef.current?.focus();
+    const formatted = formatMobileNumber(mobile);
+    if (!formatted || formatted.length < 10) {
+      setError('Please enter a valid 10-digit mobile number');
       return;
     }
-
-    if (loading) return;
-
     setError(null);
     setLoading(true);
-
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/send`;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
+      const res = await fetch(targetUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mobileNumber: formattedMobile,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobileNumber: formatted }),
       });
-
       const body = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        setError(
-          body?.message ||
-            'Failed to send OTP. Please try again.',
-        );
-        return;
-      }
-
-      setOtp('');
+      if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
       setStep(2);
-      setResendTimer(RESEND_SECONDS);
-
-      // Wait for OTP screen to render before focusing.
-      setTimeout(() => {
-        otpInputRef.current?.focus();
-      }, 300);
-    } catch {
-      setError(
-        'Could not reach the server. Check your internet connection.',
-      );
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
     }
+    finally { setLoading(false); }
   };
-
-  /* -------------------------------------------------------
-   * Verify OTP
-   * ----------------------------------------------------- */
 
   const handleVerifyOtp = async () => {
-    Keyboard.dismiss();
-
-    if (otp.length !== OTP_LENGTH) {
-      setError('Enter the 6-digit OTP');
-      otpInputRef.current?.focus();
-      return;
-    }
-
-    if (loading) return;
-
+    if (!otp.trim() || otp.trim().length !== 6) { setError('Please enter the 6-digit OTP code'); return; }
     setError(null);
     setLoading(true);
-
+    const targetUrl = `${API_BASE_URL}/api/auth/otp/verify`;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/verify`, {
+      const formatted = formatMobileNumber(mobile);
+      const res = await fetch(targetUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mobileNumber: formattedMobile,
-          otpCode: otp,
-          role: 'DELIVERY_PARTNER',
+          mobileNumber: formatted,
+          otpCode: otp.trim(),
+          role: requiredRole,
         }),
       });
-
       const body = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        setError(body?.message || 'Invalid OTP code');
-        return;
-      }
-
+      if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
       const { data } = body as ApiResponse<AuthToken>;
-
-      if (!data?.accessToken || !data?.userId) {
-        setError('Invalid server response. Please try again.');
-        return;
-      }
-
-      await login(
-        data.accessToken,
-        data.refreshToken ?? null,
-        String(data.userId),
-        data.role,
-        data.verificationStatus || 'NEW',
-      );
-    } catch {
-      setError(
-        'Could not reach the server. Check your internet connection.',
-      );
-    } finally {
-      setLoading(false);
+      
+      await login(data.accessToken, null, String(data.userId), data.role, 'NEW');
+    } catch (err: any) {
+      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
     }
+    finally { setLoading(false); }
   };
 
-  /* -------------------------------------------------------
-   * Resend timer
-   * ----------------------------------------------------- */
-
-  useEffect(() => {
-    if (resendTimer <= 0) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setResendTimer((current) => {
-        if (current <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-
-        return current - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [resendTimer]);
-
-  /* -------------------------------------------------------
-   * Resend OTP
-   * ----------------------------------------------------- */
-
-  const handleResendOtp = async () => {
-    if (resendTimer > 0 || resendLoading || loading) {
-      return;
-    }
-
-    setError(null);
-    setResendLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          mobileNumber: formattedMobile,
-        }),
-      });
-
-      const body = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        setError(
-          body?.message ||
-            'Could not resend OTP. Please try again.',
-        );
-        return;
-      }
-
-      setOtp('');
-      setResendTimer(RESEND_SECONDS);
-
-      setTimeout(() => {
-        otpInputRef.current?.focus();
-      }, 200);
-    } catch {
-      setError(
-        'Could not reach the server. Check your internet connection.',
-      );
-    } finally {
-      setResendLoading(false);
-    }
-  };
-
-  /* -------------------------------------------------------
-   * Change number
-   * ----------------------------------------------------- */
-
-  const handleChangeNumber = () => {
-    setStep(1);
-    setOtp('');
-    setError(null);
-    setResendTimer(0);
-
-    setTimeout(() => {
-      phoneInputRef.current?.focus();
-    }, 200);
-  };
-
-  const otpComplete = otp.length === OTP_LENGTH;
-  const phoneComplete = mobile.length === PHONE_LENGTH;
+  const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
 
   return (
-    <View className="flex-1 bg-ruvo-bg">
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
-      />
+    <View className="flex-1 bg-ruvo-ink">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* --------------------------------------------------
-          Background decoration
-      --------------------------------------------------- */}
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-[-100px] right-[-100px] w-64 h-64 bg-[#FF7A00]/20 rounded-full blur-3xl opacity-50" />
+      <View className="absolute bottom-[-100px] left-[-100px] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl opacity-50" />
 
-      <View
-        pointerEvents="none"
-        className="absolute top-0 left-0 right-0 h-72 bg-ruvo-accent-soft"
-      />
-
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={
-          Platform.OS === 'ios' ? insets.top : 0
-        }
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
       >
         <ScrollView
-          className="flex-1"
-          contentContainerStyle={{
-            flexGrow: 1,
-            paddingTop: insets.top + 24,
-            paddingBottom: Math.max(insets.bottom, 24) + 24,
-            paddingHorizontal: 20,
-          }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40, paddingTop: insets.top + 32, paddingHorizontal: 24 }}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={
-            Platform.OS === 'ios' ? 'interactive' : 'on-drag'
-          }
           showsVerticalScrollIndicator={false}
         >
-          {/* --------------------------------------------------
-              Header
-          --------------------------------------------------- */}
+          {/* Brand Row */}
+          <View className="items-center justify-center mb-sm">
+            <Image
+              source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798945/RuvoPartner.png' }}
+              style={{ width: 140, height: 60, resizeMode: 'contain', tintColor: '#FFF' }}
+            />
+          </View>
+          <Text className="text-white text-center font-black text-xl tracking-tight mb-md">RuVo Partner</Text>
 
-          <Animated.View
-            entering={FadeInUp.duration(450)}
-            className="mb-8"
-          >
-            <View className="flex-row items-center">
-              <View
-                className="w-12 h-12 rounded-2xl bg-ruvo-accent items-center justify-center p-1"
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.12,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                <Image source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798945/RuvoPartner.png' }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-              </View>
-
-              <View className="ml-3">
-                <Text className="text-xl font-extrabold text-ruvo-ink">
-                  RuVo Partner
-                </Text>
-
-                <Text className="text-xs text-warm-600 mt-0.5">
-                  Delivery Partner
-                </Text>
-              </View>
+          {/* Dynamic Step Header */}
+          <View className="items-center mb-xl">
+            <View className="flex-row items-center gap-xs mb-md">
+              <View className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'w-6 bg-[#FF7A00]' : 'w-2 bg-gray-700'}`} />
+              <View className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'w-6 bg-[#FF7A00]' : 'w-2 bg-gray-700'}`} />
             </View>
-          </Animated.View>
-
-          {/* --------------------------------------------------
-              Progress
-          --------------------------------------------------- */}
-
-          <Animated.View
-            entering={FadeInUp.delay(80).duration(450)}
-            className="flex-row items-center mb-6"
-          >
-            <View
-              className={`h-1.5 rounded-full ${
-                step === 1
-                  ? 'bg-ruvo-accent flex-1'
-                  : 'bg-ruvo-accent flex-1'
-              }`}
-            />
-
-            <View className="w-2" />
-
-            <View
-              className={`h-1.5 rounded-full ${
-                step === 2
-                  ? 'bg-ruvo-accent flex-1'
-                  : 'bg-warm-300 flex-1'
-              }`}
-            />
-          </Animated.View>
-
-          {/* --------------------------------------------------
-              Heading
-          --------------------------------------------------- */}
-
-          <Animated.View
-            entering={FadeInUp.delay(140).duration(450)}
-            className="mb-6"
-          >
-            <Text className="text-3xl font-extrabold text-ruvo-ink">
-              {step === 1
-                ? 'Start delivering'
-                : 'Verify your number'}
+            <Text className="text-white text-3xl font-black tracking-tight mb-2">
+              {step === 1 ? 'Start delivering' : 'Verify OTP'}
             </Text>
-
-            <Text className="text-base text-warm-600 mt-2 leading-6">
+            <Text className="text-gray-400 text-sm font-bold text-center leading-5 px-sm">
               {step === 1
                 ? 'Enter your mobile number to continue as a RuVo delivery partner.'
-                : `We sent a 6-digit OTP to +91 ${mobile}`}
+                : `We've sent a 6-digit code to +91 ${phoneDigits}`}
             </Text>
-          </Animated.View>
+          </View>
 
-          {/* --------------------------------------------------
-              Main Card
-          --------------------------------------------------- */}
-
-          <Animated.View
-            entering={FadeInUp.delay(220).duration(450)}
-            className="bg-ruvo-surface rounded-2xl p-5 border border-warm-200"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: {
-                width: 0,
-                height: 5,
-              },
-              shadowOpacity: 0.07,
-              shadowRadius: 14,
-              elevation: 3,
-            }}
+          {/* Premium Form Glassmorphism Card */}
+          <View 
+            className="bg-[#1C2026] border border-gray-800 rounded-[32px] p-6 mb-lg"
+            style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 12 }}
           >
             {step === 1 ? (
-              <>
-                {/* Mobile label */}
-
-                <Text className="text-sm font-bold text-ruvo-ink mb-2">
-                  Mobile number
+              <View className="mb-md">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
+                  Mobile Number
                 </Text>
-
-                {/* Mobile input */}
-
-                <View
-                  className={`flex-row items-center h-14 rounded-xl border ${
-                    error
-                      ? 'border-red-400 bg-red-50'
-                      : 'border-warm-300 bg-warm-100'
-                  }`}
+                <View 
+                  className={`flex-row items-center h-14 rounded-2xl px-4 border ${focusedField === 'mobile' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all`}
                 >
-                  {/* Country code */}
-
-                  <View className="h-8 px-4 border-r border-warm-300 justify-center">
-                    <Text className="text-base font-bold text-ruvo-ink">
-                      🇮🇳 +91
-                    </Text>
+                  <View className="pr-3 pb-1 border-r border-gray-800 justify-center">
+                    <Text className="text-white font-bold text-base">🇮🇳 +91</Text>
                   </View>
-
-                  {/* Actual input */}
-
                   <TextInput
-                    ref={phoneInputRef}
+                    className="flex-1 text-white text-lg font-bold ml-3"
+                    placeholder="10-digit number"
+                    placeholderTextColor="#6B7280"
+                    keyboardType="phone-pad"
+                    maxLength={10}
                     value={mobile}
-                    onChangeText={handleMobileChange}
-                    placeholder="Enter mobile number"
-                    placeholderTextColor="#A79E92"
-                    keyboardType={
-                      Platform.OS === 'ios'
-                        ? 'number-pad'
-                        : 'phone-pad'
-                    }
-                    textContentType="telephoneNumber"
-                    autoComplete="tel"
-                    autoCorrect={false}
-                    maxLength={PHONE_LENGTH}
+                    onChangeText={t => { setMobile(t); setError(null); }}
+                    onFocus={() => setFocusedField('mobile')}
+                    onBlur={() => setFocusedField(null)}
                     returnKeyType="done"
                     onSubmitEditing={handleSendOtp}
-                    className="flex-1 px-4 text-base font-semibold text-ruvo-ink"
-                    style={{
-                      height: 56,
-                      paddingVertical: 0,
-                    }}
                   />
-
-                  {phoneComplete && (
-                    <View className="pr-4">
-                      <Ionicons
-                        name={
-                          isValidMobile()
-                            ? 'checkmark-circle'
-                            : 'alert-circle'
-                        }
-                        size={21}
-                        color={
-                          isValidMobile()
-                            ? '#16A34A'
-                            : '#DC2626'
-                        }
-                      />
-                    </View>
+                  {mobile.length === 10 && (
+                    <Ionicons name="checkmark-circle" size={22} color="#10B981" />
                   )}
                 </View>
-
-                <Text className="text-xs text-warm-500 mt-2">
-                  We'll send a verification code to this number.
-                </Text>
-              </>
+              </View>
             ) : (
-              <>
-                {/* OTP label */}
-
-                <View className="flex-row items-center justify-between mb-2">
-                  <Text className="text-sm font-bold text-ruvo-ink">
-                    Verification code
-                  </Text>
-
-                  <Text className="text-xs font-semibold text-warm-500">
-                    6 digits
-                  </Text>
-                </View>
-
-                {/* OTP input */}
-
-                <View
-                  className={`rounded-xl border ${
-                    error
-                      ? 'border-red-400 bg-red-50'
-                      : otpComplete
-                        ? 'border-ruvo-accent bg-ruvo-accent-soft'
-                        : 'border-warm-300 bg-warm-100'
-                  }`}
+              <View className="mb-md">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
+                  6-Digit OTP
+                </Text>
+                <View 
+                  className={`flex-row items-center h-14 rounded-2xl px-4 border ${focusedField === 'otp' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all`}
                 >
+                  <Ionicons name="key-outline" size={20} color="#9CA3AF" />
                   <TextInput
-                    ref={otpInputRef}
-                    value={otp}
-                    onChangeText={handleOtpChange}
+                    className="flex-1 text-white text-2xl font-black ml-3 tracking-[8px]"
                     placeholder="••••••"
-                    placeholderTextColor="#B8B0A5"
+                    placeholderTextColor="#4B5563"
                     keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    autoComplete="sms-otp"
-                    autoCorrect={false}
-                    maxLength={OTP_LENGTH}
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={t => { setOtp(t); setError(null); }}
+                    onFocus={() => setFocusedField('otp')}
+                    onBlur={() => setFocusedField(null)}
                     returnKeyType="done"
                     onSubmitEditing={handleVerifyOtp}
-                    className="text-center text-2xl font-bold text-ruvo-ink"
-                    style={{
-                      height: 64,
-                      letterSpacing: 10,
-                      paddingVertical: 0,
-                    }}
+                    autoFocus
                   />
                 </View>
-
-                {/* Resend */}
-
-                <View className="flex-row items-center justify-center mt-5">
-                  <Text className="text-sm text-warm-600">
-                    Didn't receive the code?{' '}
-                  </Text>
-
-                  <TouchableOpacity
-                    disabled={
-                      resendTimer > 0 ||
-                      resendLoading ||
-                      loading
-                    }
-                    onPress={handleResendOtp}
-                  >
-                    {resendLoading ? (
-                      <ActivityIndicator
-                        size="small"
-                        color="#16A34A"
-                      />
-                    ) : (
-                      <Text
-                        className={`text-sm font-bold ${
-                          resendTimer > 0
-                            ? 'text-warm-400'
-                            : 'text-ruvo-accent'
-                        }`}
-                      >
-                        {resendTimer > 0
-                          ? `Resend in ${resendTimer}s`
-                          : 'Resend OTP'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </>
+              </View>
             )}
 
-            {/* ------------------------------------------------
-                Error
-            ------------------------------------------------- */}
+            {/* Error Message */}
+            {error ? (
+              <View className="flex-row items-center gap-xs bg-red-500/10 border border-red-500/30 p-3 rounded-xl mb-4">
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text className="flex-1 text-red-500 font-bold text-xs">{error}</Text>
+              </View>
+            ) : null}
 
-            {error && (
-              <Animated.View
-                entering={FadeIn.duration(200)}
-                className="flex-row items-start bg-red-50 border border-red-200 rounded-xl p-3 mt-4"
+            {/* Giant CTA Button */}
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
+                onPressIn={pressBtnIn}
+                onPressOut={pressBtnOut}
+                disabled={loading}
+                activeOpacity={1}
+                className={`h-14 rounded-2xl items-center justify-center flex-row gap-2 ${loading ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
+                style={{ shadowColor: '#FF7A00', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
               >
-                <Ionicons
-                  name="alert-circle"
-                  size={18}
-                  color="#DC2626"
-                />
-
-                <Text className="flex-1 ml-2 text-sm text-red-600 leading-5">
-                  {error}
-                </Text>
-              </Animated.View>
-            )}
-
-            {/* ------------------------------------------------
-                CTA
-            ------------------------------------------------- */}
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={loading}
-              onPress={
-                step === 1
-                  ? handleSendOtp
-                  : handleVerifyOtp
-              }
-              className={`h-14 rounded-xl items-center justify-center flex-row mt-5 ${
-                loading
-                  ? 'bg-ruvo-accent opacity-70'
-                  : 'bg-ruvo-accent'
-              }`}
-            >
-              {loading ? (
-                <>
-                  <ActivityIndicator
-                    size="small"
-                    color="#FFFFFF"
-                  />
-
-                  <Text className="text-white font-bold ml-2">
-                    {step === 1
-                      ? 'Sending OTP...'
-                      : 'Verifying...'}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text className="text-white text-base font-bold">
-                    {step === 1
-                      ? 'Get OTP'
-                      : 'Verify & Continue'}
-                  </Text>
-
-                  <Ionicons
-                    name="arrow-forward"
-                    size={18}
-                    color="#FFFFFF"
-                    style={{ marginLeft: 8 }}
-                  />
-                </>
-              )}
-            </TouchableOpacity>
-
-            {/* ------------------------------------------------
-                Change number
-            ------------------------------------------------- */}
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text className="text-white font-black text-base">{step === 1 ? 'GET OTP' : 'VERIFY & LOGIN'}</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
 
             {step === 2 && (
-              <TouchableOpacity
+              <TouchableOpacity 
+                onPress={() => { setStep(1); setOtp(''); setError(null); }} 
+                className="flex-row items-center justify-center mt-5 gap-1"
                 activeOpacity={0.7}
-                onPress={handleChangeNumber}
-                className="flex-row items-center justify-center mt-4 py-2"
               >
-                <Ionicons
-                  name="chevron-back"
-                  size={16}
-                  color="#16A34A"
-                />
-
-                <Text className="text-sm font-bold text-ruvo-accent ml-1">
-                  Change mobile number
-                </Text>
+                <Ionicons name="chevron-back" size={14} color="#9CA3AF" />
+                <Text className="text-gray-400 font-bold text-sm">Change Mobile Number</Text>
               </TouchableOpacity>
             )}
-          </Animated.View>
+          </View>
 
-          {/* --------------------------------------------------
-              Benefits
-          --------------------------------------------------- */}
-
-          {step === 1 && (
-            <Animated.View
-              entering={FadeInDown.delay(320).duration(450)}
-              className="mt-7"
-            >
-              <Text className="text-base font-bold text-ruvo-ink mb-4">
-                Why deliver with RuVo?
-              </Text>
-
-              <View className="flex-row">
-                <Benefit
-                  icon="time-outline"
-                  title="Flexible"
-                  subtitle="Work your hours"
-                />
-
-                <View className="w-3" />
-
-                <Benefit
-                  icon="cash-outline"
-                  title="Earn"
-                  subtitle="Get paid for deliveries"
-                />
-
-                <View className="w-3" />
-
-                <Benefit
-                  icon="shield-checkmark-outline"
-                  title="Secure"
-                  subtitle="Trusted platform"
-                />
-              </View>
-            </Animated.View>
-          )}
-
-          {/* --------------------------------------------------
-              Security footer
-          --------------------------------------------------- */}
-
-          <Animated.View
-            entering={FadeInDown.delay(400).duration(450)}
-            className="items-center mt-auto pt-8"
-          >
-            <View className="flex-row items-center">
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={15}
-                color="#A79E92"
-              />
-
-              <Text className="text-xs text-warm-500 ml-1.5">
-                Your information is encrypted and secure
-              </Text>
-            </View>
-          </Animated.View>
+          {/* Secure Trust Footer */}
+          <View className="flex-row items-center justify-center gap-2 mt-4 opacity-50">
+            <Ionicons name="shield-checkmark-outline" size={16} color="#9CA3AF" />
+            <Text className="text-gray-400 font-bold text-[11px] uppercase tracking-widest">
+               Secure Delivery Fleet Authentication
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 };
-
-/* ===========================================================
-   Benefit Component
-=========================================================== */
-
-const Benefit = ({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-}) => {
-  return (
-    <View className="flex-1 bg-ruvo-surface border border-warm-200 rounded-xl p-3">
-      <View className="w-9 h-9 rounded-lg bg-ruvo-accent-soft items-center justify-center mb-2">
-        <Ionicons
-          name={icon}
-          size={18}
-          color="#16A34A"
-        />
-      </View>
-
-      <Text className="text-sm font-bold text-ruvo-ink">
-        {title}
-      </Text>
-
-      <Text className="text-[10px] text-warm-500 mt-0.5">
-        {subtitle}
-      </Text>
-    </View>
-  );
-};
-
-export default LoginScreen;

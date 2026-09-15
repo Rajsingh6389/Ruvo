@@ -380,17 +380,6 @@ public class PartnerController {
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
             
-            // Verify Pickup OTP
-            if (order.getPickupOtp() != null && !order.getPickupOtp().trim().isEmpty() && !Boolean.TRUE.equals(order.getPickupOtpVerified())) {
-                if (otp == null || otp.trim().isEmpty()) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Pickup OTP is required to mark this order as picked up."));
-                }
-                if (!order.getPickupOtp().equals(otp.trim())) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "Invalid Pickup OTP."));
-                }
-                order.setPickupOtpVerified(true);
-            }
-            
             order.setOrderStatus("PICKED_UP");
             orderRepository.save(order);
         }
@@ -485,12 +474,13 @@ public class PartnerController {
 
         Long partnerId = dp != null ? dp.getId() : (partner != null ? partner.getId() : null);
         if (partnerId == null) {
-            return ResponseEntity.ok(Map.of("todayEarnings", 0.0, "totalEarnings", 0.0, "walletBalance", 0.0));
+            return ResponseEntity.ok(Map.of("todayEarnings", 0.0, "totalEarnings", 0.0, "walletBalance", 0.0, "shopDues", 0.0));
         }
 
         List<Delivery> runs = deliveryRepository.findByPartnerId(partnerId);
         double totalEarnings = 0;
         double todayEarnings = 0;
+        double shopDues = 0;
 
         Instant startOfToday = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant();
 
@@ -499,6 +489,14 @@ public class PartnerController {
                 totalEarnings += d.getDeliveryFee();
                 if (d.getDeliveredAt() != null && d.getDeliveredAt().isAfter(startOfToday)) {
                     todayEarnings += d.getDeliveryFee();
+                    
+                    Optional<Order> orderOpt = orderRepository.findById(d.getOrderId());
+                    if (orderOpt.isPresent()) {
+                        Order o = orderOpt.get();
+                        if ("COD".equalsIgnoreCase(o.getPaymentMethod())) {
+                            shopDues += (o.getTotalAmount().doubleValue() - d.getDeliveryFee());
+                        }
+                    }
                 }
             }
         }
@@ -508,7 +506,8 @@ public class PartnerController {
         return ResponseEntity.ok(Map.of(
                 "todayEarnings", todayEarnings,
                 "totalEarnings", totalEarnings,
-                "walletBalance", walletBalance
+                "walletBalance", walletBalance,
+                "shopDues", Math.max(0, shopDues)
         ));
     }
 

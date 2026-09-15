@@ -163,7 +163,7 @@ export const ShopSettlementScreen = () => {
         <View style={styles.upiBanner}>
           <Ionicons name="card-outline" size={18} color="#D97706" />
           <Text style={styles.upiBannerText}>
-            💡 UPI Instant Payouts are <Text style={{ fontWeight: '800' }}>Coming Soon</Text>! Use Cash Handover OTP below.
+            💡 UPI Instant Payouts are <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>Coming Soon</Text>! Use Cash Handover OTP below.
           </Text>
         </View>
 
@@ -270,7 +270,7 @@ export const ShopSettlementScreen = () => {
             <View style={styles.timerRow}>
               <Ionicons name="time-outline" size={16} color="#64748B" />
               <Text style={styles.timerText}>
-                OTP is valid for <Text style={{ fontWeight: '800', color: EMERALD }}>{formatTimer(timerSeconds)}</Text>
+                OTP is valid for <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: EMERALD }}>{formatTimer(timerSeconds)}</Text>
               </Text>
             </View>
 
@@ -285,8 +285,8 @@ export const ShopSettlementScreen = () => {
                 <Text style={styles.sumVal}>₹{otpData?.deliveryCharge || 0}</Text>
               </View>
               <View style={[styles.summaryLine, { marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#CBD5E1' }]}>
-                <Text style={{ fontWeight: '800', color: '#0F172A' }}>Cash Given to Shopkeeper:</Text>
-                <Text style={{ fontWeight: '900', color: EMERALD, fontSize: 16 }}>₹{otpData?.netCashToShop || 0}</Text>
+                <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: '#0F172A' }}>Cash Given to Shopkeeper:</Text>
+                <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: EMERALD, fontSize: 16 }}>₹{otpData?.netCashToShop || 0}</Text>
               </View>
             </View>
 
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
-  headerTitle: { fontSize: 22, fontWeight: '800' },
+  headerTitle: { fontSize: 22, fontFamily: 'Poppins_800ExtraBold' },
   subtitle: { fontSize: 13, marginTop: 2 },
   refreshBtn: { padding: 8, backgroundColor: EMERALD_LIGHT, borderRadius: 20 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -346,9 +346,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
   },
-  cardLabel: { fontSize: 12, color: '#64748B', fontWeight: '600' },
-  cardValue: { fontSize: 20, fontWeight: '900', marginTop: 4 },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginBottom: 12 },
+  cardLabel: { fontSize: 12, color: '#64748B', fontFamily: 'Poppins_600SemiBold' },
+  cardValue: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', marginTop: 4 },
+  sectionTitle: { fontSize: 17, fontFamily: 'Poppins_800ExtraBold', color: '#0F172A', marginBottom: 12 },
   shopCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -370,20 +370,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  shopName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  shopName: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#0F172A' },
   orderSubtext: { fontSize: 12, color: '#64748B', marginTop: 1 },
   statusBadge: { backgroundColor: AMBER_LIGHT, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusBadgeText: { color: AMBER, fontWeight: '700', fontSize: 11 },
+  statusBadgeText: { color: AMBER, fontFamily: 'Poppins_700Bold', fontSize: 11 },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
   calcRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
   calcBox: { alignItems: 'center', flex: 1 },
   calcLabel: { fontSize: 10, color: '#64748B', textTransform: 'uppercase' },
-  calcVal: { fontSize: 15, fontWeight: '800', color: '#1E293B', marginTop: 2 },
-  minusSign: { fontSize: 16, fontWeight: '800', color: '#94A3B8' },
-  equalSign: { fontSize: 16, fontWeight: '800', color: '#94A3B8' },
+  calcVal: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#1E293B', marginTop: 2 },
+  minusSign: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#94A3B8' },
+  equalSign: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#94A3B8' },
   calcBoxHighlight: { alignItems: 'center', flex: 1.2, backgroundColor: EMERALD_LIGHT, paddingVertical: 6, borderRadius: 8 },
-  calcLabelHighlight: { fontSize: 10, color: EMERALD, fontWeight: '700', textTransform: 'uppercase' },
-  calcValHighlight: { fontSize: 16, fontWeight: '900', color: EMERALD, marginTop: 1 },
+  calcLabelHighlight: { fontSize: 10, color: EMERALD, fontFamily: 'Poppins_700Bold', textTransform: 'uppercase' },
+  calcValHighlight: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: EMERALD, marginTop: 1 },
   settleBtn: {
     backgroundColor: EMERALD,
     flexDirection: 'row',
@@ -393,10 +393,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 8,
   },
-  settleBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  settleBtnText: { color: '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 15 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center' },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginTop: 10 },
+  modalTitle: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', color: '#0F172A', marginTop: 10 },
   modalSub: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 4 },
   otpBoxContainer: { flexDirection: 'row', gap: 8, marginVertical: 20 },
   digitBox: {
@@ -409,13 +409,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  digitText: { fontSize: 24, fontWeight: '900', color: EMERALD },
+  digitText: { fontSize: 24, fontFamily: 'Poppins_800ExtraBold', color: EMERALD },
   timerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   timerText: { fontSize: 13, color: '#64748B' },
   modalSummaryBox: { width: '100%', backgroundColor: '#F8FAFC', padding: 14, borderRadius: 12, marginBottom: 16 },
   summaryLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   sumLabel: { color: '#64748B', fontSize: 13 },
-  sumVal: { fontWeight: '700', color: '#0F172A', fontSize: 13 },
+  sumVal: { fontFamily: 'Poppins_700Bold', color: '#0F172A', fontSize: 13 },
   cancelBtn: { paddingVertical: 12, width: '100%', alignItems: 'center' },
-  cancelBtnText: { color: '#64748B', fontWeight: '700', fontSize: 15 },
+  cancelBtnText: { color: '#64748B', fontFamily: 'Poppins_700Bold', fontSize: 15 },
 });

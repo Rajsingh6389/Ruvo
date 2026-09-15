@@ -1,3 +1,18 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  Text, TextInput {
+    font-family: 'Poppins_400Regular';
+  }
+}
+
+@layer utilities {
+  .font-normal { font-family: 'Poppins_400Regular'; font-weight: normal; }
+  .font-medium { font-family: 'Poppins_500Medium'; font-weight: 500; }
+  .font-semibold { font-family: 'Poppins_600SemiBold'; font-weight: 600; }
+  .font-bold { font-family: 'Poppins_700Bold'; font-weight: 700; }
+  .font-extrabold { font-family: 'Poppins_800ExtraBold'; font-weight: 800; }
+  .font-black { font-family: 'Poppins_800ExtraBold'; font-weight: 900; }
+}

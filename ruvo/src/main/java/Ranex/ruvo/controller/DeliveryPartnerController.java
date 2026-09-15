@@ -131,4 +131,25 @@ public class DeliveryPartnerController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<?> getShopRiders(@PathVariable Long shopId) {
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        List<DeliveryPartner> shopRiders = new java.util.ArrayList<>(deliveryPartnerRepository.findByShopId(shopId));
+        List<DeliveryPartner> allPartners = deliveryPartnerRepository.findAll();
+        for (DeliveryPartner dp : allPartners) {
+            if (dp.getPreferredShopIds() != null && !dp.getPreferredShopIds().isEmpty()) {
+                String[] prefs = dp.getPreferredShopIds().split(",");
+                for (String pId : prefs) {
+                    if (pId.trim().equals(shopId.toString()) && !shopRiders.contains(dp)) {
+                        shopRiders.add(dp);
+                        break;
+                    }
+                }
+            }
+        }
+        return ResponseEntity.ok(shopRiders);
+    }
 }

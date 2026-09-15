@@ -169,6 +169,32 @@ export const AuthProvider = ({
     }
   };
 
+  // =========================================================
+  // GLOBAL FETCH INTERCEPTOR FOR 401
+  // =========================================================
+  const logoutRef = React.useRef(logout);
+  useEffect(() => {
+    logoutRef.current = logout;
+  }, [logout]);
+
+  useEffect(() => {
+    const originalFetch = globalThis.fetch;
+    // @ts-ignore
+    globalThis.fetch = async (...args: any[]) => {
+      // @ts-ignore
+      const response = await originalFetch(...args);
+      const initInfo = args[1] as RequestInit | undefined;
+      const skipGlobal = initInfo?.headers && (initInfo.headers as any)['X-Skip-Global-401'];
+      if (response.status === 401 && !skipGlobal) {
+        logoutRef.current();
+      }
+      return response;
+    };
+    return () => {
+      globalThis.fetch = originalFetch;
+    };
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       isAuthenticated, isLoading, token, userId, user,

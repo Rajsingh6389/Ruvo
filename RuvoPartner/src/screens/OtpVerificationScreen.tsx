@@ -1,29 +1,27 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Animated,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { api } from '../services/api';
 
 export const OtpVerificationScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { login } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
-
+  
   const { mobileNumber } = route.params;
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -93,57 +91,55 @@ export const OtpVerificationScreen = () => {
   const shortNumber = mobileNumber?.slice(-4);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView className="flex-1 bg-ruvo-ink">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-0 right-[-50px] w-64 h-64 bg-[#FF7A00]/10 rounded-full blur-3xl opacity-50" />
+      
       {/* Back */}
       <TouchableOpacity
-        style={[styles.backBtn, { backgroundColor: colors.surfaceSunken, borderRadius: radius.sm }]}
+        className="absolute top-4 left-4 z-10 w-10 h-10 bg-white/5 rounded-full items-center justify-center border border-white/10"
         onPress={() => navigation.goBack()}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        <Ionicons name="arrow-back" size={22} color="#FFF" />
       </TouchableOpacity>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.kav}>
-        <View style={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <View className="flex-1 justify-center px-6 items-center">
           {/* Icon */}
-          <View style={[styles.iconCircle, { backgroundColor: colors.primarySoft, borderRadius: 40 }]}>
-            <Ionicons name="phone-portrait-outline" size={44} color={colors.primary} />
+          <View className="w-20 h-20 items-center justify-center mb-6 rounded-[24px] bg-[#FF7A00]/10 border border-[#FF7A00]/30 animate-pulse">
+            <Ionicons name="shield-checkmark" size={40} color="#FF7A00" />
           </View>
 
-          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
+          <Text className="text-white text-3xl font-black tracking-tight mb-2">
             Verify OTP
           </Text>
-          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
+          <Text className="text-gray-400 text-sm font-bold text-center leading-5 mb-8">
             Enter the 6-digit code sent to{'\n'}
-            <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>
+            <Text className="text-white font-black tracking-wider">
               ••••••{shortNumber}
             </Text>
           </Text>
 
-          {/* Form card */}
-          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad }, shadows.md]}>
-            <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>
-              6-Digit OTP
+          {/* Premium Form Glassmorphism Card */}
+          <View 
+            className="w-full bg-[#1C2026] border border-gray-800 rounded-[32px] p-6 mb-5"
+            style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 12 }}
+          >
+            <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
+              6-Digit Secure Code
             </Text>
 
-            <View style={[
-              styles.inputWrap,
-              {
-                backgroundColor: colors.surfaceSunken,
-                borderColor: focused ? colors.primary : colors.border,
-                borderRadius: radius.input,
-              },
-              focused && styles.inputFocused,
-            ]}>
-              <Ionicons name="key-outline" size={20} color={colors.textHint} />
+            <View 
+              className={`flex-row items-center h-14 rounded-2xl px-4 border ${focused ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all mb-4`}
+            >
+              <Ionicons name="key-outline" size={20} color="#9CA3AF" />
               <TextInput
-                style={[
-                  typography.body,
-                  styles.input,
-                  { color: colors.textPrimary, letterSpacing: 8, fontSize: 22, textAlign: 'center' },
-                ]}
-                placeholder="• • • • • •"
-                placeholderTextColor={colors.placeholder}
+                className="flex-1 text-white text-3xl font-black ml-3 tracking-[8px] text-center"
+                placeholder="••••••"
+                placeholderTextColor="#4B5563"
                 value={code}
                 onChangeText={t => { setCode(t); setError(null); }}
                 onFocus={() => setFocused(true)}
@@ -155,22 +151,23 @@ export const OtpVerificationScreen = () => {
                 autoFocus
               />
               {code.length === 6 && (
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                <Ionicons name="checkmark-circle" size={22} color="#10B981" />
               )}
             </View>
 
-            {/* Error */}
+            {/* Error Message */}
             {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft, borderRadius: radius.sm }]}>
-                <Ionicons name="alert-circle" size={15} color={colors.error} />
-                <Text style={[typography.caption, { color: colors.error, flex: 1 }]}>{error}</Text>
+              <View className="flex-row items-center gap-xs bg-red-500/10 border border-red-500/30 p-3 rounded-xl mb-4">
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text className="flex-1 text-red-500 font-bold text-xs">{error}</Text>
               </View>
             ) : null}
 
-            {/* CTA */}
+            {/* Giant CTA Button */}
             <Animated.View style={{ transform: [{ scale: btnScale }] }}>
               <TouchableOpacity
-                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+                className={`h-14 rounded-2xl items-center justify-center flex-row gap-2 ${loading ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
+                style={{ shadowColor: '#FF7A00', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
                 onPress={handleVerify}
                 onPressIn={pressBtnIn}
                 onPressOut={pressBtnOut}
@@ -178,28 +175,29 @@ export const OtpVerificationScreen = () => {
                 activeOpacity={1}
               >
                 {loading ? (
-                  <ActivityIndicator color={colors.onPrimary} />
+                  <ActivityIndicator color="#FFF" />
                 ) : (
                   <>
-                    <Text style={[typography.button, { color: colors.onPrimary }]}>Verify & Continue</Text>
-                    <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+                    <Text className="text-white font-black text-base">VERIFY & CONTINUE</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
                   </>
                 )}
               </TouchableOpacity>
             </Animated.View>
 
             {/* Resend */}
-            <View style={styles.resendRow}>
+            <View className="items-center justify-center mt-6">
               {!canResend ? (
-                <Text style={[typography.body, { color: colors.textSecondary, fontSize: 13 }]}>
+                <Text className="text-gray-400 text-sm font-bold">
                   Resend OTP in{' '}
-                  <Text style={{ color: colors.primary, fontWeight: '700' }}>
+                  <Text className="text-[#FF7A00] font-black">
                     {`00:${timer < 10 ? '0' : ''}${timer}`}
                   </Text>
                 </Text>
               ) : (
-                <TouchableOpacity onPress={handleResend}>
-                  <Text style={[typography.bodyStrong, { color: colors.primary }]}>
+                <TouchableOpacity onPress={handleResend} activeOpacity={0.7} className="flex-row gap-1 items-center">
+                  <Ionicons name="reload" size={14} color="#FF7A00" />
+                  <Text className="text-[#FF7A00] text-sm font-black uppercase">
                     Resend OTP
                   </Text>
                 </TouchableOpacity>
@@ -211,27 +209,3 @@ export const OtpVerificationScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  kav: { flex: 1 },
-  backBtn: {
-    position: 'absolute', top: 16, left: 16, zIndex: 10,
-    width: 38, height: 38, alignItems: 'center', justifyContent: 'center',
-  },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, alignItems: 'center' },
-  iconCircle: { width: 80, height: 80, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  title: { marginBottom: 8 },
-  subtitle: { textAlign: 'center', marginBottom: 32, lineHeight: 22 },
-  formCard: { borderWidth: StyleSheet.hairlineWidth, width: '100%', marginBottom: 20 },
-  label: { marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 11 },
-  inputWrap: {
-    flexDirection: 'row', alignItems: 'center', borderWidth: 1.5,
-    height: 56, marginBottom: 16, paddingHorizontal: 14, gap: 10,
-  },
-  inputFocused: { borderWidth: StyleSheet.hairlineWidth },
-  input: { flex: 1 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginBottom: 14 },
-  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, gap: 8 },
-  resendRow: { alignItems: 'center', marginTop: 16 },
-});

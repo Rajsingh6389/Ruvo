@@ -92,6 +92,7 @@ public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner
 
     List<DeliveryPartner> findByApprovedFalse();
 
+    List<DeliveryPartner> findByShopId(Long shopId);
     List<DeliveryPartner> findByShopIdAndApprovedTrueAndActiveTrueAndAvailableTrue(Long shopId);
 
     List<DeliveryPartner> findByApprovedTrueAndActiveTrueAndAvailableTrue();

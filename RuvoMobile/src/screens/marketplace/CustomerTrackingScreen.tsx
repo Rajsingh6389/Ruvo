@@ -69,6 +69,7 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
+<<<<<<< HEAD
 const PROMO_BANNERS = [
   {
     id: '1',
@@ -125,6 +126,8 @@ const RUVO_FACTS = [
   },
 ];
 
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
   const navigation  = useNavigation<any>();
@@ -319,7 +322,7 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#FF6B35" />
-        <Text style={{ color: colors.textSecondary, marginTop: 12, fontWeight: '700' }}>Loading live tracking...</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 12, fontFamily: 'Poppins_700Bold' }}>Loading live tracking...</Text>
       </SafeAreaView>
     );
   }
@@ -328,9 +331,9 @@ export default function CustomerTrackingScreen() {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
         <Ionicons name="alert-circle-outline" size={52} color="#EF4444" />
-        <Text style={{ color: colors.textPrimary, marginTop: 12, fontWeight: '800' }}>Order not found.</Text>
+        <Text style={{ color: colors.textPrimary, marginTop: 12, fontFamily: 'Poppins_800ExtraBold' }}>Order not found.</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={{ color: '#FFF', fontWeight: '800' }}>Go Back</Text>
+          <Text style={{ color: '#FFF', fontFamily: 'Poppins_800ExtraBold' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -351,100 +354,91 @@ export default function CustomerTrackingScreen() {
 
   const productImgUri = formatProductImageUrl(order.productImageUrl);
 
+  const formatETA = () => {
+    if (order.orderStatus === 'DELIVERED') return '✅ Delivered successfully';
+    if (isLive) return '🚴 Arriving in 10-15 min';
+    if (order.orderStatus === 'SHOP_ACCEPTED' || order.orderStatus === 'PREPARING' || order.orderStatus === 'READY') return '🧑‍🍳 Shop is preparing your order';
+    if (order.orderStatus === 'ORDER_PLACED' || order.orderStatus === 'SHOP_PENDING') return '🛍️ Order placed successfully';
+    if (order.orderStatus === 'CANCELLED' || isCancelled) return '❌ Order Cancelled';
+    return '🚀 Processing your order';
+  };
+
+  const formatSubtitle = () => {
+    if (order.orderStatus === 'DELIVERED') return 'Thank you for ordering with RuVo!';
+    if (isLive) return 'Your order is on the way';
+    if (isCancelled) return 'This order was cancelled and will not be delivered.';
+    return 'We will notify you when it ships';
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#FF6B35" />
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-      {/* ── BLINKIT-STYLE HEADER BANNER ─────────────────────────────── */}
-      <View style={{ backgroundColor: '#FF6B35', borderBottomLeftRadius: 24, borderBottomRightRadius: 24, elevation: 6 }} className="px-4 pt-3 pb-4 shadow-md">
-        <View className="flex-row items-center justify-between mb-2">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-            className="w-10 h-10 rounded-full items-center justify-center"
+      {/* ── MAP HERO (Top 45% of Screen) ─────────────────────────────────── */}
+      <View style={styles.heroMap}>
+        {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
+          <MapView
+            style={StyleSheet.absoluteFill}
+            initialRegion={{ ...destination, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+            showsUserLocation={false}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-
-          <View className="items-center flex-1">
-            <Text style={{ color: '#FFFFFF' }} className="text-lg font-black">
-              {order.shopName || 'Live Tracking'}
-            </Text>
-            <Text style={{ color: 'rgba(255,255,255,0.88)' }} className="text-xs font-semibold">
-              Order #{order.id} • {order.items?.length || order.quantity || 1} Item(s)
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={handleRefresh}
-            style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
-            className="w-10 h-10 rounded-full items-center justify-center"
-          >
-            <Ionicons name="refresh" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Live ETA Box */}
-        {!isCancelled && (
-          <View style={{ backgroundColor: '#FFFFFF', elevation: 4 }} className="flex-row items-center justify-between rounded-2xl p-3 mt-1 shadow-sm">
-            <View className="flex-1">
-              <View className="flex-row items-center gap-1.5 mb-0.5">
-                <Animated.View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E', transform: [{ scale: pulseAnim }] }} />
-                <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }} className="uppercase">
-                  {isLive ? 'RIDER DISPATCHED' : order.orderStatus === 'DELIVERED' ? 'DELIVERED' : 'SHOP PREPARING'}
-                </Text>
+            <Marker coordinate={destination} title="Drop Location">
+              <View style={[styles.markerBase, { backgroundColor: '#111827' }]}>
+                <Ionicons name="home" size={16} color="#FFF" />
               </View>
-              <Text style={{ color: '#171A1F' }} className="text-base font-black">
-                {isLive ? 'Arriving in 10-15 mins' : order.orderStatus === 'DELIVERED' ? 'Order Delivered' : 'Preparing fresh items'}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setIsMapExpanded(!isMapExpanded)}
-              style={{ backgroundColor: '#FF6B35' }}
-              className="px-3.5 h-9 rounded-full flex-row items-center gap-1 shadow-sm"
-            >
-              <Ionicons name={isMapExpanded ? "contract" : "map-outline"} size={16} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>
-                {isMapExpanded ? 'Minimize' : 'View Map'}
-              </Text>
-            </TouchableOpacity>
+            </Marker>
+            {validDestLat !== shopLat && (
+              <Marker coordinate={{ latitude: shopLat, longitude: shopLng }} title="Shop">
+                <View style={[styles.markerBase, { backgroundColor: '#EF4444' }]}>
+                  <Ionicons name="storefront" size={16} color="#FFF" />
+                </View>
+              </Marker>
+            )}
+            {partnerLocation && (
+              <Marker coordinate={partnerLocation} title="Rider">
+                <View style={[styles.riderMarker, { backgroundColor: '#10B981' }]}>
+                  <Ionicons name="bicycle" size={20} color="#FFF" />
+                </View>
+              </Marker>
+            )}
+            {partnerLocation ? (
+              <Polyline coordinates={[partnerLocation, destination]} strokeColor="#10B981" strokeWidth={5} />
+            ) : (shopLat && shopLng) ? (
+              <Polyline coordinates={[{ latitude: shopLat, longitude: shopLng }, destination]} strokeColor="#9CA3AF" strokeWidth={4} lineDashPattern={[8, 8]} />
+            ) : null}
+          </MapView>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <Ionicons name={isCancelled ? "close-circle" : "checkmark-circle"} size={64} color={isCancelled ? '#EF4444' : '#10B981'} />
+            <Text style={styles.mapPlaceholderText}>
+              {isCancelled ? 'Order Cancelled' : 'Order Delivered Successfully'}
+            </Text>
           </View>
         )}
+        <View style={styles.liveBadgeOverlay}>
+          <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }], marginRight: 6 }]} />
+          <Text style={styles.liveBadgeText}>LIVE TRACKING</Text>
+        </View>
       </View>
 
-      {/* Red Cancelled Banner */}
-      {isCancelled && (
-        <View style={styles.cancelBanner}>
-          <Ionicons name="close-circle" size={26} color="#FFF" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.cancelBannerTitle}>Order Cancelled</Text>
-            <Text style={styles.cancelBannerSub}>
-              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
-                ? 'Shop did not accept the order within 10 minutes.'
-                : order.orderStatus === 'SHOP_REJECTED'
-                ? 'The shopkeeper rejected this order.'
-                : order.orderStatus === 'CANCELLED_NO_PARTNER_FOUND'
-                ? 'No delivery partner could be assigned.'
-                : order.orderStatus === 'CANCELLED_BY_SHOP'
-                ? 'Cancelled by the shopkeeper.'
-                : 'This order has been cancelled.'}
-            </Text>
-          </View>
-        </View>
-      )}
+      {/* ── FLOATING HEADER ──────────────────────────────────────────────── */}
+      <View style={styles.floatingHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.floatBtn}>
+          <Ionicons name="arrow-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.floatBtn}>
+          <Text style={styles.helpBtnText}>Help</Text>
+        </TouchableOpacity>
+      </View>
 
+      {/* ── OVERLAPPING BOTTOM SHEET CONTENT ─────────────────────────────── */}
       <ScrollView
+        style={styles.sheetContainer}
+        contentContainerStyle={styles.sheetContent}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FF6B35"
-          />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />}
       >
+<<<<<<< HEAD
         {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
         <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
           {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
@@ -732,13 +726,19 @@ export default function CustomerTrackingScreen() {
         {order.orderStatus === 'DELIVERED' && (
           <View style={styles.deliveredBox}>
             <Ionicons name="checkmark-circle" size={24} color="#18A957" />
+=======
+        <View style={styles.mainCard}>
+          {/* Status Header */}
+          <View style={styles.statusHeaderRow}>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             <View style={{ flex: 1 }}>
-              <Text style={styles.deliveredTitle}>Order Delivered & Verified</Text>
-              <Text style={styles.deliveredSub}>OTP verified. Thank you for ordering with RuVo!</Text>
+              <Text style={styles.statusMainText}>{formatETA()}</Text>
+              <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
             </View>
           </View>
-        )}
+          <View style={styles.divider} />
 
+<<<<<<< HEAD
         {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
         {partnerInfo && (
           <View style={[
@@ -863,217 +863,287 @@ export default function CustomerTrackingScreen() {
               <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
             </TouchableOpacity>
           </View>
+=======
+          {/* Swiggy-like Horizontal Timeline */}
+          {!isCancelled && order.orderStatus !== 'DELIVERED' && (
+            <View style={styles.horizontalTimeline}>
+              {TIMELINE_STEPS.map((step, index) => {
+                const active = isStepActive(step.key, order.orderStatus || '');
+                const isLast = index === TIMELINE_STEPS.length - 1;
+                const activeColor = active ? '#FF7A00' : '#E5E7EB';
+                return (
+                  <View key={step.key} style={styles.timelineHItem}>
+                    <View style={styles.timelineHLineWrap}>
+                      <View style={[styles.timelineHDot, { borderColor: activeColor, backgroundColor: active ? '#FF7A00' : '#FFF' }]} />
+                      {!isLast && <View style={[styles.timelineHLine, { backgroundColor: activeColor }]} />}
+                    </View>
+                    <Text style={[styles.timelineHLabel, active && { color: '#111827', fontFamily: 'Poppins_700Bold' }]} numberOfLines={2}>
+                      {step.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* OTP Box */}
+          {order.orderStatus === 'OUT_FOR_DELIVERY' && order.deliveryOtpHash && (
+            <View style={styles.otpCard}>
+              <View style={styles.otpIconWrap}>
+                <Ionicons name="shield-checkmark" size={24} color="#D97706" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.otpTitle}>Delivery PIN</Text>
+                <Text style={styles.otpSubtitle}>Share this with rider</Text>
+              </View>
+              <Text style={styles.otpHashCode}>{order.deliveryOtpHash}</Text>
+            </View>
+          )}
+
+          {/* Rider Box */}
+          {partnerInfo && (
+            <View style={styles.riderCard}>
+              <View style={styles.riderAvatar}>
+                <Ionicons name="bicycle" size={24} color="#FFF" />
+              </View>
+              <View style={{ flex: 1, marginHorizontal: 12 }}>
+                <Text style={styles.riderName}>{partnerInfo.name}</Text>
+                <Text style={styles.riderRole}>Delivery Partner • 4.8 ★</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={styles.callRiderBtn} onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}>
+                  <Ionicons name="call" size={18} color="#FFF" />
+                  <Text style={styles.callRiderText}>Call</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
-        {/* Customer Cancel Order Button (Allowed if not picked up yet) */}
-        {!isCancelled &&
-         order.orderStatus !== 'PICKED_UP' &&
-         order.orderStatus !== 'OUT_FOR_DELIVERY' &&
-         order.orderStatus !== 'DELIVERED' && (
-          <TouchableOpacity
-            style={[styles.cancelBtn, { backgroundColor: '#FDECEC', borderColor: '#F8B4B4', borderRadius: radius.button }, shadows.sm]}
-            onPress={handleCancelOrder}
-          >
-            <Text style={[typography.button, styles.cancelBtnText, { color: '#D94A4A' }]}>Cancel Order</Text>
-          </TouchableOpacity>
-        )}
+
+
+        {/* Bill Box */}
+        <View style={styles.billBox}>
+          <Text style={styles.billTitle}>Order Summary</Text>
+          
+          <View style={styles.billItemsWrapper}>
+            {order.items && order.items.length > 0 ? (
+              order.items.map((item, index) => {
+                const price = item.price ?? Math.round((order.subtotal || order.totalAmount) / order.items!.length);
+                const itImg = item.productImageUrl ? (item.productImageUrl.startsWith('http') ? item.productImageUrl : `${API_BASE_URL}${item.productImageUrl}`) : null;
+                return (
+                  <View key={item.id || index} style={styles.billItemRowExpanded}>
+                    {itImg ? (
+                      <Image source={{ uri: itImg }} style={styles.billItemImage} />
+                    ) : (
+                      <View style={styles.billItemImagePlaceholder}>
+                        <Ionicons name="fast-food-outline" size={16} color="#9CA3AF" />
+                      </View>
+                    )}
+                    <View style={styles.billItemInfo}>
+                      <Text style={styles.billItemNameExpanded} numberOfLines={1}>{item.productName}</Text>
+                      <Text style={styles.billItemQty}>Qty: {item.quantity}</Text>
+                    </View>
+                    <Text style={styles.billItemPriceExpanded}>₹{price * item.quantity}</Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.billItemRowExpanded}>
+                {order.productImageUrl ? (
+                    <Image source={{ uri: order.productImageUrl.startsWith('http') ? order.productImageUrl : `${API_BASE_URL}${order.productImageUrl}` }} style={styles.billItemImage} />
+                ) : (
+                    <View style={styles.billItemImagePlaceholder}>
+                      <Ionicons name="fast-food-outline" size={16} color="#9CA3AF" />
+                    </View>
+                )}
+                <View style={styles.billItemInfo}>
+                  <Text style={styles.billItemNameExpanded} numberOfLines={1}>{order.productName || 'Order Items'}</Text>
+                  <Text style={styles.billItemQty}>Qty: {order.quantity}</Text>
+                </View>
+                <Text style={styles.billItemPriceExpanded}>₹{order.subtotal || order.totalAmount}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Breakdown List */}
+          <View style={styles.breakdownBox}>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Subtotal</Text>
+              <Text style={styles.breakdownValue}>₹{order.subtotal || order.totalAmount}</Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Delivery Fee</Text>
+              <Text style={styles.breakdownValue}>₹{order.deliveryFee || 0}</Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>Platform Fee</Text>
+              <Text style={styles.breakdownValue}>₹{order.platformFee || 0}</Text>
+            </View>
+            {order.couponDiscount && order.couponDiscount > 0 ? (
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Discount</Text>
+                <Text style={styles.breakdownValueDiscount}>-₹{order.couponDiscount}</Text>
+              </View>
+            ) : null}
+            <View style={styles.dividerDashed} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
+              <Text style={styles.billTotalTitle}>Grand Total</Text>
+              <Text style={styles.billTotalValue}>₹{order.totalAmount}</Text>
+            </View>
+          </View>
+
+          {/* Cancel Logic */}
+          {!isCancelled && order.orderStatus !== 'PICKED_UP' && order.orderStatus !== 'OUT_FOR_DELIVERY' && order.orderStatus !== 'DELIVERED' && (
+            <TouchableOpacity style={styles.cancelLink} onPress={handleCancelOrder} disabled={cancelling}>
+              <Text style={styles.cancelLinkText}>{cancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
+            </TouchableOpacity>
+          )}
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
+        </View>
+
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-
-  retryBtn: {
-    marginTop: 16,
-    backgroundColor: '#059669',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 56,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    gap: 8,
-  },
-  backBtn: { padding: 8, marginRight: 4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', flex: 1 },
-
-  cancelBanner: {
-    backgroundColor: '#EF4444',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  cancelBannerTitle: { color: '#FFF', fontWeight: '800', fontSize: 15 },
-  cancelBannerSub: { color: '#FEE2E2', fontSize: 12, marginTop: 2 },
-
-  mapContainer: { height: 220, backgroundColor: '#F1F5F9' },
-  mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  partnerMarker: {
-    backgroundColor: '#059669',
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#FFF',
-  },
-  liveBadge: {
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  retryBtn: { marginTop: 16, backgroundColor: '#111827', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  
+  heroMap: {
+    height: '45%',
+    width: '100%',
+    backgroundColor: '#E5E7EB',
     position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  markerBase: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF', elevation: 4 },
+  riderMarker: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFF', elevation: 8, shadowColor: '#10B981', shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9FAFB' },
+  mapPlaceholderText: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#374151', marginTop: 12 },
+  
+  liveBadgeOverlay: {
+    position: 'absolute',
+    top: 100,
+    right: 16,
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFF' },
-  liveText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
-
-  card: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderWidth: 0.5,
-    borderRadius: 16,
-    padding: 16,
-    elevation: 1,
-  },
-  cardTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12 },
-
-  productRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  productImg: { width: 64, height: 64, borderRadius: 10 },
-  productImgBox: { width: 64, height: 64, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  productName: { fontSize: 15, fontWeight: '700', flexShrink: 1 },
-  productPrice: { fontSize: 17, fontWeight: '800' },
-  billingBox: { marginTop: 14, borderTopWidth: 1, paddingTop: 12, gap: 4 },
-  billingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  billingLabel: { fontSize: 13 },
-  billingValue: { fontSize: 13 },
-
-  otpBox: {
-    backgroundColor: '#FEF3C7',
-    padding: 16,
-    borderRadius: 14,
-    marginHorizontal: 16,
-    marginTop: 14,
-    alignItems: 'center',
-    gap: 4,
-  },
-  otpLabel: { fontSize: 13, color: '#92400E', fontWeight: '700', marginTop: 4 },
-  otpCode: { fontSize: 34, fontWeight: '900', color: '#D97706', letterSpacing: 10 },
-  otpSub: { fontSize: 12, color: '#B45309', textAlign: 'center' },
-
-  partnerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 16,
-    borderWidth: 0.5,
-    gap: 14,
+    elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4,
   },
-  partnerAvatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#1D4ED8',
+  liveBadgeText: { fontSize: 10, fontFamily: 'Poppins_800ExtraBold', color: '#111827', letterSpacing: 0.5 },
+  pulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+
+  floatingHeader: {
+    position: 'absolute',
+    top: 45,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 100,
+  },
+  floatBtn: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', 
     alignItems: 'center', justifyContent: 'center',
+    elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4,
   },
-  partnerAvatarLetter: { fontSize: 22, fontWeight: '900', color: '#FFF' },
-  livePulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' },
-  partnerActionBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5,
-  },
-  partnerIconBox: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#DBEAFE', alignItems: 'center', justifyContent: 'center' },
-  partnerName: { fontSize: 15, fontWeight: '800' },
-  partnerPhone: { fontSize: 13, marginTop: 2 },
-  callBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5, borderColor: '#A7F3D0',
-  },
+  helpBtnText: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827' },
 
-  timelineRow: { flexDirection: 'row', minHeight: 44 },
-  timelineDotCol: { alignItems: 'center', width: 28, marginRight: 10 },
-  timelineDot: {
-    width: 20, height: 20, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center', marginTop: 2,
+  sheetContainer: {
+    flex: 1,
+    marginTop: '68%',
   },
-  timelineLine: { width: 2, flex: 1, marginTop: 4, borderRadius: 2 },
-  timelineLabel: { fontSize: 15, marginTop: 1 },
-  findingBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  findingText: { color: '#D97706', fontSize: 10, fontWeight: '700' },
+  sheetContent: {
+    paddingBottom: 40,
+  },
+  mainCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    minHeight: 300,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.08, shadowRadius: 15, elevation: 12,
+  },
+  statusHeaderRow: { marginBottom: 16 },
+  statusMainText: { fontSize: 22, fontFamily: 'Poppins_900Black', color: '#111827', letterSpacing: -0.5 },
+  statusSubText: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', color: '#6B7280', marginTop: 2 },
+  divider: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 16 },
+  dividerThick: { height: 2, backgroundColor: '#E5E7EB', marginVertical: 16 },
 
-  cancelCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 0.5,
-    borderColor: '#FCA5A5',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  cancelCardTitle: { fontSize: 17, fontWeight: '800', color: '#EF4444' },
-  cancelCardSub: { fontSize: 13, color: '#EF4444', textAlign: 'center', opacity: 0.85 },
+  horizontalTimeline: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 4 },
+  timelineHItem: { flex: 1, alignItems: 'center' },
+  timelineHLineWrap: { flexDirection: 'row', alignItems: 'center', width: '100%', paddingHorizontal: 12 },
+  timelineHDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, zIndex: 2 },
+  timelineHLine: { flex: 1, height: 3, marginLeft: -2, zIndex: 1, borderRadius: 2 },
+  timelineHLabel: { fontSize: 10, fontFamily: 'Poppins_600SemiBold', color: '#9CA3AF', textAlign: 'center', marginTop: 8, paddingHorizontal: 2 },
 
-  paymentRow: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    borderWidth: 0.5,
-    borderRadius: 12,
-  },
-  paymentText: { fontSize: 13, fontWeight: '600' },
+  riderCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 12, marginTop: 16, borderWidth: 1, borderColor: '#F3F4F6' },
+  riderAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FF7A00', alignItems: 'center', justifyContent: 'center' },
+  riderName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  riderRole: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#6B7280', marginTop: 1 },
+  callRiderBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111827', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, gap: 6 },
+  callRiderText: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#FFF' },
 
-  deliveredBox: {
-    backgroundColor: '#ECFDF5',
-    padding: 16,
-    borderRadius: 14,
-    marginHorizontal: 16,
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 0.5,
-    borderColor: '#A7F3D0',
-  },
-  deliveredTitle: { fontSize: 15, fontWeight: '800', color: '#065F46' },
-  deliveredSub: { fontSize: 12, color: '#047857', marginTop: 2 },
+  otpCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: '#FDE68A' },
+  otpIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  otpTitle: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#92400E' },
+  otpSubtitle: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#B45309' },
+  otpHashCode: { fontSize: 24, fontFamily: 'Poppins_900Black', color: '#D97706', letterSpacing: 4 },
 
-  cancelBtn: {
-    marginHorizontal: 16,
-    marginTop: 18,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
+  upsellBlock: { backgroundColor: '#FFFFFF', paddingVertical: 20, marginTop: 12, borderRadius: 24 },
+  upsellRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginBottom: 16 },
+  upsellMainTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  upsellSubTitle: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#6B7280' },
+  upsellTimerBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  upsellTimerTxt: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: '#D97706' },
+  upsellItemCard: { width: 140, backgroundColor: '#FFF', borderRadius: 16, padding: 12, marginRight: 12, borderWidth: 1, borderColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
+  upsellIconBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  upsellItemName: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827', marginBottom: 6 },
+  upsellBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  upsellItemPrice: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  upsellAddBtn: { backgroundColor: '#FEE2E2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  upsellAddText: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: '#EF4444' },
+
+  billBox: {
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    marginTop: 12,
+    borderRadius: 24,
+    marginHorizontal: 0,
   },
-  cancelBtnText: {
-    color: '#EF4444',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  billTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#111827', borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12, marginBottom: 16 },
+  billItemsWrapper: { gap: 12, marginBottom: 16 },
+  billItemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  billItemName: { fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: '#4B5563', flex: 1, paddingRight: 16 },
+  billItemPrice: { fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  billTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 16 },
+  billTotalTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  billTotalValue: { fontSize: 18, fontFamily: 'Poppins_900Black', color: '#111827' },
+
+  cancelLink: { alignSelf: 'center', marginTop: 24, paddingVertical: 8 },
+  cancelLinkText: { fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#EF4444', textDecorationLine: 'underline' },
+
+  billItemRowExpanded: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  billItemImage: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F3F4F6' },
+  billItemImagePlaceholder: { width: 40, height: 40, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+  billItemInfo: { flex: 1, paddingHorizontal: 12 },
+  billItemNameExpanded: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  billItemQty: { fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: '#6B7280', marginTop: 2 },
+  billItemPriceExpanded: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  breakdownBox: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginTop: 8 },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  breakdownLabel: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#4B5563' },
+  breakdownValue: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  breakdownValueDiscount: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#10B981' },
+  dividerDashed: { height: 1.5, backgroundColor: '#E5E7EB', marginVertical: 12 },
 });

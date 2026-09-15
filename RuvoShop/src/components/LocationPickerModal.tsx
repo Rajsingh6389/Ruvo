@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   scroll: {
     paddingBottom: 24,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   },
   trackTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   trackText: {
     fontSize: 12,
@@ -292,12 +292,12 @@ const styles = StyleSheet.create({
   },
   gpsBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
   errorText: {
     color: '#C62828',
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     marginBottom: 8,
   },
   row: {
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#374151',
     marginBottom: 6,
   },
@@ -332,6 +332,6 @@ const styles = StyleSheet.create({
   saveBtnText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
 });

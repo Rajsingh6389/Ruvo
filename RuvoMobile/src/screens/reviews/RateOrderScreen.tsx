@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     paddingVertical: sh(12),
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: sf(18), fontWeight: '700' },
+  headerTitle: { fontSize: sf(18), fontFamily: 'Poppins_700Bold' },
   content: { flex: 1 },
   contentContainer: { padding: sw(16) },
   shopCard: {
@@ -245,12 +245,12 @@ const styles = StyleSheet.create({
     marginBottom: sh(24),
     gap: sw(12),
   },
-  shopName: { fontSize: sf(18), fontWeight: '700' },
+  shopName: { fontSize: sf(18), fontFamily: 'Poppins_700Bold' },
   ratingSection: { alignItems: 'center', marginBottom: sh(32) },
-  sectionTitle: { fontSize: sf(16), fontWeight: '600', marginBottom: sh(16) },
+  sectionTitle: { fontSize: sf(16), fontFamily: 'Poppins_600SemiBold', marginBottom: sh(16) },
   starsContainer: { flexDirection: 'row', gap: sw(8), marginBottom: sh(12) },
   starButton: { padding: sw(4) },
-  ratingText: { fontSize: sf(16), fontWeight: '600' },
+  ratingText: { fontSize: sf(16), fontFamily: 'Poppins_600SemiBold' },
   reviewSection: { marginBottom: sh(24) },
   reviewInput: {
     borderWidth: 0.5,
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     marginBottom: sh(24),
   },
   toggleLeft: { flexDirection: 'row', alignItems: 'center', gap: sw(12) },
-  toggleText: { fontSize: sf(14), fontWeight: '500' },
+  toggleText: { fontSize: sf(14), fontFamily: 'Poppins_500Medium' },
   submitButton: {
     padding: sw(16),
     borderRadius: sw(12),
@@ -278,5 +278,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: sh(50),
   },
-  submitButtonText: { color: '#FFFFFF', fontSize: sf(16), fontWeight: '700' },
+  submitButtonText: { color: '#FFFFFF', fontSize: sf(16), fontFamily: 'Poppins_700Bold' },
 });

@@ -159,7 +159,7 @@ export const ShopCard = ({
             { backgroundColor: colors.gold || '#D4AF37', borderRadius: radius.pill },
           ]}
         >
-          <Text style={[typography.overline, { color: '#171A1F', fontWeight: '800' }]}>
+          <Text style={[typography.overline, { color: '#171A1F', fontFamily: 'Poppins_800ExtraBold' }]}>
             {badge ?? '0% COMMISSION'}
           </Text>
         </View>
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   name: {
     flex: 1,
     minWidth: 0,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   rating: {
     flexDirection: 'row',
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   ratingText: {
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
   metaRow: {
     flexDirection: 'row',
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   pillText: {
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: 11,
     flexShrink: 1,
   },

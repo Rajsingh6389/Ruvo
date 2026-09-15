@@ -75,24 +75,24 @@ const TabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor:   colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarActiveTintColor:   '#FF7A00',
+        tabBarInactiveTintColor: '#9CA3AF',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#EDE7DE',
+          backgroundColor: '#171A1F',
+          borderTopColor: '#1F2937',
           height: 64,
           paddingBottom: 6,
           paddingTop: 6,
-          elevation: 8,
+          elevation: 16,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 4,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
         },
         tabBarItemStyle: {
           paddingHorizontal: 0,
         },
-        tabBarLabelStyle: { fontSize: 10.5, fontWeight: '700', marginTop: 2 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
         tabBarIcon: ({ focused, color }) => {
           const icons: Record<string, [string, string]> = {
             Home:          ['home',          'home-outline'],
@@ -105,18 +105,18 @@ const TabNavigator = () => {
           return (
             <View
               style={{
-                width: 42,
+                width: 44,
                 height: 28,
                 borderRadius: 14,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: focused ? 'rgba(244, 180, 0, 0.2)' : 'transparent',
+                backgroundColor: focused ? 'rgba(255, 122, 0, 0.15)' : 'transparent',
               }}
             >
               <Ionicons
                 name={(focused ? active : inactive) as React.ComponentProps<typeof Ionicons>['name']}
-                size={22}
-                color={focused ? '#D99B00' : color}
+                size={20}
+                color={focused ? '#FF7A00' : color}
               />
             </View>
           );

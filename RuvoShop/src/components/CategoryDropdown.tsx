@@ -124,7 +124,7 @@ export const CategoryDropdown: React.FC<CategoryDropdownProps> = ({
 const styles = StyleSheet.create({
   container: { marginBottom: 16 },
 
-  label: { fontSize: 13, fontWeight: '600', color: TEXT, marginBottom: 6 },
+  label: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', color: TEXT, marginBottom: 6 },
   required: { color: '#E53935' },
 
   selector: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-  sheetTitle: { fontSize: 17, fontWeight: '700', color: TEXT },
+  sheetTitle: { fontSize: 17, fontFamily: 'Poppins_700Bold', color: TEXT },
   closeBtn: {
     width: 34,
     height: 34,
@@ -196,5 +196,5 @@ const styles = StyleSheet.create({
   },
   optionSelected: { backgroundColor: PRIMARY_LIGHT },
   optionText: { fontSize: 15, color: TEXT },
-  optionTextSelected: { color: PRIMARY, fontWeight: '600' },
+  optionTextSelected: { color: PRIMARY, fontFamily: 'Poppins_600SemiBold' },
 });

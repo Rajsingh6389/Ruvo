@@ -379,8 +379,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+<<<<<<< HEAD
     width: '100%',
     height: '100%',
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
     backgroundColor: '#FAF7F0',
     alignItems: 'center',
     justifyContent: 'center',
@@ -506,10 +509,9 @@ const styles = StyleSheet.create({
   },
   wordmarkLetterPrimary: {
     fontSize: 34,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     letterSpacing: 4,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-black',
   },
   taglineWrapper: {
     marginTop: 10,
@@ -520,7 +522,7 @@ const styles = StyleSheet.create({
   },
   taglineText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#77736B',
     letterSpacing: 1.8,
     textTransform: 'uppercase',
@@ -541,7 +543,7 @@ const styles = StyleSheet.create({
   },
   bottomBrandText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#77736B',
     letterSpacing: 1.5,
   },

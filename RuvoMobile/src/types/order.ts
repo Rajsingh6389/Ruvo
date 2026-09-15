@@ -20,6 +20,7 @@ export interface Order {
   subtotal?: number;
   deliveryFee?: number;
   platformFee?: number;
+  couponDiscount?: number;
   distanceKm?: number;
   totalAmount: number;
   paymentMethod: string;

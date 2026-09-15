@@ -319,7 +319,7 @@ export default function CartScreen() {
 
                   <View style={styles.itemBottomRow}>
                     <Text style={[styles.lineCalculationText, { color: colors.textSecondary }]}>
-                      {item.quantity} × ₹{price} = <Text style={{ fontWeight: '800', color: colors.textPrimary }}>₹{item.quantity * price}</Text>
+                      {item.quantity} × ₹{price} = <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: colors.textPrimary }}>₹{item.quantity * price}</Text>
                     </Text>
 
                     {/* Stepper pill */}
@@ -405,10 +405,10 @@ export default function CartScreen() {
             </View>
             <Text style={[styles.promoBannerText, { color: isDark ? '#FBBF24' : '#92400E' }, isFreeDeliveryEligible && { color: '#22C55E' }]}>
               {isFreeDeliveryEligible ? (
-                <Text style={{ fontWeight: '900' }}>Congratulations! You have unlocked FREE Delivery! 🎉</Text>
+                <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>Congratulations! You have unlocked FREE Delivery! 🎉</Text>
               ) : (
                 <>
-                  Add items worth <Text style={{ fontWeight: '900' }}>₹{remainingForFreeDelivery}</Text> more to get <Text style={{ fontWeight: '900', color: GREEN_SAVING }}>FREE delivery!</Text>
+                  Add items worth <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>₹{remainingForFreeDelivery}</Text> more to get <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: GREEN_SAVING }}>FREE delivery!</Text>
                 </>
               )}
             </Text>
@@ -478,7 +478,7 @@ export default function CartScreen() {
                     <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
                   </View>
                   {isFreeDeliveryEligible ? (
-                    <Text style={{ fontSize: 13, fontWeight: '900', color: GREEN_SAVING }}>FREE</Text>
+                    <Text style={{ fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: GREEN_SAVING }}>FREE</Text>
                   ) : (
                     <Text style={[styles.billValue, { color: colors.textPrimary }]}>₹{deliveryFee}</Text>
                   )}
@@ -504,10 +504,19 @@ export default function CartScreen() {
 
       {/* ── Proceed to Checkout (Swiggy / Zomato Style Flow) ─── */}
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(tabBarHeight + 8, 16), backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        {cartTotal < 100 && (
+          <View style={{ backgroundColor: '#FEE2E2', padding: 8, borderRadius: 8, marginBottom: 10, alignItems: 'center' }}>
+            <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'Poppins_700Bold' }}>Minimum order amount is ₹100</Text>
+          </View>
+        )}
         <TouchableOpacity
-          style={styles.checkoutFullBtn}
+          style={[styles.checkoutFullBtn, cartTotal < 100 && { backgroundColor: '#9CA3AF', shadowOpacity: 0 }]}
           activeOpacity={0.88}
           onPress={() => {
+            if (cartTotal < 100) {
+              showToast('Add items worth ₹' + (100 - cartTotal) + ' more to place order', 'error');
+              return;
+            }
             (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true });
           }}
         >
@@ -554,7 +563,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleWrap: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '900' },
+  headerTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold' },
   headerSubtitle: { fontSize: 11, marginTop: 1 },
   clearBtn: {
     flexDirection: 'row',
@@ -565,15 +574,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 4,
   },
-  clearText: { fontSize: 11, fontWeight: '800', color: '#DC2626' },
+  clearText: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: '#DC2626' },
 
   // Empty state
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   emptyIconCircle: { width: 90, height: 90, borderRadius: 45, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '900' },
+  emptyTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold' },
   emptySubtitle: { fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 18 },
   startShopBtn: { backgroundColor: ORANGE_PRIMARY, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 14, marginTop: 20 },
-  startShopText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  startShopText: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
 
   // Cart item card
   sectionContainer: { paddingHorizontal: 16, paddingTop: 12 },
@@ -592,16 +601,16 @@ const styles = StyleSheet.create({
   itemImg: { width: '100%', height: '100%' },
   itemContent: { flex: 1, marginLeft: 12 },
   itemTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  itemName: { fontSize: 15, fontWeight: '900', flex: 1, marginRight: 8 },
+  itemName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', flex: 1, marginRight: 8 },
   deleteIconBtn: { padding: 2 },
   shopTagRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   vegDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' },
   shopTagName: { fontSize: 11 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  itemPrice: { fontSize: 16, fontWeight: '900', color: ORANGE_PRIMARY },
+  itemPrice: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: ORANGE_PRIMARY },
   itemStrikePrice: { fontSize: 12, textDecorationLine: 'line-through' },
   discountChip: { backgroundColor: '#DCFCE7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 },
-  discountChipText: { fontSize: 9, fontWeight: '900', color: '#15803D' },
+  discountChipText: { fontSize: 9, fontFamily: 'Poppins_800ExtraBold', color: '#15803D' },
   itemBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
   lineCalculationText: { fontSize: 11 },
 
@@ -614,22 +623,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stepperMinusBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  stepperQtyText: { fontSize: 13, fontWeight: '900', minWidth: 16, textAlign: 'center' },
+  stepperQtyText: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', minWidth: 16, textAlign: 'center' },
   stepperPlusBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: ORANGE_PRIMARY, alignItems: 'center', justifyContent: 'center' },
 
   // Related section
   relatedSection: { paddingVertical: 8 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '900' },
+  sectionTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold' },
   viewAllPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 2 },
-  viewAllText: { fontSize: 12, fontWeight: '800', color: ORANGE_PRIMARY },
+  viewAllText: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: ORANGE_PRIMARY },
   relCard: { width: 130, borderRadius: 16, padding: 10, borderWidth: 1 },
   relImgWrap: { height: 80, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 6, overflow: 'hidden' },
   relImg: { width: '100%', height: '100%' },
-  relName: { fontSize: 12, fontWeight: '700' },
-  relPrice: { fontSize: 13, fontWeight: '900', marginTop: 2 },
+  relName: { fontSize: 12, fontFamily: 'Poppins_700Bold' },
+  relPrice: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', marginTop: 2 },
   relAddBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: ORANGE_PRIMARY, borderRadius: 10, paddingVertical: 4, marginTop: 8, gap: 2 },
-  relAddText: { fontSize: 11, fontWeight: '900', color: ORANGE_PRIMARY },
+  relAddText: { fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: ORANGE_PRIMARY },
 
   // Promo Banner
   promoBannerWrap: { paddingHorizontal: 16, marginVertical: 8 },
@@ -642,14 +651,14 @@ const styles = StyleSheet.create({
   infoCard: { borderRadius: 18, padding: 14 },
   deliveryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   locationPinCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  infoLabel: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-  infoAddressText: { fontSize: 13, fontWeight: '800', marginTop: 1 },
+  infoLabel: { fontSize: 9, fontFamily: 'Poppins_800ExtraBold', letterSpacing: 0.5 },
+  infoAddressText: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold', marginTop: 1 },
   editPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  editText: { fontSize: 12, fontWeight: '900', color: '#D97706' },
+  editText: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: '#D97706' },
   dividerLine: { height: 1, marginVertical: 12 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bikeIconCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  timeTitle: { fontSize: 13, fontWeight: '900' },
+  timeTitle: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold' },
   timeSubtext: { fontSize: 11, marginTop: 1 },
 
   // Payment Options
@@ -668,19 +677,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   paymentOptionActive: { backgroundColor: ORANGE_LIGHT, borderColor: ORANGE_PRIMARY },
-  paymentOptionText: { fontSize: 12, fontWeight: '700' },
-  paymentOptionTextActive: { color: ORANGE_PRIMARY, fontWeight: '900' },
+  paymentOptionText: { fontSize: 12, fontFamily: 'Poppins_700Bold' },
+  paymentOptionTextActive: { color: ORANGE_PRIMARY, fontFamily: 'Poppins_800ExtraBold' },
 
   // Bill details
   billSectionWrap: { paddingHorizontal: 16, marginVertical: 6 },
   billCard: { borderRadius: 18, padding: 14 },
   billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  billTitle: { fontSize: 15, fontWeight: '900' },
+  billTitle: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold' },
   billRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 4 },
   billLabel: { fontSize: 13 },
-  billValue: { fontSize: 13, fontWeight: '800' },
-  totalLabel: { fontSize: 14, fontWeight: '900' },
-  totalValue: { fontSize: 16, fontWeight: '900' },
+  billValue: { fontSize: 13, fontFamily: 'Poppins_800ExtraBold' },
+  totalLabel: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold' },
+  totalValue: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold' },
 
   // Sticky footer
   stickyFooter: {
@@ -711,14 +720,14 @@ const styles = StyleSheet.create({
   },
   checkoutItemsBadge: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#FFFFFF',
     opacity: 0.88,
     letterSpacing: 0.5,
   },
   checkoutPriceText: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#FFFFFF',
     marginTop: -2,
   },
@@ -729,7 +738,7 @@ const styles = StyleSheet.create({
   },
   checkoutActionText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: '#FFFFFF',
     letterSpacing: 0.2,
   },
@@ -741,5 +750,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkoutFullText: { fontSize: 16, fontWeight: '900', color: '#FFFFFF' },
+  checkoutFullText: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
 });

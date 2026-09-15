@@ -86,7 +86,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
           {
             color: palette.text,
             fontSize: isSmall ? 10 : isLarge ? 13 : 11,
-            fontWeight: '700',
+            fontFamily: 'Poppins_700Bold',
           },
         ]}
       >

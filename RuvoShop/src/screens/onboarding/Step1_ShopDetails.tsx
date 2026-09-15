@@ -408,7 +408,7 @@ export const Step1_ShopDetails = () => {
               focused === 'phone' && s.phoneFocused,
             ]}>
               <View style={[s.prefixBox, { borderRightColor: colors.border }]}>
-                <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]}>🇮🇳 +91</Text>
+                <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]}>🇮🇳 +91</Text>
               </View>
               <TextInput
                 placeholder="10-digit number"
@@ -464,7 +464,7 @@ export const Step1_ShopDetails = () => {
                     <Ionicons name={cat.icon} size={22} color={active ? colors.primary : colors.textHint} />
                     <Text style={[
                       typography.caption,
-                      { color: active ? colors.primary : colors.textSecondary, fontWeight: '700', marginTop: 6, textAlign: 'center' },
+                      { color: active ? colors.primary : colors.textSecondary, fontFamily: 'Poppins_700Bold', marginTop: 6, textAlign: 'center' },
                     ]}>
                       {cat.key}
                     </Text>
@@ -500,7 +500,7 @@ export const Step1_ShopDetails = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Image source={{ uri: logo.uri }} style={s.logoPreviewThumb} />
                   <View style={{ marginLeft: 12, flex: 1 }}>
-                    <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]}>Logo Selected</Text>
+                    <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]}>Logo Selected</Text>
                     <Text style={[typography.caption, { color: colors.primary }]}>Tap to change logo</Text>
                   </View>
                   <Ionicons name="checkmark-circle" size={22} color={colors.success} />
@@ -508,7 +508,7 @@ export const Step1_ShopDetails = () => {
               ) : (
                 <View style={{ alignItems: 'center', paddingVertical: 12 }}>
                   <Ionicons name="camera-outline" size={24} color={colors.primary} />
-                  <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700', marginTop: 4 }]}>Select Shop Logo</Text>
+                  <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold', marginTop: 4 }]}>Select Shop Logo</Text>
                   <Text style={[typography.caption, { color: colors.textSecondary }]}>Required storefront or logo photo</Text>
                 </View>
               )}
@@ -526,7 +526,7 @@ export const Step1_ShopDetails = () => {
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14 }}>
                   <Ionicons name="image-outline" size={20} color={colors.primary} />
-                  <Text style={[typography.body, { color: colors.primary, fontWeight: '700', marginLeft: 8 }]}>Add Banner Photo</Text>
+                  <Text style={[typography.body, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginLeft: 8 }]}>Add Banner Photo</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -553,7 +553,7 @@ export const Step1_ShopDetails = () => {
               {galleryImages.length < MAX_GALLERY && (
                 <TouchableOpacity style={[s.galleryAddCard, { backgroundColor: colors.primarySoft, borderColor: colors.primary }]} onPress={addGalleryImages}>
                   <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
-                  <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginTop: 2 }]}>Add Photos</Text>
+                  <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginTop: 2 }]}>Add Photos</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -576,7 +576,7 @@ export const Step1_ShopDetails = () => {
                   ? <ActivityIndicator color={colors.primary} size="small" />
                   : <Ionicons name="locate-outline" size={16} color={colors.primary} />
                 }
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginLeft: 4 }]}>
                   {locating ? 'Locating…' : 'GPS Fill'}
                 </Text>
               </TouchableOpacity>
@@ -585,7 +585,7 @@ export const Step1_ShopDetails = () => {
                 onPress={() => setMapOpen(true)}
               >
                 <Ionicons name="map-outline" size={16} color={colors.primary} />
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginLeft: 4 }]}>
                   Pick on Map
                 </Text>
               </TouchableOpacity>

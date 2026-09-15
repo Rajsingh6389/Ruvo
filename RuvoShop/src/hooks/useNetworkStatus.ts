@@ -59,6 +59,7 @@ export const installNetworkMonitor = () => {
   const originalFetch = scope.fetch;
   if (typeof originalFetch !== 'function') return;
 
+  // @ts-ignore
   scope.fetch = async (...args: Parameters<typeof originalFetch>) => {
     try {
       const response = await originalFetch(...args);

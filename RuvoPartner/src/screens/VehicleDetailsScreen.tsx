@@ -103,7 +103,7 @@ export const VehicleDetailsScreen = () => {
                 ]}
                 onPress={() => setVehicleType(type)}
               >
-                <Text style={[vehicleType === type ? { color: '#FFFFFF', fontWeight: 'bold' } : { color: colors.textPrimary }, { fontSize: 13 }]}>
+                <Text style={[vehicleType === type ? { color: '#FFFFFF', fontFamily: 'Poppins_700Bold' } : { color: colors.textPrimary }, { fontSize: 13 }]}>
                   {type}
                 </Text>
               </TouchableOpacity>
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 17, fontWeight: '700' },
+  headerTitle: { fontSize: 17, fontFamily: 'Poppins_700Bold' },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
   container: {
     flex: 1,
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   btnText: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     fontSize: 16,
   },
 });

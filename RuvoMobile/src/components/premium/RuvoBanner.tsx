@@ -145,7 +145,7 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
                     <Text style={[typography.body, styles.subtitle, { 
                       color: 'rgba(255,255,255,0.98)', 
                       fontSize: sf(15),
-                      fontWeight: '600',
+                      fontFamily: 'Poppins_600SemiBold',
                       textShadowColor: 'rgba(0,0,0,0.75)',
                       textShadowOffset: { width: 0, height: 1 },
                       textShadowRadius: 4
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
   },
   subtitle: {
     lineHeight: 20,

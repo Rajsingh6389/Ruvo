@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   chipText: {
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     flexShrink: 1,
   },
 });

@@ -1,74 +1,72 @@
 import { Platform } from 'react-native';
 
-const fontFamily = Platform.OS === 'ios' ? 'System' : 'Roboto';
+const getPoppinsFont = (weight: string) => {
+  switch (weight) {
+    case '400': return 'Poppins_400Regular';
+    case '500': return 'Poppins_500Medium';
+    case '600': return 'Poppins_600SemiBold';
+    case '700': return 'Poppins_700Bold';
+    case '800': return 'Poppins_800ExtraBold';
+    default: return 'Poppins_400Regular';
+  }
+};
 
 export const TYPOGRAPHY = {
   headingXL: {
-    fontFamily,
     fontSize: 32,
-    fontWeight: '700' as const,
+    fontFamily: getPoppinsFont('700'),
     lineHeight: 40,
   },
   headingL: {
-    fontFamily,
     fontSize: 24,
-    fontWeight: '700' as const,
+    fontFamily: getPoppinsFont('700'),
     lineHeight: 32,
   },
   headingM: {
-    fontFamily,
     fontSize: 20,
-    fontWeight: '600' as const,
+    fontFamily: getPoppinsFont('600'),
     lineHeight: 28,
   },
   headingS: {
-    fontFamily,
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: getPoppinsFont('600'),
     lineHeight: 24,
   },
   bodyLarge: {
-    fontFamily,
     fontSize: 16,
-    fontWeight: '400' as const,
+    fontFamily: getPoppinsFont('400'),
     lineHeight: 24,
   },
   body: {
-    fontFamily,
     fontSize: 14,
-    fontWeight: '400' as const,
+    fontFamily: getPoppinsFont('400'),
     lineHeight: 20,
   },
   bodyStrong: {
-    fontFamily,
     fontSize: 14,
-    fontWeight: '600' as const,
+    fontFamily: getPoppinsFont('600'),
     lineHeight: 20,
   },
   overline: {
-    fontFamily,
     fontSize: 10,
-    fontWeight: '700' as const,
+    fontFamily: getPoppinsFont('700'),
     lineHeight: 14,
     textTransform: 'uppercase' as const,
   },
   caption: {
-    fontFamily,
     fontSize: 12,
-    fontWeight: '400' as const,
+    fontFamily: getPoppinsFont('400'),
     lineHeight: 16,
   },
   label: {
-    fontFamily,
     fontSize: 12,
-    fontWeight: '500' as const,
+    fontFamily: getPoppinsFont('500'),
     lineHeight: 16,
     textTransform: 'uppercase' as const,
   },
   button: {
-    fontFamily,
     fontSize: 16,
-    fontWeight: '600' as const,
+    fontFamily: getPoppinsFont('600'),
     lineHeight: 20,
   },
 };

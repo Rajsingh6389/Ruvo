@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     textAlign: 'center',
   },
   badge: {
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
 });
 

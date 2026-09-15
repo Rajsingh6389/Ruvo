@@ -145,8 +145,22 @@ export default function ShopkeeperDashboardScreen() {
 
   // Modal state
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
-  const [partnerModalOrder, setPartnerModalOrder] = useState<Order | null>(null);
+  const [partnerModalOrder, setPartnerModalOrder] = useState<any>(null);
   const [assigningPartner, setAssigningPartner] = useState(false);
+  const [incomingOrder, setIncomingOrder] = useState<any>(null);
+  const [ignoredOrderIds, setIgnoredOrderIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const pending = orders.filter((o: any) => o.orderStatus === 'SHOP_PENDING' && !ignoredOrderIds.includes(o.id));
+    if (pending.length > 0 && !incomingOrder) {
+      setIncomingOrder(pending[0]);
+    } else if (incomingOrder) {
+      const active = orders.find((o: any) => o.id === incomingOrder.id);
+      if (!active || active.orderStatus !== 'SHOP_PENDING') {
+         setIncomingOrder(null);
+      }
+    }
+  }, [orders, incomingOrder, ignoredOrderIds]);
 
   // Countdown state
   const [countdowns, setCountdowns] = useState<Record<number, string>>({});
@@ -165,7 +179,11 @@ export default function ShopkeeperDashboardScreen() {
 
     // Auto-discover shop
     if (!activeShopId) {
+<<<<<<< HEAD
       const ownerId = userId || user?.id || user?.email;
+=======
+      const ownerId = userId || user?.email || '';
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
       if (ownerId) {
         try {
           const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
@@ -241,7 +259,7 @@ export default function ShopkeeperDashboardScreen() {
     }
     setLoading(false);
     setRefreshing(false);
-  }, [currentShopId, routeShopId, token, user]);
+  }, [currentShopId, routeShopId, token, user, userId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -371,7 +389,7 @@ export default function ShopkeeperDashboardScreen() {
   // ── Loading State ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg">
+      <SafeAreaView className="flex-1 bg-[#F9FAFB]">
         <DashboardSkeleton />
       </SafeAreaView>
     );
@@ -379,6 +397,7 @@ export default function ShopkeeperDashboardScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
+<<<<<<< HEAD
     <SafeAreaView className="flex-1 bg-ruvo-bg">
       {/* ── Slide-Out Drawer ─────────────────────────────────────────────── */}
       <Modal visible={showDrawer} transparent animationType="none" onRequestClose={closeDrawer}>
@@ -480,20 +499,30 @@ export default function ShopkeeperDashboardScreen() {
         </View>
       </Modal>
 
+=======
+    <SafeAreaView className="flex-1 bg-[#F9FAFB]">
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
       {/* Top App Bar Header */}
-      <Animated.View entering={FadeInDown.duration(300)} className="bg-white border-b border-warm-200 px-lg py-sm shadow-xs">
+      <Animated.View entering={FadeInDown.duration(300)} className="bg-white border-b border-gray-100 px-lg py-sm shadow-xs">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-sm flex-1">
             {/* Hamburger Menu Button */}
             <TouchableOpacity
+<<<<<<< HEAD
               onPress={openDrawer}
               className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
             >
               <Ionicons name="menu" size={22} color="#231C10" />
+=======
+              onPress={() => navigation.openDrawer && navigation.openDrawer()}
+              className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-100"
+            >
+              <Ionicons name="menu" size={20} color="#231C10" />
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             </TouchableOpacity>
             <View className="flex-1">
               <View className="flex-row items-center gap-1">
-                <Text className="text-xl font-black text-ruvo-ink">Dashboard</Text>
+                <Text className="text-xl font-black text-gray-900">Dashboard</Text>
                 <View className="w-2 h-2 rounded-full bg-emerald-500" />
               </View>
               <View className="flex-row items-center gap-1 mt-0.5">
@@ -505,8 +534,8 @@ export default function ShopkeeperDashboardScreen() {
 
           <View className="flex-row items-center gap-xs">
             <TouchableOpacity
-              onPress={() => setShowNotificationsModal(true)}
-              className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200 relative"
+              onPress={() => navigation.navigate('Notifications')}
+              className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-100 relative"
             >
               <Ionicons name="notifications-outline" size={20} color="#231C10" />
               {unreadNotifs > 0 && (
@@ -527,7 +556,7 @@ export default function ShopkeeperDashboardScreen() {
       </Animated.View>
 
       {/* Segment Tab Bar */}
-      <Animated.View entering={FadeInDown.delay(100).duration(300)} className="bg-white border-b border-warm-200 py-xs">
+      <Animated.View entering={FadeInDown.delay(100).duration(300)} className="bg-white border-b border-gray-100 py-xs">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-md">
           <View className="flex-row gap-xs py-1">
             {[
@@ -550,7 +579,7 @@ export default function ShopkeeperDashboardScreen() {
                     }
                   }}
                   className={`flex-row items-center gap-xs px-md py-2 rounded-2xl ${
-                    isActive ? 'bg-amber-500 border border-amber-600 shadow-sm' : 'bg-warm-100/70 border border-warm-200/50'
+                    isActive ? 'bg-amber-500 border border-amber-600 shadow-sm' : 'bg-gray-50/70 border border-gray-100/50'
                   }`}
                 >
                   <Ionicons
@@ -558,7 +587,7 @@ export default function ShopkeeperDashboardScreen() {
                     size={16}
                     color={isActive ? '#FFFFFF' : '#6B7280'}
                   />
-                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-warm-700'}`}>
+                  <Text className={`text-xs font-black ${isActive ? 'text-white' : 'text-gray-700'}`}>
                     {tab.label}
                   </Text>
                   {tab.badge !== undefined && tab.badge > 0 ? (
@@ -633,8 +662,8 @@ export default function ShopkeeperDashboardScreen() {
       >
         <View className="flex-1 bg-black/50 justify-end">
           <TouchableOpacity className="flex-1" onPress={() => setPartnerModalOrder(null)} />
-          <View className="bg-ruvo-surface rounded-t-3xl p-xl">
-            <Text className="text-2xl font-bold text-ruvo-ink mb-md">Assign Delivery Partner</Text>
+          <View className="bg-white rounded-t-3xl p-xl">
+            <Text className="text-2xl font-bold text-gray-900 mb-md">Assign Delivery Partner</Text>
             {assigningPartner ? (
               <ActivityIndicator size="large" color="#F5B700" />
             ) : (
@@ -645,16 +674,16 @@ export default function ShopkeeperDashboardScreen() {
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       onPress={() => assignPartner(item.id)}
-                      className="bg-warm-100 rounded-lg p-lg mb-sm flex-row items-center justify-between"
+                      className="bg-gray-50 rounded-lg p-lg mb-sm flex-row items-center justify-between"
                     >
                       <View>
-                        <Text className="text-base font-bold text-ruvo-ink">{item.name}</Text>
-                        <Text className="text-sm text-warm-600">{item.phone}</Text>
+                        <Text className="text-base font-bold text-gray-900">{item.name}</Text>
+                        <Text className="text-sm text-gray-600">{item.phone}</Text>
                       </View>
                       {item.rating && (
                         <View className="flex-row items-center gap-xs">
                           <Ionicons name="star" size={16} color="#F5B700" />
-                          <Text className="text-sm font-bold text-ruvo-ink">{item.rating.toFixed(1)}</Text>
+                          <Text className="text-sm font-bold text-gray-900">{item.rating.toFixed(1)}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
@@ -682,19 +711,19 @@ export default function ShopkeeperDashboardScreen() {
       >
         <View className="flex-1 bg-black/50 justify-end">
           <TouchableOpacity className="flex-1" onPress={() => setShowNotificationsModal(false)} />
-          <View className="bg-ruvo-surface rounded-t-3xl p-xl" style={{ maxHeight: '80%' }}>
+          <View className="bg-white rounded-t-3xl p-xl" style={{ maxHeight: '80%' }}>
             <View className="flex-row items-center justify-between mb-md">
-              <Text className="text-2xl font-bold text-ruvo-ink">Notifications</Text>
+              <Text className="text-2xl font-bold text-gray-900">Notifications</Text>
               <IconButton icon="close" onPress={() => setShowNotificationsModal(false)} size="sm" />
             </View>
             <FlatList
               data={notifications}
               keyExtractor={n => n.id.toString()}
               renderItem={({ item }) => (
-                <View className={`rounded-lg p-lg mb-sm ${item.isRead ? 'bg-warm-100' : 'bg-ruvo-yellow-soft'}`}>
-                  <Text className="text-base font-bold text-ruvo-ink mb-xs">{item.title}</Text>
-                  <Text className="text-sm text-warm-700">{item.message}</Text>
-                  <Text className="text-xs text-warm-500 mt-xs">
+                <View className={`rounded-lg p-lg mb-sm ${item.isRead ? 'bg-gray-50' : 'bg-ruvo-yellow-soft'}`}>
+                  <Text className="text-base font-bold text-gray-900 mb-xs">{item.title}</Text>
+                  <Text className="text-sm text-gray-700">{item.message}</Text>
+                  <Text className="text-xs text-gray-500 mt-xs">
                     {new Date(item.createdAt).toLocaleString()}
                   </Text>
                 </View>
@@ -707,6 +736,111 @@ export default function ShopkeeperDashboardScreen() {
               )}
             />
           </View>
+        </View>
+      </Modal>
+
+      {/* Incoming Order Half-Screen Modal */}
+      <Modal
+        visible={!!incomingOrder}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+           if (incomingOrder?.id) setIgnoredOrderIds(prev => [...prev, incomingOrder.id]);
+           setIncomingOrder(null);
+        }}
+      >
+        <View className="flex-1 bg-black/80 justify-end">
+          <TouchableOpacity className="flex-1" onPress={() => {
+             if (incomingOrder?.id) setIgnoredOrderIds(prev => [...prev, incomingOrder.id]);
+             setIncomingOrder(null);
+          }} />
+          <Animated.View entering={FadeInDown.duration(400).springify()} className="bg-white rounded-t-[32px] overflow-hidden shadow-2xl">
+            {/* Urgency Header */}
+            <View className="bg-amber-500 px-xl py-4 flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                 <Ionicons name="notifications" size={24} color="#FFFFFF" className="animate-bounce" />
+                 <Text className="text-lg font-black text-white uppercase tracking-widest mt-0.5">New Order Alert</Text>
+              </View>
+              {countdowns[incomingOrder?.id] && (
+                 <View className="bg-red-600 px-3 py-1 rounded-full border border-red-400">
+                   <Text className="text-sm font-black text-white tabular-nums">
+                     {countdowns[incomingOrder.id]}
+                   </Text>
+                 </View>
+              )}
+            </View>
+
+            <View className="p-xl">
+              <View className="flex-row items-center justify-between mb-sm">
+                <Text className="text-gray-500 font-bold tracking-wide">ORDER ID #{incomingOrder?.id}</Text>
+                <Badge variant="warning">Awaiting Response</Badge>
+              </View>
+
+              <Text className="text-2xl font-black text-gray-900 mb-xs" numberOfLines={2}>
+                {incomingOrder?.productName || 'Multiple Items Selected'}
+              </Text>
+              {incomingOrder?.items && incomingOrder.items.length > 0 && (
+                <Text className="text-sm font-bold text-gray-500 mb-md">
+                  + {incomingOrder.items.length - 1} additional item{incomingOrder.items.length > 2 ? 's' : ''}
+                </Text>
+              )}
+
+              {/* Order Data Bento Box */}
+              <View className="bg-gray-50 rounded-2xl p-lg border border-gray-100 flex-row gap-lg mb-md">
+                <View className="flex-1 border-r border-gray-200">
+                   <Text className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Total Value</Text>
+                   <Text className="text-2xl font-black text-emerald-600">₹{incomingOrder?.totalAmount}</Text>
+                </View>
+                <View className="flex-1 pl-sm">
+                   <Text className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Payment</Text>
+                   <View className="flex-row items-center gap-xs mt-1">
+                     <Ionicons name={incomingOrder?.paymentMethod === 'COD' ? 'timer-outline' : 'checkmark-circle'} size={18} color={incomingOrder?.paymentMethod === 'COD' ? '#EA580C' : '#16A34A'} />
+                     <Text className="text-base font-black text-gray-900 pt-0.5">
+                       {incomingOrder?.paymentMethod || 'Online'}
+                     </Text>
+                   </View>
+                </View>
+              </View>
+
+              {/* Delivery Data */}
+              <View className="flex-row items-start gap-md mb-xl bg-blue-50/50 p-md rounded-2xl border border-blue-100/50">
+                <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center">
+                  <Ionicons name="location" size={20} color="#2563EB" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-[10px] text-blue-600 font-black mb-0.5 uppercase tracking-wider">Delivery To</Text>
+                  <Text className="text-sm font-bold text-gray-800" numberOfLines={2}>{incomingOrder?.deliveryAddress || 'Customer Address'}</Text>
+                  <Text className="text-xs font-semibold text-gray-500 mt-1">{incomingOrder?.customerName || 'Customer'}</Text>
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View className="flex-row gap-md pb-md">
+                <TouchableOpacity 
+                   activeOpacity={0.8}
+                   onPress={() => {
+                      if (incomingOrder?.id) handleReject(incomingOrder.id);
+                   }} 
+                   className="flex-1 bg-white border-2 border-rose-500 py-4 rounded-2xl items-center justify-center shadow-sm"
+                >
+                  <Text className="text-rose-600 font-black text-base uppercase tracking-wider">Reject</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                   activeOpacity={0.8}
+                   onPress={() => {
+                      if (incomingOrder?.id) handleAccept(incomingOrder.id);
+                      setIncomingOrder(null);
+                   }} 
+                   className="flex-[2] bg-emerald-500 border border-emerald-600 py-4 rounded-2xl items-center justify-center shadow-md shadow-emerald-500/20"
+                >
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="checkmark-done" size={20} color="#FFFFFF" />
+                    <Text className="text-white font-black text-base uppercase tracking-widest mt-0.5">Accept Order</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -740,9 +874,9 @@ function DashboardTab({
     <View className="p-lg gap-lg">
       {/* ── Stylish My Shop Card ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.duration(400)}>
-        <Card variant="elevated" className="bg-white border border-warm-300 rounded-3xl p-lg shadow-md overflow-hidden relative">
+        <Card variant="elevated" className="bg-white border border-gray-200 rounded-3xl p-lg shadow-md overflow-hidden relative">
           <View className="flex-row items-center gap-md">
-            <View className="w-16 h-16 rounded-2xl bg-warm-100 border border-warm-300 overflow-hidden items-center justify-center relative">
+            <View className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-200 overflow-hidden items-center justify-center relative">
               {shopLogo ? (
                 <Image source={{ uri: shopLogo }} className="w-full h-full" resizeMode="cover" />
               ) : (
@@ -751,17 +885,17 @@ function DashboardTab({
             </View>
             <View className="flex-1">
               <View className="flex-row items-center gap-xs">
-                <Text className="text-xl font-black text-ruvo-ink" numberOfLines={1}>
+                <Text className="text-xl font-black text-gray-900" numberOfLines={1}>
                   {shop?.name || 'My Shop'}
                 </Text>
                 <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
               </View>
-              <Text className="text-xs text-warm-600 font-semibold mt-0.5" numberOfLines={1}>
+              <Text className="text-xs text-gray-600 font-semibold mt-0.5" numberOfLines={1}>
                 {`${shop?.category || 'General Merchant'} • ${shop?.address || 'Verified Partner'}`}
               </Text>
-              <View className="flex-row items-center justify-between gap-xs mt-3 pt-2.5 border-t border-warm-200">
+              <View className="flex-row items-center justify-between gap-xs mt-3 pt-2.5 border-t border-gray-100">
                 <View className="flex-1">
-                  <Text className="text-[11px] font-bold text-warm-600">
+                  <Text className="text-[11px] font-bold text-gray-600">
                     {(shop?.active ?? true) ? '🟢 Accepting Orders' : '🔴 Shop is Offline'}
                   </Text>
                 </View>
@@ -804,15 +938,15 @@ function DashboardTab({
       {/* ── RuVo Platform Fee COD Settlement Banner (2-Day Grace & Pay Now) ── */}
       {Boolean(settlementSummary && Number(settlementSummary.unpaidPlatformFee || 0) > 0) && (
         <Animated.View entering={FadeInDown.delay(70).duration(400)} className="mb-lg">
-          <Card variant="default" className="p-md bg-white rounded-3xl border border-warm-300 shadow-sm overflow-hidden relative">
+          <Card variant="default" className="p-md bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden relative">
             <View className="flex-row items-center justify-between mb-xs">
               <View className="flex-row items-center gap-xs">
                 <View className="w-8 h-8 rounded-full bg-ruvo-yellow-soft items-center justify-center">
                   <Ionicons name="card" size={18} color="#D99B00" />
                 </View>
                 <View>
-                  <Text className="text-sm font-black text-ruvo-ink">RuVo COD Commission</Text>
-                  <Text className="text-[10px] text-warm-600 font-semibold">2-Day Auto Settlement Grace</Text>
+                  <Text className="text-sm font-black text-gray-900">RuVo COD Commission</Text>
+                  <Text className="text-[10px] text-gray-600 font-semibold">2-Day Auto Settlement Grace</Text>
                 </View>
               </View>
               <View className="bg-ruvo-yellow-soft px-2.5 py-1 rounded-full border border-ruvo-yellow">
@@ -822,10 +956,10 @@ function DashboardTab({
               </View>
             </View>
 
-            <View className="bg-warm-50 p-sm rounded-xl border border-warm-200 my-xs flex-row items-center justify-between">
+            <View className="bg-warm-50 p-sm rounded-xl border border-gray-100 my-xs flex-row items-center justify-between">
               <View className="flex-row items-center gap-xs">
                 <Ionicons name="time" size={16} color={settlementSummary.overdue ? '#DC2626' : '#EA580C'} />
-                <Text className="text-xs font-bold text-warm-700">Settlement Deadline:</Text>
+                <Text className="text-xs font-bold text-gray-700">Settlement Deadline:</Text>
               </View>
               <Text className={`text-xs font-black ${settlementSummary.overdue ? 'text-red-600' : 'text-orange-600'}`}>
                 {settlementSummary.overdue ? 'OVERDUE (Shop Disabled)' : `${settlementSummary.hoursRemaining ?? 48} Hours Left`}
@@ -862,7 +996,7 @@ function DashboardTab({
               className="mt-xs bg-ruvo-yellow py-2.5 rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
             >
               <Ionicons name="checkmark-done-circle" size={18} color="#231C10" />
-              <Text className="text-xs font-black text-ruvo-ink uppercase tracking-wider">
+              <Text className="text-xs font-black text-gray-900 uppercase tracking-wider">
                 Pay RuVo Commission Now (₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)})
               </Text>
             </TouchableOpacity>
@@ -875,27 +1009,27 @@ function DashboardTab({
         <View className="flex-row items-center justify-between mb-sm">
           <View className="flex-row items-center gap-xs">
             <Ionicons name="cube" size={20} color="#231C10" />
-            <Text className="text-lg font-black text-ruvo-ink">Recent Products</Text>
+            <Text className="text-lg font-black text-gray-900">Recent Products</Text>
           </View>
           <TouchableOpacity
             onPress={onNavigateProducts}
-            className="flex-row items-center gap-0.5 bg-warm-100 px-3 py-1.5 rounded-full border border-warm-200"
+            className="flex-row items-center gap-0.5 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100"
           >
-            <Text className="text-xs font-bold text-ruvo-ink">Browse All ({products.length})</Text>
+            <Text className="text-xs font-bold text-gray-900">Browse All ({products.length})</Text>
             <Ionicons name="chevron-forward" size={14} color="#231C10" />
           </TouchableOpacity>
         </View>
 
         {recentProducts.length === 0 ? (
-          <Card variant="default" className="p-lg items-center justify-center bg-white rounded-2xl border border-warm-200">
+          <Card variant="default" className="p-lg items-center justify-center bg-white rounded-2xl border border-gray-100">
             <Ionicons name="bag-remove-outline" size={36} color="#9CA3AF" />
-            <Text className="text-sm font-bold text-ruvo-ink mt-2">No products added yet</Text>
+            <Text className="text-sm font-bold text-gray-900 mt-2">No products added yet</Text>
             <TouchableOpacity
               onPress={onNavigateAddProduct}
               className="mt-3 bg-ruvo-yellow px-4 py-2 rounded-xl flex-row items-center gap-1.5"
             >
               <Ionicons name="add-circle" size={16} color="#111827" />
-              <Text className="text-xs font-black text-ruvo-ink">Add First Product</Text>
+              <Text className="text-xs font-black text-gray-900">Add First Product</Text>
             </TouchableOpacity>
           </Card>
         ) : (
@@ -908,9 +1042,9 @@ function DashboardTab({
               return (
                 <View
                   key={product.id}
-                  className="bg-white border border-warm-200 rounded-2xl p-3 flex-row items-center gap-3 shadow-xs"
+                  className="bg-white border border-gray-100 rounded-2xl p-3 flex-row items-center gap-3 shadow-xs"
                 >
-                  <View className="w-16 h-16 rounded-xl bg-warm-50 border border-warm-100 items-center justify-center overflow-hidden relative">
+                  <View className="w-16 h-16 rounded-xl bg-warm-50 border border-gray-50 items-center justify-center overflow-hidden relative">
                     {pImg ? (
                       <Image source={{ uri: pImg }} className="w-full h-full" resizeMode="contain" />
                     ) : (
@@ -925,7 +1059,7 @@ function DashboardTab({
 
                   <View className="flex-1">
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-sm font-extrabold text-ruvo-ink flex-1 mr-2" numberOfLines={1}>
+                      <Text className="text-sm font-extrabold text-gray-900 flex-1 mr-2" numberOfLines={1}>
                         {product.name}
                       </Text>
                       <View className={`px-2 py-0.5 rounded-full ${isAvailable ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -936,23 +1070,23 @@ function DashboardTab({
                     </View>
 
                     <View className="flex-row items-baseline gap-1.5 mt-0.5">
-                      <Text className="text-sm font-black text-ruvo-ink">₹{product.sellingPrice}</Text>
+                      <Text className="text-sm font-black text-gray-900">₹{product.sellingPrice}</Text>
                       {product.actualPrice > product.sellingPrice && (
-                        <Text className="text-xs text-warm-500 line-through">₹{product.actualPrice}</Text>
+                        <Text className="text-xs text-gray-500 line-through">₹{product.actualPrice}</Text>
                       )}
                       {product.unit && (
-                        <Text className="text-[10px] text-warm-500 font-bold">/ {product.unit}</Text>
+                        <Text className="text-[10px] text-gray-500 font-bold">/ {product.unit}</Text>
                       )}
                     </View>
 
-                    <Text className="text-[11px] text-warm-600 font-medium mt-0.5">
+                    <Text className="text-[11px] text-gray-600 font-medium mt-0.5">
                       Stock: {product.stockQuantity} units
                     </Text>
                   </View>
 
                   <TouchableOpacity
                     onPress={() => onNavigateEditProduct(product)}
-                    className="bg-warm-100 p-2.5 rounded-xl border border-warm-200 items-center justify-center"
+                    className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 items-center justify-center"
                   >
                     <Ionicons name="create-outline" size={18} color="#231C10" />
                   </TouchableOpacity>
@@ -965,23 +1099,23 @@ function DashboardTab({
 
       {/* ── Stats Overview Grid ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(200).duration(300)}>
-        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Orders Analytics</Text>
+        <Text className="text-sm font-black text-gray-900 mb-xs uppercase tracking-wider">Orders Analytics</Text>
         <View className="flex-row flex-wrap gap-xs">
           {[
             { label: 'Pending', value: pendingCount, icon: 'time-outline', iconColor: '#E99A16', badgeBg: 'bg-amber-50', badgeText: 'text-amber-700' },
             { label: 'Active', value: activeCount, icon: 'bicycle-outline', iconColor: '#3478C8', badgeBg: 'bg-blue-50', badgeText: 'text-blue-700' },
             { label: 'Completed', value: completedCount, icon: 'checkmark-circle-outline', iconColor: '#18A957', badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-700' },
-            { label: 'Total Orders', value: orders.length, icon: 'receipt-outline', iconColor: '#171A1F', badgeBg: 'bg-warm-100', badgeText: 'text-warm-800' },
+            { label: 'Total Orders', value: orders.length, icon: 'receipt-outline', iconColor: '#171A1F', badgeBg: 'bg-gray-50', badgeText: 'text-warm-800' },
           ].map((stat, idx) => (
             <View
               key={idx}
-              className="flex-1 min-w-[45%] bg-white border border-warm-300 p-md rounded-2xl flex-row items-center justify-between shadow-xs"
+              className="flex-1 min-w-[45%] bg-white border border-gray-200 p-md rounded-2xl flex-row items-center justify-between shadow-xs"
             >
               <View>
-                <Text className="text-2xl font-black text-ruvo-ink">{stat.value}</Text>
-                <Text className="text-xs font-bold text-warm-600 mt-0.5">{stat.label}</Text>
+                <Text className="text-2xl font-black text-gray-900">{stat.value}</Text>
+                <Text className="text-xs font-bold text-gray-600 mt-0.5">{stat.label}</Text>
               </View>
-              <View className="w-10 h-10 bg-warm-100 rounded-xl items-center justify-center border border-warm-200">
+              <View className="w-10 h-10 bg-gray-50 rounded-xl items-center justify-center border border-gray-100">
                 <Ionicons name={stat.icon as any} size={20} color={stat.iconColor} />
               </View>
             </View>
@@ -991,27 +1125,27 @@ function DashboardTab({
 
       {/* ── Financial Revenue Cards ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(300).duration(300)}>
-        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Financial Overview</Text>
+        <Text className="text-sm font-black text-gray-900 mb-xs uppercase tracking-wider">Financial Overview</Text>
         <View className="flex-row gap-xs">
-          <View className="flex-1 bg-white border border-warm-300 rounded-2xl p-md shadow-xs">
+          <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-md shadow-xs">
             <View className="flex-row items-center justify-between mb-xs">
-              <Text className="text-xs font-black text-warm-600">Total Sales</Text>
+              <Text className="text-xs font-black text-gray-600">Total Sales</Text>
               <View className="w-7 h-7 rounded-lg bg-ruvo-yellow-soft items-center justify-center">
                 <Ionicons name="wallet-outline" size={16} color="#D99B00" />
               </View>
             </View>
-            <Text className="text-2xl font-black text-ruvo-ink">₹{totalSales.toFixed(2)}</Text>
-            <Text className="text-[10px] font-bold text-warm-500 mt-1">Realized Net Sales</Text>
+            <Text className="text-2xl font-black text-gray-900">₹{totalSales.toFixed(2)}</Text>
+            <Text className="text-[10px] font-bold text-gray-500 mt-1">Realized Net Sales</Text>
           </View>
 
-          <View className="flex-1 bg-white border border-warm-300 rounded-2xl p-md shadow-xs">
+          <View className="flex-1 bg-white border border-gray-200 rounded-2xl p-md shadow-xs">
             <View className="flex-row items-center justify-between mb-xs">
-              <Text className="text-xs font-black text-warm-600">Today Sales</Text>
+              <Text className="text-xs font-black text-gray-600">Today Sales</Text>
               <View className="w-7 h-7 rounded-lg bg-emerald-50 items-center justify-center">
                 <Ionicons name="trending-up" size={16} color="#18A957" />
               </View>
             </View>
-            <Text className="text-2xl font-black text-ruvo-ink">₹{todaySales.toFixed(2)}</Text>
+            <Text className="text-2xl font-black text-gray-900">₹{todaySales.toFixed(2)}</Text>
             <Text className="text-[10px] font-bold text-emerald-600 mt-1">Live Today Earnings</Text>
           </View>
         </View>
@@ -1019,7 +1153,7 @@ function DashboardTab({
 
       {/* ── Quick Actions Tiles ────────────────────────────────────────── */}
       <Animated.View entering={FadeInDown.delay(400).duration(300)}>
-        <Text className="text-sm font-black text-ruvo-ink mb-xs uppercase tracking-wider">Shop Actions</Text>
+        <Text className="text-sm font-black text-gray-900 mb-xs uppercase tracking-wider">Shop Actions</Text>
         <View className="flex-row gap-xs">
           <TouchableOpacity
             activeOpacity={0.8}
@@ -1027,7 +1161,7 @@ function DashboardTab({
             className="flex-1 bg-ruvo-yellow py-3.5 px-md rounded-2xl flex-row items-center justify-center gap-xs shadow-xs border border-ruvo-yellow-dark"
           >
             <Ionicons name="receipt-outline" size={20} color="#171A1F" />
-            <Text className="text-xs font-black text-ruvo-ink">View Orders</Text>
+            <Text className="text-xs font-black text-gray-900">View Orders</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1045,10 +1179,10 @@ function DashboardTab({
       {pendingCount > 0 && (
         <Animated.View entering={FadeInDown.delay(500).duration(300)}>
           <View className="flex-row items-center justify-between mb-md">
-            <Text className="text-xl font-bold text-ruvo-ink">Pending Orders</Text>
+            <Text className="text-xl font-bold text-gray-900">Pending Orders</Text>
             <Badge variant="warning">{pendingCount}</Badge>
           </View>
-          <Text className="text-sm text-warm-600 mb-md">Action required on these orders</Text>
+          <Text className="text-sm text-gray-600 mb-md">Action required on these orders</Text>
           <Button onPress={onNavigateOrders} variant="outline">View All Pending</Button>
         </Animated.View>
       )}
@@ -1073,9 +1207,9 @@ function OrdersTab({
         <View className="flex-row gap-sm">
           <TouchableOpacity
             onPress={() => onSelectFilter('ALL')}
-            className={`px-lg py-sm rounded-lg ${selectedFilter === 'ALL' ? 'bg-ruvo-yellow' : 'bg-warm-200'}`}
+            className={`px-lg py-sm rounded-lg ${selectedFilter === 'ALL' ? 'bg-ruvo-yellow' : 'bg-gray-100'}`}
           >
-            <Text className={`text-sm font-bold ${selectedFilter === 'ALL' ? 'text-ruvo-ink' : 'text-warm-700'}`}>
+            <Text className={`text-sm font-bold ${selectedFilter === 'ALL' ? 'text-gray-900' : 'text-gray-700'}`}>
               All ({orders.length})
             </Text>
           </TouchableOpacity>
@@ -1085,9 +1219,9 @@ function OrdersTab({
               <TouchableOpacity
                 key={f.status}
                 onPress={() => onSelectFilter(f.status)}
-                className={`px-lg py-sm rounded-lg ${selectedFilter === f.status ? f.color : 'bg-warm-200'}`}
+                className={`px-lg py-sm rounded-lg ${selectedFilter === f.status ? f.color : 'bg-gray-100'}`}
               >
-                <Text className={`text-sm font-bold ${selectedFilter === f.status ? f.textColor : 'text-warm-700'}`}>
+                <Text className={`text-sm font-bold ${selectedFilter === f.status ? f.textColor : 'text-gray-700'}`}>
                   {f.label} ({count})
                 </Text>
               </TouchableOpacity>
@@ -1133,7 +1267,7 @@ function OrderCard({ order, index, countdown, onAccept, onReject, onAssignPartne
         <View className="flex-row gap-md">
           {/* Product Image */}
           {imgUri && (
-            <View className="w-20 h-20 bg-warm-200 rounded-lg overflow-hidden">
+            <View className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden">
               <Image source={{ uri: imgUri }} className="w-full h-full" resizeMode="cover" />
             </View>
           )}
@@ -1141,7 +1275,7 @@ function OrderCard({ order, index, countdown, onAccept, onReject, onAssignPartne
           {/* Order Info */}
           <View className="flex-1">
             <View className="flex-row items-start justify-between mb-xs">
-              <Text className="flex-1 text-base font-bold text-ruvo-ink" numberOfLines={1}>
+              <Text className="flex-1 text-base font-bold text-gray-900" numberOfLines={1}>
                 {order.productName}
               </Text>
               <Badge variant={order.orderStatus === 'DELIVERED' ? 'success' : 'warning'} size="sm">
@@ -1150,13 +1284,13 @@ function OrderCard({ order, index, countdown, onAccept, onReject, onAssignPartne
             </View>
 
             <View className="flex-row items-center gap-md mb-xs">
-              <Text className="text-sm text-warm-600">Qty: {order.quantity}</Text>
-              <Text className="text-base font-bold text-ruvo-ink">₹{order.totalAmount}</Text>
+              <Text className="text-sm text-gray-600">Qty: {order.quantity}</Text>
+              <Text className="text-base font-bold text-gray-900">₹{order.totalAmount}</Text>
             </View>
 
             <View className="flex-row items-center gap-xs mb-sm">
               <Ionicons name="location-outline" size={14} color="#A79E92" />
-              <Text className="flex-1 text-sm text-warm-600" numberOfLines={1}>
+              <Text className="flex-1 text-sm text-gray-600" numberOfLines={1}>
                 {order.deliveryAddress}
               </Text>
             </View>

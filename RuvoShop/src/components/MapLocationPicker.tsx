@@ -175,7 +175,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         <View style={s.mapContainer}>
           <MapView
             ref={mapRef}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             provider={PROVIDER_GOOGLE}
             region={region}
             onRegionChangeComplete={handleRegionChangeComplete}
@@ -203,7 +203,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 </View>
               ) : preview.formattedAddress ? (
                 <>
-                  <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '700' }]} numberOfLines={2}>
+                  <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]} numberOfLines={2}>
                     {preview.address || preview.formattedAddress}
                   </Text>
                   <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={1}>
@@ -225,7 +225,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             disabled={geocoding}
           >
             <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-            <Text style={[typography.body, { color: '#FFFFFF', fontWeight: '700', marginLeft: 6 }]}>
+            <Text style={[typography.body, { color: '#FFFFFF', fontFamily: 'Poppins_700Bold', marginLeft: 6 }]}>
               Confirm Location
             </Text>
           </TouchableOpacity>

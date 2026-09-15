@@ -67,14 +67,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     color: '#DC2626',
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     lineHeight: 56,
     marginBottom: 20,
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     color: '#111827',
     marginBottom: 8,
     textAlign: 'center',
@@ -95,6 +95,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
   },
 });

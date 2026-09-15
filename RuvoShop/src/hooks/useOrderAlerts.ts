@@ -26,13 +26,12 @@ export function useOrderAlerts(orders: any[]) {
     // 2. Play audio alert (Expo AV if native module linked, or Web Audio API fallback)
     try {
       let playedAudio = false;
-      const { NativeModules } = require('react-native');
       
-      if (NativeModules.ExponentAV) {
-        const { Audio } = require('expo-av');
-        if (Audio) {
+      try {
+        const expoAvStatus = await import('expo-av').catch(() => null);
+        if (expoAvStatus && expoAvStatus.Audio) {
           console.log('[useOrderAlerts] 🎵 Playing local sound file via expo-av...');
-          const soundObject = new Audio.Sound();
+          const soundObject = new expoAvStatus.Audio.Sound();
           await soundObject.loadAsync(require('../../assets/images/sound/New Order Received A.wav'));
           await soundObject.playAsync();
           playedAudio = true;
@@ -42,6 +41,8 @@ export function useOrderAlerts(orders: any[]) {
             }
           });
         }
+      } catch (e) {
+        console.log('[useOrderAlerts] ℹ️ expo-av not available, falling back...');
       }
       
       // Fallback for Web / Expo Go environments using HTML5 Audio synthesis

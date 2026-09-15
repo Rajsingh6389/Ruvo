@@ -10,11 +10,29 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 import { ToastProvider } from './src/context/ToastContext';
 import { AnimatedAlertProvider } from './src/components/AnimatedAlertProvider';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 
 // Wrap fetch before any provider gets the chance to fire its first request.
 installNetworkMonitor();
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>

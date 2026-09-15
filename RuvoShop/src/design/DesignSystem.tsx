@@ -385,7 +385,7 @@ export const Badge: React.FC<BadgeProps> = ({
           {
             color: v.fg,
             fontSize: sizes[size],
-            fontWeight: '600',
+            fontFamily: 'Poppins_600SemiBold',
             marginLeft: icon ? 4 : 0,
           },
         ]}
@@ -560,7 +560,7 @@ const s = StyleSheet.create({
   },
 
   inputContainer: { marginBottom: 12 },
-  label: { fontSize: 12, fontWeight: '600', marginBottom: 6, letterSpacing: 0.5 },
+  label: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', marginBottom: 6, letterSpacing: 0.5 },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -223,7 +223,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
                     {agreed && <Ionicons name="checkmark" size={11} color={colors.onPrimary} />}
                   </View>
                   <Text style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}>
-                    I agree to the <Text style={{ color: colors.primary, fontWeight: '600' }}>Terms & Conditions</Text> and <Text style={{ color: colors.primary, fontWeight: '600' }}>Privacy Policy</Text>
+                    I agree to the <Text style={{ color: colors.primary, fontFamily: 'Poppins_600SemiBold' }}>Terms & Conditions</Text> and <Text style={{ color: colors.primary, fontFamily: 'Poppins_600SemiBold' }}>Privacy Policy</Text>
                   </Text>
                 </TouchableOpacity>
               </>
@@ -255,7 +255,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
                 {/* Name preview */}
                 <View style={[styles.namePill, { backgroundColor: colors.primarySoft, borderRadius: radius.sm }]}>
                   <Ionicons name="person-circle" size={16} color={colors.primaryDark} />
-                  <Text style={[typography.caption, { color: colors.primaryDark, fontWeight: '600' }]}>
+                  <Text style={[typography.caption, { color: colors.primaryDark, fontFamily: 'Poppins_600SemiBold' }]}>
                     Creating account for {name}
                   </Text>
                 </View>
@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   brandBadge: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  brandLetter: { fontSize: 22, fontWeight: '900', color: '#231C10' },
-  brandName: { fontWeight: '800', letterSpacing: 0.5 },
+  brandLetter: { fontSize: 22, fontFamily: 'Poppins_800ExtraBold', color: '#231C10' },
+  brandName: { fontFamily: 'Poppins_800ExtraBold', letterSpacing: 0.5 },
   stepRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 20 },
   stepDot: { width: 8, height: 8, borderRadius: 4 },
   title: { textAlign: 'center', marginBottom: 6 },

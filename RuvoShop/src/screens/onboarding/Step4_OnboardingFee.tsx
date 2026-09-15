@@ -80,9 +80,9 @@ export const Step4_OnboardingFee = () => {
                 ONBOARDING FEE
               </Text>
               <View style={s.feeAmountRow}>
-                <Text style={[typography.headingXL, { color: colors.onPrimary, fontSize: 52, fontWeight: '900' }]}>₹0</Text>
+                <Text style={[typography.headingXL, { color: colors.onPrimary, fontSize: 52, fontFamily: 'Poppins_800ExtraBold' }]}>₹0</Text>
                 <View style={[s.freeBadge, { backgroundColor: colors.onPrimary, borderRadius: RADIUS.pill }]}>
-                  <Text style={[typography.caption, { color: colors.primary, fontWeight: '800', fontSize: 11 }]}>FREE</Text>
+                  <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_800ExtraBold', fontSize: 11 }]}>FREE</Text>
                 </View>
               </View>
               <Text style={[typography.body, { color: colors.onPrimary, opacity: 0.75, marginTop: 6, textAlign: 'center' }]}>
@@ -102,7 +102,7 @@ export const Step4_OnboardingFee = () => {
                   <Ionicons name={b.icon} size={16} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[typography.body, { color: colors.textPrimary, fontWeight: '600' }]}>{b.title}</Text>
+                  <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_600SemiBold' }]}>{b.title}</Text>
                   <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 2 }]}>{b.text}</Text>
                 </View>
               </View>
@@ -134,7 +134,7 @@ export const Step4_OnboardingFee = () => {
               {accepted && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
             </View>
             <Text style={[typography.body, { color: colors.textSecondary, flex: 1, lineHeight: 20 }]}>
-              I understand the onboarding fee is currently <Text style={{ color: colors.primary, fontWeight: '700' }}>₹0</Text> and agree to the <Text style={{ color: colors.primary, fontWeight: '600' }}>RuVo Shop Terms & Conditions</Text>.
+              I understand the onboarding fee is currently <Text style={{ color: colors.primary, fontFamily: 'Poppins_700Bold' }}>₹0</Text> and agree to the <Text style={{ color: colors.primary, fontFamily: 'Poppins_600SemiBold' }}>RuVo Shop Terms & Conditions</Text>.
             </Text>
           </TouchableOpacity>
 

@@ -10,6 +10,14 @@ import { CartProvider } from './src/context/CartContext';
 import { DeliveryLocationProvider } from './src/context/DeliveryLocationContext';
 import { ToastProvider } from './src/context/ToastContext';
 import { AlertProvider } from './src/context/AlertProvider';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 
 function MainApp() {
   const { theme, colors } = useTheme();
@@ -27,6 +35,18 @@ function MainApp() {
 }
 
 function App() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <AuthProvider>
       <ThemeProvider>

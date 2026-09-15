@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
 
   backText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: 'Poppins_600SemiBold',
     color: COLORS.secondary,
   },
 
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
 
   topLabelText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 1.5,
     color: COLORS.primaryDark,
   },
@@ -698,19 +698,19 @@ const styles = StyleSheet.create({
   brandMarkText: {
     color: COLORS.white,
     fontSize: 19,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
   },
 
   brandName: {
     color: COLORS.text,
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
   },
 
   brandCaption: {
     color: COLORS.secondary,
     fontSize: 6.5,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 0.8,
     marginTop: 1,
   },
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
   previewText: {
     color: COLORS.primaryDark,
     fontSize: 7,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 0.7,
   },
 
@@ -808,14 +808,14 @@ const styles = StyleSheet.create({
   coreRuVo: {
     color: COLORS.white,
     fontSize: 25,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: -1,
   },
 
   coreSmall: {
     color: COLORS.white,
     fontSize: 7,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 2,
     marginTop: 4,
     opacity: 0.85,
@@ -834,14 +834,14 @@ const styles = StyleSheet.create({
   bottomSmall: {
     color: COLORS.secondary,
     fontSize: 6.5,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 1,
   },
 
   bottomMain: {
     color: COLORS.primaryDark,
     fontSize: 12,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     letterSpacing: 1,
     marginTop: 2,
   },
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
   mainTitle: {
     color: COLORS.text,
     fontSize: 19,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     textAlign: 'center',
   },
 
@@ -945,14 +945,14 @@ const styles = StyleSheet.create({
 
   featureTitle: {
     fontSize: 8.5,
-    fontWeight: '800',
+    fontFamily: 'Poppins_800ExtraBold',
     color: COLORS.text,
     textAlign: 'center',
   },
 
   featureStatus: {
     fontSize: 6,
-    fontWeight: '900',
+    fontFamily: 'Poppins_800ExtraBold',
     color: COLORS.primaryDark,
     marginTop: 3,
     letterSpacing: 0.4,

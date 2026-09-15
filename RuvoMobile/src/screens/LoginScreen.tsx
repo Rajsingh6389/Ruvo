@@ -192,10 +192,22 @@ export const LoginScreen = ({ navigation }: Props) => {
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
+<<<<<<< HEAD
       {/* ── Geometric Background ── */}
       <BackgroundShapes isDark={isDark} />
+=======
+      {/* Full-screen theme-aware gradient */}
+      <LinearGradient
+        colors={[
+          colors.primary + '30',
+          colors.primary + '10',
+          colors.background
+        ]}
+        style={styles.fullScreenGradient}
+      />
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <ScrollView
           contentContainerStyle={[styles.container, { paddingTop: insets.top + (SW * 0.1) }]}
           keyboardShouldPersistTaps="handled"
@@ -212,12 +224,149 @@ export const LoginScreen = ({ navigation }: Props) => {
                 source={require('../../assets/images/RuvoIcon.png')}
                 style={styles.logoImg}
               />
+<<<<<<< HEAD
             </View>
             <Text style={[typography.headingXL, styles.brandName, { color: colors.textPrimary }]}>
               RuVo
             </Text>
             <Text style={[typography.body, styles.tagline, { color: colors.textSecondary }]}>
               India's premium local marketplace
+=======
+            ))}
+          </View>
+
+          {/* Heading */}
+          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
+            {step === 1 ? 'Welcome back' : 'Verify OTP'}
+          </Text>
+          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
+            {step === 1
+              ? 'Enter your mobile number to continue'
+              : `We've sent a 6-digit code to +91 ${phoneDigits}`}
+          </Text>
+
+          {/* Form card */}
+          <View style={[
+            styles.formCard,
+            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad },
+            shadows.md,
+          ]}>
+            {step === 1 ? (
+              <>
+                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>Mobile Number</Text>
+                <View style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: focusedField === 'mobile' ? colors.background : colors.surfaceSunken,
+                    borderColor: focusedField === 'mobile' ? colors.primary : colors.border,
+                    borderRadius: radius.input,
+                  },
+                  focusedField === 'mobile' && styles.inputFocused,
+                ]}>
+                  <View style={[styles.prefixBox, { borderRightColor: colors.border }]}>
+                    <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15 }]}>🇮🇳  +91</Text>
+                  </View>
+                  <TextInput
+                    style={[typography.body, styles.input, { color: colors.textPrimary }]}
+                    placeholder="10-digit number"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="phone-pad"
+                    maxLength={10}
+                    value={mobile}
+                    onChangeText={t => { setMobile(t); setError(null); }}
+                    onFocus={() => setFocusedField('mobile')}
+                    onBlur={() => setFocusedField(null)}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSendOtp}
+                  />
+                  {mobile.length === 10 && (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  )}
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>6-Digit OTP</Text>
+                <View style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: focusedField === 'otp' ? colors.background : colors.surfaceSunken,
+                    borderColor: focusedField === 'otp' ? colors.primary : colors.border,
+                    borderRadius: radius.input,
+                  },
+                  focusedField === 'otp' && styles.inputFocused,
+                ]}>
+                  <Ionicons name="key-outline" size={20} color={colors.textHint} style={styles.inputIcon} />
+                  <TextInput
+                    style={[typography.body, styles.input, { color: colors.textPrimary, letterSpacing: 6, fontSize: 20 }]}
+                    placeholder="• • • • • •"
+                    placeholderTextColor={colors.placeholder}
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={t => { setOtp(t); setError(null); }}
+                    onFocus={() => setFocusedField('otp')}
+                    onBlur={() => setFocusedField(null)}
+                    returnKeyType="done"
+                    onSubmitEditing={handleVerifyOtp}
+                    autoFocus
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Error */}
+            {error ? (
+              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft, borderRadius: radius.sm }]}>
+                <Ionicons name="alert-circle" size={15} color={colors.error} />
+                <Text style={[typography.caption, { color: colors.error, flex: 1 }]}>{error}</Text>
+              </View>
+            ) : null}
+
+            {/* CTA */}
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
+                onPressIn={pressBtnIn}
+                onPressOut={pressBtnOut}
+                disabled={loading}
+                activeOpacity={1}
+                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+              >
+                {loading
+                  ? <ActivityIndicator color={colors.onPrimary} />
+                  : <>
+                      <Text style={[typography.button, { color: colors.onPrimary }]}>
+                        {step === 1 ? 'Get OTP' : 'Verify & Login'}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+                    </>
+                }
+              </TouchableOpacity>
+            </Animated.View>
+
+            {step === 2 && (
+              <TouchableOpacity onPress={() => { setStep(1); setOtp(''); setError(null); }} style={styles.changePhoneBtn}>
+                <Ionicons name="chevron-back" size={14} color={colors.primary} />
+                <Text style={[typography.bodyStrong, { color: colors.primary, fontSize: 13 }]}>Change Mobile Number</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footerRow}>
+            <Text style={[typography.body, { color: colors.textSecondary }]}>New to RuVo? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.SIGNUP)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
+              <Text style={[typography.bodyStrong, { color: colors.primary }]}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Trust badge */}
+          <View style={styles.trustRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textHint} />
+            <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>
+              Your data is encrypted and secure
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             </Text>
           </View>
 
@@ -382,6 +531,13 @@ export const LoginScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1 },
+<<<<<<< HEAD
+=======
+  fullScreenGradient: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+  },
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
   container: {
     flexGrow: 1,
     paddingHorizontal: 20,
@@ -406,12 +562,26 @@ const styles = StyleSheet.create({
   logoImg: {
     width: 44,
     height: 44,
+<<<<<<< HEAD
     borderRadius: 14,
     resizeMode: 'contain',
   },
   brandName: {
     fontSize: 28,
     letterSpacing: -0.5,
+=======
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandLetter: {
+    fontSize: 22,
+    fontFamily: 'Poppins_800ExtraBold',
+    color: '#231C10',
+  },
+  brandName: {
+    fontFamily: 'Poppins_800ExtraBold',
+    letterSpacing: 0.5,
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
   },
   tagline: {
     marginTop: 2,

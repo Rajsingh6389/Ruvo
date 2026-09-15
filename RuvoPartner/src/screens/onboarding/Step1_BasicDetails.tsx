@@ -221,7 +221,7 @@ export const Step1_BasicDetails = () => {
                   ? <ActivityIndicator color={colors.primary} size="small" />
                   : <Ionicons name="locate-outline" size={16} color={colors.primary} />
                 }
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginLeft: 4 }]}>
                   {locating ? 'Locating…' : 'GPS Fill'}
                 </Text>
               </TouchableOpacity>
@@ -230,7 +230,7 @@ export const Step1_BasicDetails = () => {
                 onPress={() => setMapOpen(true)}
               >
                 <Ionicons name="map-outline" size={16} color={colors.primary} />
-                <Text style={[typography.caption, { color: colors.primary, fontWeight: '700', marginLeft: 4 }]}>
+                <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_700Bold', marginLeft: 4 }]}>
                   Pick on Map
                 </Text>
               </TouchableOpacity>
