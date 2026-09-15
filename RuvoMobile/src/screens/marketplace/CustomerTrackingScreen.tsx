@@ -69,6 +69,19 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
+const PROMO_BANNERS = [
+  {
+    id: '1',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
+    title: 'Fresh Groceries Daily',
+  },
+  {
+    id: '2',
+    image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=800',
+    title: 'Local Farm Produce',
+  },
+];
+
 const RUVO_FACTS = [
   {
     id: '1',
@@ -130,6 +143,14 @@ export default function CustomerTrackingScreen() {
 
   // Map expansion toggle state
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+  const [upsellTimeLeft, setUpsellTimeLeft] = useState(14 * 60);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setUpsellTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const stepAnims = useRef(TIMELINE_STEPS.map(() => new Animated.Value(0))).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -506,57 +527,72 @@ export default function CustomerTrackingScreen() {
           )}
         </View>
 
-        {/* ── RuVo DID-YOU-KNOW / VALUE PROPOSITION CAROUSEL ─────────── */}
+        {/* ── PROMOTIONAL CAROUSEL ─────────── */}
         {!isMapExpanded && (
           <View className="mt-4 px-4">
-            <View className="flex-row items-center justify-between mb-2 px-1">
-              <Text style={{ color: colors.textPrimary }} className="text-xs font-black uppercase tracking-wider">
-                Why RuVo Local? ⚡
-              </Text>
-              <Text style={{ color: '#FF6B35' }} className="text-[11px] font-bold">
-                Local Stores • Zero Surge
-              </Text>
-            </View>
-
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 12, paddingRight: 8 }}
             >
-              {RUVO_FACTS.map((fact) => (
+              {PROMO_BANNERS.map((banner) => (
                 <View
-                  key={fact.id}
+                  key={banner.id}
                   style={{
-                    backgroundColor: fact.bg,
-                    borderColor: fact.border,
-                    borderWidth: 1.5,
-                    borderRadius: 20,
-                    padding: 14,
-                    width: 260,
-                    elevation: 1,
+                    backgroundColor: colors.card,
+                    borderRadius: 16,
+                    width: 300,
+                    elevation: 2,
+                    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
+                    overflow: 'hidden'
                   }}
                 >
-                  <View className="flex-row items-center justify-between mb-2">
-                    <View
-                      style={{ backgroundColor: fact.iconBg }}
-                      className="w-8 h-8 rounded-full items-center justify-center shadow-sm"
-                    >
-                      <Ionicons name={fact.icon} size={18} color="#FFFFFF" />
-                    </View>
-                    <View style={{ backgroundColor: fact.iconBg }} className="px-2 py-0.5 rounded-full">
-                      <Text className="text-[9px] font-black text-white">{fact.badge}</Text>
+                  <Image source={{ uri: banner.image }} style={{ width: '100%', height: 120 }} resizeMode="cover" />
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginBottom: 8 }}>
+                      {banner.title}
+                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Enquire Now</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setIsMapExpanded(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="map-outline" size={16} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 12 }}>View Map</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-
-                  <Text style={{ color: '#171A1F' }} className="text-sm font-black mb-1">
-                    {fact.title}
-                  </Text>
-                  <Text style={{ color: '#555149' }} className="text-xs font-semibold leading-snug">
-                    {fact.subtitle}
-                  </Text>
                 </View>
               ))}
             </ScrollView>
+            
+            {/* Pagination dots */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12, gap: 6 }}>
+              {PROMO_BANNERS.map((_, idx) => (
+                <View key={idx} style={{ width: idx === 0 ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: idx === 0 ? '#FF6B35' : colors.border }} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ── UPSELL BANNER (Forgot to add something?) ─────────── */}
+        {!isCancelled && order.orderStatus === 'SHOP_ACCEPTED' && upsellTimeLeft > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFF2EC', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#FFE0D3', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ backgroundColor: '#FF6B35', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 20 }}>🧙</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#171A1F', fontSize: 14, fontWeight: '800' }}>Forgot to add something?</Text>
+              <Text style={{ color: '#555149', fontSize: 12, marginTop: 2 }}>Add now at no extra fee</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Text style={{ color: '#EF4444', fontWeight: '900', fontSize: 14 }}>
+                {String(Math.floor(upsellTimeLeft / 60)).padStart(2, '0')}:{String(upsellTimeLeft % 60).padStart(2, '0')}
+              </Text>
+              <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>Add Items</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -760,49 +796,32 @@ export default function CustomerTrackingScreen() {
 
         {/* Animated Timeline or Red Cancel Card */}
         {!isCancelled ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
-            <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>Delivery Progress</Text>
-            {TIMELINE_STEPS.map((step, i) => {
-              const active = isStepActive(step.key, order.orderStatus || '');
-              const isLast = i === TIMELINE_STEPS.length - 1;
-              const nextActive = !isLast && isStepActive(TIMELINE_STEPS[i + 1].key, order.orderStatus || '');
+          <View style={[styles.card, { backgroundColor: '#FFF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ width: 24, alignItems: 'center', marginRight: 16, marginTop: 4 }}>
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#D1D5DB' }} />
+                <View style={{ width: 2, height: 38, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
+                
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#D1D5DB' }} />
+                <View style={{ width: 2, height: 38, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
 
-              const scale   = stepAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] });
-              const opacity = stepAnims[i].interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] });
-
-              return (
-                <View key={step.key} style={styles.timelineRow}>
-                  <View style={styles.timelineDotCol}>
-                    <Animated.View
-                      style={[
-                        styles.timelineDot,
-                        { backgroundColor: active ? '#171A1F' : colors.border, transform: [{ scale }], opacity },
-                      ]}
-                    >
-                      {active && <Ionicons name="checkmark" size={10} color="#F4B400" />}
-                    </Animated.View>
-                    {!isLast && (
-                      <Animated.View
-                        style={[styles.timelineLine, { backgroundColor: nextActive ? '#171A1F' : colors.border }]}
-                      />
-                    )}
-                  </View>
-                  <Animated.View style={{ flex: 1, paddingBottom: isLast ? 0 : 18, opacity }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Ionicons name={step.icon} size={16} color={active ? '#171A1F' : colors.textSecondary} />
-                      <Text style={[typography.bodyStrong, styles.timelineLabel, { color: active ? colors.textPrimary : colors.textSecondary, fontWeight: active ? '800' : '500' }]}>
-                        {step.label}
-                      </Text>
-                      {i === 1 && active && (order.orderStatus === 'DELIVERY_ASSIGNMENT' || order.orderStatus === 'DELIVERY_ASSIGNED') && (
-                        <View style={styles.findingBadge}>
-                          <Text style={styles.findingText}>Finding Partner</Text>
-                        </View>
-                      )}
-                    </View>
-                  </Animated.View>
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('pickedup', order.orderStatus || '') ? '#059669' : '#F59E0B' }} />
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: isStepActive('accepted', order.orderStatus || '') ? '#171A1F' : '#9CA3AF', height: 52 }}>shop accepted</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: (order.deliveryPartnerId) ? '#171A1F' : '#9CA3AF', height: 52 }}>delivery partner assigned</Text>
+                
+                <View>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#171A1F' }}>
+                    {isStepActive('pickedup', order.orderStatus || '') ? 'Order picked up 🚴' : 'Your order is getting packed'}
+                  </Text>
+                  {!isStepActive('pickedup', order.orderStatus || '') && (
+                    <Text style={{ fontSize: 24, position: 'absolute', right: 0, top: -4 }}>🎁</Text>
+                  )}
                 </View>
-              );
-            })}
+              </View>
+            </View>
           </View>
         ) : (
           <View style={styles.cancelCard}>
@@ -829,15 +848,21 @@ export default function CustomerTrackingScreen() {
         )}
 
         {/* Payment Method */}
-        <View style={[styles.paymentRow, { borderColor: colors.border, padding: spacing.cardPad }]}>
-          <Ionicons
-            name={order.paymentMethod === 'ONLINE' ? 'card-outline' : 'cash-outline'}
-            size={18}
-            color={colors.textSecondary}
-          />
-          <Text style={[typography.body, styles.paymentText, { color: colors.textSecondary }]}>
-            {order.paymentMethod === 'ONLINE' ? 'Paid Online' : 'Cash on Delivery'}
+        <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: '#FFF', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 13, color: '#555149', fontWeight: '600' }}>
+            You can pay online now or at delivery.
           </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <View>
+              <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '800', letterSpacing: 0.5 }}>PAYING VIA ▼</Text>
+              <Text style={{ fontSize: 16, color: '#171A1F', fontWeight: '900', marginTop: 4 }}>
+                {order.paymentMethod === 'ONLINE' ? 'BHIM UPI' : 'Cash on Delivery'}
+              </Text>
+            </View>
+            <TouchableOpacity style={{ backgroundColor: '#171A1F', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 }}>
+              <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Customer Cancel Order Button (Allowed if not picked up yet) */}

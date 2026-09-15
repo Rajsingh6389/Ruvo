@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   useWindowDimensions,
   RefreshControl,
   Platform,
+  Animated,
+  StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -45,6 +47,43 @@ import {
 
 const FETCHING_LABEL = 'Fetching location...';
 
+// ── Premium Home Header Navigation ───────────────────────────────────────────
+const HOME_NAV_ITEMS = [
+  {
+    id: 'food',
+    label: 'Food',
+    image: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessorybag.jpg',
+    route: ROUTES.NEARBY_SHOPS,
+    params: undefined,
+    badge: undefined,
+  },
+  {
+    id: 'groceries',
+    label: 'Groceries',
+    image: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessoriesbasket.jpg',
+    route: ROUTES.GROCERIES,
+    params: undefined,
+    badge: 'EXPRESS',
+  },
+  {
+    id: 'accessories',
+    label: 'Accessories',
+    image: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787657146/ce1254b8-af09-41a6-b5a7-003d3db58941.png',
+    route: ROUTES.NEARBY_SHOPS,
+    params: { category: 'Accessories' },
+    badge: undefined,
+  },
+  {
+    id: 'dineout',
+    label: 'Dineout',
+    image: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787828141/0858b8b6-7274-4c08-9d69-5256a5d3ce9b.png',
+    route: ROUTES.NEARBY_SHOPS,
+    params: { category: 'Cafe' },
+    badge: undefined,
+  },
+] as const;
+
+
 export const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, userId, token } = useAuth();
@@ -73,6 +112,63 @@ export const HomeScreen = () => {
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   const [refreshing, setRefreshing] = useState(false);
+  const [activeNavItem, setActiveNavItem] = useState(0);
+
+  // Header background animation — subtle light movement, not a distracting color flash.
+  const headerGlow1 = useRef(new Animated.Value(0)).current;
+  const headerGlow2 = useRef(new Animated.Value(0)).current;
+  const headerGlow3 = useRef(new Animated.Value(0)).current;
+
+  // Top navigation item press animation.
+  const navScales = useRef(
+    HOME_NAV_ITEMS.map((_, index) => new Animated.Value(index === 0 ? 1.05 : 1))
+  ).current;
+
+  useEffect(() => {
+    const glow1 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(headerGlow1, { toValue: 1, duration: 5200, useNativeDriver: true }),
+        Animated.timing(headerGlow1, { toValue: 0, duration: 5200, useNativeDriver: true }),
+      ])
+    );
+
+    const glow2 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(headerGlow2, { toValue: 1, duration: 7000, useNativeDriver: true }),
+        Animated.timing(headerGlow2, { toValue: 0, duration: 7000, useNativeDriver: true }),
+      ])
+    );
+
+    const glow3 = Animated.loop(
+      Animated.sequence([
+        Animated.timing(headerGlow3, { toValue: 1, duration: 4300, useNativeDriver: true }),
+        Animated.timing(headerGlow3, { toValue: 0, duration: 4300, useNativeDriver: true }),
+      ])
+    );
+
+    glow1.start();
+    glow2.start();
+    glow3.start();
+
+    return () => {
+      glow1.stop();
+      glow2.stop();
+      glow3.stop();
+    };
+  }, [headerGlow1, headerGlow2, headerGlow3]);
+
+  const selectNavItem = (index: number) => {
+    setActiveNavItem(index);
+
+    navScales.forEach((scale, i) => {
+      Animated.spring(scale, {
+        toValue: i === index ? 1.05 : 1,
+        friction: 7,
+        tension: 80,
+        useNativeDriver: true,
+      }).start();
+    });
+  };
 
   const loadHomeData = React.useCallback(async () => {
     // Fetch active orders
@@ -131,10 +227,10 @@ export const HomeScreen = () => {
       <StatusBar backgroundColor={isDark ? colors.surface : '#FFFFFF'} barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* ── Header with U-Shaped Orange Rounded Background ─────────────────────────────────────────── */}
-      <View 
-        style={{ 
-          backgroundColor: '#FF6B35', 
-          borderBottomLeftRadius: 32, 
+      <View
+        style={{
+          backgroundColor: '#FF6B35',
+          borderBottomLeftRadius: 32,
           borderBottomRightRadius: 32,
           paddingHorizontal: 14,
           paddingTop: 8,
@@ -144,8 +240,87 @@ export const HomeScreen = () => {
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.3,
           shadowRadius: 10,
+          overflow: 'hidden',
+          position: 'relative',
         }}
       >
+        {/* ── Animated orange ambient background ─────────────────────────────── */}
+        <View
+          pointerEvents="none"
+          style={{
+            ...(StyleSheet.absoluteFill as any),
+            overflow: 'hidden',
+          }}
+        >
+          <Animated.View
+            style={{
+              position: 'absolute',
+              width: 300,
+              height: 300,
+              borderRadius: 150,
+              backgroundColor: 'rgba(255, 214, 170, 0.24)',
+              top: -155,
+              left: -75,
+              opacity: headerGlow1.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] }),
+              transform: [
+                {
+                  translateX: headerGlow1.interpolate({ inputRange: [0, 1], outputRange: [-20, 100] }),
+                },
+                {
+                  translateY: headerGlow1.interpolate({ inputRange: [0, 1], outputRange: [15, -35] }),
+                },
+                {
+                  scale: headerGlow1.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }),
+                },
+              ],
+            }}
+          />
+
+          <Animated.View
+            style={{
+              position: 'absolute',
+              width: 260,
+              height: 260,
+              borderRadius: 130,
+              backgroundColor: 'rgba(207, 49, 5, 0.20)',
+              right: -100,
+              bottom: -150,
+              opacity: headerGlow2.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }),
+              transform: [
+                {
+                  translateX: headerGlow2.interpolate({ inputRange: [0, 1], outputRange: [80, -50] }),
+                },
+                {
+                  translateY: headerGlow2.interpolate({ inputRange: [0, 1], outputRange: [-25, 45] }),
+                },
+                {
+                  scale: headerGlow2.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }),
+                },
+              ],
+            }}
+          />
+
+          <Animated.View
+            style={{
+              position: 'absolute',
+              width: 135,
+              height: 135,
+              borderRadius: 68,
+              backgroundColor: 'rgba(255, 247, 237, 0.14)',
+              top: 42,
+              left: '43%',
+              opacity: headerGlow3.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.85] }),
+              transform: [
+                {
+                  translateX: headerGlow3.interpolate({ inputRange: [0, 1], outputRange: [-35, 55] }),
+                },
+                {
+                  translateY: headerGlow3.interpolate({ inputRange: [0, 1], outputRange: [20, -25] }),
+                },
+              ],
+            }}
+          />
+        </View>
         {/* Logo and Location Row */}
         <View className="flex-row items-center justify-between mb-sm">
           {/* Prominent Large Top-Left RuVo Icon */}
@@ -159,20 +334,23 @@ export const HomeScreen = () => {
           {/* Location Pill */}
           <Pressable
             onPress={() => setLocationPickerVisible(true)}
-            style={{ backgroundColor: '#FFFFFF', borderColor: '#FFE4D6' }}
+            style={{
+              backgroundColor: isDark ? colors.surface : '#FFFFFF',
+              borderColor: isDark ? colors.border : '#FFE4D6',
+            }}
             className="flex-row items-center gap-xs px-md py-2 border rounded-full flex-1 mx-sm shadow-sm"
           >
             <Ionicons name="location-sharp" size={18} color="#FF6B35" />
             <View className="flex-1">
-              <Text style={{ color: '#77736B' }} className="text-[10px] font-semibold">Deliver to</Text>
+              <Text style={{ color: colors.textSecondary }} className="text-[10px] font-semibold">Deliver to</Text>
               <View className="flex-row items-center gap-xs">
                 {isFetchingLocation && (
                   <ActivityIndicator size="small" color="#FF6B35" />
                 )}
-                <Text style={{ color: '#171A1F' }} className="text-xs font-extrabold flex-1" numberOfLines={1}>
+                <Text style={{ color: colors.textPrimary }} className="text-xs font-extrabold flex-1" numberOfLines={1}>
                   {locationText}
                 </Text>
-                <Ionicons name="chevron-down" size={14} color="#77736B" />
+                <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
               </View>
             </View>
           </Pressable>
@@ -192,171 +370,173 @@ export const HomeScreen = () => {
           </Pressable>
         </View>
 
-        {/* ── Top Navigator Tabs (Food, Groceries, Accessories, Dineout) ── */}
+        {/* ── Premium service carousel ───────────────────────────────────────── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="mb-3 mt-1"
-          contentContainerStyle={{ gap: 14, paddingHorizontal: 4, paddingVertical: 6 }}
+          decelerationRate="fast"
+          contentContainerStyle={{
+            gap: 10,
+            paddingHorizontal: 6,
+            paddingVertical: 8,
+          }}
         >
-          {/* Food & Dining */}
-          <Pressable
-            onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS)}
-            style={{
-              alignItems: 'center',
-              width: 76,
-            }}
-          >
-            <View
-              style={{
-                width: 66,
-                height: 66,
-                borderRadius: 20,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#FFE0D3',
-                elevation: 4,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '-6deg' }],
-              }}
-            >
-              <Image
-                source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessorybag.jpg' }}
-                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
-              />
-            </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
-              Food
-            </Text>
-          </Pressable>
+          {HOME_NAV_ITEMS.map((item, index) => {
+            const isActive = activeNavItem === index;
 
-          {/* Groceries (Instamart) */}
-          <Pressable
-            onPress={() => (navigation.navigate as any)(ROUTES.GROCERIES)}
-            style={{
-              alignItems: 'center',
-              width: 76,
-            }}
-          >
-            <View
-              style={{
-                width: 66,
-                height: 66,
-                borderRadius: 20,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#DCFCE7',
-                elevation: 4,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 6,
-                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '-4deg' }],
-              }}
-            >
-              <Image
-                source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787637143/grocessoriesbasket.jpg' }}
-                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
-              />
-              <View style={{ position: 'absolute', bottom: -6, backgroundColor: '#22C55E', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
-                <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 8 }}>EXPRESS</Text>
-              </View>
-            </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
-              Groceries
-            </Text>
-          </Pressable>
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => {
+                  selectNavItem(index);
+                  (navigation.navigate as any)(item.route, item.params);
+                }}
+                onPressIn={() => {
+                  Animated.spring(navScales[index], {
+                    toValue: 0.95,
+                    friction: 7,
+                    useNativeDriver: true,
+                  }).start();
+                }}
+                onPressOut={() => {
+                  Animated.spring(navScales[index], {
+                    toValue: isActive ? 1.05 : 1,
+                    friction: 7,
+                    tension: 80,
+                    useNativeDriver: true,
+                  }).start();
+                }}
+                style={{
+                  width: 78,
+                  alignItems: 'center',
+                }}
+              >
+                <Animated.View
+                  style={{
+                    alignItems: 'center',
+                    transform: [{ scale: navScales[index] }],
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 22,
+                      backgroundColor: '#FFFFFF',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: isActive ? 2 : 1,
+                      borderColor: isActive ? '#FFF0E9' : 'rgba(255,255,255,0.55)',
+                      shadowColor: '#8F2E0D',
+                      shadowOffset: { width: 0, height: isActive ? 7 : 4 },
+                      shadowOpacity: isActive ? 0.28 : 0.15,
+                      shadowRadius: isActive ? 9 : 6,
+                      elevation: isActive ? 8 : 4,
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.image }}
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 18,
+                        resizeMode: 'cover',
+                      }}
+                    />
 
-          {/* Accessories */}
-          <Pressable
-            onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS, { category: 'Accessories' })}
-            style={{
-              alignItems: 'center',
-              width: 76,
-            }}
-          >
-            <View
-              style={{
-                width: 66,
-                height: 66,
-                borderRadius: 20,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#F3F4F6',
-                elevation: 4,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.15,
-                shadowRadius: 5,
-                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '4deg' }],
-              }}
-            >
-              <Image
-                source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787657146/ce1254b8-af09-41a6-b5a7-003d3db58941.png' }}
-                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
-              />
-            </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
-              Accessories
-            </Text>
-          </Pressable>
+                    {item.badge && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: -6,
+                          backgroundColor: '#16A34A',
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#FFFFFF',
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 7.5 }}>
+                          {item.badge}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
-          {/* Dineout */}
-          <Pressable
-            onPress={() => (navigation.navigate as any)(ROUTES.NEARBY_SHOPS, { category: 'Cafe' })}
-            style={{
-              alignItems: 'center',
-              width: 76,
-            }}
-          >
-            <View
-              style={{
-                width: 66,
-                height: 66,
-                borderRadius: 20,
-                backgroundColor: '#FFFFFF',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#FBCFE8',
-                elevation: 4,
-                shadowColor: '#000000',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.15,
-                shadowRadius: 5,
-                transform: [{ perspective: 400 }, { rotateX: '10deg' }, { rotateY: '6deg' }],
-              }}
-            >
-              <Image
-                source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1787828141/0858b8b6-7274-4c08-9d69-5256a5d3ce9b.png' }}
-                style={{ width: 54, height: 54, borderRadius: 16, resizeMode: 'cover' }}
-              />
-            </View>
-            <Text numberOfLines={1} style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 11, marginTop: 6, textAlign: 'center' }}>
-              Dineout
-            </Text>
-          </Pressable>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: '#FFFFFF',
+                      fontWeight: '900',
+                      fontSize: 11,
+                      marginTop: item.badge ? 9 : 7,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+
+                  <View
+                    style={{
+                      marginTop: 5,
+                      width: isActive ? 20 : 5,
+                      height: 4,
+                      borderRadius: 4,
+                      backgroundColor: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
+                    }}
+                  />
+                </Animated.View>
+              </Pressable>
+            );
+          })}
         </ScrollView>
 
         {/* Search Bar Button */}
-        <Pressable 
+        <Pressable
           onPress={() => (navigation.navigate as any)(ROUTES.SEARCH)}
-          style={{ backgroundColor: '#FFFFFF', borderColor: '#FFE4D6', elevation: 4 }}
-          className="flex-row items-center border rounded-2xl px-md py-3 gap-sm shadow-sm"
+          style={{
+            height: 52,
+            backgroundColor: isDark ? colors.surface : '#FFFFFF',
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: isDark ? colors.border : 'rgba(255,255,255,0.9)',
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            shadowColor: '#8F2E0D',
+            shadowOffset: { width: 0, height: 5 },
+            shadowOpacity: 0.16,
+            shadowRadius: 8,
+            elevation: 5,
+          }}
         >
-          <Ionicons name="search-outline" size={20} color="#FF6B35" />
-          <Text style={{ color: '#77736B' }} className="flex-1 text-sm font-semibold">
+          <Ionicons name="search-outline" size={21} color="#FF6B35" />
+
+          <Text
+            style={{
+              flex: 1,
+              marginLeft: 10,
+              color: colors.textSecondary,
+              fontSize: 14,
+              fontWeight: '600',
+            }}
+          >
             Search shops, products...
           </Text>
+
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 11,
+              backgroundColor: isDark ? colors.surfaceSunken : '#FFF1EB',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="options-outline" size={17} color="#FF6B35" />
+          </View>
         </Pressable>
       </View>
 
@@ -421,7 +601,6 @@ export const HomeScreen = () => {
             contentContainerStyle={{ gap: 14, paddingHorizontal: 2, paddingVertical: 4 }}
           >
             {CATEGORIES.map((cat, index) => {
-              const rotateYVal = index % 2 === 0 ? '-6deg' : '6deg';
               return (
                 <Pressable
                   key={cat.id}
@@ -557,10 +736,9 @@ export const HomeScreen = () => {
           </>
         )}
 
+        {/* ── RuVo Why Us Animated Carousel ───────────────── */}
+        <RuvoFeatureCarousel />
 
-
-        {/* ── Why RuVo Features ───────────────────────────── */}
-      
       </ScrollView>
 
       {/* ── Floating Active Order Widget (Above Tab Navigator) ─────────────────── */}
@@ -617,6 +795,103 @@ export const HomeScreen = () => {
         onClose={() => setLocationPickerVisible(false)}
       />
     </SafeAreaView>
+  );
+};
+
+// ── RuVo Why Us Feature Carousel (styled like Products Near You section) ──
+const RUVO_FEATURES = [
+  { id: 'cod',      icon: 'cash-outline'      as const, label: 'Cash on Delivery',       desc: 'Pay at your door — Cash or UPI accepted.',          accent: '#FF7A00' },
+  { id: 'speed',    icon: 'flash-outline'     as const, label: '15-Min Local Delivery',   desc: 'Fresh from nearby stores in minutes.',               accent: '#16A34A' },
+  { id: 'shop',     icon: 'storefront-outline' as const, label: 'Zero Onboarding Fee',    desc: 'Local shops go digital with 0% setup cost.',         accent: '#2563EB' },
+  { id: 'quality',  icon: 'ribbon-outline'    as const, label: '100% Authentic Products', desc: 'Sourced directly from verified local merchants.',     accent: '#D97706' },
+];
+
+const RuvoFeatureCarousel: React.FC = () => {
+  const { colors, theme: activeTheme } = useTheme();
+  const isDark = activeTheme === 'dark';
+  const [idx, setIdx] = useState(0);
+  const fade  = useRef(new Animated.Value(1)).current;
+  const slide = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      Animated.parallel([
+        Animated.timing(fade,  { toValue: 0,   duration: 280, useNativeDriver: true }),
+        Animated.timing(slide, { toValue: -12, duration: 280, useNativeDriver: true }),
+      ]).start(() => {
+        setIdx(p => (p + 1) % RUVO_FEATURES.length);
+        slide.setValue(12);
+        Animated.parallel([
+          Animated.timing(fade,  { toValue: 1, duration: 340, useNativeDriver: true }),
+          Animated.spring(slide, { toValue: 0, friction: 7, tension: 55, useNativeDriver: true }),
+        ]).start();
+      });
+    }, 4000);
+    return () => clearInterval(id);
+  }, [fade, slide]);
+
+  const item = RUVO_FEATURES[idx];
+
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24, marginVertical: 8 }}>
+      {/* Section Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '900' }}>Why RuVo?</Text>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          {RUVO_FEATURES.map((f, i) => (
+            <View
+              key={f.id}
+              style={{
+                height: 4, borderRadius: 2,
+                width: i === idx ? 20 : 5,
+                backgroundColor: i === idx ? item.accent : isDark ? colors.border : '#EAF0F6',
+              }}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* Card */}
+      <Pressable
+        onPress={() => setIdx(p => (p + 1) % RUVO_FEATURES.length)}
+        style={{
+          backgroundColor: isDark ? colors.surface : '#FFFFFF',
+          borderRadius: 24,
+          borderWidth: 1.5,
+          borderColor: isDark ? colors.border : '#EAF0F6',
+          padding: 18,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          elevation: 2,
+        }}
+      >
+        <Animated.View style={{ opacity: fade, transform: [{ translateY: slide }] }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            {/* Icon Circle */}
+            <View style={{
+              width: 52, height: 52, borderRadius: 26,
+              backgroundColor: item.accent + '15',
+              alignItems: 'center', justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: item.accent + '30',
+            }}>
+              <Ionicons name={item.icon} size={26} color={item.accent} />
+            </View>
+            {/* Text */}
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '900', marginBottom: 4 }}>
+                {item.label}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18, fontWeight: '500' }}>
+                {item.desc}
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </View>
   );
 };
 

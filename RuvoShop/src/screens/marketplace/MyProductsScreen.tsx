@@ -1,20 +1,18 @@
-﻿import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
   RefreshControl,
-  StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
 
-import { useTheme } from '../../context/ThemeContext';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
 import { useAuth } from '../../context/AuthContext';
 import {
   deleteProduct,
@@ -26,29 +24,18 @@ import { ROUTES } from '../../constants/routes';
 import { OfflineBar } from '../../components/OfflineBar';
 import { ProductSkeleton } from '../../components/ProductSkeleton';
 
-const GREEN = '#18A957';
-const LIGHT_GREEN = '#E8F8EE';
-const BG = '#FAF7F0'; // unified RuVo Cream
-const TEXT = '#171717';
-const MUTED = '#77736B';
-const BORDER = '#E7E0D5';
-const WHITE = '#FFFFFF';
-const RED = '#D94A4A';
-const GOLD = '#F4B400';
-const INK = '#171A1F';
-
-export const MyProductsScreen = () => {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
-  const { colors } = useTheme();
+export const MyProductsScreen = ({ navigation, route }: any) => {
   const { token } = useAuth();
-
   const shopId = route.params?.shopId;
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ============================================================
+  // LOAD PRODUCTS
+  // ============================================================
 
   const loadProducts = useCallback(
     async (showLoader = true) => {
@@ -74,49 +61,73 @@ export const MyProductsScreen = () => {
         setRefreshing(false);
       }
     },
-    [shopId, token],
+    [shopId, token]
   );
 
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 
+  // ============================================================
+  // REFRESH
+  // ============================================================
+
   const onRefresh = () => {
     setRefreshing(true);
     loadProducts(false);
   };
 
+  // ============================================================
+  // AVAILABILITY
+  // ============================================================
+
   const toggleAvailability = async (
     product: Product,
-    value: boolean,
+    value: boolean
   ) => {
     if (!product.id || !token) return;
 
+    // Optimistic UI update
     setProducts(current =>
       current.map(item =>
         item.id === product.id
-          ? { ...item, isAvailable: value }
-          : item,
-      ),
+          ? {
+              ...item,
+              isAvailable: value,
+            }
+          : item
+      )
     );
 
     try {
-      await updateAvailability(product.id, value, token);
+      await updateAvailability(
+        product.id,
+        value,
+        token
+      );
     } catch (err: any) {
+      // Rollback
       setProducts(current =>
         current.map(item =>
           item.id === product.id
-            ? { ...item, isAvailable: !value }
-            : item,
-        ),
+            ? {
+                ...item,
+                isAvailable: !value,
+              }
+            : item
+        )
       );
 
       Alert.alert(
         'Update failed',
-        err?.message || 'Could not update product availability.',
+        err?.message || 'Could not update value.'
       );
     }
   };
+
+  // ============================================================
+  // DELETE
+  // ============================================================
 
   const confirmDelete = (product: Product) => {
     if (!product.id || !token) return;
@@ -132,193 +143,262 @@ export const MyProductsScreen = () => {
         {
           text: 'Delete',
           style: 'destructive',
+
           onPress: async () => {
             try {
-              await deleteProduct(product.id!, token);
+              await deleteProduct(
+                product.id!,
+                token
+              );
 
               setProducts(current =>
-                current.filter(item => item.id !== product.id),
+                current.filter(
+                  item => item.id !== product.id
+                )
               );
             } catch (err: any) {
               Alert.alert(
                 'Delete failed',
-                err?.message || 'Could not delete product.',
+                err?.message ||
+                  'Could not delete product.'
               );
             }
           },
         },
-      ],
+      ]
     );
   };
 
+  // ============================================================
+  // PRODUCT CARD
+  // ============================================================
+
   const renderProduct = ({
     item,
+    index,
   }: {
     item: Product;
+    index: number;
   }) => {
     const available =
-      item.isAvailable !== false && item.stockQuantity > 0;
+      item.isAvailable !== false &&
+      item.stockQuantity > 0;
+
+    const actualPrice =
+      typeof item.actualPrice === 'number'
+        ? item.actualPrice
+        : 0;
+
+    const sellingPrice =
+      typeof item.sellingPrice === 'number'
+        ? item.sellingPrice
+        : 0;
 
     const discount =
       item.discount ??
-      (item.actualPrice > item.sellingPrice
+      (actualPrice > sellingPrice &&
+      actualPrice > 0
         ? Math.round(
-            ((item.actualPrice - item.sellingPrice) /
-              item.actualPrice) *
-              100,
+            ((actualPrice - sellingPrice) /
+              actualPrice) *
+              100
           )
         : 0);
 
     return (
-      <View style={styles.productCard}>
-        {/* IMAGE */}
+      <Animated.View
+        entering={FadeInUp
+          .delay(index * 70)
+          .duration(300)}
+        className="mb-3"
+      >
+        {/* ====================================================
+            PRODUCT CARD
+        ==================================================== */}
 
-        <View style={styles.imageWrap}>
-          {item.imageUrl ? (
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.noImage}>
-              <Ionicons
-                name="image-outline"
-                size={34}
-                color="#B8C0B9"
-              />
+        <View className="bg-ruvo-surface border border-warm-200 rounded-[20px] overflow-hidden shadow-sm">
+
+          {/* TOP CONTENT */}
+          <View className="flex-row">
+
+            {/* PRODUCT IMAGE */}
+            <View className="w-[112px] h-[142px] bg-warm-100 relative overflow-hidden">
+
+              {item.imageUrl ? (
+                <Image
+                  source={{
+                    uri: item.imageUrl,
+                  }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <View className="flex-1 items-center justify-center">
+                  <View className="w-12 h-12 rounded-full bg-warm-50 items-center justify-center">
+                    <Ionicons
+                      name="image-outline"
+                      size={25}
+                      color="#A79E92"
+                    />
+                  </View>
+                </View>
+              )}
+
+              {/* DISCOUNT BADGE */}
+              {discount > 0 && (
+                <View className="absolute top-2 left-2 bg-ruvo-yellow px-2.5 py-1 rounded-full shadow-sm">
+                  <Text className="text-[9px] font-black text-ruvo-ink">
+                    {discount}% OFF
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
 
-          {discount > 0 ? (
-            <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>
-                {discount}% OFF
-              </Text>
-            </View>
-          ) : null}
-        </View>
+            {/* PRODUCT INFORMATION */}
+            <View className="flex-1 p-3">
 
-        {/* PRODUCT INFO */}
+              {/* NAME + STATUS */}
+              <View className="flex-row items-start">
 
-        <View style={styles.productBody}>
-          <View style={styles.topRow}>
-            <View style={styles.nameArea}>
-              <Text
-                style={styles.productName}
-                numberOfLines={2}
-              >
-                {item.name}
-              </Text>
+                <View className="flex-1 pr-2">
 
-              {item.brandName ? (
-                <Text
-                  style={styles.brand}
-                  numberOfLines={1}
+                  <Text
+                    className="text-[16px] font-black text-ruvo-ink leading-[19px]"
+                    numberOfLines={2}
+                  >
+                    {item.name}
+                  </Text>
+
+                  {item.brandName ? (
+                    <Text
+                      className="text-[10px] font-semibold text-warm-500 mt-1"
+                      numberOfLines={1}
+                    >
+                      {item.brandName}
+                    </Text>
+                  ) : null}
+
+                </View>
+
+                {/* STATUS */}
+                <View
+                  className={`px-2 py-1 rounded-full flex-row items-center ${
+                    available
+                      ? 'bg-green-100'
+                      : 'bg-red-100'
+                  }`}
                 >
-                  {item.brandName}
+                  <View
+                    className={`w-1.5 h-1.5 rounded-full mr-1 ${
+                      available
+                        ? 'bg-green-600'
+                        : 'bg-red-600'
+                    }`}
+                  />
+
+                  <Text
+                    className={`text-[8px] font-black ${
+                      available
+                        ? 'text-green-700'
+                        : 'text-red-700'
+                    }`}
+                  >
+                    {available
+                      ? 'ACTIVE'
+                      : 'OFFLINE'}
+                  </Text>
+                </View>
+
+              </View>
+
+              {/* PRICE */}
+              <View className="flex-row items-baseline mt-2">
+
+                <Text className="text-[21px] font-black text-ruvo-ink">
+                  ₹{sellingPrice}
                 </Text>
-              ) : null}
-            </View>
 
-            <View
-              style={[
-                styles.statusPill,
-                {
-                  backgroundColor: available
-                    ? LIGHT_GREEN
-                    : '#FDECEC',
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: available
-                      ? GREEN
-                      : RED,
-                  },
-                ]}
-              />
+                {actualPrice > sellingPrice && (
+                  <Text className="text-[12px] font-bold text-warm-400 line-through ml-2">
+                    ₹{actualPrice}
+                  </Text>
+                )}
 
-              <Text
-                style={[
-                  styles.statusText,
-                  {
-                    color: available
-                      ? GREEN
-                      : RED,
-                  },
-                ]}
-              >
-                {available ? 'Active' : 'Unavailable'}
-              </Text>
-            </View>
-          </View>
+                {item.unit && (
+                  <Text className="text-[10px] font-semibold text-warm-500 ml-1">
+                    /{item.unit}
+                  </Text>
+                )}
 
-          {/* PRICE */}
+              </View>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.sellingPrice}>
-              ₹{item.sellingPrice}
-            </Text>
+              {/* STOCK */}
+              <View className="flex-row items-center justify-between mt-2.5 bg-warm-50 border border-warm-200 rounded-[10px] px-2.5 py-1.5">
 
-            {item.actualPrice > item.sellingPrice ? (
-              <Text style={styles.actualPrice}>
-                ₹{item.actualPrice}
-              </Text>
-            ) : null}
+                <View className="flex-row items-center flex-1">
 
-            {item.unit ? (
-              <Text style={styles.unit}>
-                / {item.unit}
-              </Text>
-            ) : null}
-          </View>
+                  <Ionicons
+                    name="cube-outline"
+                    size={14}
+                    color="#8F8579"
+                  />
 
-          {/* STOCK */}
+                  <Text
+                    className={`text-[10px] font-bold ml-1.5 ${
+                      item.stockQuantity <= 0
+                        ? 'text-red-600'
+                        : 'text-warm-600'
+                    }`}
+                    numberOfLines={1}
+                  >
+                    {item.stockQuantity <= 0
+                      ? 'Out of stock'
+                      : `${item.stockQuantity} in stock`}
+                  </Text>
 
-          <View style={styles.stockRow}>
-            <View style={styles.stockInfo}>
-              <Ionicons
-                name="cube-outline"
-                size={14}
-                color={MUTED}
-              />
+                </View>
 
-              <Text style={styles.stockText}>
-                {item.stockQuantity} in stock
-              </Text>
-            </View>
+                <Switch
+                  value={available}
+                  onValueChange={value =>
+                    toggleAvailability(
+                      item,
+                      value
+                    )
+                  }
+                  trackColor={{
+                    false: '#E5E7EB',
+                    true: '#F5B700',
+                  }}
+                  thumbColor="#FFFFFF"
+                  style={{
+                    transform: [
+                      {
+                        scaleX: 0.72,
+                      },
+                      {
+                        scaleY: 0.72,
+                      },
+                    ],
+                    marginRight: -5,
+                  }}
+                />
 
-            <View style={styles.availabilityControl}>
-              <Text style={styles.availabilityLabel}>
-                Available
-              </Text>
+              </View>
 
-              <Switch
-                value={available}
-                onValueChange={value =>
-                  toggleAvailability(item, value)
-                }
-                trackColor={{
-                  false: '#D9DEDA',
-                  true: '#9CCC9F',
-                }}
-                thumbColor={
-                  available ? GREEN : '#FFFFFF'
-                }
-              />
             </View>
           </View>
 
-          {/* ACTIONS */}
+          {/* ==================================================
+              ACTION BAR
+          ================================================== */}
 
-          <View style={styles.actions}>
+          <View className="flex-row border-t border-warm-100 px-3 py-2 gap-2">
+
+            {/* EDIT */}
             <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.editButton}
+              activeOpacity={0.75}
+              className="flex-1 h-9 bg-warm-50 border border-warm-200 rounded-[10px] flex-row items-center justify-center"
               onPress={() =>
                 navigation.navigate(
                   ROUTES.EDIT_PRODUCT,
@@ -326,696 +406,333 @@ export const MyProductsScreen = () => {
                     product: item,
                     productId: item.id,
                     shopId,
-                  },
+                  }
                 )
               }
             >
               <Ionicons
                 name="create-outline"
-                size={17}
-                color={GREEN}
+                size={15}
+                color="#5F554B"
               />
 
-              <Text style={styles.editText}>
-                Edit
+              <Text className="text-[11px] font-black text-ruvo-ink ml-1.5">
+                EDIT
               </Text>
             </TouchableOpacity>
 
+            {/* DELETE */}
             <TouchableOpacity
-              activeOpacity={0.8}
-              style={styles.deleteButton}
-              onPress={() => confirmDelete(item)}
+              activeOpacity={0.75}
+              className="flex-1 h-9 bg-red-50 border border-red-100 rounded-[10px] flex-row items-center justify-center"
+              onPress={() =>
+                confirmDelete(item)
+              }
             >
               <Ionicons
                 name="trash-outline"
-                size={17}
-                color={RED}
+                size={15}
+                color="#DC2626"
               />
 
-              <Text style={styles.deleteText}>
-                Delete
+              <Text className="text-[11px] font-black text-red-600 ml-1.5">
+                DELETE
               </Text>
             </TouchableOpacity>
+
           </View>
         </View>
-      </View>
+      </Animated.View>
     );
   };
 
+  // ============================================================
+  // LOADING
+  // ============================================================
+
   if (loading) {
     return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: colors.background, padding: 16 },
-        ]}
-      >
+      <View className="flex-1 bg-ruvo-bg">
+
+        <View className="bg-ruvo-yellow pt-3 pb-5">
+          <View className="px-4 pt-3">
+            <Text className="text-[22px] font-black text-ruvo-ink">
+              My Products
+            </Text>
+            <Text className="text-[11px] font-bold text-ruvo-ink/60 mt-0.5">
+              Manage stock, prices & catalogue
+            </Text>
+          </View>
+        </View>
+
         <OfflineBar />
-        <ProductSkeleton count={6} />
+
+        <View className="px-4 pt-5">
+          <ProductSkeleton count={6} />
+        </View>
+
       </View>
     );
   }
 
-  return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-    >
-      <OfflineBar />
-      {/* HEADER */}
+  // ============================================================
+  // COUNTERS
+  // ============================================================
 
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
+  const activeCount = products.filter(
+    p =>
+      p.isAvailable !== false &&
+      p.stockQuantity > 0
+  ).length;
+
+  const oosCount = products.filter(
+    p => p.stockQuantity <= 0
+  ).length;
+
+  // ============================================================
+  // MAIN SCREEN
+  // ============================================================
+
+  return (
+    <View className="flex-1 bg-ruvo-bg">
+
+      {/* ======================================================
+          ORANGE / YELLOW HEADER
+      ====================================================== */}
+
+      <View className="bg-ruvo-yellow pt-3">
+
+        <View className="px-4 pt-3 pb-5 flex-row items-center">
+
+          {/* BACK */}
           <TouchableOpacity
-            activeOpacity={0.75}
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() =>
+              navigation.goBack()
+            }
+            activeOpacity={0.8}
+            className="w-11 h-11 bg-white/90 rounded-[14px] items-center justify-center shadow-sm"
           >
             <Ionicons
               name="arrow-back"
-              size={20}
-              color={TEXT}
+              size={21}
+              color="#171A1F"
             />
           </TouchableOpacity>
 
-          <View style={styles.headerTitleArea}>
-            <Text style={styles.title}>
+          {/* TITLE */}
+          <View className="flex-1 ml-3">
+
+            <Text className="text-[22px] font-black text-ruvo-ink">
               My Products
             </Text>
 
-            <Text style={styles.subtitle}>
-              Manage products in your shop
+            <Text className="text-[11px] font-bold text-ruvo-ink/60 mt-0.5">
+              Manage stock, prices & catalogue
             </Text>
+
           </View>
 
+          {/* ADD PRODUCT */}
           <TouchableOpacity
-            activeOpacity={0.82}
-            style={styles.addButton}
+            activeOpacity={0.8}
+            className="w-11 h-11 bg-ruvo-ink rounded-[14px] items-center justify-center shadow-sm"
             onPress={() =>
               navigation.navigate(
                 ROUTES.ADD_PRODUCT,
-                { shopId },
+                { shopId }
               )
             }
           >
             <Ionicons
               name="add"
-              size={21}
-              color={WHITE}
+              size={24}
+              color="#FFFFFF"
             />
           </TouchableOpacity>
+
         </View>
 
-        {/* SUMMARY */}
-
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryNumber}>
-              {products.length}
-            </Text>
-            <Text style={styles.summaryLabel}>
-              Products
-            </Text>
-          </View>
-
-          <View style={styles.summaryDivider} />
-
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryNumber}>
-              {
-                products.filter(
-                  p =>
-                    p.isAvailable !== false &&
-                    p.stockQuantity > 0,
-                ).length
-              }
-            </Text>
-            <Text style={styles.summaryLabel}>
-              Active
-            </Text>
-          </View>
-
-          <View style={styles.summaryDivider} />
-
-          <View style={styles.summaryItem}>
-            <Text
-              style={[
-                styles.summaryNumber,
-                {
-                  color:
-                    products.filter(
-                      p => p.stockQuantity <= 0,
-                    ).length > 0
-                      ? RED
-                      : GREEN,
-                },
-              ]}
-            >
-              {
-                products.filter(
-                  p => p.stockQuantity <= 0,
-                ).length
-              }
-            </Text>
-
-            <Text style={styles.summaryLabel}>
-              Out of stock
-            </Text>
-          </View>
-        </View>
       </View>
 
-      {/* ERROR */}
+      {/* OFFLINE BAR */}
+      <OfflineBar />
 
-      {error ? (
+      {/* ======================================================
+          SUMMARY
+      ====================================================== */}
+
+      <View className="mx-4 mt-4 mb-1 bg-white rounded-[18px] border border-warm-200 px-2 py-3 flex-row items-center shadow-sm">
+
+        {/* TOTAL */}
+        <View className="flex-1 items-center">
+
+          <Text className="text-[20px] font-black text-ruvo-ink">
+            {products.length}
+          </Text>
+
+          <Text className="text-[9px] font-black text-warm-500 uppercase tracking-wider mt-0.5">
+            Total
+          </Text>
+
+        </View>
+
+        <View className="w-px h-8 bg-warm-200" />
+
+        {/* ACTIVE */}
+        <View className="flex-1 items-center">
+
+          <Text className="text-[20px] font-black text-green-600">
+            {activeCount}
+          </Text>
+
+          <Text className="text-[9px] font-black text-warm-500 uppercase tracking-wider mt-0.5">
+            Active
+          </Text>
+
+        </View>
+
+        <View className="w-px h-8 bg-warm-200" />
+
+        {/* OUT OF STOCK */}
+        <View className="flex-1 items-center">
+
+          <Text
+            className={`text-[20px] font-black ${
+              oosCount > 0
+                ? 'text-red-500'
+                : 'text-ruvo-ink'
+            }`}
+          >
+            {oosCount}
+          </Text>
+
+          <Text className="text-[9px] font-black text-warm-500 uppercase tracking-wider mt-0.5">
+            No Stock
+          </Text>
+
+        </View>
+
+      </View>
+
+      {/* ======================================================
+          ERROR
+      ====================================================== */}
+
+      {error && (
         <TouchableOpacity
           activeOpacity={0.8}
-          style={styles.errorCard}
-          onPress={() => loadProducts()}
+          onPress={() =>
+            loadProducts()
+          }
+          className="mx-4 mt-3 p-3.5 bg-red-50 rounded-[16px] border border-red-200 flex-row items-center"
         >
+
           <Ionicons
-            name="alert-circle-outline"
-            size={20}
-            color={RED}
+            name="alert-circle"
+            size={22}
+            color="#DC2626"
           />
 
-          <View style={styles.errorCopy}>
-            <Text style={styles.errorTitle}>
-              Couldn't load products
+          <View className="flex-1 ml-3">
+
+            <Text className="text-[12px] font-black text-red-700">
+              Failed to load
             </Text>
 
-            <Text
-              style={styles.errorText}
-              numberOfLines={2}
-            >
+            <Text className="text-[10px] font-semibold text-red-600 mt-0.5">
               {error}
             </Text>
+
           </View>
 
           <Ionicons
             name="refresh"
             size={19}
-            color={RED}
+            color="#DC2626"
           />
-        </TouchableOpacity>
-      ) : null}
 
-      {/* LIST */}
+        </TouchableOpacity>
+      )}
+
+      {/* ======================================================
+          PRODUCT LIST
+      ====================================================== */}
 
       <FlatList
         data={products}
-        keyExtractor={(item, index) =>
-          item.id?.toString() ?? `product-${index}`
+        keyExtractor={(item, idx) =>
+          item.id?.toString() ??
+          `prod-${idx}`
         }
         renderItem={renderProduct}
-        contentContainerStyle={[
-          styles.list,
-          products.length === 0 &&
-            styles.emptyList,
-        ]}
+        contentContainerStyle={{
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: 60,
+          flexGrow: 1,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={GREEN}
-            colors={[GREEN]}
+            tintColor="#F5B700"
+            colors={['#F5B700']}
           />
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIcon}>
-              <Ionicons
-                name="cube-outline"
-                size={42}
-                color={GREEN}
-              />
-            </View>
+          !loading && !error ? (
+            <View className="flex-1 items-center justify-center px-6">
 
-            <Text style={styles.emptyTitle}>
-              No products yet
-            </Text>
+              {/* EMPTY ICON */}
+              <View className="w-20 h-20 bg-warm-50 rounded-full items-center justify-center border border-warm-200 mb-4">
 
-            <Text style={styles.emptyText}>
-              Add your first product and start
-              showcasing your shop on RuVo.
-            </Text>
+                <Ionicons
+                  name="cube-outline"
+                  size={36}
+                  color="#D97706"
+                />
 
-            <TouchableOpacity
-              activeOpacity={0.82}
-              style={styles.emptyAddButton}
-              onPress={() =>
-                navigation.navigate(
-                  ROUTES.ADD_PRODUCT,
-                  { shopId },
-                )
-              }
-            >
-              <Ionicons
-                name="add"
-                size={19}
-                color={WHITE}
-              />
+              </View>
 
-              <Text style={styles.emptyAddText}>
-                Add Product
+              <Text className="text-[20px] font-black text-ruvo-ink mb-2">
+                No products yet
               </Text>
-            </TouchableOpacity>
-          </View>
+
+              <Text className="text-[12px] font-semibold text-warm-600 text-center leading-5 mb-5">
+                Add your first product to showcase your offerings to customers.
+              </Text>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                className="bg-ruvo-ink px-6 py-3.5 rounded-[15px] flex-row items-center"
+                onPress={() =>
+                  navigation.navigate(
+                    ROUTES.ADD_PRODUCT,
+                    { shopId }
+                  )
+                }
+              >
+
+                <Ionicons
+                  name="add-circle"
+                  size={19}
+                  color="#FFF"
+                />
+
+                <Text className="text-[13px] font-black text-white ml-2">
+                  Add First Product
+                </Text>
+
+              </TouchableOpacity>
+
+            </View>
+          ) : null
         }
       />
+
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  loadingIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 19,
-    backgroundColor: LIGHT_GREEN,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  loadingText: {
-    color: MUTED,
-    fontSize: 11,
-    marginTop: 8,
-    fontWeight: '600',
-  },
-
-  /* HEADER */
-
-  header: {
-    backgroundColor: WHITE,
-    paddingHorizontal: 15,
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-  },
-
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  headerTitleArea: {
-    flex: 1,
-    marginLeft: 11,
-  },
-
-  title: {
-    color: TEXT,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: -0.3,
-  },
-
-  subtitle: {
-    color: MUTED,
-    fontSize: 10.5,
-    marginTop: 2,
-  },
-
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: GOLD,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  summaryCard: {
-    minHeight: 67,
-    backgroundColor: BG,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
-    borderRadius: 16,
-    marginTop: 13,
-    paddingHorizontal: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-
-  summaryNumber: {
-    color: TEXT,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  summaryLabel: {
-    color: MUTED,
-    fontSize: 9.5,
-    marginTop: 2,
-    fontWeight: '700',
-  },
-
-  summaryDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: BORDER,
-  },
-
-  /* ERROR */
-
-  errorCard: {
-    marginHorizontal: 15,
-    marginTop: 10,
-    padding: 11,
-    borderRadius: 14,
-    backgroundColor: '#FFF5F5',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#F2D1D1',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  errorCopy: {
-    flex: 1,
-    marginHorizontal: 9,
-  },
-
-  errorTitle: {
-    color: RED,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-
-  errorText: {
-    color: '#8D6868',
-    fontSize: 9.5,
-    marginTop: 2,
-  },
-
-  /* LIST */
-
-  list: {
-    padding: 12,
-    paddingBottom: 35,
-  },
-
-  emptyList: {
-    flexGrow: 1,
-  },
-
-  /* PRODUCT */
-
-  productCard: {
-    backgroundColor: WHITE,
-    borderRadius: 16,
-    marginBottom: 11,
-    padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
-    flexDirection: 'row',
-    minHeight: 185,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    elevation: 1,
-  },
-
-  imageWrap: {
-    width: 116,
-    height: 165,
-    borderRadius: 12,
-    backgroundColor: BG,
-    overflow: 'hidden',
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
-  },
-
-  productImage: {
-    width: '100%',
-    height: '100%',
-  },
-
-  noImage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  discountBadge: {
-    position: 'absolute',
-    left: 7,
-    top: 7,
-    backgroundColor: GOLD,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-
-  discountText: {
-    color: INK,
-    fontSize: 8.5,
-    fontWeight: '900',
-  },
-
-  productBody: {
-    flex: 1,
-    marginLeft: 11,
-    paddingVertical: 1,
-    minWidth: 0,
-  },
-
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-
-  nameArea: {
-    flex: 1,
-    paddingRight: 5,
-  },
-
-  productName: {
-    color: TEXT,
-    fontSize: 14,
-    lineHeight: 19,
-    fontWeight: '900',
-  },
-
-  brand: {
-    color: MUTED,
-    fontSize: 9.5,
-    marginTop: 2,
-  },
-
-  statusPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-
-  statusText: {
-    fontSize: 8,
-    fontWeight: '900',
-  },
-
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 9,
-    flexWrap: 'wrap',
-  },
-
-  sellingPrice: {
-    color: TEXT,
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  actualPrice: {
-    color: '#929792',
-    fontSize: 10.5,
-    marginLeft: 6,
-    textDecorationLine: 'line-through',
-  },
-
-  unit: {
-    color: MUTED,
-    fontSize: 9,
-    marginLeft: 4,
-  },
-
-  stockRow: {
-    minHeight: 34,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F0EAE0',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0EAE0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  stockInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-
-  stockText: {
-    color: MUTED,
-    fontSize: 9.5,
-    fontWeight: '700',
-  },
-
-  availabilityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  availabilityLabel: {
-    color: MUTED,
-    fontSize: 8.5,
-    fontWeight: '700',
-    marginRight: 1,
-  },
-
-  actions: {
-    flexDirection: 'row',
-    gap: 7,
-    marginTop: 9,
-  },
-
-  editButton: {
-    flex: 1,
-    minHeight: 33,
-    borderRadius: 9,
-    backgroundColor: BG,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  editText: {
-    color: INK,
-    fontSize: 9.5,
-    fontWeight: '900',
-  },
-
-  deleteButton: {
-    flex: 1,
-    minHeight: 33,
-    borderRadius: 9,
-    backgroundColor: '#FDECEC',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#F2D1D1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 5,
-  },
-
-  deleteText: {
-    color: RED,
-    fontSize: 9.5,
-    fontWeight: '900',
-  },
-
-  /* EMPTY */
-
-  emptyContainer: {
-    flex: 1,
-    minHeight: 390,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 35,
-  },
-
-  emptyIcon: {
-    width: 82,
-    height: 82,
-    borderRadius: 27,
-    backgroundColor: BG,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  emptyTitle: {
-    color: TEXT,
-    fontSize: 19,
-    fontWeight: '900',
-    marginTop: 15,
-  },
-
-  emptyText: {
-    color: MUTED,
-    fontSize: 11.5,
-    lineHeight: 18,
-    textAlign: 'center',
-    marginTop: 6,
-  },
-
-  emptyAddButton: {
-    minHeight: 45,
-    paddingHorizontal: 19,
-    borderRadius: 13,
-    backgroundColor: GOLD,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 17,
-  },
-
-  emptyAddText: {
-    color: INK,
-    fontSize: 11.5,
-    fontWeight: '900',
-  },
-});
 
 export default MyProductsScreen;

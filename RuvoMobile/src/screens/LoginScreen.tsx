@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ScrollView,
   Animated,
   Image,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,23 +24,75 @@ import { useTheme } from '../context/ThemeContext';
 import { ROUTES } from '../constants/routes';
 import { API_BASE_URL } from '../config/api';
 
-interface AuthToken {
-  accessToken: string;
-  tokenType: string;
-  userId: number | string;
-  role: string;
-}
-interface ApiResponse<T> {
-  message: string;
-  data: T;
-}
+const { width: SW } = Dimensions.get('window');
+
+interface AuthToken { accessToken: string; tokenType: string; userId: number | string; role: string; }
+interface ApiResponse<T> { message: string; data: T; }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
+// ── Static Background Shapes ──
+const BackgroundShapes = ({ isDark }: { isDark: boolean }) => {
+  const opacityVal = isDark ? 0.35 : 0.6;
+  
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+      {/* 1. Top Right Orange Rectangle (Rotated) */}
+      <LinearGradient 
+        colors={['#FF7A00', '#FFB74D']}
+        style={{
+          position: 'absolute', top: -50, right: -40, width: 200, height: 200,
+          borderRadius: 40, transform: [{ rotate: '45deg' }], opacity: opacityVal
+        }}
+      />
+      
+      {/* 2. Top Left Yellow Circle */}
+      <LinearGradient 
+        colors={['#F5B700', '#FFD54F']}
+        style={{
+          position: 'absolute', top: 60, left: -60, width: 140, height: 140,
+          borderRadius: 70, opacity: opacityVal
+        }}
+      />
+
+      {/* 3. Middle Left Purple Blob / Pill */}
+      <LinearGradient 
+        colors={['#8B5CF6', '#A78BFA']}
+        style={{
+          position: 'absolute', top: 350, left: -40, width: 90, height: 200,
+          borderRadius: 45, transform: [{ rotate: '-15deg' }], opacity: opacityVal
+        }}
+      />
+
+      {/* 4. Middle Right Blue Polygon */}
+      <LinearGradient 
+        colors={['#2563EB', '#60A5FA']}
+        style={{
+          position: 'absolute', top: 300, right: -30, width: 120, height: 120,
+          borderRadius: 20, transform: [{ rotate: '30deg' }], opacity: opacityVal * 0.8
+        }}
+      />
+      
+      {/* 5. Bottom Center Green Circle */}
+      <LinearGradient 
+        colors={['#16A34A', '#4ADE80']}
+        style={{
+          position: 'absolute', bottom: -50, left: '20%', width: 250, height: 150,
+          borderRadius: 125, opacity: opacityVal * 0.7
+        }}
+      />
+
+      {/* Glassmorphism subtle overlay to blend everything together */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.3)' }]} />
+    </View>
+  );
+};
+
 export const LoginScreen = ({ navigation }: Props) => {
   const { login, requiredRole } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
+  const { colors, typography, radius, shadows, spacing, theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const isDark = theme === 'dark';
 
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
@@ -48,10 +101,37 @@ export const LoginScreen = ({ navigation }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  // Subtle button press scale
+  // Smooth entrance
+  const cardY = useRef(new Animated.Value(30)).current;
+  const cardOp = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(cardY, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }),
+      Animated.timing(cardOp, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  // Button scale interaction
   const btnScale = useRef(new Animated.Value(1)).current;
-  const pressBtnIn = () => Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const pressBtnIn = () => Animated.spring(btnScale, { toValue: 0.96, useNativeDriver: true, speed: 30 }).start();
   const pressBtnOut = () => Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+
+  // Slide transition between steps
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideOpacity = useRef(new Animated.Value(1)).current;
+  const navigateToStep2 = () => {
+    Animated.parallel([
+      Animated.timing(slideOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: -30, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      setStep(2);
+      slideAnim.setValue(30);
+      Animated.parallel([
+        Animated.timing(slideOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
+      ]).start();
+    });
+  };
 
   const formatMobileNumber = (raw: string) => {
     const clean = raw.replace(/[^0-9]/g, '');
@@ -68,34 +148,27 @@ export const LoginScreen = ({ navigation }: Props) => {
     }
     setError(null);
     setLoading(true);
-    const targetUrl = `${API_BASE_URL}/api/auth/otp/send`;
-    console.log('[LoginScreen] Sending OTP to URL:', targetUrl);
     try {
-      const res = await fetch(targetUrl, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobileNumber: formatted }),
       });
       const body = await res.json().catch(() => null);
-      console.log('[LoginScreen] Send OTP response status:', res.status, body);
       if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
-      setStep(2);
+      navigateToStep2();
     } catch (err: any) {
-      console.error('[LoginScreen] Send OTP error:', err);
-      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
-    }
-    finally { setLoading(false); }
+      setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);
+    } finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async () => {
     if (!otp.trim() || otp.trim().length !== 6) { setError('Please enter the 6-digit OTP code'); return; }
     setError(null);
     setLoading(true);
-    const targetUrl = `${API_BASE_URL}/api/auth/otp/verify`;
-    console.log('[LoginScreen] Verifying OTP at URL:', targetUrl);
     try {
       const formatted = formatMobileNumber(mobile);
-      const res = await fetch(targetUrl, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -105,191 +178,201 @@ export const LoginScreen = ({ navigation }: Props) => {
         }),
       });
       const body = await res.json().catch(() => null);
-      console.log('[LoginScreen] Verify OTP response status:', res.status, body);
       if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
       const { data } = body as ApiResponse<AuthToken>;
       await login(data.accessToken, String(data.userId), data.role);
     } catch (err: any) {
-      console.error('[LoginScreen] Verify OTP error:', err);
-      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
-    }
-    finally { setLoading(false); }
+      setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);
+    } finally { setLoading(false); }
   };
 
   const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-      {/* Warm ambient gradient top wash */}
-      <LinearGradient
-        colors={[colors.primarySoft, colors.background]}
-        style={[styles.topGradient, { paddingTop: insets.top }]}
-        pointerEvents="none"
-      />
+      {/* ── Geometric Background ── */}
+      <BackgroundShapes isDark={isDark} />
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 32 }]}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + (SW * 0.1) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Brand mark */}
-          <View style={styles.brandRow}>
-            <Image
-              source={require('../../assets/images/RuvoMobileLogo.png')}
-              style={{ width: 180, height: 60, resizeMode: 'contain' }}
-            />
-          </View>
-
-          {/* Step indicator */}
-          <View style={styles.stepRow}>
-            {[1, 2].map(s => (
-              <View
-                key={s}
-                style={[
-                  styles.stepDot,
-                  { backgroundColor: step >= s ? colors.primary : colors.border },
-                  step >= s && { width: 24 },
-                ]}
+          {/* ── Graphic Header ── */}
+          <View style={styles.headerBlock}>
+            <View style={[
+              styles.logoRing, 
+              { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
+              isDark ? shadows.md : shadows.sm
+            ]}>
+              <Image
+                source={require('../../assets/images/RuvoIcon.png')}
+                style={styles.logoImg}
               />
-            ))}
-          </View>
-
-          {/* Heading */}
-          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
-            {step === 1 ? 'Welcome back' : 'Verify OTP'}
-          </Text>
-          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
-            {step === 1
-              ? 'Enter your mobile number to continue'
-              : `We've sent a 6-digit code to +91 ${phoneDigits}`}
-          </Text>
-
-          {/* Form card */}
-          <View style={[
-            styles.formCard,
-            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad },
-            shadows.md,
-          ]}>
-            {step === 1 ? (
-              <>
-                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>Mobile Number</Text>
-                <View style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.surfaceSunken,
-                    borderColor: focusedField === 'mobile' ? colors.primary : colors.border,
-                    borderRadius: radius.input,
-                  },
-                  focusedField === 'mobile' && styles.inputFocused,
-                ]}>
-                  <View style={[styles.prefixBox, { borderRightColor: colors.border }]}>
-                    <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15 }]}>🇮🇳  +91</Text>
-                  </View>
-                  <TextInput
-                    style={[typography.body, styles.input, { color: colors.textPrimary }]}
-                    placeholder="10-digit number"
-                    placeholderTextColor={colors.placeholder}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={mobile}
-                    onChangeText={t => { setMobile(t); setError(null); }}
-                    onFocus={() => setFocusedField('mobile')}
-                    onBlur={() => setFocusedField(null)}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSendOtp}
-                  />
-                  {mobile.length === 10 && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                  )}
-                </View>
-              </>
-            ) : (
-              <>
-                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>6-Digit OTP</Text>
-                <View style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.surfaceSunken,
-                    borderColor: focusedField === 'otp' ? colors.primary : colors.border,
-                    borderRadius: radius.input,
-                  },
-                  focusedField === 'otp' && styles.inputFocused,
-                ]}>
-                  <Ionicons name="key-outline" size={20} color={colors.textHint} style={styles.inputIcon} />
-                  <TextInput
-                    style={[typography.body, styles.input, { color: colors.textPrimary, letterSpacing: 6, fontSize: 20 }]}
-                    placeholder="• • • • • •"
-                    placeholderTextColor={colors.placeholder}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    value={otp}
-                    onChangeText={t => { setOtp(t); setError(null); }}
-                    onFocus={() => setFocusedField('otp')}
-                    onBlur={() => setFocusedField(null)}
-                    returnKeyType="done"
-                    onSubmitEditing={handleVerifyOtp}
-                    autoFocus
-                  />
-                </View>
-              </>
-            )}
-
-            {/* Error */}
-            {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft, borderRadius: radius.sm }]}>
-                <Ionicons name="alert-circle" size={15} color={colors.error} />
-                <Text style={[typography.caption, { color: colors.error, flex: 1 }]}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* CTA */}
-            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-              <TouchableOpacity
-                onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
-                onPressIn={pressBtnIn}
-                onPressOut={pressBtnOut}
-                disabled={loading}
-                activeOpacity={1}
-                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
-              >
-                {loading
-                  ? <ActivityIndicator color={colors.onPrimary} />
-                  : <>
-                      <Text style={[typography.button, { color: colors.onPrimary }]}>
-                        {step === 1 ? 'Get OTP' : 'Verify & Login'}
-                      </Text>
-                      <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-                    </>
-                }
-              </TouchableOpacity>
-            </Animated.View>
-
-            {step === 2 && (
-              <TouchableOpacity onPress={() => { setStep(1); setOtp(''); setError(null); }} style={styles.changePhoneBtn}>
-                <Ionicons name="chevron-back" size={14} color={colors.primary} />
-                <Text style={[typography.bodyStrong, { color: colors.primary, fontSize: 13 }]}>Change Mobile Number</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footerRow}>
-            <Text style={[typography.body, { color: colors.textSecondary }]}>New to RuVo? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.SIGNUP)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
-              <Text style={[typography.bodyStrong, { color: colors.primary }]}>Create Account</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Trust badge */}
-          <View style={styles.trustRow}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textHint} />
-            <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>
-              Your data is encrypted and secure
+            </View>
+            <Text style={[typography.headingXL, styles.brandName, { color: colors.textPrimary }]}>
+              RuVo
+            </Text>
+            <Text style={[typography.body, styles.tagline, { color: colors.textSecondary }]}>
+              India's premium local marketplace
             </Text>
           </View>
+
+          {/* ── Main Form Card ── */}
+          <Animated.View style={[
+            styles.card,
+            { backgroundColor: isDark ? 'rgba(25,25,25,0.75)' : 'rgba(255,255,255,0.85)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderRadius: 28 },
+            isDark ? shadows.md : shadows.lg,
+            { transform: [{ translateY: cardY }], opacity: cardOp }
+          ]}>
+            {/* Step Header */}
+            <View style={styles.cardHeader}>
+              <View style={styles.headerTextCol}>
+                <Text style={[typography.headingL, { color: colors.textPrimary, fontWeight: '900', marginBottom: 2 }]}>
+                  {step === 1 ? 'Login or Signup' : 'Enter OTP'}
+                </Text>
+                <Text style={[typography.caption, { color: colors.textSecondary }]}>
+                  {step === 1 ? 'Get started with your mobile number' : `Sent to +91 ${phoneDigits}`}
+                </Text>
+              </View>
+              <View style={styles.stepIndicator}>
+                <View style={[styles.stepDot, { backgroundColor: colors.primary, width: step === 1 ? 24 : 8 }]} />
+                <View style={[styles.stepDot, { backgroundColor: step === 2 ? '#16A34A' : (isDark ? '#444' : '#E5E7EB'), width: step === 2 ? 24 : 8 }]} />
+              </View>
+            </View>
+
+            <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
+
+            {/* Step Content */}
+            <Animated.View style={{ opacity: slideOpacity, transform: [{ translateX: slideAnim }] }}>
+              {step === 1 ? (
+                <>
+                  <Text style={[styles.inputLabel, { color: colors.textHint }]}>MOBILE NUMBER</Text>
+                  <View style={[
+                    styles.inputField,
+                    { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.9)', borderColor: focusedField === 'mobile' ? colors.primary : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') },
+                    focusedField === 'mobile' && { borderWidth: 1.5 }
+                  ]}>
+                    <View style={styles.prefixGroup}>
+                      <Text style={{ fontSize: 16 }}>🇮🇳</Text>
+                      <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>+91</Text>
+                    </View>
+                    <View style={[styles.inputSeparator, { backgroundColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]} />
+                    <TextInput
+                      style={[typography.body, styles.textInput, { color: colors.textPrimary }]}
+                      placeholder="10-digit number"
+                      placeholderTextColor={colors.placeholder}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      value={mobile}
+                      onChangeText={t => { setMobile(t); setError(null); }}
+                      onFocus={() => setFocusedField('mobile')}
+                      onBlur={() => setFocusedField(null)}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSendOtp}
+                    />
+                    {mobile.length === 10 && (
+                      <View style={[styles.successTick, { backgroundColor: '#16A34A' }]}>
+                        <Ionicons name="checkmark" size={14} color="#FFF" />
+                      </View>
+                    )}
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.inputLabel, { color: colors.textHint }]}>6-DIGIT OTP</Text>
+                  <View style={[
+                    styles.inputField,
+                    { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.9)', borderColor: focusedField === 'otp' ? '#16A34A' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') },
+                    focusedField === 'otp' && { borderWidth: 1.5, backgroundColor: isDark ? 'rgba(22,163,74,0.15)' : '#F0FDF4' }
+                  ]}>
+                    <Ionicons name="key-outline" size={20} color={focusedField === 'otp' ? '#16A34A' : colors.textHint} style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={[typography.headingL, styles.textInput, { color: colors.textPrimary, letterSpacing: 8, paddingLeft: 4 }]}
+                      placeholder="• • • • • •"
+                      placeholderTextColor={colors.placeholder}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      value={otp}
+                      onChangeText={t => { setOtp(t); setError(null); }}
+                      onFocus={() => setFocusedField('otp')}
+                      onBlur={() => setFocusedField(null)}
+                      returnKeyType="done"
+                      onSubmitEditing={handleVerifyOtp}
+                      autoFocus
+                    />
+                  </View>
+                  
+                  <TouchableOpacity onPress={() => { setStep(1); setOtp(''); setError(null); }} style={styles.resendAction}>
+                    <Text style={[typography.caption, { color: colors.primary, fontWeight: '700' }]}>Wrong number? Change</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* Error */}
+              {error ? (
+                <View style={[styles.errorBox, { backgroundColor: isDark ? 'rgba(217,74,74,0.2)' : '#FEF2F2', borderColor: 'rgba(217,74,74,0.3)' }]}>
+                  <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                  <Text style={[typography.caption, { color: isDark ? '#fca5a5' : '#D94A4A', flex: 1, fontWeight: '600' }]}>{error}</Text>
+                </View>
+              ) : null}
+
+              {/* CTA */}
+              <Animated.View style={{ transform: [{ scale: btnScale }], marginTop: 6 }}>
+                <TouchableOpacity
+                  onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
+                  onPressIn={pressBtnIn}
+                  onPressOut={pressBtnOut}
+                  disabled={loading}
+                  activeOpacity={1}
+                >
+                  <LinearGradient
+                    colors={step === 1 ? ['#FF7A00', '#FF6B35'] : ['#16A34A', '#15803D']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={styles.ctaButton}
+                  >
+                    {loading
+                      ? <ActivityIndicator color="#FFFFFF" />
+                      : <>
+                          <Text style={[typography.button, { color: '#FFFFFF', fontSize: 16, letterSpacing: 0.5 }]}>
+                            {step === 1 ? 'Continue' : 'Verify & Secure Login'}
+                          </Text>
+                          <View style={styles.ctaArrowCircle}>
+                            <Ionicons name="arrow-forward" size={16} color={step === 1 ? '#FF6B35' : '#15803D'} />
+                          </View>
+                        </>
+                    }
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+
+              {/* Terms Footer directly under CTA */}
+              {step === 1 && (
+                <Text style={[typography.caption, { color: colors.textHint, textAlign: 'center', marginTop: 16, fontSize: 10, lineHeight: 14 }]}>
+                  By continuing, you agree to our <Text style={{ color: colors.textSecondary }}>Terms of Service</Text> & <Text style={{ color: colors.textSecondary }}>Privacy Policy</Text>
+                </Text>
+              )}
+            </Animated.View>
+          </Animated.View>
+
+          {/* ── Footer ── */}
+          <View style={styles.bottomFooter}>
+            <View style={styles.footerRow}>
+              <Text style={[typography.caption, { color: colors.textSecondary }]}>New to RuVo? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate(ROUTES.SIGNUP)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={[typography.caption, { color: colors.primary, fontWeight: '800' }]}>Create an Account</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.trustRow}>
+              <Ionicons name="shield-checkmark" size={12} color={colors.textHint} />
+              <Text style={[typography.caption, { color: colors.textHint, fontSize: 10 }]}>100% Secure & Encrypted</Text>
+            </View>
+          </View>
+          
+          <View style={{ height: spacing.gutter }} />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -299,121 +382,170 @@ export const LoginScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1 },
-  topGradient: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 200,
-    pointerEvents: 'none',
-  },
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
+    paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  brandRow: {
-    flexDirection: 'row',
+  
+  // Header
+  headerBlock: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  logoRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  brandBadge: {
+  logoImg: {
     width: 44,
     height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  brandLetter: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#231C10',
+    borderRadius: 14,
+    resizeMode: 'contain',
   },
   brandName: {
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 28,
+    letterSpacing: -0.5,
   },
-  stepRow: {
+  tagline: {
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  trustBadges: {
     flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    marginBottom: 20,
+    flexWrap: 'wrap',
   },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  title: {
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    textAlign: 'center',
-    marginBottom: 28,
-    lineHeight: 20,
-  },
-  formCard: {
-    borderWidth: 0.5,
-    marginBottom: 20,
-  },
-  label: {
-    marginBottom: 8,
-    marginTop: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontSize: 11,
-  },
-  inputWrap: {
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 0.5,
-    height: 52,
-    marginBottom: 16,
-    paddingHorizontal: 14,
-    gap: 10,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
-  inputFocused: {
-    borderWidth: StyleSheet.hairlineWidth,
+
+  // Card
+  card: {
+    borderWidth: 1,
+    padding: 24,
+    marginBottom: 24,
   },
-  prefixBox: {
-    paddingRight: 10,
-    borderRightWidth: 1,
-    height: '60%',
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  headerTextCol: {
+    flex: 1,
+  },
+  stepIndicator: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 6,
+  },
+  stepDot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 20,
+    opacity: 0.5,
+  },
+
+  // Inputs
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  inputField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 16,
+    height: 56,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  prefixGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inputSeparator: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  successTick: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  inputIcon: { flexShrink: 0 },
-  input: { flex: 1 },
+  resendAction: {
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+
+  // Error
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    padding: 10,
-    marginBottom: 14,
-  },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
     gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
   },
-  changePhoneBtn: {
+
+  // CTA
+  ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 14,
-    gap: 4,
+    height: 54,
+    borderRadius: 16,
+    gap: 12,
+  },
+  ctaArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Footer
+  bottomFooter: {
+    alignItems: 'center',
+    gap: 8,
   },
   footerRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    alignItems: 'center',
   },
   trustRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
+    gap: 4,
   },
 });
