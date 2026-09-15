@@ -41,11 +41,11 @@ export type DeliveryRequest = {
   quantity?: number;
   items?: OrderItem[];
 };
-export type Earnings = { todayEarnings: number; totalEarnings: number; walletBalance: number };
+export type Earnings = { todayEarnings: number; totalEarnings: number; walletBalance: number; shopDues?: number };
 
 export const partnerService = {
-  profile: async (token: string) => unwrap<PartnerProfile>(await api('/api/partner/profile', token)),
-  account: async (token: string) => unwrap<{ isAvailable?: boolean; status?: string }>(await api('/api/partner/auth/me', token)),
+  profile: async (token: string) => unwrap<PartnerProfile>(await api('/api/partner/profile', token, { headers: { 'X-Skip-Global-401': 'true' } })),
+  account: async (token: string) => unwrap<{ isAvailable?: boolean; status?: string }>(await api('/api/partner/auth/me', token, { headers: { 'X-Skip-Global-401': 'true' } })),
   verification: async (token: string) => unwrap<{ profileStatus: string; adminReason?: string }>(await api('/api/partner/verification/status', token)),
   availability: (token: string, available: boolean, lat?: number, lng?: number, locationName?: string) => {
     let url = `/api/partner/availability?available=${available}`;
@@ -64,7 +64,7 @@ export const partnerService = {
     }
     return api(url, token, { method: 'PUT' });
   },
-  activeDeliveries: (token: string) => api<Delivery[]>('/api/partner/deliveries/active', token).catch(() => api<Delivery[]>('/api/partner/deliveries', token)),
+  activeDeliveries: (token: string) => api<Delivery[]>('/api/partner/deliveries', token),
   delivery: (token: string, id: number) => api<Delivery>(`/api/partner/deliveries/${id}`, token),
   earnings: (token: string) => api<Earnings>('/api/partner/earnings', token),
   history: (token: string) => api<Delivery[]>('/api/partner/history', token),

@@ -30,9 +30,7 @@ interface DeliveryPartner {
   shopId?: number;
 }
 
-export default function ShopRidersScreen() {
-  const navigation = useNavigation<any>();
-  const route = useRoute<any>();
+export default function ShopRidersScreen({ navigation, route }: any) {
   const { token, user, userId } = useAuth();
   const { showToast } = useToast();
 
@@ -40,6 +38,7 @@ export default function ShopRidersScreen() {
   const [riders, setRiders] = useState<DeliveryPartner[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'ALL' | 'ONLINE' | 'OFFLINE' | 'PENDING'>('ALL');
 
   const fetchRiders = useCallback(async (showLoader = true) => {
     if (!token) { setLoading(false); return; }
@@ -151,9 +150,9 @@ export default function ShopRidersScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={['top']}>
       {/* Header */}
-      <View className="bg-white px-6 py-4 flex-row items-center shadow-sm border-b border-gray-100 z-10">
+      <View className="bg-white px-6 py-4 flex-row items-center shadow-sm border-b border-gray-100 z-0">
         <TouchableOpacity
-          onPress={() => navigation.openDrawer ? navigation.openDrawer() : navigation.goBack()}
+          onPress={() => navigation.toggleDrawer ? navigation.toggleDrawer() : navigation.goBack()}
           className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:bg-gray-100"
         >
           <Ionicons name="menu-outline" size={24} color="#111827" />
@@ -166,6 +165,34 @@ export default function ShopRidersScreen() {
       </View>
 
       <View className="flex-1 px-5 pt-4">
+        {/* Navigator for Active/Offline */}
+        <View className="flex-row items-center justify-between mb-4 bg-gray-100 rounded-2xl p-1">
+          <TouchableOpacity 
+            onPress={() => setFilter('ALL')} 
+            className={`flex-1 items-center py-2 rounded-xl ${filter === 'ALL' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
+          >
+            <Text className={`font-bold text-xs ${filter === 'ALL' ? 'text-gray-900' : 'text-gray-500'}`}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setFilter('ONLINE')} 
+            className={`flex-1 items-center py-2 rounded-xl ${filter === 'ONLINE' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
+          >
+            <Text className={`font-bold text-xs ${filter === 'ONLINE' ? 'text-green-600' : 'text-gray-500'}`}>Online</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setFilter('OFFLINE')} 
+            className={`flex-1 items-center py-2 rounded-xl ${filter === 'OFFLINE' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
+          >
+            <Text className={`font-bold text-xs ${filter === 'OFFLINE' ? 'text-gray-500' : 'text-gray-400'}`}>Offline</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setFilter('PENDING')} 
+            className={`flex-1 items-center py-2 rounded-xl ${filter === 'PENDING' ? 'bg-white shadow-sm' : 'bg-transparent'}`}
+          >
+            <Text className={`font-bold text-xs ${filter === 'PENDING' ? 'text-yellow-600' : 'text-gray-500'}`}>Pending</Text>
+          </TouchableOpacity>
+        </View>
+
         {loading && !refreshing ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#FF7A00" />
@@ -173,7 +200,12 @@ export default function ShopRidersScreen() {
           </View>
         ) : (
           <FlatList
-            data={riders}
+            data={riders.filter(r => {
+              if (filter === 'ONLINE') return r.active && r.available && r.approved;
+              if (filter === 'OFFLINE') return (!r.active || !r.available) && r.approved;
+              if (filter === 'PENDING') return !r.approved;
+              return true;
+            })}
             keyExtractor={r => r.id.toString()}
             renderItem={renderRider}
             contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}

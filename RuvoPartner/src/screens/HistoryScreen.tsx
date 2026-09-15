@@ -1,5 +1,5 @@
 /**
- * HistoryScreen - RuvoPartner (Redesigned with Premium UI/UX)
+ * HistoryScreen - RuvoPartner (Premium Dark Bento UI)
  * 
  * Features:
  * - Delivery history list grouped by date
@@ -21,6 +21,7 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,9 +30,6 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
-import { EmptyState } from '../components/ui/EmptyState';
 
 type HistoryItem = {
   id: number;
@@ -120,36 +118,47 @@ export const HistoryScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-ruvo-bg items-center justify-center">
-        <ActivityIndicator size="large" color="#16A34A" />
+      <SafeAreaView className="flex-1 bg-ruvo-ink items-center justify-center">
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <ActivityIndicator size="large" color="#10B981" />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-ruvo-ink" edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-0 right-[-100px] w-64 h-64 bg-[#10B981]/10 rounded-full blur-3xl opacity-30 pointer-events-none" />
+
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center justify-between">
+      <View className="bg-ruvo-ink/90 border-b border-gray-800 px-6 py-4 flex-row items-center justify-between z-10">
         <View className="flex-1">
-          <Text className="text-xl font-extrabold text-ruvo-ink">Delivery History</Text>
-          <Text className="text-xs text-warm-600 font-medium mt-xs">
-            Completed runs · Today: <Text className="text-emerald-700 font-extrabold">+₹{totalToday.toFixed(0)}</Text>
+          <Text className="text-xl font-black text-white tracking-tight">Delivery History</Text>
+          <Text className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-1">
+            Completed · Today: <Text className="text-emerald-400 font-black">+₹{totalToday.toFixed(0)}</Text>
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => { setRefreshing(true); fetchHistory(); }}
-          className="w-10 h-10 bg-ruvo-bg border border-ruvo-border rounded-full items-center justify-center"
+          className="w-10 h-10 bg-white/5 border border-white/10 rounded-full items-center justify-center"
+          activeOpacity={0.7}
         >
-          <Ionicons name="refresh" size={18} color="#171A1F" />
+          <Ionicons name="refresh" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
 
       {sections.length === 0 ? (
-        <EmptyState
-          icon="receipt-outline"
-          title="No completed runs yet"
-          description="Completed delivery runs will show up here."
-        />
+        <View className="flex-1 items-center justify-center mt-10">
+          <View className="w-24 h-24 bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-3xl items-center justify-center mb-6">
+            <Ionicons name="receipt" size={44} color="#FF7A00" />
+          </View>
+          <Text className="text-lg font-black text-white mb-2 text-center">No completed runs yet</Text>
+          <Text className="text-xs text-gray-400 font-bold text-center leading-5 px-6">
+            Completed delivery runs will show up here.
+          </Text>
+        </View>
       ) : (
         <SectionList
           sections={sections}
@@ -163,40 +172,47 @@ export const HistoryScreen = () => {
               : '—';
 
             return (
-              <Animated.View entering={FadeInDown.delay(index * 50).duration(400)}>
-                <View className="mb-sm bg-white rounded-2xl p-4 shadow-sm" style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+              <Animated.View entering={FadeInDown.delay(index * 50).duration(400)} className="px-6 mb-4">
+                <View className="bg-[#1C2026] border border-gray-800 rounded-[28px] p-5 shadow-lg shadow-black/40">
                   {/* Header Row */}
-                  <View className="flex-row items-center justify-between mb-sm">
-                    <View className="flex-1 pr-2">
-                      <Text className="text-base font-extrabold text-ruvo-ink">
-                        Order #{item.orderId}
-                      </Text>
+                  <View className="flex-row items-start justify-between mb-4">
+                    <View className="flex-1 pr-4">
+                      <View className="flex-row items-center gap-2 mb-1">
+                        <Text className="text-lg font-black text-white" numberOfLines={1}>
+                          Order #{item.orderId}
+                        </Text>
+                        <View className="bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                          <Text className="text-emerald-400 font-black text-[9px] uppercase tracking-wider">DONE</Text>
+                        </View>
+                      </View>
+                      
                       {item.items && item.items.length > 0 ? (
-                        <Text className="text-xs text-warm-700 font-medium mt-0.5 leading-tight" numberOfLines={2}>
+                        <Text className="text-xs text-gray-400 font-bold leading-tight" numberOfLines={2}>
                           {item.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
                         </Text>
                       ) : null}
-                      <Text className="text-[10px] text-warm-500 font-bold mt-1 uppercase tracking-wider">{date}</Text>
+                      <Text className="text-[10px] text-gray-500 font-black mt-2 uppercase tracking-widest">{date}</Text>
                     </View>
                     <View className="items-end">
-                      <Text className="text-lg font-extrabold text-emerald-700">
+                      <Text className="text-xl font-black text-emerald-400">
                         +₹{item.deliveryFee}
                       </Text>
-                      <Text className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Earned</Text>
+                      <Text className="text-[9px] text-emerald-500/80 font-black uppercase tracking-widest">Earned</Text>
                     </View>
                   </View>
 
                   {/* Route Display */}
-                  <View className="bg-ruvo-bg rounded-xl p-sm mb-sm" style={{ borderWidth: 1, borderColor: '#FAFAFA' }}>
-                    <View className="flex-row items-center gap-xs mb-xs">
-                      <Ionicons name="storefront-outline" size={14} color="#F4B400" />
-                      <Text className="flex-1 text-xs text-ruvo-ink font-semibold" numberOfLines={1}>
+                  <View className="bg-[#171A1F] border border-gray-800 rounded-[16px] p-3 mb-4">
+                    <View className="flex-row items-center gap-3 mb-2">
+                      <Ionicons name="storefront" size={14} color="#FF7A00" />
+                      <Text className="flex-1 text-[11px] text-gray-300 font-bold" numberOfLines={1}>
                         {item.shopName ?? item.pickupLocation?.split(',')[0]}
                       </Text>
                     </View>
-                    <View className="flex-row items-center gap-xs">
-                      <Ionicons name="location-outline" size={14} color="#3478C8" />
-                      <Text className="flex-1 text-xs text-ruvo-ink font-semibold" numberOfLines={1}>
+                    <View className="w-px h-2 bg-gray-700 ml-1.5" />
+                    <View className="flex-row items-center gap-3 mt-1">
+                      <Ionicons name="location" size={14} color="#3B82F6" />
+                      <Text className="flex-1 text-[11px] text-gray-300 font-bold" numberOfLines={1}>
                         {item.deliveryLocation}
                       </Text>
                     </View>
@@ -204,21 +220,20 @@ export const HistoryScreen = () => {
 
                   {/* COD Section */}
                   {isCod && (
-                    <View className="flex-row items-center justify-between pt-sm border-t border-ruvo-border">
-                      <View className="flex-row items-center gap-xs">
-                        <View className="bg-amber-50 border border-amber-200 px-sm py-xs rounded-lg flex-row items-center gap-xs">
-                          <Ionicons name="cash-outline" size={14} color="#E99A16" />
-                          <Text className="text-xs font-bold text-amber-800">
-                            COD: ₹{item.codCollected ?? item.totalAmount ?? 0}
-                          </Text>
-                        </View>
+                    <View className="flex-row items-center justify-between pt-4 border-t border-gray-800">
+                      <View className="bg-[#FF7A00]/10 border border-[#FF7A00]/20 px-3 py-2.5 rounded-[12px] flex-row items-center gap-1.5">
+                        <Ionicons name="cash" size={16} color="#FF7A00" />
+                        <Text className="text-[11px] font-black text-[#FF7A00] tracking-widest uppercase">
+                          COD: ₹{item.codCollected ?? item.totalAmount ?? 0}
+                        </Text>
                       </View>
                       <TouchableOpacity
                         onPress={() => generateHandoverOtp(item.orderId)}
-                        className="bg-ruvo-bg border border-ruvo-border px-sm py-xs rounded-lg flex-row items-center gap-xs"
+                        className="bg-[#171A1F] border border-gray-700 px-3 py-2.5 rounded-[12px] flex-row items-center gap-1.5"
+                        activeOpacity={0.7}
                       >
-                        <Ionicons name="key-outline" size={14} color="#171A1F" />
-                        <Text className="text-xs font-bold text-ruvo-ink">Handover OTP</Text>
+                        <Ionicons name="key" size={16} color="#FFF" />
+                        <Text className="text-[11px] font-black text-white tracking-widest uppercase">Handover OTP</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -227,8 +242,8 @@ export const HistoryScreen = () => {
             );
           }}
           renderSectionHeader={({ section }) => (
-            <View className="bg-transparent px-md py-xs mb-1 mt-xs">
-              <Text className="text-xs font-black text-warm-500 uppercase tracking-widest">
+            <View className="px-6 py-3 mt-4 mb-2">
+              <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest">
                 {section.title}
               </Text>
             </View>
@@ -237,11 +252,12 @@ export const HistoryScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => { setRefreshing(true); fetchHistory(); }}
-              tintColor="#F4B400"
-              colors={['#F4B400']}
+              tintColor="#10B981"
+              colors={['#10B981']}
+              progressBackgroundColor="#1C2026"
             />
           }
-          contentContainerClassName="px-lg pt-lg pb-2xl"
+          contentContainerStyle={{ paddingBottom: 100 }}
           stickySectionHeadersEnabled={false}
         />
       )}

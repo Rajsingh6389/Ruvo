@@ -167,10 +167,10 @@ export const AddProductScreen = () => {
       if (images.length > 0) {
         const formData = new FormData();
         formData.append('product', JSON.stringify({
-          shopId, name: name.trim(), category,
+          shopId: Number(shopId), name: name.trim(), category,
           brandName: brandName.trim() || null, description: description.trim() || null,
-          actualPrice: ap, sellingPrice: sp, discount: disc,
-          stockQuantity: sq, unit: unit.trim() || null, isAvailable,
+          actualPrice: Number(ap), sellingPrice: Number(sp), discount: disc,
+          stockQuantity: Number(sq), unit: unit.trim() || null, isAvailable,
         }));
         (formData as any).append('image', { uri: images[0].uri, type: images[0].type, name: images[0].fileName });
         for (let i = 0; i < images.length; i++) {
@@ -179,10 +179,10 @@ export const AddProductScreen = () => {
         await uploadProduct(formData, token);
       } else {
         await addProduct({
-          shopId, name: name.trim(), category,
+          shopId: Number(shopId), name: name.trim(), category,
           brandName: brandName.trim() || undefined, description: description.trim() || undefined,
-          actualPrice: ap, sellingPrice: sp, discount: disc,
-          stockQuantity: sq, unit: unit.trim() || undefined, isAvailable,
+          actualPrice: Number(ap), sellingPrice: Number(sp), discount: disc,
+          stockQuantity: Number(sq), unit: unit.trim() || undefined, isAvailable,
         }, token);
       }
       showToast('Product added successfully!', 'success');

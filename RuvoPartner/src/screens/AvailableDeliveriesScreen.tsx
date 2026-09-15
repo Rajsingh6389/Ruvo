@@ -1,17 +1,6 @@
 /**
- * AvailableDeliveriesScreen - RuvoPartner (Redesigned with Premium UI/UX)
- * 
- * Features:
- * - Real-time list of available delivery runs
- * - Location-based matching with visual route display
- * - Accept delivery flow with loading states
- * - Empty state with helpful messaging
- * - Pull-to-refresh
- * - Error handling with retry
- * - Smooth animations
- * - Responsive layout
+ * AvailableDeliveriesScreen - RuvoPartner (Premium Dark Bento UI)
  */
-
 import React, { useCallback, useState } from 'react';
 import {
   View,
@@ -19,9 +8,8 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  Alert,
   ActivityIndicator,
-  useWindowDimensions,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,20 +22,14 @@ import { Delivery } from '../services/partnerService';
 import { OfflineBar } from '../components/OfflineBar';
 import { NotificationPopup } from '../components/NotificationPopup';
 import { useNewDeliverySound } from '../hooks/useNotificationSound';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
-
 import { useToast } from '../context/ToastContext';
 
 export const AvailableDeliveriesScreen = () => {
   const { token } = useAuth();
   const { showToast } = useToast();
   const navigation = useNavigation<any>();
-  const { width } = useWindowDimensions();
-  const isTablet = width >= 768;
 
   const [runs, setRuns] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +62,7 @@ export const AvailableDeliveriesScreen = () => {
       await api(`/api/partner/deliveries/${run.id}/accept`, token, { method: 'POST' });
       showToast('Delivery run accepted!', 'success');
       
-      // Fetch the actual Active Delivery ID (since requests have different IDs than accepted deliveries)
-      const activeDeliveries = await api<Delivery[]>('/api/partner/deliveries/active', token).catch(() => api<Delivery[]>('/api/partner/deliveries', token));
+      const activeDeliveries = await api<Delivery[]>('/api/partner/deliveries', token);
       const activeOnly = activeDeliveries.filter(d => ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(d.status));
       if (activeOnly.length > 0) {
         navigation.navigate('ActiveDelivery', { deliveryId: activeOnly[0].id });
@@ -97,7 +78,8 @@ export const AvailableDeliveriesScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-ruvo-ink" edges={['top']}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <OfflineBar />
 
       <NotificationPopup
@@ -107,40 +89,47 @@ export const AvailableDeliveriesScreen = () => {
         onDismiss={dismissPopup}
       />
 
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-0 right-[-100px] w-64 h-64 bg-[#FF7A00]/10 rounded-full blur-3xl opacity-30 pointer-events-none" />
+
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-ruvo-border px-lg py-md flex-row items-center justify-between">
+      <View className="bg-ruvo-ink/90 border-b border-gray-800 px-6 py-4 flex-row items-center justify-between z-10">
         <View className="flex-1">
-          <Text className="text-xl font-extrabold text-ruvo-ink">Available Deliveries</Text>
-          <Text className="text-xs text-warm-600 font-medium mt-xs">
-            Real-time runs matching your location
+          <Text className="text-xl font-black text-white tracking-tight">Available Deliveries</Text>
+          <Text className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+            Real-time matching runs
           </Text>
         </View>
         <TouchableOpacity
           onPress={() => load(true)}
-          className="w-10 h-10 bg-ruvo-bg border border-ruvo-border rounded-full items-center justify-center"
+          className="w-10 h-10 bg-white/5 border border-white/10 rounded-full items-center justify-center"
+          activeOpacity={0.7}
         >
-          <Ionicons name="refresh" size={18} color="#171A1F" />
+          <Ionicons name="refresh" size={20} color="#FFF" />
         </TouchableOpacity>
       </View>
 
       {/* Content */}
       {loading ? (
-        <View className="px-lg pt-lg">
-          <Skeleton height={180} className="mb-md" />
-          <Skeleton height={180} className="mb-md" />
-          <Skeleton height={180} />
+        <View className="px-6 pt-6 gap-5">
+          <Skeleton height={200} className="rounded-[28px] bg-gray-800" />
+          <Skeleton height={200} className="rounded-[28px] bg-gray-800" />
         </View>
       ) : error ? (
-        <View className="flex-1 items-center justify-center px-xl">
+        <View className="flex-1 items-center justify-center px-8">
           <Animated.View entering={FadeIn.duration(300)} className="items-center">
-            <View className="w-24 h-24 bg-red-50 border border-red-200 rounded-3xl items-center justify-center mb-lg">
-              <Ionicons name="cloud-offline-outline" size={44} color="#D94A4A" />
+            <View className="w-24 h-24 bg-red-500/10 border border-red-500/20 rounded-3xl items-center justify-center mb-6">
+              <Ionicons name="cloud-offline-outline" size={44} color="#EF4444" />
             </View>
-            <Text className="text-xl font-extrabold text-ruvo-ink mb-sm">Connection Error</Text>
-            <Text className="text-sm text-warm-600 text-center mb-xl leading-5">{error}</Text>
-            <Button variant="primary" onPress={() => load()} icon="refresh">
-              Retry
-            </Button>
+            <Text className="text-xl font-black text-white mb-2">Connection Error</Text>
+            <Text className="text-sm text-gray-400 text-center mb-8 leading-5 font-bold">{error}</Text>
+            <TouchableOpacity 
+              onPress={() => load()}
+              className="bg-[#FF7A00] h-12 px-6 rounded-xl flex-row items-center justify-center gap-2"
+            >
+              <Ionicons name="refresh" size={18} color="#FFF" />
+              <Text className="text-white font-black tracking-widest uppercase">Retry</Text>
+            </TouchableOpacity>
           </Animated.View>
         </View>
       ) : (
@@ -151,99 +140,115 @@ export const AvailableDeliveriesScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => load(true)}
-              tintColor="#F4B400"
-              colors={['#F4B400']}
+              tintColor="#FF7A00"
+              colors={['#FF7A00']}
+              progressBackgroundColor="#1C2026"
             />
           }
-          contentContainerClassName={`px-lg pt-lg pb-2xl ${runs.length === 0 ? 'flex-grow' : ''}`}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 60, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <EmptyState
-              icon="bicycle"
-              title="No Active Deliveries"
-              description="Stay online and keep this tab active to receive automated delivery orders."
-            />
+            <View className="flex-1 items-center justify-center mt-10">
+              <View className="w-24 h-24 bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-3xl items-center justify-center mb-6">
+                <Ionicons name="bicycle" size={44} color="#FF7A00" />
+              </View>
+              <Text className="text-lg font-black text-white mb-2 text-center">No Active Deliveries</Text>
+              <Text className="text-xs text-gray-400 font-bold text-center leading-5 px-6">
+                Stay online and keep this tab active to receive automated delivery orders.
+              </Text>
+            </View>
           }
-          ItemSeparatorComponent={() => <View className="h-md" />}
+          ItemSeparatorComponent={() => <View className="h-5" />}
           renderItem={({ item, index }) => (
             <Animated.View entering={FadeInDown.delay(index * 100).duration(400)}>
-              <Card className="bg-ruvo-surface border border-ruvo-border shadow-sm">
+              <View className="bg-[#1C2026] border border-gray-800 rounded-[28px] p-6 shadow-lg shadow-black/40">
                 {/* Header */}
-                <View className="flex-row items-center justify-between mb-md">
-                  <View className="flex-row items-center gap-sm">
-                    <Text className="text-lg font-extrabold text-ruvo-ink">
+                <View className="flex-row items-center justify-between mb-5">
+                  <View className="flex-row items-center gap-3">
+                    <Text className="text-lg font-black text-white">
                       Order #{item.orderId}
                     </Text>
-                    <Badge variant="info" size="sm">
-                      {item.status.replaceAll('_', ' ')}
-                    </Badge>
+                    <View className="bg-blue-500/20 border border-blue-500/30 px-2.5 py-1 rounded-full">
+                      <Text className="text-blue-400 font-black text-[9px] tracking-wider uppercase">
+                        {item.status.replaceAll('_', ' ')}
+                      </Text>
+                    </View>
                   </View>
-                  <Text className="text-lg font-extrabold text-emerald-700">
+                  <Text className="text-xl font-black text-emerald-400">
                     +₹{item.deliveryFee}
                   </Text>
                 </View>
 
                 {/* Items Summary */}
                 {item.items && item.items.length > 0 ? (
-                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm flex-row items-center gap-xs">
-                    <Ionicons name="basket-outline" size={16} color="#F4B400" />
-                    <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                  <View className="bg-[#171A1F] border border-gray-800 rounded-xl p-3 mb-4 flex-row items-center gap-2">
+                    <Ionicons name="basket" size={16} color="#FF7A00" />
+                    <Text className="text-[11px] font-bold text-white flex-1 tracking-wide" numberOfLines={1}>
                       {item.items.map(i => `${i.quantity}x ${i.productName}`).join(', ')}
                     </Text>
                   </View>
                 ) : item.productName ? (
-                  <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-sm mb-sm flex-row items-center gap-xs">
-                    <Ionicons name="basket-outline" size={16} color="#F4B400" />
-                    <Text className="text-xs font-bold text-ruvo-ink flex-1" numberOfLines={1}>
+                  <View className="bg-[#171A1F] border border-gray-800 rounded-xl p-3 mb-4 flex-row items-center gap-2">
+                    <Ionicons name="basket" size={16} color="#FF7A00" />
+                    <Text className="text-[11px] font-bold text-white flex-1 tracking-wide" numberOfLines={1}>
                       {item.quantity ? `${item.quantity}x ` : ''}{item.productName}
                     </Text>
                   </View>
                 ) : null}
 
                 {/* Route Section */}
-                <View className="bg-ruvo-bg border border-ruvo-border rounded-xl p-md mb-md">
+                <View className="bg-[#171A1F] border border-gray-800 rounded-xl p-4 mb-5">
                   {/* Pickup */}
-                  <View className="flex-row items-center gap-md mb-xs">
-                    <View className="w-2.5 h-2.5 bg-ruvo-primary rounded-full" />
-                    <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
+                  <View className="flex-row items-center gap-4 mb-2">
+                    <View className="w-3 h-3 bg-blue-500 shadow-[0_0_8px_#3B82F6] rounded-full" />
+                    <Text className="text-[10px] font-black text-gray-500 uppercase tracking-widest w-12">
                       Pickup
                     </Text>
                     <View className="flex-1">
                       {item.shopName ? (
-                        <Text className="text-xs font-bold text-ruvo-ink">{item.shopName}</Text>
+                        <Text className="text-xs font-black text-white mb-0.5">{item.shopName}</Text>
                       ) : null}
-                      <Text className="text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
+                      <Text className="text-[13px] font-bold text-gray-400" numberOfLines={1}>
                         {item.shopAddress || item.pickupLocation}
                       </Text>
                     </View>
                   </View>
 
                   {/* Connector */}
-                  <View className="w-px h-3 bg-ruvo-border ml-1 my-0.5" />
+                  <View className="w-px h-6 bg-gray-700 ml-1.5 my-1" />
 
                   {/* Drop */}
-                  <View className="flex-row items-center gap-md">
-                    <View className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                    <Text className="text-xs font-extrabold text-warm-700 uppercase w-12">
+                  <View className="flex-row items-center gap-4 mt-1">
+                    <View className="w-3 h-3 bg-[#FF7A00] shadow-[0_0_8px_#FF7A00] rounded-full" />
+                    <Text className="text-[10px] font-black text-gray-500 uppercase tracking-widest w-12">
                       Drop
                     </Text>
-                    <Text className="flex-1 text-sm font-semibold text-ruvo-ink" numberOfLines={1}>
+                    <Text className="flex-1 text-[13px] font-bold text-white" numberOfLines={1}>
                       {item.deliveryLocation}
                     </Text>
                   </View>
                 </View>
 
                 {/* Accept Button */}
-                <Button
-                  variant="primary"
+                <TouchableOpacity
                   onPress={() => accept(item)}
-                  loading={busy === item.id}
                   disabled={busy === item.id}
-                  icon="checkmark-circle-outline"
+                  activeOpacity={0.8}
+                  className={`h-14 rounded-2xl flex-row items-center justify-center gap-2 ${busy === item.id ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
+                  style={{ shadowColor: '#FF7A00', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 }}
                 >
-                  Accept Delivery Run
-                </Button>
-              </Card>
+                  {busy === item.id ? (
+                    <ActivityIndicator color="#FFF" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                      <Text className="text-white font-black tracking-widest uppercase">
+                        Accept Delivery Run
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           )}
         />

@@ -504,10 +504,19 @@ export default function CartScreen() {
 
       {/* ── Proceed to Checkout (Swiggy / Zomato Style Flow) ─── */}
       <View style={[styles.stickyFooter, { paddingBottom: Math.max(tabBarHeight + 8, 16), backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+        {cartTotal < 100 && (
+          <View style={{ backgroundColor: '#FEE2E2', padding: 8, borderRadius: 8, marginBottom: 10, alignItems: 'center' }}>
+            <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'Poppins_700Bold' }}>Minimum order amount is ₹100</Text>
+          </View>
+        )}
         <TouchableOpacity
-          style={styles.checkoutFullBtn}
+          style={[styles.checkoutFullBtn, cartTotal < 100 && { backgroundColor: '#9CA3AF', shadowOpacity: 0 }]}
           activeOpacity={0.88}
           onPress={() => {
+            if (cartTotal < 100) {
+              showToast('Add items worth ₹' + (100 - cartTotal) + ' more to place order', 'error');
+              return;
+            }
             (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true });
           }}
         >

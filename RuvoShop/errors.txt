@@ -1,0 +1,7 @@
+src/hooks/useNetworkStatus.ts(62,3): error TS2322: Type '(input: global.RequestInfo, init?: RequestInit | undefined) => Promise<Response>' is not assignable to type '{ (input: RequestInfo | URL, init?: RequestInit | undefined): Promise<Response>; (input: RequestInfo, init?: RequestInit | undefined): Promise<...>; }'.
+  Types of parameters 'input' and 'input' are incompatible.
+    Type 'RequestInfo | URL' is not assignable to type 'RequestInfo'.
+      Type 'URL' is not assignable to type 'RequestInfo'.
+        Type 'URL' is missing the following properties from type 'Request': cache, credentials, destination, headers, and 18 more.
+src/screens/marketplace/AddProductScreen.tsx(182,11): error TS2322: Type 'string | number' is not assignable to type 'number'.
+  Type 'string' is not assignable to type 'number'.

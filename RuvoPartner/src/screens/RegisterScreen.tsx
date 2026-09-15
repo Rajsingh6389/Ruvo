@@ -1,15 +1,16 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -17,13 +18,11 @@ import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
 
 export const RegisterScreen = () => {
   const navigation = useNavigation<any>();
   const { token, setVerificationStatus, authenticatedFetch, logout } = useAuth();
-  const { colors } = useTheme();
 
   const [fullName, setFullName] = useState('');
   const [dob, setDob] = useState('');
@@ -34,6 +33,13 @@ export const RegisterScreen = () => {
   const [pincode, setPincode] = useState('');
   const [loading, setLoading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const pressBtnIn = () =>
+    Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
+  const pressBtnOut = () =>
+    Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
 
   const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -123,209 +129,210 @@ export const RegisterScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Back Button Header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => {
-          Alert.alert(
-            'Go back?',
-            'This will return you to the mobile number input.',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Yes', onPress: () => logout?.() }
-            ]
-          );
-        }}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+    <SafeAreaView className="flex-1 bg-ruvo-ink">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-0 right-[-100px] w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl opacity-40 pointer-events-none" />
+      <View className="absolute bottom-[-100px] left-[-100px] w-80 h-80 bg-blue-500/10 rounded-full blur-3xl opacity-30 pointer-events-none" />
+
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-4 py-4 z-10 border-b border-gray-800 bg-ruvo-ink/90">
+        <TouchableOpacity 
+          className="w-10 h-10 items-center justify-center rounded-full bg-white/5 border border-white/10"
+          onPress={() => {
+            Alert.alert(
+              'Go back?',
+              'This will return you to the mobile number input.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Yes', onPress: () => logout?.() }
+              ]
+            );
+          }}
+        >
+          <Ionicons name="arrow-back" size={20} color="#FFF" />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Partner Registration</Text>
+        <Text className="text-white text-lg font-black tracking-widest uppercase">Partner Registration</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Complete your profile to join RuVo delivery network
-        </Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 32, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          <Text className="text-[#FF7A00] text-sm font-black tracking-widest uppercase mb-1">Step 1 of 2</Text>
+          <Text className="text-white text-3xl font-black tracking-tight mb-2">
+            Build your Profile
+          </Text>
+          <Text className="text-gray-400 text-sm font-bold leading-5 mb-8">
+            Complete your profile to join the secure RuVo delivery network.
+          </Text>
 
-        <View style={styles.form}>
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Full Name</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="John Doe"
-            placeholderTextColor={colors.textSecondary}
-            value={fullName}
-            onChangeText={setFullName}
-          />
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Date of Birth</Text>
-          <TouchableOpacity style={[styles.dateInput, { borderColor: colors.border }]} onPress={() => setShowDatePicker(true)}>
-            <Text style={{ color: dob ? colors.textPrimary : colors.textSecondary }}>{dob || 'Select date of birth'}</Text>
-            <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          {showDatePicker && <DateTimePicker
-            value={dob ? new Date(`${dob}T12:00:00`) : new Date(2000, 0, 1)}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={(_, selectedDate) => { setShowDatePicker(Platform.OS === 'ios'); if (selectedDate) setDob(formatDate(selectedDate)); }}
-          />}
-
-          <TouchableOpacity style={[styles.locationButton, { borderColor: colors.primary }]} onPress={useCurrentLocation} disabled={locating}>
-            {locating ? <ActivityIndicator color={colors.primary} /> : <><Ionicons name="locate-outline" size={20} color={colors.primary} /><Text style={[styles.locationButtonText, { color: colors.primary }]}>Use current location</Text></>}
-          </TouchableOpacity>
-          <Text style={[styles.locationHint, { color: colors.textSecondary }]}>Uses your GPS location to fill address, city, state and pincode. You can edit all fields.</Text>
-
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Street Address</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="House No, Road, Locality"
-            placeholderTextColor={colors.textSecondary}
-            value={address}
-            onChangeText={setAddress}
-          />
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 8 }}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>City</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                placeholder="New Delhi"
-                placeholderTextColor={colors.textSecondary}
-                value={city}
-                onChangeText={setCity}
-              />
+          {/* Form Card */}
+          <View 
+            className="w-full bg-[#1C2026] border border-gray-800 rounded-[32px] p-6 mb-6"
+            style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 12 }}
+          >
+            {/* Full Name */}
+            <View className="mb-4">
+              <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">Full Name *</Text>
+              <View className={`flex-row items-center h-14 rounded-2xl px-4 border transition-all ${focusedField === 'fullName' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'}`}>
+                <Ionicons name="person-outline" size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 text-white text-base font-bold ml-3"
+                  placeholder="John Doe"
+                  placeholderTextColor="#4B5563"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  onFocus={() => setFocusedField('fullName')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>State</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-                placeholder="Delhi"
-                placeholderTextColor={colors.textSecondary}
-                value={state}
-                onChangeText={setState}
-              />
+
+            {/* Date of Birth */}
+            <View className="mb-6">
+              <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">Date of Birth</Text>
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                className="flex-row items-center h-14 rounded-2xl px-4 border bg-[#171A1F] border-gray-800 justify-between"
+                onPress={() => setShowDatePicker(true)}
+              >
+                <View className="flex-row items-center">
+                  <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
+                  <Text className={`text-base font-bold ml-3 ${dob ? 'text-white' : 'text-[#4B5563]'}`}>
+                    {dob || 'YYYY-MM-DD'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-down" size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dob ? new Date(`${dob}T12:00:00`) : new Date(2000, 0, 1)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  maximumDate={new Date()}
+                  onChange={(_, selectedDate) => { 
+                    setShowDatePicker(Platform.OS === 'ios'); 
+                    if (selectedDate) setDob(formatDate(selectedDate)); 
+                  }}
+                  textColor="#FFFFFF"
+                />
+              )}
             </View>
+
+            <View className="h-[1px] bg-gray-800 w-full mb-6" />
+
+            {/* Location Section */}
+            <Text className="text-white text-lg font-black tracking-tight mb-4">Location Details</Text>
+            
+            <TouchableOpacity 
+              className={`flex-row items-center justify-center p-4 rounded-2xl border mb-5 gap-2 ${locating ? 'bg-[#FF7A00]/10 border-[#FF7A00]/30' : 'bg-[#FF7A00]/5 border-[#FF7A00]/20'}`}
+              onPress={useCurrentLocation}
+              disabled={locating}
+            >
+              {locating ? (
+                <ActivityIndicator color="#FF7A00" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="locate" size={20} color="#FF7A00" />
+                  <Text className="text-[#FF7A00] font-black tracking-wider uppercase text-sm">Auto-fill via GPS</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Address */}
+            <View className="mb-4">
+              <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">Street Address *</Text>
+              <View className={`flex-row items-center h-14 rounded-2xl px-4 border transition-all ${focusedField === 'address' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'}`}>
+                <Ionicons name="home-outline" size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 text-white text-base font-bold ml-3"
+                  placeholder="House No, Road, Locality"
+                  placeholderTextColor="#4B5563"
+                  value={address}
+                  onChangeText={setAddress}
+                  onFocus={() => setFocusedField('address')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
+            </View>
+
+            {/* City & State */}
+            <View className="flex-row gap-4 mb-4">
+              <View className="flex-1">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">City *</Text>
+                <View className={`flex-row items-center h-14 rounded-2xl px-4 border transition-all ${focusedField === 'city' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'}`}>
+                  <TextInput
+                    className="flex-1 text-white text-base font-bold"
+                    placeholder="City"
+                    placeholderTextColor="#4B5563"
+                    value={city}
+                    onChangeText={setCity}
+                    onFocus={() => setFocusedField('city')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+              </View>
+              <View className="flex-1">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">State *</Text>
+                <View className={`flex-row items-center h-14 rounded-2xl px-4 border transition-all ${focusedField === 'state' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'}`}>
+                  <TextInput
+                    className="flex-1 text-white text-base font-bold"
+                    placeholder="State"
+                    placeholderTextColor="#4B5563"
+                    value={state}
+                    onChangeText={setState}
+                    onFocus={() => setFocusedField('state')}
+                    onBlur={() => setFocusedField(null)}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Pincode */}
+            <View className="mb-6">
+              <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">Pincode *</Text>
+              <View className={`flex-row items-center h-14 rounded-2xl px-4 border transition-all ${focusedField === 'pincode' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'}`}>
+                <Ionicons name="map-outline" size={20} color="#9CA3AF" />
+                <TextInput
+                  className="flex-1 text-white text-base font-bold ml-3 tracking-widest"
+                  placeholder="110001"
+                  placeholderTextColor="#4B5563"
+                  value={pincode}
+                  onChangeText={setPincode}
+                  onFocus={() => setFocusedField('pincode')}
+                  onBlur={() => setFocusedField(null)}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              </View>
+            </View>
+
+            {/* Giant CTA Button */}
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <TouchableOpacity
+                className={`h-14 rounded-2xl items-center justify-center flex-row gap-2 ${loading ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
+                style={{ shadowColor: '#FF7A00', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
+                onPress={handleSubmitProfile}
+                onPressIn={pressBtnIn}
+                onPressOut={pressBtnOut}
+                disabled={loading}
+                activeOpacity={1}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text className="text-white font-black text-base tracking-widest uppercase">Next Step</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
           </View>
 
-          <Text style={[styles.label, { color: colors.textPrimary }]}>Pincode</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.border, color: colors.textPrimary }]}
-            placeholder="110001"
-            placeholderTextColor={colors.textSecondary}
-            value={pincode}
-            onChangeText={setPincode}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-
-          <TouchableOpacity
-            style={[styles.btn, { backgroundColor: colors.primary }]}
-            onPress={handleSubmitProfile}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.btnText}>Next: Vehicle Details</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 56,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-  },
-  headerTitle: { fontSize: 17, fontFamily: 'Poppins_700Bold' },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: 'Poppins_700Bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 28,
-  },
-  form: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 13,
-    fontFamily: 'Poppins_600SemiBold',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  input: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-  },
-  dateInput: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  locationButton: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-  locationButtonText: { fontFamily: 'Poppins_700Bold', fontSize: 14 },
-  locationHint: { fontSize: 12, lineHeight: 17, marginBottom: 16 },
-  row: {
-    flexDirection: 'row',
-  },
-  btn: {
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    elevation: 2,
-  },
-  btnText: {
-    color: '#FFFFFF',
-    fontFamily: 'Poppins_700Bold',
-    fontSize: 16,
-  },
-});

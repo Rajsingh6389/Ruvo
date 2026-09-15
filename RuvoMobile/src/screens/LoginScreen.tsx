@@ -122,14 +122,17 @@ export const LoginScreen = ({ navigation }: Props) => {
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Warm ambient gradient top wash */}
+      {/* Full-screen theme-aware gradient */}
       <LinearGradient
-        colors={[colors.primarySoft, colors.background]}
-        style={[styles.topGradient, { paddingTop: insets.top }]}
-        pointerEvents="none"
+        colors={[
+          colors.primary + '30',
+          colors.primary + '10',
+          colors.background
+        ]}
+        style={styles.fullScreenGradient}
       />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <ScrollView
           contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 32 }]}
           keyboardShouldPersistTaps="handled"
@@ -179,7 +182,7 @@ export const LoginScreen = ({ navigation }: Props) => {
                 <View style={[
                   styles.inputWrap,
                   {
-                    backgroundColor: colors.surfaceSunken,
+                    backgroundColor: focusedField === 'mobile' ? colors.background : colors.surfaceSunken,
                     borderColor: focusedField === 'mobile' ? colors.primary : colors.border,
                     borderRadius: radius.input,
                   },
@@ -212,7 +215,7 @@ export const LoginScreen = ({ navigation }: Props) => {
                 <View style={[
                   styles.inputWrap,
                   {
-                    backgroundColor: colors.surfaceSunken,
+                    backgroundColor: focusedField === 'otp' ? colors.background : colors.surfaceSunken,
                     borderColor: focusedField === 'otp' ? colors.primary : colors.border,
                     borderRadius: radius.input,
                   },
@@ -299,11 +302,9 @@ export const LoginScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1 },
-  topGradient: {
+  fullScreenGradient: {
     position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 200,
-    pointerEvents: 'none',
+    top: 0, left: 0, right: 0, bottom: 0,
   },
   container: {
     flexGrow: 1,

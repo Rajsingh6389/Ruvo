@@ -27,6 +27,7 @@ import { AddProductScreen } from './screens/marketplace/AddProductScreen';
 import { EditProductScreen } from './screens/marketplace/EditProductScreen';
 import DeliveryPartnerAssignmentScreen from './screens/marketplace/DeliveryPartnerAssignmentScreen';
 import { EditShopScreen } from './screens/marketplace/EditShopScreen';
+import NotificationsScreen from './screens/marketplace/NotificationsScreen';
 
 export type DrawerParamList = {
   ShopkeeperDashboard: undefined;
@@ -47,6 +48,7 @@ export type ShopStackParamList = {
   AddProduct: { shopId: string };
   EditProduct: { productId: string; shopId: string };
   DeliveryPartnerAssignment: { orderId: string };
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<ShopStackParamList>();
@@ -227,6 +229,7 @@ export const ShopNavigator = () => {
                 <Stack.Screen name="EditShop" component={EditShopScreen} />
                 <Stack.Screen name="EditProduct" component={EditProductScreen} />
                 <Stack.Screen name="DeliveryPartnerAssignment" component={DeliveryPartnerAssignmentScreen} />
+                <Stack.Screen name="Notifications" component={NotificationsScreen} />
               </>
             )}
           </Stack.Navigator>

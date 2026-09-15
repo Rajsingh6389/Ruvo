@@ -183,6 +183,14 @@ export const EditShopScreen = () => {
         token,
       );
       setSaved(true);
+      // Explicitly wipe fields based on user request instead of caching them
+      setName('');
+      setCategory('');
+      setAddress('');
+      setPhone('');
+      setLogoAsset(null);
+      setBannerAsset(null);
+      
       setTimeout(() => navigation.goBack(), 1800);
     } catch (err: any) {
       Alert.alert('Update Failed', err?.message || 'Failed to update shop. Please try again.');
@@ -359,7 +367,7 @@ export const EditShopScreen = () => {
               )}
 
               <TouchableOpacity
-                onPress={() => navigation.navigate('EditBankAccount')}
+                onPress={() => navigation.navigate('MainDrawer', { screen: 'EditBankAccount' })}
                 className="mt-5 flex-row items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-xl py-3 active:bg-gray-100"
               >
                 <Ionicons name="create-outline" size={16} color="#4B5563" />

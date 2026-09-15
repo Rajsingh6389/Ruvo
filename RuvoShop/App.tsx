@@ -1,4 +1,5 @@
 import React from 'react';
+// @ts-ignore
 import './global.css';
 import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

@@ -175,7 +175,7 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         <View style={s.mapContainer}>
           <MapView
             ref={mapRef}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             provider={PROVIDER_GOOGLE}
             region={region}
             onRegionChangeComplete={handleRegionChangeComplete}

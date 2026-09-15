@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -16,13 +15,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { RootStackParamList } from '../types/navigation';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
 
-/* RuVo Partner Login */
+/* RuVo Partner Login - Premium UI Redesign */
 
 interface AuthToken {
   accessToken: string;
@@ -39,7 +36,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 export const LoginScreen = ({ navigation }: Props) => {
   const { login } = useAuth();
-  const { colors, typography, radius, shadows, spacing } = useTheme();
   const insets = useSafeAreaInsets();
   
   // Hardcoded for Partners
@@ -108,7 +104,6 @@ export const LoginScreen = ({ navigation }: Props) => {
       if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
       const { data } = body as ApiResponse<AuthToken>;
       
-      // Note: Partner Context handles refresh tokens and verification status differently.
       await login(data.accessToken, null, String(data.userId), data.role, 'NEW');
     } catch (err: any) {
       setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
@@ -119,80 +114,68 @@ export const LoginScreen = ({ navigation }: Props) => {
   const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <View className="flex-1 bg-ruvo-ink">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Warm ambient gradient top wash */}
-      <LinearGradient
-        colors={[colors.primarySoft || '#E8F8EE', colors.background]}
-        style={[styles.topGradient, { paddingTop: insets.top }]}
-        pointerEvents="none"
-      />
+      {/* Decorative Glow Elements */}
+      <View className="absolute top-[-100px] right-[-100px] w-64 h-64 bg-[#FF7A00]/20 rounded-full blur-3xl opacity-50" />
+      <View className="absolute bottom-[-100px] left-[-100px] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl opacity-50" />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+      >
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 32 }]}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40, paddingTop: insets.top + 32, paddingHorizontal: 24 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Brand mark */}
-          <View style={styles.brandRow}>
+          {/* Brand Row */}
+          <View className="items-center justify-center mb-sm">
             <Image
               source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788798945/RuvoPartner.png' }}
-              style={{ width: 140, height: 60, resizeMode: 'contain' }}
+              style={{ width: 140, height: 60, resizeMode: 'contain', tintColor: '#FFF' }}
             />
           </View>
-          <Text style={[{ fontFamily: 'Poppins_800ExtraBold', fontSize: 18, textAlign: 'center', marginBottom: 20 }]}>RuVo Partner</Text>
+          <Text className="text-white text-center font-black text-xl tracking-tight mb-md">RuVo Partner</Text>
 
-          {/* Step indicator */}
-          <View style={styles.stepRow}>
-            {[1, 2].map(s => (
-              <View
-                key={s}
-                style={[
-                  styles.stepDot,
-                  { backgroundColor: step >= s ? colors.primary : colors.border },
-                  step >= s && { width: 24 },
-                ]}
-              />
-            ))}
+          {/* Dynamic Step Header */}
+          <View className="items-center mb-xl">
+            <View className="flex-row items-center gap-xs mb-md">
+              <View className={`h-2 rounded-full transition-all duration-300 ${step >= 1 ? 'w-6 bg-[#FF7A00]' : 'w-2 bg-gray-700'}`} />
+              <View className={`h-2 rounded-full transition-all duration-300 ${step >= 2 ? 'w-6 bg-[#FF7A00]' : 'w-2 bg-gray-700'}`} />
+            </View>
+            <Text className="text-white text-3xl font-black tracking-tight mb-2">
+              {step === 1 ? 'Start delivering' : 'Verify OTP'}
+            </Text>
+            <Text className="text-gray-400 text-sm font-bold text-center leading-5 px-sm">
+              {step === 1
+                ? 'Enter your mobile number to continue as a RuVo delivery partner.'
+                : `We've sent a 6-digit code to +91 ${phoneDigits}`}
+            </Text>
           </View>
 
-          {/* Heading */}
-          <Text style={[typography.headingXL, styles.title, { color: colors.textPrimary }]}>
-            {step === 1 ? 'Start delivering' : 'Verify OTP'}
-          </Text>
-          <Text style={[typography.body, styles.subtitle, { color: colors.textSecondary }]}>
-            {step === 1
-              ? 'Enter your mobile number to continue as a RuVo delivery partner.'
-              : `We've sent a 6-digit code to +91 ${phoneDigits}`}
-          </Text>
-
-          {/* Form card */}
-          <View style={[
-            styles.formCard,
-            { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card, padding: spacing.cardPad },
-            shadows.md,
-          ]}>
+          {/* Premium Form Glassmorphism Card */}
+          <View 
+            className="bg-[#1C2026] border border-gray-800 rounded-[32px] p-6 mb-lg"
+            style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 12 }}
+          >
             {step === 1 ? (
-              <>
-                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>Mobile Number</Text>
-                <View style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.surfaceSunken,
-                    borderColor: focusedField === 'mobile' ? colors.primary : colors.border,
-                    borderRadius: radius.input,
-                  },
-                  focusedField === 'mobile' && styles.inputFocused,
-                ]}>
-                  <View style={[styles.prefixBox, { borderRightColor: colors.border }]}>
-                    <Text style={[typography.bodyStrong, { color: colors.textPrimary, fontSize: 15 }]}>🇮🇳  +91</Text>
+              <View className="mb-md">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
+                  Mobile Number
+                </Text>
+                <View 
+                  className={`flex-row items-center h-14 rounded-2xl px-4 border ${focusedField === 'mobile' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all`}
+                >
+                  <View className="pr-3 pb-1 border-r border-gray-800 justify-center">
+                    <Text className="text-white font-bold text-base">🇮🇳 +91</Text>
                   </View>
                   <TextInput
-                    style={[typography.body, styles.input, { color: colors.textPrimary }]}
+                    className="flex-1 text-white text-lg font-bold ml-3"
                     placeholder="10-digit number"
-                    placeholderTextColor={colors.placeholder}
+                    placeholderTextColor="#6B7280"
                     keyboardType="phone-pad"
                     maxLength={10}
                     value={mobile}
@@ -203,27 +186,23 @@ export const LoginScreen = ({ navigation }: Props) => {
                     onSubmitEditing={handleSendOtp}
                   />
                   {mobile.length === 10 && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.success || '#18A957'} />
+                    <Ionicons name="checkmark-circle" size={22} color="#10B981" />
                   )}
                 </View>
-              </>
+              </View>
             ) : (
-              <>
-                <Text style={[typography.label, styles.label, { color: colors.textSecondary }]}>6-Digit OTP</Text>
-                <View style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.surfaceSunken,
-                    borderColor: focusedField === 'otp' ? colors.primary : colors.border,
-                    borderRadius: radius.input,
-                  },
-                  focusedField === 'otp' && styles.inputFocused,
-                ]}>
-                  <Ionicons name="key-outline" size={20} color={colors.textHint} style={styles.inputIcon} />
+              <View className="mb-md">
+                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
+                  6-Digit OTP
+                </Text>
+                <View 
+                  className={`flex-row items-center h-14 rounded-2xl px-4 border ${focusedField === 'otp' ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all`}
+                >
+                  <Ionicons name="key-outline" size={20} color="#9CA3AF" />
                   <TextInput
-                    style={[typography.body, styles.input, { color: colors.textPrimary, letterSpacing: 6, fontSize: 20 }]}
-                    placeholder="• • • • • •"
-                    placeholderTextColor={colors.placeholder}
+                    className="flex-1 text-white text-2xl font-black ml-3 tracking-[8px]"
+                    placeholder="••••••"
+                    placeholderTextColor="#4B5563"
                     keyboardType="number-pad"
                     maxLength={6}
                     value={otp}
@@ -235,18 +214,18 @@ export const LoginScreen = ({ navigation }: Props) => {
                     autoFocus
                   />
                 </View>
-              </>
+              </View>
             )}
 
-            {/* Error */}
+            {/* Error Message */}
             {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.errorSoft || '#FEE2E2', borderRadius: radius.sm }]}>
-                <Ionicons name="alert-circle" size={15} color={colors.error || '#DC2626'} />
-                <Text style={[typography.caption, { color: colors.error || '#DC2626', flex: 1 }]}>{error}</Text>
+              <View className="flex-row items-center gap-xs bg-red-500/10 border border-red-500/30 p-3 rounded-xl mb-4">
+                <Ionicons name="alert-circle" size={16} color="#EF4444" />
+                <Text className="flex-1 text-red-500 font-bold text-xs">{error}</Text>
               </View>
             ) : null}
 
-            {/* CTA */}
+            {/* Giant CTA Button */}
             <Animated.View style={{ transform: [{ scale: btnScale }] }}>
               <TouchableOpacity
                 onPress={step === 1 ? handleSendOtp : handleVerifyOtp}
@@ -254,31 +233,36 @@ export const LoginScreen = ({ navigation }: Props) => {
                 onPressOut={pressBtnOut}
                 disabled={loading}
                 activeOpacity={1}
-                style={[styles.btn, { backgroundColor: colors.primary, borderRadius: radius.button }, shadows.brand]}
+                className={`h-14 rounded-2xl items-center justify-center flex-row gap-2 ${loading ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
+                style={{ shadowColor: '#FF7A00', shadowOffset: {width: 0, height: 6}, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
               >
-                {loading
-                  ? <ActivityIndicator color={colors.onPrimary} />
-                  : <>
-                      <Text style={[typography.button, { color: colors.onPrimary }]}>
-                        {step === 1 ? 'Get OTP' : 'Verify & Login'}
-                      </Text>
-                      <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
-                    </>
-                }
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Text className="text-white font-black text-base">{step === 1 ? 'GET OTP' : 'VERIFY & LOGIN'}</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  </>
+                )}
               </TouchableOpacity>
             </Animated.View>
 
             {step === 2 && (
-              <TouchableOpacity onPress={() => { setStep(1); setOtp(''); setError(null); }} style={styles.changePhoneBtn}>
-                <Ionicons name="chevron-back" size={14} color={colors.primary} />
-                <Text style={[typography.bodyStrong, { color: colors.primary, fontSize: 13 }]}>Change Mobile Number</Text>
+              <TouchableOpacity 
+                onPress={() => { setStep(1); setOtp(''); setError(null); }} 
+                className="flex-row items-center justify-center mt-5 gap-1"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chevron-back" size={14} color="#9CA3AF" />
+                <Text className="text-gray-400 font-bold text-sm">Change Mobile Number</Text>
               </TouchableOpacity>
             )}
           </View>
-          
-          <View style={styles.trustRow}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textHint} />
-            <Text style={[typography.caption, { color: colors.textHint, fontSize: 11 }]}>
+
+          {/* Secure Trust Footer */}
+          <View className="flex-row items-center justify-center gap-2 mt-4 opacity-50">
+            <Ionicons name="shield-checkmark-outline" size={16} color="#9CA3AF" />
+            <Text className="text-gray-400 font-bold text-[11px] uppercase tracking-widest">
                Secure Delivery Fleet Authentication
             </Text>
           </View>
@@ -287,104 +271,3 @@ export const LoginScreen = ({ navigation }: Props) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  screen: { flex: 1 },
-  topGradient: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 200,
-    pointerEvents: 'none',
-  },
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 40,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 4,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 20,
-  },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  title: {
-    textAlign: 'center',
-    marginBottom: 6,
-  },
-  subtitle: {
-    textAlign: 'center',
-    marginBottom: 28,
-    lineHeight: 20,
-  },
-  formCard: {
-    borderWidth: 0.5,
-    marginBottom: 20,
-  },
-  label: {
-    marginBottom: 8,
-    marginTop: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    fontSize: 11,
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 0.5,
-    height: 52,
-    marginBottom: 16,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  inputFocused: {
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  prefixBox: {
-    paddingRight: 10,
-    borderRightWidth: 1,
-    height: '60%',
-    justifyContent: 'center',
-  },
-  inputIcon: { flexShrink: 0 },
-  input: { flex: 1 },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    padding: 10,
-    marginBottom: 14,
-  },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 52,
-    gap: 8,
-  },
-  changePhoneBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 14,
-    gap: 4,
-  },
-  trustRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-  },
-});

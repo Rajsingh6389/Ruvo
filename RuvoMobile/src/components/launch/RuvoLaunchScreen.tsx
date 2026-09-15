@@ -509,7 +509,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_800ExtraBold',
     color: '#171A1F',
     letterSpacing: 4,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-black',
   },
   taglineWrapper: {
     marginTop: 10,
