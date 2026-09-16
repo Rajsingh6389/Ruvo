@@ -202,9 +202,29 @@ export const EditShopScreen = () => {
   const currentLogoUri   = logoAsset   ? logoAsset.uri   : resolveImage(existingShop.logoUrl);
   const currentBannerUri = bannerAsset ? bannerAsset.uri : resolveImage(existingShop.bannerUrl);
 
+  const inputClass = "bg-warm-50 border border-warm-200 rounded-[18px] px-4 py-[16px] text-[15px] font-semibold text-ruvo-ink";
+  const labelClass = "text-[13px] font-extrabold text-ruvo-ink mb-2";
+  const sectionClass = "bg-ruvo-surface border border-warm-200 rounded-[24px] p-5 mb-5 shadow-sm";
+  const sectionHeaderClass = "text-[12px] font-black text-warm-500 uppercase tracking-widest mb-4 border-b border-warm-100 pb-3";
+
   return (
     <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={['top']}>
       {/* Header */}
+<<<<<<< HEAD
+      <View className="bg-ruvo-surface border-b border-warm-200 shadow-sm z-10 px-4 py-3 flex-row items-center gap-3">
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          className="w-10 h-10 bg-warm-50 rounded-[12px] border border-warm-200 items-center justify-center"
+        >
+          <Ionicons name="arrow-back" size={20} color="#171A1F" />
+        </TouchableOpacity>
+        <View className="flex-1">
+          <Text className="text-xl font-black text-ruvo-ink tracking-tight">Edit Shop</Text>
+          <Text className="text-[12px] font-bold text-warm-600">Keep your storefront information up to date</Text>
+        </View>
+        <View className="w-10 h-10 bg-ruvo-yellow/20 rounded-[12px] border border-ruvo-yellow/30 items-center justify-center">
+          <Ionicons name="storefront" size={18} color="#D97706" />
+=======
       <View className="bg-white border-b border-gray-100 px-6 py-4 flex-row items-center gap-4 shadow-sm z-10">
         <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:opacity-70">
           <Ionicons name="arrow-back" size={20} color="#111827" />
@@ -212,14 +232,76 @@ export const EditShopScreen = () => {
         <View className="flex-1">
           <Text className="text-xl font-black text-gray-900 tracking-tight">Edit Shop Profile</Text>
           <Text className="text-[11px] text-[#FF7A00] font-black uppercase tracking-widest mt-0.5">Manage Details</Text>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
         </View>
       </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+<<<<<<< HEAD
+        <ScrollView
+          contentContainerClassName="px-4 pt-5 pb-10"
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+=======
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 250 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 
-          {/* ── Images ──────────────────────────────────────────── */}
+          {/* ── Shop Branding ──────────────────────────────────────────── */}
           <Animated.View entering={FadeInUp.duration(400)}>
+<<<<<<< HEAD
+            <View className={sectionClass}>
+              <Text className={sectionHeaderClass}>
+                Shop Branding
+              </Text>
+
+              <Text className={labelClass}>Banner</Text>
+              <TouchableOpacity
+                onPress={pickBanner}
+                activeOpacity={0.8}
+                className="relative w-full h-[160px] bg-warm-100 rounded-[20px] overflow-hidden mb-6 border border-warm-200 items-center justify-center shadow-sm"
+              >
+                {currentBannerUri ? (
+                  <>
+                    <Image source={{ uri: currentBannerUri }} className="w-full h-full absolute" resizeMode="cover" />
+                    <View className="absolute inset-0 bg-black/30" /> 
+                    <View className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/40 flex-row items-center gap-2">
+                       <Ionicons name="camera" size={16} color="#FFF" />
+                       <Text className="text-[13px] font-black text-white tracking-wide shadow-sm">CHANGE BANNER</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View className="items-center gap-2">
+                    <Ionicons name="image-outline" size={32} color="#A79E92" />
+                    <Text className="text-[13px] font-bold text-warm-500">Tap to upload 16:9 Banner</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <Text className={labelClass}>Logo / Avatar</Text>
+              <View className="flex-row items-center gap-4">
+                <TouchableOpacity
+                  onPress={pickLogo}
+                  activeOpacity={0.8}
+                  className="relative w-24 h-24 bg-warm-100 rounded-[24px] overflow-hidden border border-warm-200 items-center justify-center shadow-sm"
+                >
+                  {currentLogoUri ? (
+                     <>
+                        <Image source={{ uri: currentLogoUri }} className="w-full h-full absolute" resizeMode="cover" />
+                        <View className="absolute bottom-0 inset-x-0 bg-black/50 py-1.5 items-center backdrop-blur-sm">
+                          <Ionicons name="camera" size={12} color="#FFF" />
+                        </View>
+                     </>
+                  ) : (
+                    <Ionicons name="storefront" size={36} color="#A79E92" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                   onPress={pickLogo} 
+                   className="bg-ruvo-surface border border-warm-200 px-4 py-3 rounded-[14px] shadow-xs"
+                >
+                  <Text className="text-[13px] font-bold text-ruvo-ink">Select New Logo</Text>
+=======
             <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6 relative overflow-hidden">
               <View className="flex-row items-center gap-2 mb-6 border-b border-gray-50 pb-4">
                 <View className="w-8 h-8 rounded-full bg-orange-50 border border-orange-100 items-center justify-center">
@@ -262,13 +344,90 @@ export const EditShopScreen = () => {
                 </TouchableOpacity>
                 <TouchableOpacity onPress={pickLogo} className="bg-[#FF7A00]/10 px-4 py-2 rounded-xl">
                   <Text className="text-xs font-black text-[#FF7A00] uppercase tracking-widest">Select New Logo</Text>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
                 </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
 
-          {/* ── General Details ──────────────────────────────────── */}
+          {/* ── General Information ──────────────────────────────────── */}
           <Animated.View entering={FadeInUp.delay(100).duration(400)}>
+<<<<<<< HEAD
+            <View className={sectionClass}>
+              <Text className={sectionHeaderClass}>
+                General Information
+              </Text>
+
+              <Text className={labelClass}>Shop Name *</Text>
+              <TextInput
+                value={name}
+                onChangeText={t => { setName(t); setErrors(e => ({ ...e, name: undefined })); }}
+                placeholder="e.g. Ruvo Fresh Mart"
+                placeholderTextColor="#A79E92"
+                className={`${inputClass} mb-1 ${errors.name ? 'border-red-400 bg-red-50' : ''}`}
+              />
+              {errors.name ? <Text className="text-[11px] font-bold text-red-600 mb-4">{errors.name}</Text> : <View className="mb-4" />}
+
+              <Text className={labelClass}>Category</Text>
+              <View className="mb-4">
+                <CategoryDropdown value={category} onChange={setCategory} />
+              </View>
+
+              <Text className={labelClass}>Address *</Text>
+              <TextInput
+                value={address}
+                onChangeText={t => { setAddress(t); setErrors(e => ({ ...e, address: undefined })); }}
+                placeholder="Shop physical address"
+                placeholderTextColor="#A79E92"
+                multiline
+                numberOfLines={2}
+                className={`bg-warm-50 border rounded-[18px] px-4 py-[16px] text-[15px] font-semibold text-ruvo-ink mb-1 min-h-[80px] ${errors.address ? 'border-red-400 bg-red-50' : 'border-warm-200'}`}
+              />
+              {errors.address ? <Text className="text-[11px] font-bold text-red-600 mb-4">{errors.address}</Text> : <View className="mb-4" />}
+
+              <Text className={labelClass}>Phone Number *</Text>
+              <TextInput
+                value={phone}
+                onChangeText={t => { setPhone(t); setErrors(e => ({ ...e, phone: undefined })); }}
+                placeholder="10-digit mobile"
+                placeholderTextColor="#A79E92"
+                keyboardType="phone-pad"
+                className={`${inputClass} mb-1 ${errors.phone ? 'border-red-400 bg-red-50' : ''}`}
+              />
+              {errors.phone ? <Text className="text-[11px] font-bold text-red-600 mb-4">{errors.phone}</Text> : <View className="mb-4" />}
+
+              <View className="flex-row items-center justify-between mt-2 pt-5 border-t border-warm-100">
+                <View className="flex-1">
+                  <Text className="text-[15px] font-black text-ruvo-ink">Home Delivery</Text>
+                  <Text className="text-[12px] text-warm-600 font-medium mt-0.5">Enable delivery for this shop</Text>
+                </View>
+                <Switch
+                  value={deliveryAvailable}
+                  onValueChange={setDeliveryAvailable}
+                  trackColor={{ false: '#E5E7EB', true: '#F5B700' }}
+                  thumbColor="#FFF"
+                />
+              </View>
+
+              <View className="flex-row items-center justify-between mt-5 pt-5 border-t border-warm-100">
+                <View className="flex-1 mr-3">
+                  <Text className="text-[15px] font-black text-ruvo-ink">GPS Location</Text>
+                  {latitude && longitude ? (
+                    <Text className="text-[12px] font-bold text-green-600 mt-1">Coordinates set: {latitude.toFixed(4)}, {longitude.toFixed(4)}</Text>
+                  ) : (
+                    <Text className="text-[12px] text-warm-500 mt-1 leading-[16px]">GPS accuracy is highly recommended for routing</Text>
+                  )}
+                </View>
+                <TouchableOpacity 
+                   disabled={locationFetching}
+                   activeOpacity={0.7}
+                   className={`px-4 py-2.5 rounded-[12px] flex-row items-center gap-1.5 shadow-sm ${locationFetching ? 'bg-warm-100 border border-warm-200' : 'bg-ruvo-yellow/20 border border-ruvo-yellow'}`}
+                   onPress={handleUpdateLocation}
+                >
+                  <Ionicons name="navigate" size={14} color={locationFetching ? '#A79E92' : '#D97706'} />
+                  <Text className={`text-[12px] font-black ${locationFetching ? 'text-warm-500' : 'text-ruvo-yellow-dark'}`}>
+                    {locationFetching ? 'Fetching...' : 'Update GPS'}
+=======
             <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
               <View className="flex-row items-center justify-between mb-6 border-b border-gray-50 pb-4">
                 <View className="flex-row items-center gap-2">
@@ -312,6 +471,7 @@ export const EditShopScreen = () => {
                   <Ionicons name="navigate" size={16} color={locationFetching ? '#9CA3AF' : '#16A34A'} />
                   <Text className={`text-xs font-black uppercase tracking-widest ${locationFetching ? 'text-gray-400' : 'text-green-700'}`}>
                     {locationFetching ? 'Fetching' : 'Update GPS'}
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -320,6 +480,16 @@ export const EditShopScreen = () => {
 
           {/* ── Bank & Settlement ───── */}
           <Animated.View entering={FadeInUp.delay(200).duration(400)}>
+<<<<<<< HEAD
+            <View className={sectionClass}>
+              <View className="flex-row items-center justify-between mb-4 border-b border-warm-100 pb-3">
+                <Text className="text-[12px] font-black text-warm-500 uppercase tracking-widest">
+                  Bank & Settlement
+                </Text>
+                <View className="flex-row items-center gap-1 bg-green-50 border border-green-200 px-2 py-1 rounded-[8px]">
+                  <Ionicons name="lock-closed" size={10} color="#16A34A" />
+                  <Text className="text-[10px] font-extrabold text-green-700 uppercase tracking-wider">Secured</Text>
+=======
             <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6">
               <View className="flex-row items-center justify-between mb-6 border-b border-gray-50 pb-4">
                 <View className="flex-row items-center gap-2">
@@ -331,12 +501,39 @@ export const EditShopScreen = () => {
                 <View className="flex-row items-center gap-1.5 bg-green-50 px-2 py-1 rounded-md border border-green-100">
                   <Ionicons name="lock-closed" size={10} color="#16A34A" />
                   <Text className="text-[10px] font-black uppercase tracking-widest text-green-700">Secured</Text>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
                 </View>
               </View>
 
               {hasBankDetails ? (
                 <View>
                   {bankAccountNumber ? (
+<<<<<<< HEAD
+                    <View className="flex-row items-center justify-between py-2.5">
+                      <Text className="text-[13px] text-warm-600 font-bold">Account No.</Text>
+                      <Text className="text-[14px] font-black text-ruvo-ink">{maskAccount(bankAccountNumber)}</Text>
+                    </View>
+                  ) : null}
+                  {ifscCode ? (
+                    <View className="flex-row items-center justify-between py-2.5 border-t border-warm-100 border-dashed">
+                      <Text className="text-[13px] text-warm-600 font-bold">IFSC</Text>
+                      <Text className="text-[14px] font-black text-ruvo-ink">{ifscCode}</Text>
+                    </View>
+                  ) : null}
+                  {upiId ? (
+                    <View className="flex-row items-center justify-between py-2.5 border-t border-warm-100 border-dashed">
+                      <Text className="text-[13px] text-warm-600 font-bold">UPI ID</Text>
+                      <Text className="text-[14px] font-black text-ruvo-ink">{upiId}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : (
+                <View className="items-center py-6 bg-warm-50 rounded-[16px] border border-warm-100 border-dashed mb-2">
+                  <Ionicons name="wallet-outline" size={32} color="#D1C7BA" />
+                  <Text className="text-[13px] text-warm-600 mt-2 font-medium text-center px-4">
+                    No bank account linked yet.{'\n'}Tap below to add one for payouts.
+                  </Text>
+=======
                     <View className="flex-row items-center justify-between py-3 border-b border-gray-50">
                       <Text className="text-xs text-gray-500 font-bold tracking-widest uppercase">Account No.</Text>
                       <Text className="text-sm font-black text-gray-900">{maskAccount(bankAccountNumber)}</Text>
@@ -363,16 +560,27 @@ export const EditShopScreen = () => {
                   <Ionicons name="wallet-outline" size={36} color="#D1D5DB" />
                   <Text className="text-sm font-black text-gray-900 mt-3 text-center">No Account Attached</Text>
                   <Text className="text-xs text-gray-500 mt-1 text-center px-4">Link a bank to receive same-day vendor payouts securely.</Text>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
                 </View>
               )}
 
               <TouchableOpacity
+<<<<<<< HEAD
+                onPress={() => navigation.navigate('EditBankAccount')}
+                activeOpacity={0.7}
+                className="mt-4 flex-row items-center justify-center gap-2 bg-warm-50 border border-warm-200 rounded-[14px] py-3"
+              >
+                <Ionicons name="create" size={16} color="#6B5E52" />
+                <Text className="text-[13px] font-extrabold text-warm-700">
+                  {hasBankDetails ? 'Update Bank Details' : 'Add Bank Details'}
+=======
                 onPress={() => navigation.navigate('MainDrawer', { screen: 'EditBankAccount' })}
                 className="mt-5 flex-row items-center justify-center gap-2 bg-gray-50 border border-gray-200 rounded-xl py-3 active:bg-gray-100"
               >
                 <Ionicons name="create-outline" size={16} color="#4B5563" />
                 <Text className="text-xs font-black uppercase tracking-widest text-gray-700">
                   {hasBankDetails ? 'Update Payout Details' : 'Attach Bank Account'}
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
                 </Text>
               </TouchableOpacity>
             </View>
@@ -380,6 +588,19 @@ export const EditShopScreen = () => {
 
           {/* ── Save Button ──────────────────────────────────────── */}
           <Animated.View entering={FadeInUp.delay(300).duration(400)}>
+<<<<<<< HEAD
+             <TouchableOpacity 
+               onPress={handleSave} 
+               disabled={loading}
+               activeOpacity={0.8}
+               className={`w-full py-[16px] rounded-[18px] items-center justify-center flex-row gap-2 shadow-sm mb-4 ${loading ? 'bg-warm-200' : 'bg-ruvo-yellow'}`}
+             >
+                <Ionicons name="cloud-upload" size={20} color="#231C10" />
+                <Text className="text-[16px] font-black text-ruvo-ink">
+                  {loading ? 'Saving Changes...' : 'Save Shop Details'}
+                </Text>
+             </TouchableOpacity>
+=======
             <TouchableOpacity onPress={handleSave} disabled={loading} className={`w-full py-4 rounded-2xl flex-row items-center justify-center shadow-lg ${loading ? 'bg-gray-300' : 'bg-[#FF7A00]'}`}>
               {loading ? (
                 <Text className="text-white text-sm font-black uppercase tracking-widest">Saving...</Text>
@@ -390,6 +611,7 @@ export const EditShopScreen = () => {
                 </>
               )}
             </TouchableOpacity>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
           </Animated.View>
 
         </ScrollView>

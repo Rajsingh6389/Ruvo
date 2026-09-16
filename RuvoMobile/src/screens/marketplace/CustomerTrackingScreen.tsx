@@ -69,6 +69,65 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
+<<<<<<< HEAD
+const PROMO_BANNERS = [
+  {
+    id: '1',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
+    title: 'Fresh Groceries Daily',
+  },
+  {
+    id: '2',
+    image: 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=800',
+    title: 'Local Farm Produce',
+  },
+];
+
+const RUVO_FACTS = [
+  {
+    id: '1',
+    icon: 'flash-outline' as const,
+    title: 'RuVo Express Promise ⚡',
+    subtitle: '10 to 15 mins direct delivery straight from your closest neighborhood shopkeeper!',
+    badge: '10-15 MINS',
+    bg: '#FFF2EC',
+    border: '#FFE0D3',
+    iconBg: '#FF6B35',
+  },
+  {
+    id: '2',
+    icon: 'storefront-outline' as const,
+    title: 'Support Local Sellers 🏪',
+    subtitle: 'Every order directly empowers real shopkeepers in your own colony & city.',
+    badge: 'LOCAL FIRST',
+    bg: '#ECFDF5',
+    border: '#A7F3D0',
+    iconBg: '#059669',
+  },
+  {
+    id: '3',
+    icon: 'shield-checkmark-outline' as const,
+    title: 'Zero Surge Pricing Ever 🛡️',
+    subtitle: 'No rain fees or unexpected surge price hikes. Fair & honest delivery charges always.',
+    badge: 'FAIR PRICE',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+    iconBg: '#2563EB',
+  },
+  {
+    id: '4',
+    icon: 'leaf-outline' as const,
+    title: '100% Fresh Guaranteed 🌿',
+    subtitle: 'Fresh dairy, fruits, vegetables and essentials packed right before dispatch.',
+    badge: 'SUPER FRESH',
+    bg: '#FEF3C7',
+    border: '#FDE68A',
+    iconBg: '#D97706',
+  },
+];
+
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
   const navigation  = useNavigation<any>();
@@ -87,6 +146,14 @@ export default function CustomerTrackingScreen() {
 
   // Map expansion toggle state
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+  const [upsellTimeLeft, setUpsellTimeLeft] = useState(14 * 60);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setUpsellTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const stepAnims = useRef(TIMELINE_STEPS.map(() => new Animated.Value(0))).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -371,9 +438,299 @@ export default function CustomerTrackingScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />}
       >
+<<<<<<< HEAD
+        {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
+        <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
+          {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
+            <MapView
+              style={StyleSheet.absoluteFill}
+              initialRegion={{ ...destination, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+            >
+              {/* User Location Marker */}
+              <Marker coordinate={destination} title="Delivery Address" pinColor="#059669" />
+
+              {/* Shop Location Marker */}
+              {order.shopLatitude && order.shopLongitude && (
+                <Marker
+                  coordinate={{ latitude: order.shopLatitude, longitude: order.shopLongitude }}
+                  title={order.shopName || "Store"}
+                >
+                  <View style={[styles.partnerMarker, { backgroundColor: '#FF6B35' }]}>
+                    <Ionicons name="storefront" size={18} color="#FFF" />
+                  </View>
+                </Marker>
+              )}
+
+              {/* Delivery Partner Marker */}
+              {partnerLocation && (
+                <Marker coordinate={partnerLocation} title="Delivery Partner">
+                  <View style={styles.partnerMarker}>
+                    <Ionicons name="bicycle" size={20} color="#FFF" />
+                  </View>
+                </Marker>
+              )}
+
+              {/* Polyline Route */}
+              {partnerLocation ? (
+                <Polyline
+                  coordinates={[partnerLocation, destination]}
+                  strokeColor="#059669"
+                  strokeWidth={4}
+                  lineDashPattern={[6, 4]}
+                />
+              ) : (order.shopLatitude && order.shopLongitude) ? (
+                <Polyline
+                  coordinates={[
+                    { latitude: order.shopLatitude, longitude: order.shopLongitude },
+                    destination,
+                  ]}
+                  strokeColor="#FF6B35"
+                  strokeWidth={3.5}
+                  lineDashPattern={[8, 5]}
+                />
+              ) : null}
+            </MapView>
+          ) : (
+            <View style={[styles.mapPlaceholder, { backgroundColor: colors.card }]}>
+              <Ionicons name="map" size={48} color={isCancelled ? '#FCA5A5' : '#D1D5DB'} />
+              <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24, fontWeight: '700' }}>
+                {isCancelled
+                  ? 'Order was cancelled. No delivery in progress.'
+                  : 'Order delivered successfully.'}
+              </Text>
+            </View>
+          )}
+
+          {/* Floating Map Toggle Button */}
+          <TouchableOpacity
+            onPress={() => setIsMapExpanded(!isMapExpanded)}
+            style={{ backgroundColor: 'rgba(23, 26, 31, 0.85)' }}
+            className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-md"
+          >
+            <Ionicons name={isMapExpanded ? "contract" : "expand"} size={14} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+              {isMapExpanded ? 'Minimize Map' : 'Tap to Expand'}
+            </Text>
+          </TouchableOpacity>
+
+          {isLive && (
+            <Animated.View style={[styles.liveBadge, { transform: [{ scale: pulseAnim }] }]}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </Animated.View>
+          )}
+        </View>
+
+        {/* ── PROMOTIONAL CAROUSEL ─────────── */}
+        {!isMapExpanded && (
+          <View className="mt-4 px-4">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingRight: 8 }}
+            >
+              {PROMO_BANNERS.map((banner) => (
+                <View
+                  key={banner.id}
+                  style={{
+                    backgroundColor: colors.card,
+                    borderRadius: 16,
+                    width: 300,
+                    elevation: 2,
+                    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4,
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Image source={{ uri: banner.image }} style={{ width: '100%', height: 120 }} resizeMode="cover" />
+                  <View style={{ padding: 12 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginBottom: 8 }}>
+                      {banner.title}
+                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Enquire Now</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setIsMapExpanded(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="map-outline" size={16} color={colors.primary} />
+                        <Text style={{ color: colors.primary, fontWeight: 'bold', fontSize: 12 }}>View Map</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+            
+            {/* Pagination dots */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12, gap: 6 }}>
+              {PROMO_BANNERS.map((_, idx) => (
+                <View key={idx} style={{ width: idx === 0 ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: idx === 0 ? '#FF6B35' : colors.border }} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ── UPSELL BANNER (Forgot to add something?) ─────────── */}
+        {!isCancelled && order.orderStatus === 'SHOP_ACCEPTED' && upsellTimeLeft > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFF2EC', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#FFE0D3', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ backgroundColor: '#FF6B35', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 20 }}>🧙</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#171A1F', fontSize: 14, fontWeight: '800' }}>Forgot to add something?</Text>
+              <Text style={{ color: '#555149', fontSize: 12, marginTop: 2 }}>Add now at no extra fee</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <Text style={{ color: '#EF4444', fontWeight: '900', fontSize: 14 }}>
+                {String(Math.floor(upsellTimeLeft / 60)).padStart(2, '0')}:{String(upsellTimeLeft % 60).padStart(2, '0')}
+              </Text>
+              <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>Add Items</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Product & Shop Details Card */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: radius.card }, shadows.sm]}>
+          {/* Shop Info Header with Real Logo */}
+          {order.shopName ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 14, marginBottom: 14, borderBottomWidth: 0.5, borderBottomColor: colors.border }}>
+              {/* Shop Logo */}
+              {formatProductImageUrl(order.shopLogoUrl) ? (
+                <Image
+                  source={{ uri: formatProductImageUrl(order.shopLogoUrl)! }}
+                  style={{ width: 48, height: 48, borderRadius: 12, borderWidth: 0.5, borderColor: colors.border }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  backgroundColor: colors.primarySoft,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 0.5, borderColor: colors.border,
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: colors.primary }}>
+                    {(order.shopName ?? '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: '800' }}>
+                  {order.shopName}
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                  🛒 RuVo Partner Store
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          <Text style={[typography.headingM, styles.cardTitle, { color: colors.textPrimary }]}>
+            Order Items ({order.items && order.items.length > 0 ? order.items.length : order.quantity || 1})
+          </Text>
+
+          {order.items && order.items.length > 0 ? (
+            order.items.map((item, index) => {
+              const itemImg = formatProductImageUrl(item.productImageUrl) || productImgUri;
+              const itemPrice = item.price ?? Math.round(order.totalAmount / order.items!.length);
+
+              return (
+                <View key={item.id || item.productId || index} style={[styles.productRow, { marginBottom: index === order.items!.length - 1 ? 0 : 12 }]}>
+                  {itemImg ? (
+                    <Image source={{ uri: itemImg }} style={styles.productImg} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
+                      <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
+                      {item.productName}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                      ₹{itemPrice} × {item.quantity}
+                    </Text>
+                  </View>
+                  <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
+                    ₹{itemPrice * item.quantity}
+                  </Text>
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.productRow}>
+              {productImgUri ? (
+                <Image source={{ uri: productImgUri }} style={styles.productImg} resizeMode="cover" />
+              ) : (
+                <View style={[styles.productImgBox, { backgroundColor: colors.background }]}>
+                  <Ionicons name="basket-outline" size={24} color={colors.textSecondary} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={[typography.bodyStrong, styles.productName, { color: colors.textPrimary }]} numberOfLines={2}>
+                  {order.productName || 'Your Order'}
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                  Qty: {order.quantity}
+                </Text>
+              </View>
+              <Text style={[typography.bodyStrong, styles.productPrice, { color: colors.textPrimary }]}>
+                ₹{order.subtotal || order.totalAmount}
+              </Text>
+            </View>
+          )}
+
+          <View style={[styles.billingBox, { borderTopColor: colors.border, padding: spacing.cardPad }]}>
+            {!!order.subtotal && (
+              <View style={styles.billingRow}>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Item Total</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.subtotal}</Text>
+              </View>
+            )}
+            {!!order.deliveryFee && (
+              <View style={styles.billingRow}>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Delivery Fee</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.deliveryFee}</Text>
+              </View>
+            )}
+            {!!order.platformFee && (
+              <View style={styles.billingRow}>
+                <Text style={[typography.body, styles.billingLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
+                <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.textPrimary }]}>₹{order.platformFee}</Text>
+              </View>
+            )}
+            <View style={[styles.billingRow, { marginTop: 6 }]}>
+              <Text style={[typography.bodyStrong, styles.billingLabel, { color: colors.textPrimary, fontWeight: '700' }]}>Grand Total</Text>
+              <Text style={[typography.bodyStrong, styles.billingValue, { color: colors.primary, fontWeight: '800' }]}>₹{order.totalAmount}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Delivery Verification OTP Card - Only shown when OUT_FOR_DELIVERY */}
+        {!isCancelled && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'PICKED_UP') && (
+          <View style={styles.otpBox}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="key-outline" size={18} color="#171A1F" />
+              <Text style={styles.otpLabel}>Delivery Verification OTP</Text>
+            </View>
+            <Text style={styles.otpCode}>
+              {order.deliveryOtpHash || '...'}
+            </Text>
+            <Text style={styles.otpSub}>
+              Give this {order.deliveryOtpHash?.length || 4}-digit OTP code to your delivery partner when receiving your order.
+            </Text>
+          </View>
+        )}
+
+        {/* Delivered & Verified Badge */}
+        {order.orderStatus === 'DELIVERED' && (
+          <View style={styles.deliveredBox}>
+            <Ionicons name="checkmark-circle" size={24} color="#18A957" />
+=======
         <View style={styles.mainCard}>
           {/* Status Header */}
           <View style={styles.statusHeaderRow}>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             <View style={{ flex: 1 }}>
               <Text style={styles.statusMainText}>{formatETA()}</Text>
               <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
@@ -381,6 +738,132 @@ export default function CustomerTrackingScreen() {
           </View>
           <View style={styles.divider} />
 
+<<<<<<< HEAD
+        {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
+        {partnerInfo && (
+          <View style={[
+            styles.partnerCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}>
+            {/* Avatar */}
+            <View style={styles.partnerAvatar}>
+              <Text style={styles.partnerAvatarLetter}>
+                {(partnerInfo.name ?? '?').charAt(0).toUpperCase()}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1, gap: 4 }}>
+              {/* Name + badge row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.partnerName, { color: colors.textPrimary }]}>
+                  {partnerInfo.name}
+                </Text>
+                <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ color: '#1D4ED8', fontSize: 10, fontWeight: '800', letterSpacing: 0.3 }}>RIDER</Text>
+                </View>
+              </View>
+
+              {/* Phone */}
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📞 {partnerInfo.phone}</Text>
+
+              {/* Live tracking indicator */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                <Animated.View style={[
+                  styles.livePulseDot,
+                  { transform: [{ scale: pulseAnim }] },
+                ]} />
+                <Text style={{ color: '#16A34A', fontSize: 12, fontWeight: '700' }}>Live Tracking Active</Text>
+              </View>
+            </View>
+
+            {/* Action buttons */}
+            <View style={{ gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.partnerActionBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
+                onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
+              >
+                <Ionicons name="call" size={18} color="#16A34A" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.partnerActionBtn, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
+                onPress={() => Linking.openURL(`sms:${partnerInfo.phone}`)}
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color="#2563EB" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Animated Timeline or Red Cancel Card */}
+        {!isCancelled ? (
+          <View style={[styles.card, { backgroundColor: '#FFF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ width: 24, alignItems: 'center', marginRight: 16, marginTop: 4 }}>
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#D1D5DB' }} />
+                <View style={{ width: 2, height: 38, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
+                
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#D1D5DB' }} />
+                <View style={{ width: 2, height: 38, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
+
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('pickedup', order.orderStatus || '') ? '#059669' : '#F59E0B' }} />
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: isStepActive('accepted', order.orderStatus || '') ? '#171A1F' : '#9CA3AF', height: 52 }}>shop accepted</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: (order.deliveryPartnerId) ? '#171A1F' : '#9CA3AF', height: 52 }}>delivery partner assigned</Text>
+                
+                <View>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#171A1F' }}>
+                    {isStepActive('pickedup', order.orderStatus || '') ? 'Order picked up 🚴' : 'Your order is getting packed'}
+                  </Text>
+                  {!isStepActive('pickedup', order.orderStatus || '') && (
+                    <Text style={{ fontSize: 24, position: 'absolute', right: 0, top: -4 }}>🎁</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.cancelCard}>
+            <Ionicons name="close-circle" size={40} color="#D94A4A" />
+            <Text style={styles.cancelCardTitle}>
+              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
+                ? 'Order Timed Out'
+                : 'Order Not Accepted'}
+            </Text>
+            <Text style={styles.cancelCardSub}>
+              {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
+                ? 'The shopkeeper did not accept your order in time. Your order has been automatically cancelled.'
+                : order.orderStatus === 'SHOP_REJECTED'
+                ? 'The shopkeeper rejected this order. Any payment made will be refunded.'
+                : order.orderStatus === 'CANCELLED_NO_PARTNER_FOUND'
+                ? 'We could not find a delivery partner in time. Order cancelled.'
+                : order.orderStatus === 'CANCELLED_BY_SHOP'
+                ? 'The shopkeeper cancelled this order.'
+                : order.orderStatus === 'CANCELLED_BY_USER'
+                ? 'You cancelled this order.'
+                : 'This order was cancelled.'}
+            </Text>
+          </View>
+        )}
+
+        {/* Payment Method */}
+        <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: '#FFF', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 13, color: '#555149', fontWeight: '600' }}>
+            You can pay online now or at delivery.
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+            <View>
+              <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '800', letterSpacing: 0.5 }}>PAYING VIA ▼</Text>
+              <Text style={{ fontSize: 16, color: '#171A1F', fontWeight: '900', marginTop: 4 }}>
+                {order.paymentMethod === 'ONLINE' ? 'BHIM UPI' : 'Cash on Delivery'}
+              </Text>
+            </View>
+            <TouchableOpacity style={{ backgroundColor: '#171A1F', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 }}>
+              <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
+            </TouchableOpacity>
+          </View>
+=======
           {/* Swiggy-like Horizontal Timeline */}
           {!isCancelled && order.orderStatus !== 'DELIVERED' && (
             <View style={styles.horizontalTimeline}>
@@ -516,6 +999,7 @@ export default function CustomerTrackingScreen() {
               <Text style={styles.cancelLinkText}>{cancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
             </TouchableOpacity>
           )}
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
         </View>
 
       </ScrollView>

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation } from '@react-navigation/native';
+
 import * as ImagePicker from 'expo-image-picker';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 
@@ -29,10 +29,15 @@ interface FormErrors {
   sellingPrice?: string; stockQuantity?: string;
 }
 
+<<<<<<< HEAD
+export const EditProductScreen = ({ navigation, route }: any) => {
+  const { token } = useAuth();
+=======
 export const EditProductScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation();
   const { token, userId } = useAuth();
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
   const initialProduct: Product | undefined = route.params?.product;
   const targetProductId: number | undefined = initialProduct?.id ?? route.params?.productId;
 

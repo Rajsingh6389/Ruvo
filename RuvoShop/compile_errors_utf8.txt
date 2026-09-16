@@ -1,0 +1,8 @@
+﻿App.tsx(2,8): error TS2882: Cannot find module or type declarations for side-effect import of './global.css'.
+src/components/launch/RuvoLaunchScreen.tsx(377,19): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
+src/components/MapLocationPicker.tsx(178,31): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
+src/hooks/useNetworkStatus.ts(62,3): error TS2322: Type '(input: global.RequestInfo, init?: RequestInit | undefined) => Promise<Response>' is not assignable to type '{ (input: RequestInfo | URL, init?: RequestInit | undefined): Promise<Response>; (input: RequestInfo, init?: RequestInit | undefined): Promise<...>; }'.
+  Types of parameters 'input' and 'input' are incompatible.
+    Type 'RequestInfo | URL' is not assignable to type 'RequestInfo'.
+      Type 'URL' is not assignable to type 'RequestInfo'.
+        Type 'URL' is missing the following properties from type 'Request': cache, credentials, destination, headers, and 18 more.

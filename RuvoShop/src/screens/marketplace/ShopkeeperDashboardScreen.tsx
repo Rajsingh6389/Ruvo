@@ -12,7 +12,7 @@
  * - NativeWind styling with Reanimated animations
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import {
   Image,
   Modal,
   Alert,
+  Animated as RNAnimated,
+  Dimensions,
   useWindowDimensions,
   FlatList,
 } from 'react-native';
@@ -114,6 +116,18 @@ export default function ShopkeeperDashboardScreen() {
   const shopId = currentShopId || routeShopId;
   const shopName = route.params?.shopName || shop?.name || 'My Shop';
 
+  // Drawer state
+  const [showDrawer, setShowDrawer] = useState(false);
+  const drawerAnim = useRef(new RNAnimated.Value(-Dimensions.get('window').width * 0.78)).current;
+
+  const openDrawer = () => {
+    setShowDrawer(true);
+    RNAnimated.spring(drawerAnim, { toValue: 0, friction: 8, tension: 55, useNativeDriver: true }).start();
+  };
+  const closeDrawer = () => {
+    RNAnimated.timing(drawerAnim, { toValue: -Dimensions.get('window').width * 0.78, duration: 220, useNativeDriver: true }).start(() => setShowDrawer(false));
+  };
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'products' | 'delivery' | 'financials'>('dashboard');
 
@@ -165,7 +179,11 @@ export default function ShopkeeperDashboardScreen() {
 
     // Auto-discover shop
     if (!activeShopId) {
+<<<<<<< HEAD
+      const ownerId = userId || user?.id || user?.email;
+=======
       const ownerId = userId || user?.email || '';
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
       if (ownerId) {
         try {
           const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
@@ -379,27 +397,138 @@ export default function ShopkeeperDashboardScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
+<<<<<<< HEAD
+    <SafeAreaView className="flex-1 bg-ruvo-bg">
+      {/* ── Slide-Out Drawer ─────────────────────────────────────────────── */}
+      <Modal visible={showDrawer} transparent animationType="none" onRequestClose={closeDrawer}>
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          {/* Backdrop */}
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            activeOpacity={1}
+            onPress={closeDrawer}
+          />
+          {/* Drawer Panel */}
+          <RNAnimated.View
+            style={{
+              position: 'absolute', top: 0, left: 0, bottom: 0,
+              width: '78%',
+              backgroundColor: '#FFFBF0',
+              shadowColor: '#000',
+              shadowOffset: { width: 4, height: 0 },
+              shadowOpacity: 0.18,
+              shadowRadius: 16,
+              elevation: 12,
+              transform: [{ translateX: drawerAnim }],
+            }}
+          >
+            {/* Drawer Header */}
+            <View style={{ backgroundColor: '#F5B700', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.4)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', overflow: 'hidden' }}>
+                  {shop?.logoUrl || shop?.bannerUrl ? (
+                    <Image
+                      source={{ uri: formatImageUrl(shop.logoUrl || shop.bannerUrl) || undefined }}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name="storefront" size={26} color="#231C10" />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#231C10' }} numberOfLines={1}>{shopName}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#16A34A' }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#3B2A00' }}>Shopkeeper Portal</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Drawer Menu Items */}
+            <View style={{ flex: 1, paddingTop: 12 }}>
+              {[
+                { icon: 'grid-outline', label: 'Dashboard', onPress: () => { closeDrawer(); } },
+                { icon: 'receipt-outline', label: 'My Orders', badge: pendingOrders.length, onPress: () => { closeDrawer(); navigation.navigate(ROUTES.SHOP_ORDERS, { shopId }); } },
+                { icon: 'cube-outline', label: 'My Products', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.MY_PRODUCTS, { shopId }); } },
+                { icon: 'add-circle-outline', label: 'Add Product', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.ADD_PRODUCT, { shopId }); } },
+                { icon: 'create-outline', label: 'Edit Shop', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_SHOP, { shop }); } },
+                { icon: 'card-outline', label: 'Bank Account', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_BANK_ACCOUNT); } },
+                { icon: 'bicycle-outline', label: 'Delivery Riders', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true }); } },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  onPress={item.onPress}
+                  activeOpacity={0.7}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 14,
+                    paddingHorizontal: 20, paddingVertical: 14,
+                    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFF3C4', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={item.icon as any} size={18} color="#D99B00" />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: '#1C1917' }}>{item.label}</Text>
+                  {(item as any).badge > 0 && (
+                    <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 }}>
+                      <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>{(item as any).badge}</Text>
+                    </View>
+                  )}
+                  <Ionicons name="chevron-forward" size={16} color="#A8A29E" />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Logout Button at Bottom */}
+            <TouchableOpacity
+              onPress={() => { closeDrawer(); setTimeout(logout, 250); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                margin: 16, padding: 16,
+                backgroundColor: '#FEF2F2',
+                borderRadius: 16, borderWidth: 1, borderColor: '#FECACA',
+              }}
+            >
+              <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#DC2626', flex: 1 }}>Logout</Text>
+              <Ionicons name="chevron-forward" size={16} color="#DC2626" />
+            </TouchableOpacity>
+          </RNAnimated.View>
+        </View>
+      </Modal>
+
+=======
     <SafeAreaView className="flex-1 bg-[#F9FAFB]">
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
       {/* Top App Bar Header */}
       <Animated.View entering={FadeInDown.duration(300)} className="bg-white border-b border-gray-100 px-lg py-sm shadow-xs">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-sm flex-1">
+            {/* Hamburger Menu Button */}
             <TouchableOpacity
+<<<<<<< HEAD
+              onPress={openDrawer}
+              className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
+            >
+              <Ionicons name="menu" size={22} color="#231C10" />
+=======
               onPress={() => navigation.openDrawer && navigation.openDrawer()}
               className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-100"
             >
               <Ionicons name="menu" size={20} color="#231C10" />
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             </TouchableOpacity>
             <View className="flex-1">
               <View className="flex-row items-center gap-1">
                 <Text className="text-xl font-black text-gray-900">Dashboard</Text>
                 <View className="w-2 h-2 rounded-full bg-emerald-500" />
               </View>
-              <TouchableOpacity className="flex-row items-center gap-1 mt-0.5">
+              <View className="flex-row items-center gap-1 mt-0.5">
                 <Ionicons name="storefront" size={12} color="#D99B00" />
                 <Text className="text-xs font-extrabold text-amber-700" numberOfLines={1}>{shopName}</Text>
-                <Ionicons name="chevron-down" size={12} color="#D99B00" />
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -415,19 +544,12 @@ export default function ShopkeeperDashboardScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               onPress={() => { setRefreshing(true); fetchData(); }}
               className="w-10 h-10 rounded-full bg-ruvo-yellow items-center justify-center border border-amber-400 shadow-xs"
             >
               <Ionicons name="refresh" size={18} color="#231C10" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              onPress={() => Alert.alert('Sign Out', 'Are you sure you want to log out?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Logout', style: 'destructive', onPress: logout }])}
-              className="w-10 h-10 rounded-full bg-red-50 items-center justify-center border border-red-200 shadow-xs"
-            >
-              <Ionicons name="log-out-outline" size={18} color="#DC2626" />
             </TouchableOpacity>
           </View>
         </View>

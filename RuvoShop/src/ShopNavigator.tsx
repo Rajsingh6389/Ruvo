@@ -214,6 +214,71 @@ export const ShopNavigator = () => {
   const [launchComplete, setLaunchComplete] = useState(false);
 
   return (
+<<<<<<< HEAD
+    <View style={{ flex: 1, backgroundColor: '#FAF7F0', position: 'relative' }}>
+      {/* Do not render auth-dependent navigator until initial token check completes */}
+      {!isLoading && (
+        <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+
+            {/* ── Not authenticated ────────────────────────────────────── */}
+            {!isAuthenticated ? (
+              <Stack.Screen name="Login" component={LoginScreen as any} />
+
+            /* ── Any onboarding state → register all steps ───────────────
+                 All steps MUST be registered at all times. When Step 1 sets
+                 status to AADHAAR_PENDING, navigator re-renders; if Step 2 is
+                 not registered it throws "screen not found". Keeping all steps
+                 registered resolves this.                                      */
+            ) : onboardingStatus === 'PENDING_APPROVAL' ? (
+              /* ── Already submitted, awaiting admin approval ────────────
+                   Render Step4_Success first so the user lands directly on
+                   the approval-waiting screen.  All other steps are also
+                   registered so mid-flow navigation (e.g. "edit & resubmit")
+                   still works.                                               */
+              <>
+                <Stack.Screen name="Step4_Success" component={Step4_Success} />
+                <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
+                <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
+                <Stack.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+                <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+                <Stack.Screen name="Step5_ShopSelect" component={Step5_ShopSelect} />
+              </>
+
+            ) : onboardingStatus !== 'APPROVED' ? (
+              /* ── Any other onboarding state → register all steps ─────────
+                   All steps MUST be registered at all times. When Step 1 sets
+                   status to AADHAAR_PENDING, navigator re-renders; if Step 2 is
+                   not registered it throws "screen not found". Keeping all steps
+                   registered resolves this.                                      */
+              <>
+                <Stack.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
+                <Stack.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
+                <Stack.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+                <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+                <Stack.Screen name="Step5_ShopSelect" component={Step5_ShopSelect} />
+                <Stack.Screen name="Step4_Success" component={Step4_Success} />
+              </>
+
+            /* ── Onboarding complete → main app ──────────────────────── */
+            ) : (
+              <>
+                <Stack.Screen name="ShopkeeperDashboard" component={ShopkeeperDashboardScreen} />
+                <Stack.Screen name="MyShops" component={MyShopsScreen} />
+                <Stack.Screen name="EditShop" component={EditShopScreen} />
+                <Stack.Screen name="ShopOrders" component={ShopOrdersScreen} />
+                <Stack.Screen name="MyProducts" component={MyProductsScreen} />
+                <Stack.Screen name="AddProduct" component={AddProductScreen} />
+                <Stack.Screen name="EditProduct" component={EditProductScreen} />
+                <Stack.Screen name="DeliveryPartnerAssignment" component={DeliveryPartnerAssignmentScreen} />
+                <Stack.Screen name="EditBankAccount" component={EditBankAccountScreen} />
+              </>
+            )}
+
+          </Stack.Navigator>
+        </NavigationContainer>
+      )}
+=======
     <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
       <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
         {isLoading ? (
@@ -235,13 +300,16 @@ export const ShopNavigator = () => {
           </Stack.Navigator>
         )}
       </NavigationContainer>
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 
       {!launchComplete && (
-        <RuvoLaunchScreen
-          isReady={!isLoading}
-          roleSubtitle="LOCAL • CONNECTED • MOVING"
-          onFinish={() => setLaunchComplete(true)}
-        />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: '#FAF7F0' }}>
+          <RuvoLaunchScreen
+            isReady={!isLoading}
+            roleSubtitle="LOCAL • CONNECTED • MOVING"
+            onFinish={() => setLaunchComplete(true)}
+          />
+        </View>
       )}
     </View>
   );

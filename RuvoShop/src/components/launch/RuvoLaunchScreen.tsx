@@ -379,10 +379,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+<<<<<<< HEAD
+    width: '100%',
+    height: '100%',
+=======
+>>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
     backgroundColor: '#FAF7F0',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 9999,
+    zIndex: 99999,
   },
   ambientGlow: {
     position: 'absolute',
