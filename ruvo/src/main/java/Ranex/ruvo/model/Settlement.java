@@ -60,6 +60,11 @@ public class Settlement {
     @Builder.Default
     private BigDecimal ruvoCommission = BigDecimal.ZERO;
 
+    /** GST (18%) on platform fee — shopkeeper owes this to RuVo in settlement. */
+    @Column(name = "gst_on_platform_fee", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal gstOnPlatformFee = BigDecimal.ZERO;
+
     @Column(name = "net_cash_to_shop", precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal netCashToShop = BigDecimal.ZERO;

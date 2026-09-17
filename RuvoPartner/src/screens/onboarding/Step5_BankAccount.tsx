@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Onboarding Step 5 — Bank Account Details (DEMO)
  * Collects account holder name, account number, IFSC, bank name.
  * Demo: simulates a verification delay then proceeds.
@@ -65,8 +65,6 @@ export const Step5_BankAccount = () => {
   const stopSpinner = () => spinLoop?.stop();
   const spinDeg = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
-  const simulateVerify = () => new Promise<void>(r => setTimeout(r, 2400));
-
   const validate = () => {
     if (!accountHolder.trim())            return 'Account holder name is required.';
     if (accountNumber.length < 9)         return 'Enter a valid account number (min 9 digits).';
@@ -85,8 +83,19 @@ export const Step5_BankAccount = () => {
     startSpinner();
     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     try {
-      // DEMO: swap this for real API call
-      await simulateVerify();
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/payments/razorpay/register-partner-vendor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerId: user?.userId,
+          accountNumber,
+          ifsc,
+        }),
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+
       stopSpinner();
       setVState('done');
       setTimeout(() => navigation.navigate('Step6_ShopSelection'), 1500);
@@ -120,7 +129,7 @@ export const Step5_BankAccount = () => {
           />
 
           <InfoBox
-            text="DEMO MODE — Bank verification is simulated. In production this connects to a penny-drop / bank-validation service."
+            text="Bank verification processes in real-time. Make sure details match."
             variant="warning"
             colors={colors}
             typography={typography}

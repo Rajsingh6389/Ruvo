@@ -69,7 +69,6 @@ function formatProductImageUrl(url?: string): string | null {
   }
   return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
-<<<<<<< HEAD
 const PROMO_BANNERS = [
   {
     id: '1',
@@ -126,8 +125,6 @@ const RUVO_FACTS = [
   },
 ];
 
-=======
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
   const navigation  = useNavigation<any>();
@@ -438,7 +435,6 @@ export default function CustomerTrackingScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />}
       >
-<<<<<<< HEAD
         {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
         <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
           {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
@@ -724,21 +720,18 @@ export default function CustomerTrackingScreen() {
 
         {/* Delivered & Verified Badge */}
         {order.orderStatus === 'DELIVERED' && (
-          <View style={styles.deliveredBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#18A957" />
-=======
-        <View style={styles.mainCard}>
-          {/* Status Header */}
-          <View style={styles.statusHeaderRow}>
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
-            <View style={{ flex: 1 }}>
-              <Text style={styles.statusMainText}>{formatETA()}</Text>
-              <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
+          <>
+            <View style={styles.deliveredBox}>
+              <Ionicons name="checkmark-circle" size={24} color="#18A957" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statusMainText}>{formatETA()}</Text>
+                <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.divider} />
+            <View style={styles.divider} />
+          </>
+        )}
 
-<<<<<<< HEAD
         {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
         {partnerInfo && (
           <View style={[
@@ -863,143 +856,6 @@ export default function CustomerTrackingScreen() {
               <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
             </TouchableOpacity>
           </View>
-=======
-          {/* Swiggy-like Horizontal Timeline */}
-          {!isCancelled && order.orderStatus !== 'DELIVERED' && (
-            <View style={styles.horizontalTimeline}>
-              {TIMELINE_STEPS.map((step, index) => {
-                const active = isStepActive(step.key, order.orderStatus || '');
-                const isLast = index === TIMELINE_STEPS.length - 1;
-                const activeColor = active ? '#FF7A00' : '#E5E7EB';
-                return (
-                  <View key={step.key} style={styles.timelineHItem}>
-                    <View style={styles.timelineHLineWrap}>
-                      <View style={[styles.timelineHDot, { borderColor: activeColor, backgroundColor: active ? '#FF7A00' : '#FFF' }]} />
-                      {!isLast && <View style={[styles.timelineHLine, { backgroundColor: activeColor }]} />}
-                    </View>
-                    <Text style={[styles.timelineHLabel, active && { color: '#111827', fontFamily: 'Poppins_700Bold' }]} numberOfLines={2}>
-                      {step.label}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* OTP Box */}
-          {order.orderStatus === 'OUT_FOR_DELIVERY' && order.deliveryOtpHash && (
-            <View style={styles.otpCard}>
-              <View style={styles.otpIconWrap}>
-                <Ionicons name="shield-checkmark" size={24} color="#D97706" />
-              </View>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.otpTitle}>Delivery PIN</Text>
-                <Text style={styles.otpSubtitle}>Share this with rider</Text>
-              </View>
-              <Text style={styles.otpHashCode}>{order.deliveryOtpHash}</Text>
-            </View>
-          )}
-
-          {/* Rider Box */}
-          {partnerInfo && (
-            <View style={styles.riderCard}>
-              <View style={styles.riderAvatar}>
-                <Ionicons name="bicycle" size={24} color="#FFF" />
-              </View>
-              <View style={{ flex: 1, marginHorizontal: 12 }}>
-                <Text style={styles.riderName}>{partnerInfo.name}</Text>
-                <Text style={styles.riderRole}>Delivery Partner • 4.8 ★</Text>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity style={styles.callRiderBtn} onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}>
-                  <Ionicons name="call" size={18} color="#FFF" />
-                  <Text style={styles.callRiderText}>Call</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-
-
-
-        {/* Bill Box */}
-        <View style={styles.billBox}>
-          <Text style={styles.billTitle}>Order Summary</Text>
-          
-          <View style={styles.billItemsWrapper}>
-            {order.items && order.items.length > 0 ? (
-              order.items.map((item, index) => {
-                const price = item.price ?? Math.round((order.subtotal || order.totalAmount) / order.items!.length);
-                const itImg = item.productImageUrl ? (item.productImageUrl.startsWith('http') ? item.productImageUrl : `${API_BASE_URL}${item.productImageUrl}`) : null;
-                return (
-                  <View key={item.id || index} style={styles.billItemRowExpanded}>
-                    {itImg ? (
-                      <Image source={{ uri: itImg }} style={styles.billItemImage} />
-                    ) : (
-                      <View style={styles.billItemImagePlaceholder}>
-                        <Ionicons name="fast-food-outline" size={16} color="#9CA3AF" />
-                      </View>
-                    )}
-                    <View style={styles.billItemInfo}>
-                      <Text style={styles.billItemNameExpanded} numberOfLines={1}>{item.productName}</Text>
-                      <Text style={styles.billItemQty}>Qty: {item.quantity}</Text>
-                    </View>
-                    <Text style={styles.billItemPriceExpanded}>₹{price * item.quantity}</Text>
-                  </View>
-                );
-              })
-            ) : (
-              <View style={styles.billItemRowExpanded}>
-                {order.productImageUrl ? (
-                    <Image source={{ uri: order.productImageUrl.startsWith('http') ? order.productImageUrl : `${API_BASE_URL}${order.productImageUrl}` }} style={styles.billItemImage} />
-                ) : (
-                    <View style={styles.billItemImagePlaceholder}>
-                      <Ionicons name="fast-food-outline" size={16} color="#9CA3AF" />
-                    </View>
-                )}
-                <View style={styles.billItemInfo}>
-                  <Text style={styles.billItemNameExpanded} numberOfLines={1}>{order.productName || 'Order Items'}</Text>
-                  <Text style={styles.billItemQty}>Qty: {order.quantity}</Text>
-                </View>
-                <Text style={styles.billItemPriceExpanded}>₹{order.subtotal || order.totalAmount}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Breakdown List */}
-          <View style={styles.breakdownBox}>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Subtotal</Text>
-              <Text style={styles.breakdownValue}>₹{order.subtotal || order.totalAmount}</Text>
-            </View>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Delivery Fee</Text>
-              <Text style={styles.breakdownValue}>₹{order.deliveryFee || 0}</Text>
-            </View>
-            <View style={styles.breakdownRow}>
-              <Text style={styles.breakdownLabel}>Platform Fee</Text>
-              <Text style={styles.breakdownValue}>₹{order.platformFee || 0}</Text>
-            </View>
-            {order.couponDiscount && order.couponDiscount > 0 ? (
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Discount</Text>
-                <Text style={styles.breakdownValueDiscount}>-₹{order.couponDiscount}</Text>
-              </View>
-            ) : null}
-            <View style={styles.dividerDashed} />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
-              <Text style={styles.billTotalTitle}>Grand Total</Text>
-              <Text style={styles.billTotalValue}>₹{order.totalAmount}</Text>
-            </View>
-          </View>
-
-          {/* Cancel Logic */}
-          {!isCancelled && order.orderStatus !== 'PICKED_UP' && order.orderStatus !== 'OUT_FOR_DELIVERY' && order.orderStatus !== 'DELIVERED' && (
-            <TouchableOpacity style={styles.cancelLink} onPress={handleCancelOrder} disabled={cancelling}>
-              <Text style={styles.cancelLinkText}>{cancelling ? 'Cancelling...' : 'Cancel Order'}</Text>
-            </TouchableOpacity>
-          )}
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
         </View>
 
       </ScrollView>
@@ -1009,6 +865,35 @@ export default function CustomerTrackingScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  cancelCard: { backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: '#FECACA' },
+  cancelCardTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#991B1B' },
+  cancelCardSub: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#B91C1C', marginTop: 4 },
+  deliveredBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: '#D1FAE5', gap: 12 },
+  partnerMarker: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF', elevation: 4 },
+  liveBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
+  liveText: { fontSize: 10, fontFamily: 'Poppins_800ExtraBold', color: '#FFF' },
+  card: { padding: 16, marginTop: 16, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1 },
+  cardTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#111827', marginBottom: 12 },
+  productRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
+  productImg: { width: 50, height: 50, borderRadius: 8, marginRight: 12 },
+  productImgBox: { width: 50, height: 50, borderRadius: 8, marginRight: 12, alignItems: 'center', justifyContent: 'center' },
+  productName: { fontSize: 14, fontFamily: 'Poppins_700Bold' },
+  productPrice: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold' },
+  billingBox: { backgroundColor: '#F9FAFB', padding: 16, marginTop: 16, borderRadius: 16 },
+  billingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  billingLabel: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', color: '#6B7280' },
+  billingValue: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  otpBox: { padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1 },
+  otpLabel: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold' },
+  otpCode: { fontSize: 20, fontFamily: 'Poppins_900Black', marginVertical: 4 },
+  otpSub: { fontSize: 11, fontFamily: 'Poppins_600SemiBold' },
+  partnerCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1 },
+  partnerAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  partnerAvatarLetter: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#FFF' },
+  partnerName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  livePulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+  partnerActionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   retryBtn: { marginTop: 16, backgroundColor: '#111827', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },

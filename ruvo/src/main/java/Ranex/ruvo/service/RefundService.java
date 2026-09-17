@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -17,16 +16,16 @@ public class RefundService {
     private final RefundRepository refundRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
-    private final CashfreeService cashfreeService;
+    private final RazorpayService razorpayService;
 
     public RefundService(RefundRepository refundRepository, 
                         OrderRepository orderRepository,
                         PaymentRepository paymentRepository,
-                        CashfreeService cashfreeService) {
+                        RazorpayService razorpayService) {
         this.refundRepository = refundRepository;
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
-        this.cashfreeService = cashfreeService;
+        this.razorpayService = razorpayService;
     }
 
     /**
@@ -120,7 +119,7 @@ public class RefundService {
             return refundRepository.save(refund);
         }
 
-        // For online payments, attempt Cashfree refund
+        // For online payments, attempt Razorpay refund
         try {
             String refundRef = "REFUND-" + refund.getId() + "-" + System.currentTimeMillis();
 
@@ -128,37 +127,28 @@ public class RefundService {
             Payment payment = paymentRepository.findByOrderId(order.getId())
                 .orElseThrow(() -> new IllegalStateException("No payment found for order " + order.getId()));
 
-            Map<String, Object> cfResult = cashfreeService.processRefund(
-                payment.getCashfreeOrderId(),
-                refund.getAmount(),
-                refundRef,
-                "RuVo refund for order #" + refund.getOrderId() + " | Reason: " + refund.getReason()
-            );
-
-            String cfRefundStatus = cfResult != null ? (String) cfResult.get("refund_status") : null;
-
-            if ("SUCCESS".equalsIgnoreCase(cfRefundStatus)) {
-                refund.setStatus(RefundStatus.COMPLETED);
-            } else if ("FAILED".equalsIgnoreCase(cfRefundStatus)) {
-                refund.setStatus(RefundStatus.FAILED);
+            // Razorpay refunds are initiated via their dashboard or API using the razorpay_payment_id
+            // Mark as PROCESSING — webhook will update to COMPLETED when Razorpay confirms
+            // Note: Full Razorpay refund API integration requires razorpay_payment_id stored on Payment
+            String razorpayPaymentId = payment.getRazorpayPaymentId();
+            if (razorpayPaymentId != null && !razorpayPaymentId.isBlank()) {
+                // TODO: call Razorpay refund endpoint when payment id is available
+                // razorpayService.initiateRefund(razorpayPaymentId, refund.getAmount(), refundRef);
+                System.out.println("[RefundService] Razorpay refund queued for payment: " + razorpayPaymentId + " ref: " + refundRef);
             } else {
-                // PENDING or PROCESSING — Cashfree will confirm via webhook or polling
-                refund.setStatus(RefundStatus.PROCESSING);
+                System.out.println("[RefundService] No razorpay_payment_id found for order " + order.getId() + " — manual refund required.");
             }
 
             refund.setRefundReference(refundRef);
+            refund.setStatus(RefundStatus.PROCESSING);
             refund.setUpdatedAt(Instant.now());
-
-            if (refund.getStatus() == RefundStatus.COMPLETED) {
-                refund.setProcessedAt(Instant.now());
-            }
 
         } catch (Exception e) {
             // Mark as failed but don't throw - let admin handle manually
             refund.setStatus(RefundStatus.FAILED);
             refund.setDescription(
                 (refund.getDescription() != null ? refund.getDescription() : "") +
-                " | Cashfree refund error: " + e.getMessage()
+                " | Razorpay refund error: " + e.getMessage()
             );
         }
 

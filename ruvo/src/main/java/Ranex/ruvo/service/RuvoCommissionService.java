@@ -32,7 +32,7 @@ public class RuvoCommissionService {
     private final RuvoCommissionLedgerRepository ledgerRepository;
     private final RuvoCommissionPaymentRepository paymentRepository;
     private final ShopRepository shopRepository;
-    private final CashfreeService cashfreeService;
+    private final RazorpayService razorpayService;
 
     @Value("${ruvo.commission.cycle-days:2}")
     private int cycleDays = DEFAULT_CYCLE_DAYS;
@@ -44,12 +44,12 @@ public class RuvoCommissionService {
                                   RuvoCommissionLedgerRepository ledgerRepository,
                                   RuvoCommissionPaymentRepository paymentRepository,
                                   ShopRepository shopRepository,
-                                  CashfreeService cashfreeService) {
+                                  RazorpayService razorpayService) {
         this.cycleRepository = cycleRepository;
         this.ledgerRepository = ledgerRepository;
         this.paymentRepository = paymentRepository;
         this.shopRepository = shopRepository;
-        this.cashfreeService = cashfreeService;
+        this.razorpayService = razorpayService;
     }
 
     /**
@@ -143,37 +143,32 @@ public class RuvoCommissionService {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new IllegalArgumentException("Shop not found: " + shopId));
 
-        String cfOrderId = "RUVO-COMM-" + cycle.getCycleId() + "-" + System.currentTimeMillis();
-        String returnUrl = cashfreeService.buildReturnUrl(cycle.getId());
+        String rzpOrderIdStr = "RUVO-COMM-" + cycle.getCycleId() + "-" + System.currentTimeMillis();
 
-        // Create Cashfree order for the commission payment
-        Map<String, Object> cfResponse = cashfreeService.createOrder(
-                cfOrderId,
+        // Create Razorpay order for the commission payment
+        Map<String, Object> rzpResponse = razorpayService.createOrder(
+                rzpOrderIdStr,
                 outstanding,
                 outstanding,
                 null, // RuVo commission is directly paid to RuVo, no split
-                "SHOP_OWNER_" + shopId,
-                shop.getPhone() != null && !shop.getPhone().isBlank() ? shop.getPhone() : "9999999999",
                 "shop" + shopId + "@ruvo.in",
-                returnUrl
+                shop.getPhone() != null && !shop.getPhone().isBlank() ? shop.getPhone() : "9999999999"
         );
 
-        String paymentSessionId = (String) cfResponse.get("payment_session_id");
+        String rzpOrderId = rzpResponse.get("razorpay_order_id") != null ? rzpResponse.get("razorpay_order_id").toString() : null;
 
         RuvoCommissionPayment payment = RuvoCommissionPayment.builder()
                 .cycleId(cycle.getId())
                 .shopId(shopId)
                 .amount(outstanding)
                 .currency("INR")
-                .cashfreeOrderId(cfOrderId)
-                .paymentSessionId(paymentSessionId)
+                .razorpayOrderId(rzpOrderId)
                 .status("PENDING")
                 .build();
         paymentRepository.save(payment);
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("paymentSessionId", paymentSessionId);
-        response.put("cashfreeOrderId", cfOrderId);
+        response.put("razorpayOrderId", rzpOrderId);
         response.put("amount", outstanding);
         response.put("currency", "INR");
         response.put("cycleId", cycle.getCycleId());
@@ -182,72 +177,92 @@ public class RuvoCommissionService {
     }
 
     /**
-     * Cashfree Webhook processor for RuVo commission payments.
+     * Razorpay Webhook processor for RuVo commission payments.
      * Verified with HMAC SHA256 signature, idempotent, updates cycle and unblocks shop COD if fully paid.
      */
     @Transactional
     public Map<String, Object> processCommissionWebhook(String rawPayload, HttpServletRequest request) {
-        boolean valid = cashfreeService.verifyWebhook(rawPayload, request);
+        String signature = request.getHeader("x-razorpay-signature");
+        boolean valid = razorpayService.verifyWebhookSignature(rawPayload, signature);
         if (!valid) {
-            throw new IllegalArgumentException("Invalid Cashfree webhook signature.");
+            throw new IllegalArgumentException("Invalid Razorpay webhook signature.");
         }
 
-        CashfreeService.CashfreeWebhookData webhook = cashfreeService.parseWebhook(rawPayload);
-        if (webhook == null || webhook.getCashfreeOrderId() == null) {
-            throw new IllegalArgumentException("Invalid Cashfree webhook payload.");
-        }
+        org.json.JSONObject json = new org.json.JSONObject(rawPayload);
+        String event = json.optString("event");
 
-        String cfOrderId = webhook.getCashfreeOrderId();
-        RuvoCommissionPayment payment = paymentRepository.findByCashfreeOrderId(cfOrderId).orElse(null);
+        if ("order.paid".equals(event) || "payment.captured".equals(event)) {
+            org.json.JSONObject payloadObj = json.optJSONObject("payload");
+            if (payloadObj != null) {
+                org.json.JSONObject orderObj = payloadObj.optJSONObject("order");
+                org.json.JSONObject paymentObj = payloadObj.optJSONObject("payment");
 
-        if (payment == null) {
-            // Might be a customer order payment, ignore here safely
-            return Map.of("success", true, "message", "Payment record not found for commission.");
-        }
+                String eventId = request.getHeader("x-razorpay-event-id");
+                
+                String rzpOrderId = orderObj != null ? orderObj.optJSONObject("entity").optString("id") : null;
+                if (rzpOrderId == null && paymentObj != null) {
+                    rzpOrderId = paymentObj.optJSONObject("entity").optString("order_id");
+                }
+                
+                if (rzpOrderId == null) {
+                    throw new IllegalArgumentException("Invalid Razorpay webhook payload: missing order ID.");
+                }
 
-        // Idempotency check
-        if (webhook.getEventId() != null && webhook.getEventId().equals(payment.getWebhookEventId())) {
-            return Map.of("success", true, "message", "Webhook already processed.");
-        }
-        payment.setWebhookEventId(webhook.getEventId());
+                RuvoCommissionPayment payment = paymentRepository.findByRazorpayOrderId(rzpOrderId).orElse(null);
 
-        if ("SUCCESS".equalsIgnoreCase(webhook.getPaymentStatus())) {
-            if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
-                return Map.of("success", true, "message", "Payment already marked successful.");
+                if (payment == null) {
+                    // Might be a customer order payment, ignore here safely
+                    return Map.of("success", true, "message", "Payment record not found for commission.");
+                }
+
+                // Idempotency check
+                if (eventId != null && eventId.equals(payment.getWebhookEventId())) {
+                    return Map.of("success", true, "message", "Webhook already processed.");
+                }
+                payment.setWebhookEventId(eventId);
+
+                if ("SUCCESS".equalsIgnoreCase(payment.getStatus())) {
+                    return Map.of("success", true, "message", "Payment already marked successful.");
+                }
+
+                payment.setStatus("SUCCESS");
+                payment.setRazorpayPaymentId(paymentObj != null ? paymentObj.optJSONObject("entity").optString("id") : null);
+                payment.setPaidAt(Instant.now());
+                paymentRepository.save(payment);
+
+                // Allocate payment to commission cycle
+                RuvoCommissionCycle cycle = cycleRepository.findById(payment.getCycleId())
+                        .orElseThrow(() -> new IllegalStateException("Commission cycle not found for payment."));
+
+                BigDecimal newPaid = cycle.getTotalPaid().add(payment.getAmount());
+                BigDecimal newOutstanding = cycle.getTotalCommission().subtract(newPaid).max(BigDecimal.ZERO);
+
+                cycle.setTotalPaid(newPaid);
+                cycle.setOutstandingAmount(newOutstanding);
+
+                if (newOutstanding.compareTo(BigDecimal.ZERO) == 0) {
+                    cycle.setStatus("PAID");
+                    restoreCodIfNoOutstanding(cycle.getShopId());
+                } else {
+                    cycle.setStatus("PARTIALLY_PAID");
+                }
+                cycleRepository.save(cycle);
             }
-
-            payment.setStatus("SUCCESS");
-            payment.setCashfreePaymentId(webhook.getCashfreePaymentId());
-            payment.setPaidAt(Instant.now());
-            paymentRepository.save(payment);
-
-            // Allocate payment to commission cycle
-            RuvoCommissionCycle cycle = cycleRepository.findById(payment.getCycleId())
-                    .orElseThrow(() -> new IllegalStateException("Commission cycle not found for payment."));
-
-            BigDecimal newPaid = cycle.getTotalPaid().add(payment.getAmount());
-            BigDecimal newOutstanding = cycle.getTotalCommission().subtract(newPaid).max(BigDecimal.ZERO);
-
-            cycle.setTotalPaid(newPaid);
-            cycle.setOutstandingAmount(newOutstanding);
-
-            if (newOutstanding.compareTo(BigDecimal.ZERO) == 0) {
-                cycle.setStatus("PAID");
-                restoreCodIfNoOutstanding(cycle.getShopId());
-            } else {
-                cycle.setStatus("PARTIALLY_PAID");
+        } else if ("payment.failed".equals(event)) {
+            org.json.JSONObject payloadObj = json.optJSONObject("payload");
+            if (payloadObj != null) {
+                org.json.JSONObject paymentObj = payloadObj.optJSONObject("payment");
+                String rzpOrderId = paymentObj != null ? paymentObj.optJSONObject("entity").optString("order_id") : null;
+                if (rzpOrderId != null) {
+                    RuvoCommissionPayment payment = paymentRepository.findByRazorpayOrderId(rzpOrderId).orElse(null);
+                    if (payment != null) {
+                        payment.setStatus("FAILED");
+                        payment.setFailureCode(paymentObj.optJSONObject("entity").optString("error_code"));
+                        payment.setFailureReason(paymentObj.optJSONObject("entity").optString("error_description"));
+                        paymentRepository.save(payment);
+                    }
+                }
             }
-            cycleRepository.save(cycle);
-
-        } else if ("FAILED".equalsIgnoreCase(webhook.getPaymentStatus())) {
-            payment.setStatus("FAILED");
-            payment.setFailureCode(webhook.getFailureCode());
-            payment.setFailureReason(webhook.getFailureReason());
-            paymentRepository.save(payment);
-
-        } else if ("USER_DROPPED".equalsIgnoreCase(webhook.getPaymentStatus())) {
-            payment.setStatus("CANCELLED");
-            paymentRepository.save(payment);
         }
 
         return Map.of("success", true);

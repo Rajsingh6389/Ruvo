@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RuvoShop Onboarding — Step 3: Bank Account Details (DEMO)
  * Shop earnings are settled to this account.
  * Production: replace simulateVerify() with penny-drop / bank-validation API.
@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { getMyShops } from '../../services/shopService';
+import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
@@ -30,7 +32,7 @@ const BANKS = [
 
 export const Step3_BankAccount = () => {
   const navigation = useNavigation<any>();
-  const { setOnboardingStatus } = useAuth();
+  const { setOnboardingStatus, userId, token } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [accountHolder, setAccountHolder] = useState('');
@@ -63,8 +65,6 @@ export const Step3_BankAccount = () => {
   const stopSpinner = () => spinLoop?.stop();
   const spinDeg = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
-  const simulateVerify = () => new Promise<void>(r => setTimeout(r, 2400));
-
   const validate = () => {
     if (!accountHolder.trim())            return 'Account holder name is required.';
     if (!bankName.trim())                 return 'Please select your bank.';
@@ -83,7 +83,23 @@ export const Step3_BankAccount = () => {
     startSpinner();
     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     try {
-      await simulateVerify();
+      const shops = await getMyShops(userId!, token!);
+      const myShop = shops?.[0];
+      if (!myShop) throw new Error('No shop found. Please complete previous steps again.');
+
+      const res = await fetch(`${API_BASE_URL}/api/payments/razorpay/register-shop-vendor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          shopId: myShop.id,
+          accountNumber,
+          ifsc,
+        }),
+      });
+
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+
       stopSpinner();
       setVState('done');
       // Advance to approval waiting screen
@@ -114,7 +130,7 @@ export const Step3_BankAccount = () => {
           />
 
           <InfoBox
-            text="DEMO MODE — Bank verification is simulated. Production will use a penny-drop / bank-validation service."
+            text="Bank verification processes in real-time. Make sure details match."
             variant="warning"
             colors={colors} typography={typography}
           />

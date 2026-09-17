@@ -63,7 +63,7 @@ public class RuvoCommissionController {
 
     /**
      * POST /api/ruvo/commission/webhook
-     * Cashfree webhook endpoint for RuVo commission payments.
+     * Razorpay webhook endpoint for RuVo commission payments.
      */
     @PostMapping("/webhook")
     public ResponseEntity<?> handleCommissionWebhook(@RequestBody String rawPayload, HttpServletRequest request) {

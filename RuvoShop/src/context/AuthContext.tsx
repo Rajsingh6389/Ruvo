@@ -93,10 +93,17 @@ export const AuthProvider = ({
           setToken(storedToken);
           setUserId(storedUserId);
           setIsAuthenticated(true);
-          // If we have a valid session but no saved onboarding status,
-          // the user completed onboarding in a prior install — default to
-          // APPROVED so they land in the main app, not Step 1.
-          setOnboardingStatusState(storedStatus ?? 'APPROVED');
+          
+          let resolvedStatus = storedStatus;
+          if (!resolvedStatus && storedUserId) {
+            try {
+              resolvedStatus = await checkShopApprovalStatus(storedUserId, storedToken);
+              await AsyncStorage.setItem('shopOnboardingStatus', resolvedStatus);
+            } catch {
+              resolvedStatus = 'NEW';
+            }
+          }
+          setOnboardingStatusState(resolvedStatus ?? 'APPROVED');
           setIsLoading(false);
           if (requiredRole === 'USER') fetchUser(storedToken);
         } else {

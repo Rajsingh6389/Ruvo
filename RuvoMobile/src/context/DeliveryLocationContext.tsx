@@ -42,9 +42,20 @@ export type DeliveryLocation = {
 export const getDeliveryLocationLabel = (location: DeliveryLocation | null): string => {
   if (!location) return 'Set delivery location';
   const details = location.details;
-  const preciseParts = [details.house, details.street, details.landmark && `Near ${details.landmark}`, details.area]
-    .filter(Boolean);
-  return preciseParts.join(', ') || location.fullAddress || location.shortLabel;
+  const preciseParts = [
+    details.house,
+    details.street,
+    details.landmark && `Near ${details.landmark}`,
+    details.area,
+  ].filter(Boolean);
+
+  if (preciseParts.length > 0) {
+    return preciseParts.join(', ');
+  }
+  if (details.area || details.city) {
+    return [details.area, details.city].filter(Boolean).join(', ');
+  }
+  return location.shortLabel || location.fullAddress || 'Set delivery location';
 };
 
 export type SavedAddress = {
@@ -101,7 +112,7 @@ async function getCurrentPosition(): Promise<{ latitude: number; longitude: numb
   }
 
   const pos = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
+    accuracy: Location.Accuracy.Highest,
   });
   return {
     latitude: pos.coords.latitude,
@@ -252,7 +263,7 @@ export const DeliveryLocationProvider = ({ children }: { children: ReactNode }) 
     try {
       const sub = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.Highest,
           distanceInterval: 15,
           timeInterval: 5000,
         },

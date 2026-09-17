@@ -91,6 +91,8 @@ export default function CheckoutScreen() {
               distanceKm: 0,
               deliveryFee: 10,
               platformFee: 5,
+              gstOnPlatformFee: 0.9,
+              isFreeDelivery: false,
               serviceable: true,
             });
           }
@@ -106,6 +108,8 @@ export default function CheckoutScreen() {
             distanceKm: 0,
             deliveryFee: 10,
             platformFee: 5,
+            gstOnPlatformFee: 0.9,
+            isFreeDelivery: false,
             serviceable: true,
           });
         }

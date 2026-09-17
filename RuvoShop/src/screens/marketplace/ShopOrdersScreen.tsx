@@ -176,11 +176,7 @@ export default function ShopOrdersScreen() {
 
   // Poll live broadcast data for the currently viewed radar
   useEffect(() => {
-<<<<<<< HEAD
     let timer: ReturnType<typeof setInterval>;
-=======
-    let timer: ReturnType<typeof setTimeout>;
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
     if (viewBroadcastId && token) {
       const fetchLive = async () => {
         try {
@@ -812,3 +808,4 @@ export default function ShopOrdersScreen() {
     </View>
   );
 }
+

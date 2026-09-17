@@ -179,11 +179,7 @@ export default function ShopkeeperDashboardScreen() {
 
     // Auto-discover shop
     if (!activeShopId) {
-<<<<<<< HEAD
-      const ownerId = userId || user?.id || user?.email;
-=======
-      const ownerId = userId || user?.email || '';
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
+      const ownerId = userId || user?.id || user?.email || '';
       if (ownerId) {
         try {
           const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
@@ -397,7 +393,6 @@ export default function ShopkeeperDashboardScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-<<<<<<< HEAD
     <SafeAreaView className="flex-1 bg-ruvo-bg">
       {/* ── Slide-Out Drawer ─────────────────────────────────────────────── */}
       <Modal visible={showDrawer} transparent animationType="none" onRequestClose={closeDrawer}>
@@ -452,6 +447,7 @@ export default function ShopkeeperDashboardScreen() {
                 { icon: 'grid-outline', label: 'Dashboard', onPress: () => { closeDrawer(); } },
                 { icon: 'receipt-outline', label: 'My Orders', badge: pendingOrders.length, onPress: () => { closeDrawer(); navigation.navigate(ROUTES.SHOP_ORDERS, { shopId }); } },
                 { icon: 'cube-outline', label: 'My Products', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.MY_PRODUCTS, { shopId }); } },
+                { icon: 'pricetag-outline', label: 'Manage Offers', onPress: () => { closeDrawer(); navigation.navigate('ManageOffers', { shopId }); } },
                 { icon: 'add-circle-outline', label: 'Add Product', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.ADD_PRODUCT, { shopId }); } },
                 { icon: 'create-outline', label: 'Edit Shop', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_SHOP, { shop }); } },
                 { icon: 'card-outline', label: 'Bank Account', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_BANK_ACCOUNT); } },
@@ -499,26 +495,17 @@ export default function ShopkeeperDashboardScreen() {
         </View>
       </Modal>
 
-=======
-    <SafeAreaView className="flex-1 bg-[#F9FAFB]">
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
+
       {/* Top App Bar Header */}
       <Animated.View entering={FadeInDown.duration(300)} className="bg-white border-b border-gray-100 px-lg py-sm shadow-xs">
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-sm flex-1">
             {/* Hamburger Menu Button */}
             <TouchableOpacity
-<<<<<<< HEAD
               onPress={openDrawer}
               className="w-10 h-10 rounded-full bg-warm-100 items-center justify-center border border-warm-200"
             >
               <Ionicons name="menu" size={22} color="#231C10" />
-=======
-              onPress={() => navigation.openDrawer && navigation.openDrawer()}
-              className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-100"
-            >
-              <Ionicons name="menu" size={20} color="#231C10" />
->>>>>>> 23f1d36d1772a3c9cf66e69ed0db78d93dbf0ac7
             </TouchableOpacity>
             <View className="flex-1">
               <View className="flex-row items-center gap-1">

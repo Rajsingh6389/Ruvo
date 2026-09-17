@@ -10,9 +10,9 @@ import java.util.Optional;
 @Repository
 public interface RuvoCommissionPaymentRepository extends JpaRepository<RuvoCommissionPayment, Long> {
 
-    Optional<RuvoCommissionPayment> findByCashfreeOrderId(String cashfreeOrderId);
+    Optional<RuvoCommissionPayment> findByRazorpayOrderId(String razorpayOrderId);
 
     List<RuvoCommissionPayment> findByCycleId(Long cycleId);
 
-    boolean existsByCashfreeOrderId(String cashfreeOrderId);
+    boolean existsByRazorpayOrderId(String razorpayOrderId);
 }

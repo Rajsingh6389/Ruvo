@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   StatusBar,
   Linking,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -29,6 +30,7 @@ import { ROUTES } from '../../constants/routes';
 import { API_BASE_URL } from '../../config/api';
 import { initializeCheckout, initializeCashfreeCheckout, fetchPricing, PricingResult } from '../../services/orderService';
 import { getShopDetails } from '../../services/shopService';
+import { validateCoupon } from '../../services/offerService';
 
 const ORANGE_PRIMARY = '#FF7A00';
 const ORANGE_LIGHT = 'rgba(255,122,0,0.15)';
@@ -58,6 +60,12 @@ export default function CartScreen() {
   const [shopDetails, setShopDetails] = useState<any | null>(null);
   const [pricingData, setPricingData] = useState<PricingResult | null>(null);
   const [pricingLoading, setPricingLoading] = useState(false);
+
+  // Coupon State
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, discountAmount: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   let tabBarHeight = 0;
   try {
@@ -93,7 +101,8 @@ export default function CartScreen() {
       }
       setPricingLoading(true);
       try {
-        const res = await fetchPricing(cartShopId, location.latitude, location.longitude, token || undefined);
+        // Pass cartTotal so backend applies hybrid (distance × cart modifier) logic
+        const res = await fetchPricing(cartShopId, location.latitude, location.longitude, token || undefined, cartTotal);
         if (!cancelled && res) {
           setPricingData(res);
         }
@@ -104,7 +113,8 @@ export default function CartScreen() {
     };
     loadPricing();
     return () => { cancelled = true; };
-  }, [cartShopId, location, token]);
+  // Re-fetch when cartTotal changes so fee updates dynamically
+  }, [cartShopId, location, token, cartTotal]);
 
   // Related products from shop
   const [shopProducts, setShopProducts] = useState<any[]>([]);
@@ -123,6 +133,25 @@ export default function CartScreen() {
 
   useEffect(() => { loadShopProducts(); }, [loadShopProducts]);
 
+  // If cart total changes, coupon might become invalid
+  useEffect(() => {
+    if (appliedCoupon && cartTotal > 0) {
+      // Re-validate silently
+      validateCoupon(appliedCoupon.code, cartShopId || 0, cartTotal).then(res => {
+        if (!res.valid) {
+          setAppliedCoupon(null);
+          setCouponError(res.message || 'Coupon no longer valid for this cart amount');
+        } else {
+          setAppliedCoupon({ code: appliedCoupon.code, discountAmount: res.discountAmount || 0 });
+          setCouponError(null);
+        }
+      }).catch(() => {
+        setAppliedCoupon(null);
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartTotal, cartShopId]);
+
   const inCartIds = new Set(cartItems.map(i => i.product.id));
   const related = shopProducts.filter(p => !inCartIds.has(p.id)).slice(0, 10);
 
@@ -130,15 +159,31 @@ export default function CartScreen() {
   const shopName = cartItems[0]?.product?.shopName || shopDetails?.name || 'Local Store';
   const shopCategory = shopDetails?.category || 'Grocery & Food';
 
-  // Dynamic Free Delivery Threshold Logic
-  const freeDeliveryThreshold = shopDetails?.minOrderForFreeDelivery ?? 299;
-  const remainingForFreeDelivery = Math.max(0, freeDeliveryThreshold - cartTotal);
-  const isFreeDeliveryEligible = remainingForFreeDelivery === 0;
+  // ── Fee Calculation (backend-driven, hybrid distance × cart modifier) ────
+  const isFreeDelivery    = pricingData?.isFreeDelivery ?? false;
+  const deliveryFee       = isFreeDelivery ? 0 : (pricingData?.deliveryFee ?? 20);
+  const platformFee       = pricingData?.platformFee ?? 6;
+  const gstOnPlatformFee  = pricingData?.gstOnPlatformFee ?? Number(((platformFee * 18) / 100).toFixed(2));
+  const appliedDiscount   = appliedCoupon?.discountAmount || 0;
+  const finalPayableTotal = Math.max(0, cartTotal - appliedDiscount + deliveryFee + platformFee + gstOnPlatformFee);
 
-  // Dynamic Fees Calculation
-  const deliveryFee = isFreeDeliveryEligible ? 0 : (pricingData?.deliveryFee ?? 25);
-  const platformFee = pricingData?.platformFee ?? 5;
-  const finalPayableTotal = cartTotal + deliveryFee + platformFee;
+  // ── Free Delivery Nudge — show next threshold ─────────────────────────────
+  // Slabs: ₹500+ = FREE, ₹300 = 40% off, else base
+  const FREE_THRESHOLD = 500;
+  const PARTIAL_THRESHOLD = 300;
+  const nudgeMessage = (() => {
+    if (isFreeDelivery) return null;
+    if (cartTotal < PARTIAL_THRESHOLD) {
+      const toPartial = PARTIAL_THRESHOLD - cartTotal;
+      const partialFee = Math.round(deliveryFee * 0.6);
+      return `Add ₹${toPartial} more → delivery drops to ₹${partialFee}!`;
+    }
+    if (cartTotal < FREE_THRESHOLD) {
+      const toFree = FREE_THRESHOLD - cartTotal;
+      return `Add ₹${toFree} more → FREE delivery! 🎉`;
+    }
+    return null;
+  })();
 
   // Dynamic Estimated Delivery Time based on distance (Km)
   const estimatedETA = useMemo(() => {
@@ -187,6 +232,7 @@ export default function CartScreen() {
             deliveryAddress: getDeliveryLocationLabel(location),
             customerName: user?.name,
             customerPhone: (user as any)?.phone || (user as any)?.phoneNumber,
+            couponCode: appliedCoupon?.code,
           },
           token
         );
@@ -205,6 +251,7 @@ export default function CartScreen() {
             customerPhone: (user as any)?.phone || (user as any)?.phoneNumber,
             userLatitude: location.latitude,
             userLongitude: location.longitude,
+            couponCode: appliedCoupon?.code,
           },
           token
         );
@@ -218,6 +265,28 @@ export default function CartScreen() {
       showToast(err?.message || 'Failed to place order', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setValidatingCoupon(true);
+    setCouponError(null);
+    try {
+      const res = await validateCoupon(couponCode.trim(), cartShopId!, cartTotal);
+      if (res.valid && res.discountAmount) {
+        setAppliedCoupon({ code: res.code || couponCode.trim(), discountAmount: res.discountAmount });
+        showToast('Coupon applied successfully', 'success');
+        setCouponCode('');
+      } else {
+        setCouponError(res.message || 'Invalid coupon code');
+        setAppliedCoupon(null);
+      }
+    } catch (err: any) {
+      setCouponError(err.message || 'Failed to validate coupon');
+      setAppliedCoupon(null);
+    } finally {
+      setValidatingCoupon(false);
     }
   };
 
@@ -397,18 +466,20 @@ export default function CartScreen() {
           </View>
         )}
 
-        {/* ── 3. Dynamic Free Delivery Callout Banner ──────────── */}
+        {/* ── 3. Free Delivery Nudge Banner ────────────────────── */}
         <View style={styles.promoBannerWrap}>
-          <View style={[styles.promoBanner, { backgroundColor: isDark ? 'rgba(245,158,11,0.2)' : '#FEF3C7' }, isFreeDeliveryEligible && { backgroundColor: isDark ? 'rgba(34,197,94,0.2)' : '#DCFCE7' }]}>
-            <View style={[styles.promoTagIcon, { backgroundColor: isDark ? 'rgba(245,158,11,0.3)' : '#FDE68A' }, isFreeDeliveryEligible && { backgroundColor: isDark ? 'rgba(34,197,94,0.3)' : '#86EFAC' }]}>
-              <Ionicons name={isFreeDeliveryEligible ? 'sparkles' : 'pricetag'} size={14} color={isFreeDeliveryEligible ? '#16A34A' : '#D97706'} />
+          <View style={[styles.promoBanner, { backgroundColor: isFreeDelivery ? (isDark ? 'rgba(34,197,94,0.2)' : '#DCFCE7') : (isDark ? 'rgba(245,158,11,0.2)' : '#FEF3C7') }]}>
+            <View style={[styles.promoTagIcon, { backgroundColor: isFreeDelivery ? (isDark ? 'rgba(34,197,94,0.3)' : '#86EFAC') : (isDark ? 'rgba(245,158,11,0.3)' : '#FDE68A') }]}>
+              <Ionicons name={isFreeDelivery ? 'sparkles' : 'pricetag'} size={14} color={isFreeDelivery ? '#16A34A' : '#D97706'} />
             </View>
-            <Text style={[styles.promoBannerText, { color: isDark ? '#FBBF24' : '#92400E' }, isFreeDeliveryEligible && { color: '#22C55E' }]}>
-              {isFreeDeliveryEligible ? (
-                <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>Congratulations! You have unlocked FREE Delivery! 🎉</Text>
+            <Text style={[styles.promoBannerText, { color: isFreeDelivery ? '#22C55E' : (isDark ? '#FBBF24' : '#92400E') }]}>
+              {isFreeDelivery ? (
+                <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>🎉 Congratulations! FREE Delivery unlocked!</Text>
+              ) : nudgeMessage ? (
+                nudgeMessage
               ) : (
                 <>
-                  Add items worth <Text style={{ fontFamily: 'Poppins_800ExtraBold' }}>₹{remainingForFreeDelivery}</Text> more to get <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: GREEN_SAVING }}>FREE delivery!</Text>
+                  Add more items to reduce your <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: GREEN_SAVING }}>delivery fee!</Text>
                 </>
               )}
             </Text>
@@ -453,6 +524,58 @@ export default function CartScreen() {
           </View>
         </View>
 
+        {/* ── Coupon Code Section ───────────────────────────── */}
+        <View style={styles.couponSectionWrap}>
+          <View style={[styles.couponCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 6 }}>
+              <Ionicons name="pricetag-outline" size={18} color={ORANGE_PRIMARY} />
+              <Text style={[styles.couponTitle, { color: colors.textPrimary }]}>Apply Coupon</Text>
+            </View>
+            
+            {appliedCoupon ? (
+              <View style={[styles.appliedCouponRow, { backgroundColor: isDark ? 'rgba(34,197,94,0.1)' : '#F0FDF4', borderColor: '#22C55E' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                  <View>
+                    <Text style={{ fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: '#15803D' }}>{appliedCoupon.code}</Text>
+                    <Text style={{ fontSize: 11, color: '#16A34A', marginTop: 1 }}>Saved ₹{appliedCoupon.discountAmount}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setAppliedCoupon(null)}>
+                  <Text style={{ fontSize: 12, fontFamily: 'Poppins_800ExtraBold', color: '#DC2626' }}>REMOVE</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TextInput
+                    style={[styles.couponInput, { backgroundColor: colors.surfaceSunken, color: colors.textPrimary, borderColor: couponError ? '#DC2626' : colors.border }]}
+                    placeholder="Enter coupon code"
+                    placeholderTextColor={colors.textHint}
+                    value={couponCode}
+                    onChangeText={(t) => { setCouponCode(t); setCouponError(null); }}
+                    autoCapitalize="characters"
+                  />
+                  <TouchableOpacity
+                    style={[styles.applyBtn, !couponCode.trim() && { opacity: 0.5 }]}
+                    disabled={!couponCode.trim() || validatingCoupon}
+                    onPress={handleApplyCoupon}
+                  >
+                    {validatingCoupon ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={styles.applyBtnText}>APPLY</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                {couponError && (
+                  <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 6, fontFamily: 'Poppins_400Regular' }}>{couponError}</Text>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+
         {/* ── 5. Dynamic Bill Details Accordion ───────────────── */}
         <View style={styles.billSectionWrap}>
           <View style={[styles.billCard, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
@@ -472,12 +595,19 @@ export default function CartScreen() {
                   <Text style={[styles.billValue, { color: colors.textPrimary }]}>₹{cartTotal}</Text>
                 </View>
 
+                {appliedDiscount > 0 && (
+                  <View style={styles.billRow}>
+                    <Text style={{ fontSize: 13, color: '#16A34A' }}>Discount ({appliedCoupon?.code})</Text>
+                    <Text style={{ fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: '#16A34A' }}>- ₹{appliedDiscount}</Text>
+                  </View>
+                )}
+
                 <View style={styles.billRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <Text style={[styles.billLabel, { color: colors.textSecondary }]}>Delivery Fee</Text>
                     <Ionicons name="information-circle-outline" size={14} color={colors.textSecondary} />
                   </View>
-                  {isFreeDeliveryEligible ? (
+                  {isFreeDelivery ? (
                     <Text style={{ fontSize: 13, fontFamily: 'Poppins_800ExtraBold', color: GREEN_SAVING }}>FREE</Text>
                   ) : (
                     <Text style={[styles.billValue, { color: colors.textPrimary }]}>₹{deliveryFee}</Text>
@@ -485,8 +615,13 @@ export default function CartScreen() {
                 </View>
 
                 <View style={styles.billRow}>
-                  <Text style={[styles.billLabel, { color: colors.textSecondary }]}>Platform Fee</Text>
+                  <Text style={[styles.billLabel, { color: colors.textSecondary }]}>Handling Fee</Text>
                   <Text style={[styles.billValue, { color: colors.textPrimary }]}>₹{platformFee}</Text>
+                </View>
+
+                <View style={styles.billRow}>
+                  <Text style={[styles.billLabel, { color: colors.textSecondary }]}>GST (18% on handling)</Text>
+                  <Text style={[styles.billValue, { color: colors.textSecondary, fontSize: 12 }]}>₹{gstOnPlatformFee.toFixed(2)}</Text>
                 </View>
 
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
@@ -562,6 +697,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkoutFullText: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
+  couponSectionWrap: { paddingHorizontal: 16, marginVertical: 6 },
+  couponCard: { borderRadius: 18, padding: 14 },
+  couponTitle: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold' },
+  appliedCouponRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 12, borderWidth: 1 },
+  couponInput: { flex: 1, height: 44, borderRadius: 12, paddingHorizontal: 12, borderWidth: 1, fontFamily: 'Poppins_700Bold', fontSize: 13 },
+  applyBtn: { backgroundColor: ORANGE_PRIMARY, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, borderRadius: 12 },
+  applyBtnText: { color: '#FFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 },
   headerTitleWrap: { alignItems: 'center' },
   headerTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold' },
   headerSubtitle: { fontSize: 11, marginTop: 1 },
@@ -750,5 +893,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkoutFullText: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#FFFFFF' },
+
 });
