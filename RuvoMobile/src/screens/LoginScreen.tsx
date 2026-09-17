@@ -192,6 +192,8 @@ export const LoginScreen = ({ navigation }: Props) => {
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
+      {/* ── Geometric Background ── */}
+      <BackgroundShapes isDark={isDark} />
 
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <ScrollView
@@ -210,6 +212,12 @@ export const LoginScreen = ({ navigation }: Props) => {
                 source={require('../../assets/images/RuvoIcon.png')}
                 style={styles.logoImg}
               />
+            </View>
+            <Text style={[typography.headingXL, styles.brandName, { color: colors.textPrimary }]}>
+              RuVo
+            </Text>
+            <Text style={[typography.body, styles.tagline, { color: colors.textSecondary }]}>
+              India's premium local marketplace
             </Text>
           </View>
 
@@ -398,6 +406,12 @@ const styles = StyleSheet.create({
   logoImg: {
     width: 44,
     height: 44,
+    borderRadius: 14,
+    resizeMode: 'contain',
+  },
+  brandName: {
+    fontSize: 28,
+    letterSpacing: -0.5,
   },
   tagline: {
     marginTop: 2,

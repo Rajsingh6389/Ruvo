@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getShopById, Shop } from '../../services/shopService';
 import { getProductsByShop, Product as ServiceProduct } from '../../services/productService';
+import { getShopOffers, Offer } from '../../services/offerService';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
 import { API_BASE_URL } from '../../config/api';
@@ -49,6 +50,7 @@ export const ShopDetailsScreen = () => {
 
   const [shop, setShop] = useState<Shop | null>(null);
   const [products, setProducts] = useState<ServiceProduct[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
@@ -80,6 +82,14 @@ export const ShopDetailsScreen = () => {
       } catch (err) {
         console.log('❌ Product API error:', err);
         setProducts([]);
+      }
+
+      try {
+        // We do not require token for viewing shop offers in RuvoMobile
+        const fetchedOffers = await getShopOffers(shopId);
+        setOffers(fetchedOffers || []);
+      } catch (err) {
+        console.log('❌ Offers API error:', err);
       }
 
       setLoading(false);
@@ -451,6 +461,49 @@ export const ShopDetailsScreen = () => {
                 )}
               </View>
             </View>
+
+            {/* OFFERS SECTION */}
+            {offers.length > 0 && (
+              <View className="mb-6 px-4">
+                <SectionHeader title="Available Offers" />
+                <FlatList
+                  data={offers}
+                  keyExtractor={offer => offer.id!.toString()}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 12, paddingRight: 16 }}
+                  renderItem={({ item: offer }) => (
+                    <View 
+                      style={{ 
+                        backgroundColor: colors.card,
+                        borderColor: '#F4B400',
+                        borderWidth: 1,
+                        borderStyle: 'dashed'
+                      }} 
+                      className="rounded-xl p-3 shadow-sm min-w-[200px]"
+                    >
+                      <View className="flex-row items-center gap-2 mb-1.5">
+                        <Ionicons name="pricetag" size={16} color="#F4B400" />
+                        <Text style={{ color: colors.textPrimary }} className="font-black">
+                          {offer.code}
+                        </Text>
+                      </View>
+                      <Text style={{ color: colors.textSecondary }} className="text-xs font-bold leading-4">
+                        {offer.discountType === 'PERCENTAGE' 
+                          ? `Get ${offer.discountValue}% OFF` 
+                          : `Get ₹${offer.discountValue} OFF`}
+                        {offer.minOrderValue ? ` on orders above ₹${offer.minOrderValue}` : ''}
+                      </Text>
+                      {offer.discountType === 'PERCENTAGE' && offer.maxDiscount && (
+                        <Text style={{ color: colors.textSecondary }} className="text-[10px] mt-1 font-semibold opacity-70">
+                          Up to ₹${offer.maxDiscount}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                />
+              </View>
+            )}
 
             {/* SEARCH BAR */}
             <View className="mb-4 px-0">

@@ -41,6 +41,7 @@ export async function initializeCheckout(checkoutData: {
   userLongitude?: number;
   customerName?: string;
   customerPhone?: string;
+  couponCode?: string;
 }, token: string): Promise<any> {
   const res = await fetch(`${API_BASE_URL}/api/payments/checkout`, {
     method: 'POST',
@@ -64,6 +65,7 @@ export async function initializeCashfreeCheckout(checkoutData: {
   customerEmail?: string;
   userLatitude?: number;
   userLongitude?: number;
+  couponCode?: string;
 }, token: string): Promise<any> {
   const res = await fetch(`${API_BASE_URL}/api/payments/cashfree/checkout`, {
     method: 'POST',
@@ -134,7 +136,11 @@ export interface PricingResult {
   distanceKm: number;
   deliveryFee: number;
   platformFee: number;
-  total?: number;
+  gstOnPlatformFee: number;   // 18% GST on platform fee (shopkeeper owes to RuVo)
+  grandTotal?: number;         // final amount customer pays
+  isFreeDelivery: boolean;     // true when cart qualifies for free delivery
+  riderPayout?: number;        // portion going to delivery partner
+  shopPayout?: number;         // net shop revenue
   serviceable: boolean;
   note?: string;
 }
@@ -148,6 +154,7 @@ export async function fetchPricing(
   userLat: number,
   userLng: number,
   token?: string,
+  cartTotal?: number,
 ): Promise<PricingResult> {
   const res = await fetch(`${API_BASE_URL}/api/checkout/quote`, {
     method: 'POST',
@@ -155,18 +162,24 @@ export async function fetchPricing(
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ shopId, latitude: userLat, longitude: userLng }),
+    // Pass cartTotal so backend can apply cart-value modifier + free delivery check
+    body: JSON.stringify({ shopId, latitude: userLat, longitude: userLng, cartTotal }),
   });
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     if (body?.code === 'SERVICE_UNAVAILABLE') {
-      return { distanceKm: 0, deliveryFee: 0, platformFee: 0, serviceable: false, note: body.message };
+      return { distanceKm: 0, deliveryFee: 0, platformFee: 0, gstOnPlatformFee: 0, isFreeDelivery: false, serviceable: false, note: body.message };
     }
     throw new Error(body?.message || 'Pricing fetch failed');
   }
   const data = await res.json();
-  return { ...data, serviceable: true };
+  return {
+    ...data,
+    serviceable: true,
+    gstOnPlatformFee: Number(data.gstOnPlatformFee ?? 0),
+    isFreeDelivery: data.isFreeDelivery === true,
+  };
 }
 
 /**
