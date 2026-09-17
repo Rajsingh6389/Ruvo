@@ -720,14 +720,17 @@ export default function CustomerTrackingScreen() {
 
         {/* Delivered & Verified Badge */}
         {order.orderStatus === 'DELIVERED' && (
-          <View style={styles.deliveredBox}>
-            <Ionicons name="checkmark-circle" size={24} color="#18A957" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.statusMainText}>{formatETA()}</Text>
-              <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
+          <>
+            <View style={styles.deliveredBox}>
+              <Ionicons name="checkmark-circle" size={24} color="#18A957" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.statusMainText}>{formatETA()}</Text>
+                <Text style={styles.statusSubText}>{formatSubtitle()}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.divider} />
+            <View style={styles.divider} />
+          </>
+        )}
 
         {/* ── Delivery Partner Card (Premium) ─────────────────────── */}
         {partnerInfo && (
@@ -862,6 +865,35 @@ export default function CustomerTrackingScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  cancelCard: { backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: '#FECACA' },
+  cancelCardTitle: { fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: '#991B1B' },
+  cancelCardSub: { fontSize: 12, fontFamily: 'Poppins_600SemiBold', color: '#B91C1C', marginTop: 4 },
+  deliveredBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: '#D1FAE5', gap: 12 },
+  partnerMarker: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF', elevation: 4 },
+  liveBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
+  liveText: { fontSize: 10, fontFamily: 'Poppins_800ExtraBold', color: '#FFF' },
+  card: { padding: 16, marginTop: 16, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1 },
+  cardTitle: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#111827', marginBottom: 12 },
+  productRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 8 },
+  productImg: { width: 50, height: 50, borderRadius: 8, marginRight: 12 },
+  productImgBox: { width: 50, height: 50, borderRadius: 8, marginRight: 12, alignItems: 'center', justifyContent: 'center' },
+  productName: { fontSize: 14, fontFamily: 'Poppins_700Bold' },
+  productPrice: { fontSize: 14, fontFamily: 'Poppins_800ExtraBold' },
+  billingBox: { backgroundColor: '#F9FAFB', padding: 16, marginTop: 16, borderRadius: 16 },
+  billingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  billingLabel: { fontSize: 13, fontFamily: 'Poppins_600SemiBold', color: '#6B7280' },
+  billingValue: { fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#111827' },
+  otpBox: { padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1 },
+  otpLabel: { fontSize: 12, fontFamily: 'Poppins_800ExtraBold' },
+  otpCode: { fontSize: 20, fontFamily: 'Poppins_900Black', marginVertical: 4 },
+  otpSub: { fontSize: 11, fontFamily: 'Poppins_600SemiBold' },
+  partnerCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1 },
+  partnerAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#111827', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  partnerAvatarLetter: { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#FFF' },
+  partnerName: { fontSize: 15, fontFamily: 'Poppins_800ExtraBold', color: '#111827' },
+  livePulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+  partnerActionBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   retryBtn: { marginTop: 16, backgroundColor: '#111827', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
