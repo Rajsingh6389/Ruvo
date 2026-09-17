@@ -19,8 +19,8 @@ import java.time.Instant;
     indexes = {
         @Index(name = "idx_payment_order_id", columnList = "order_id"),
         @Index(name = "idx_payment_user_id", columnList = "user_id"),
-        @Index(name = "idx_cashfree_order_id", columnList = "cashfree_order_id"),
-        @Index(name = "idx_cashfree_payment_id", columnList = "cashfree_payment_id"),
+        @Index(name = "idx_razorpay_order_id", columnList = "razorpay_order_id"),
+        @Index(name = "idx_razorpay_payment_id", columnList = "razorpay_payment_id"),
         @Index(name = "idx_payment_status", columnList = "payment_status"),
         @Index(name = "idx_webhook_event_id", columnList = "webhook_event_id")
     }
@@ -47,7 +47,7 @@ public class Payment {
 
     @Column(name = "payment_method", nullable = false, length = 30)
     @Builder.Default
-    private String paymentMethod = "CASHFREE";
+    private String paymentMethod = "RAZORPAY";
 
     /**
      * RuVo internal payment status.
@@ -76,50 +76,32 @@ public class Payment {
     private String currency = "INR";
 
     // ==============================
-    // CASHFREE INFORMATION
+    // RAZORPAY INFORMATION
     // ==============================
 
     /**
-     * Cashfree Order ID.
-     *
-     * Example:
-     * cf_order_xxxxx
+     * Razorpay Order ID.
      */
-    @Column(name = "cashfree_order_id", length = 150)
-    private String cashfreeOrderId;
+    @Column(name = "razorpay_order_id", length = 150)
+    private String razorpayOrderId;
 
     /**
-     * Actual Cashfree Payment ID.
-     *
-     * IMPORTANT:
-     * This is different from cashfreeOrderId.
+     * Actual Razorpay Payment ID.
      */
-    @Column(name = "cashfree_payment_id", length = 150)
-    private String cashfreePaymentId;
+    @Column(name = "razorpay_payment_id", length = 150)
+    private String razorpayPaymentId;
 
     /**
-     * Cashfree payment status.
-     *
-     * Examples:
-     * SUCCESS
-     * FAILED
-     * USER_DROPPED
-     * PENDING
+     * Razorpay payment status.
      */
-    @Column(name = "cashfree_status", length = 50)
-    private String cashfreeStatus;
+    @Column(name = "razorpay_status", length = 50)
+    private String razorpayStatus;
 
     /**
      * Payment instrument.
-     *
-     * Examples:
-     * UPI
-     * CARD
-     * NETBANKING
-     * WALLET
      */
-    @Column(name = "cashfree_payment_method", length = 50)
-    private String cashfreePaymentMethod;
+    @Column(name = "razorpay_payment_method", length = 50)
+    private String razorpayPaymentMethod;
 
     // ==============================
     // FAILURE INFORMATION
@@ -136,7 +118,7 @@ public class Payment {
     // ==============================
 
     /**
-     * Cashfree webhook/event identifier.
+     * Razorpay webhook/event identifier.
      *
      * Used to prevent duplicate webhook processing.
      */
@@ -202,16 +184,16 @@ public class Payment {
     // ==============================
 
     public void markSuccess(
-            String cashfreePaymentId,
-            String cashfreeStatus,
+            String razorpayPaymentId,
+            String razorpayStatus,
             String paymentMethod
     ) {
 
         this.paymentStatus = "SUCCESS";
 
-        this.cashfreePaymentId = cashfreePaymentId;
-        this.cashfreeStatus = cashfreeStatus;
-        this.cashfreePaymentMethod = paymentMethod;
+        this.razorpayPaymentId = razorpayPaymentId;
+        this.razorpayStatus = razorpayStatus;
+        this.razorpayPaymentMethod = paymentMethod;
 
         this.paidAt = Instant.now();
 
@@ -221,14 +203,14 @@ public class Payment {
     }
 
     public void markFailed(
-            String cashfreeStatus,
+            String razorpayStatus,
             String failureCode,
             String failureReason
     ) {
 
         this.paymentStatus = "FAILED";
 
-        this.cashfreeStatus = cashfreeStatus;
+        this.razorpayStatus = razorpayStatus;
         this.failureCode = failureCode;
         this.failureReason = failureReason;
 
@@ -239,7 +221,7 @@ public class Payment {
 
         this.paymentStatus = "CANCELLED";
 
-        this.cashfreeStatus = "USER_DROPPED";
+        this.razorpayStatus = "USER_DROPPED";
     }
 
     public void markRefunded() {

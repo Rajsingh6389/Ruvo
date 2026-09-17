@@ -1,0 +1,9 @@
+[
+  "﻿src/screens/marketplace/AddProductScreen.tsx(182,11): error TS2322: Type 'string | number' is not assignable to type 'number'.\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(218,62): error TS2552: Cannot find name 'setAccountHolder'. Did you mean 'accountHolder'?\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(232,62): error TS2552: Cannot find name 'setAccountNumber'. Did you mean 'accountNumber'?\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(235,63): error TS2552: Cannot find name 'setConfirmAccount'. Did you mean 'confirmAccount'?\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(241,38): error TS2304: Cannot find name 'setIfsc'.\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(261,32): error TS2304: Cannot find name 'setUpiId'.\r",
+  "src/screens/marketplace/EditBankAccountScreen.tsx(320,38): error TS2552: Cannot find name 'setBankName'. Did you mean 'bankName'?\r"
+]

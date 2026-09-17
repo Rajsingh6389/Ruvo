@@ -44,7 +44,7 @@ class RuvoCommissionServiceTest {
     private ShopRepository shopRepository;
 
     @Mock
-    private CashfreeService cashfreeService;
+    private RazorpayService razorpayService;
 
     @Mock
     private HttpServletRequest request;
@@ -97,49 +97,64 @@ class RuvoCommissionServiceTest {
     }
 
     @Test
-    @DisplayName("Initiate Commission Payment creates Cashfree order and Payment record")
+    @DisplayName("Initiate Commission Payment creates Razorpay order and Payment record")
     void testInitiateCommissionPayment_Success() {
         when(cycleRepository.findByCycleId("CYC-1-2026-08-23")).thenReturn(Optional.of(cycle));
         when(shopRepository.findById(1L)).thenReturn(Optional.of(shop));
-        when(cashfreeService.buildReturnUrl(10L)).thenReturn("http://localhost:8080/return");
-        when(cashfreeService.createOrder(anyString(), any(BigDecimal.class), any(BigDecimal.class), any(), anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(Map.of("payment_session_id", "session_test_123"));
+        when(razorpayService.createOrder(
+                anyString(),
+                any(BigDecimal.class),
+                any(BigDecimal.class),
+                isNull(),
+                anyString(),
+                anyString()
+        )).thenReturn(Map.of("razorpay_order_id", "order_test_123"));
 
         Map<String, Object> result = commissionService.initiateCommissionPayment("CYC-1-2026-08-23", 1L);
 
-        assertEquals("session_test_123", result.get("paymentSessionId"));
+        assertEquals("order_test_123", result.get("razorpayOrderId"));
         assertEquals(new BigDecimal("150.00"), result.get("amount"));
         verify(paymentRepository, times(1)).save(any(RuvoCommissionPayment.class));
     }
 
     @Test
-    @DisplayName("Process Webhook SUCCESS marks payment and cycle PAID, restoring shop COD")
+    @DisplayName("Process Webhook payment.captured marks payment SUCCESS and cycle PAID, restoring shop COD")
     void testProcessWebhook_Success() {
         shop.setCodBlocked(true);
+
         RuvoCommissionPayment payment = RuvoCommissionPayment.builder()
                 .id(100L)
                 .cycleId(10L)
                 .shopId(1L)
                 .amount(new BigDecimal("150.00"))
-                .cashfreeOrderId("CF-COMM-100")
+                .razorpayOrderId("order_rzp_001")
                 .status("PENDING")
                 .build();
 
-        when(cashfreeService.verifyWebhook(anyString(), eq(request))).thenReturn(true);
-        CashfreeService.CashfreeWebhookData whData = CashfreeService.CashfreeWebhookData.builder()
-                .cashfreeOrderId("CF-COMM-100")
-                .eventId("evt_001")
-                .paymentStatus("SUCCESS")
-                .cashfreePaymentId("CF-PAY-999")
-                .build();
+        // Build a minimal Razorpay webhook payload for payment.captured
+        String payload = """
+                {
+                  "event": "payment.captured",
+                  "payload": {
+                    "payment": {
+                      "entity": {
+                        "id": "pay_001",
+                        "order_id": "order_rzp_001"
+                      }
+                    }
+                  }
+                }
+                """;
 
-        when(cashfreeService.parseWebhook(anyString())).thenReturn(whData);
-        when(paymentRepository.findByCashfreeOrderId("CF-COMM-100")).thenReturn(Optional.of(payment));
+        when(razorpayService.verifyWebhookSignature(anyString(), isNull())).thenReturn(true);
+        when(request.getHeader("x-razorpay-signature")).thenReturn(null);
+        when(request.getHeader("x-razorpay-event-id")).thenReturn("evt_001");
+        when(paymentRepository.findByRazorpayOrderId("order_rzp_001")).thenReturn(Optional.of(payment));
         when(cycleRepository.findById(10L)).thenReturn(Optional.of(cycle));
         when(cycleRepository.existsByShopIdAndStatusIn(eq(1L), anyList())).thenReturn(false);
         when(shopRepository.findById(1L)).thenReturn(Optional.of(shop));
 
-        Map<String, Object> res = commissionService.processCommissionWebhook("{}", request);
+        Map<String, Object> res = commissionService.processCommissionWebhook(payload, request);
 
         assertTrue((Boolean) res.get("success"));
         assertEquals("SUCCESS", payment.getStatus());

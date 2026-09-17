@@ -25,7 +25,8 @@ public class CheckoutController {
                 request.getShopId(),
                 request.getLatitude(),
                 request.getLongitude(),
-                request.getItems()
+                request.getItems(),
+                null  // couponCode — not used at quote stage
             );
             return ResponseEntity.ok(quote);
         } catch (IllegalArgumentException e) {

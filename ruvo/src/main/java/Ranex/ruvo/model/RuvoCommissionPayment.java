@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Cashfree payment for RuVo commission.
+ * Razorpay payment for RuVo commission.
  * Supports partial payments — multiple payments can target the same cycle.
  */
 @Data
@@ -23,7 +23,7 @@ import java.time.Instant;
     indexes = {
         @Index(name = "idx_cp_cycle", columnList = "cycle_id"),
         @Index(name = "idx_cp_shop", columnList = "shop_id"),
-        @Index(name = "idx_cp_cf_order", columnList = "cashfree_order_id"),
+        @Index(name = "idx_cp_rzp_order", columnList = "razorpay_order_id"),
         @Index(name = "idx_cp_webhook_event", columnList = "webhook_event_id")
     }
 )
@@ -46,11 +46,11 @@ public class RuvoCommissionPayment {
     @Builder.Default
     private String currency = "INR";
 
-    @Column(name = "cashfree_order_id", length = 150)
-    private String cashfreeOrderId;
+    @Column(name = "razorpay_order_id", length = 150)
+    private String razorpayOrderId;
 
-    @Column(name = "cashfree_payment_id", length = 150)
-    private String cashfreePaymentId;
+    @Column(name = "razorpay_payment_id", length = 150)
+    private String razorpayPaymentId;
 
     @Column(name = "payment_session_id", length = 300)
     private String paymentSessionId;

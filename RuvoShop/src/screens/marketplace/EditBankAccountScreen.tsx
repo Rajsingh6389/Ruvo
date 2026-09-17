@@ -215,7 +215,7 @@ export const EditBankAccountScreen = () => {
               <Text className="text-[12px] font-black text-warm-500 uppercase tracking-widest mb-4 border-b border-warm-100 pb-3">Account Information</Text>
 
               <Text className={labelClass}>Account Holder Name *</Text>
-              <TextInput value={accountHolder} onChangeText={setAccountHolder} placeholder="Name exactly as on bank statement" placeholderTextColor="#A79E92" className={`${inputClass} mb-4`} />
+              <TextInput value={accountHolder} onChangeText={t => setForm(s => ({ ...s, accountHolder: t }))} placeholder="Name exactly as on bank statement" placeholderTextColor="#A79E92" className={`${inputClass} mb-4`} />
 
               <Text className={labelClass}>Bank Name *</Text>
               <TouchableOpacity
@@ -229,16 +229,16 @@ export const EditBankAccountScreen = () => {
               </TouchableOpacity>
 
               <Text className={labelClass}>Account Number *</Text>
-              <TextInput value={accountNumber} onChangeText={setAccountNumber} placeholder="Enter account number" placeholderTextColor="#A79E92" keyboardType="number-pad" secureTextEntry className={`${inputClass} mb-4`} />
+              <TextInput value={accountNumber} onChangeText={t => setForm(s => ({ ...s, accountNumber: t }))} placeholder="Enter account number" placeholderTextColor="#A79E92" keyboardType="number-pad" secureTextEntry className={`${inputClass} mb-4`} />
 
               <Text className={labelClass}>Confirm Account Number *</Text>
-              <TextInput value={confirmAccount} onChangeText={setConfirmAccount} placeholder="Re-enter to confirm" placeholderTextColor="#A79E92" keyboardType="number-pad" className={`${inputClass} mb-4`} />
+              <TextInput value={confirmAccount} onChangeText={t => setForm(s => ({ ...s, confirmAccount: t }))} placeholder="Re-enter to confirm" placeholderTextColor="#A79E92" keyboardType="number-pad" className={`${inputClass} mb-4`} />
 
               <Text className={labelClass}>IFSC Code *</Text>
               <View className="relative justify-center mb-1">
                 <TextInput
                   value={ifsc}
-                  onChangeText={t => setIfsc(t.toUpperCase())}
+                  onChangeText={t => setForm(s => ({ ...s, ifsc: t.toUpperCase() }))}
                   placeholder="e.g. HDFC0001234"
                   placeholderTextColor="#A79E92"
                   autoCapitalize="characters"
@@ -258,7 +258,7 @@ export const EditBankAccountScreen = () => {
               <Text className={labelClass}>UPI ID</Text>
               <TextInput 
                  value={upiId} 
-                 onChangeText={setUpiId} 
+                 onChangeText={t => setForm(s => ({ ...s, upiId: t }))} 
                  placeholder="yourname@bankname" 
                  placeholderTextColor="#A79E92" 
                  keyboardType="email-address" 
@@ -317,7 +317,7 @@ export const EditBankAccountScreen = () => {
                 return (
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => { setBankName(item); setShowBankList(false); }}
+                    onPress={() => { setForm(s => ({ ...s, bankName: item })); setShowBankList(false); }}
                     className={`p-4 rounded-[16px] flex-row items-center justify-between border ${selected ? 'bg-ruvo-yellow/10 border-ruvo-yellow' : 'bg-ruvo-surface border-warm-100'}`}
                   >
                     <View className="flex-row items-center gap-3">

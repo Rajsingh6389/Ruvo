@@ -1,0 +1,10 @@
+[
+  "﻿src/screens/LoginScreen.tsx(164,56): error TS1010: '*/' expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(52,7): error TS1005: ',' expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(70,3): error TS1128: Declaration or statement expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(91,9): error TS1136: Property assignment expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(121,9): error TS1128: Declaration or statement expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(122,7): error TS1109: Expression expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(123,5): error TS1109: Expression expected.\r",
+  "src/screens/marketplace/MyProductsScreen.tsx(124,3): error TS1128: Declaration or statement expected.\r"
+]

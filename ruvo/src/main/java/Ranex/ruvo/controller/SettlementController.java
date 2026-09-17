@@ -223,7 +223,7 @@ public class SettlementController {
 
         BigDecimal netCodCashReceived = codToReceive.subtract(codDeliveryCharges).max(BigDecimal.ZERO);
 
-        // ── UPI totals (shop received via Cashfree split) ──
+        // ── UPI totals (shop received via Razorpay split) ──
         BigDecimal upiRevenue = shopOrders.stream()
             .filter(o -> !"COD".equalsIgnoreCase(o.getPaymentMethod()))
             .map(o -> {

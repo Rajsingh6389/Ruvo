@@ -12,12 +12,13 @@ import Ranex.ruvo.repository.ProductRepository;
 import Ranex.ruvo.repository.ShopRepository;
 import Ranex.ruvo.repository.UserRepository;
 import Ranex.ruvo.model.OrderItem;
-import Ranex.ruvo.service.CashfreeService;
+import Ranex.ruvo.service.RazorpayService;
 import Ranex.ruvo.service.CouponService;
 import Ranex.ruvo.service.NotificationService;
 import Ranex.ruvo.service.PricingService;
 import Ranex.ruvo.service.WalletService;
 import Ranex.ruvo.util.DistanceUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -46,7 +47,7 @@ public class PaymentController {
     private final Ranex.ruvo.repository.OrderItemRepository orderItemRepository;
     private final CouponService couponService;
     private final WalletService walletService;
-    private final CashfreeService cashfreeService;
+    private final RazorpayService razorpayService;
 
     public PaymentController(
             OrderRepository orderRepository,
@@ -59,7 +60,7 @@ public class PaymentController {
             Ranex.ruvo.repository.OrderItemRepository orderItemRepository,
             CouponService couponService,
             WalletService walletService,
-            CashfreeService cashfreeService) {
+            RazorpayService razorpayService) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.productRepository = productRepository;
@@ -70,7 +71,7 @@ public class PaymentController {
         this.orderItemRepository = orderItemRepository;
         this.couponService = couponService;
         this.walletService = walletService;
-        this.cashfreeService = cashfreeService;
+        this.razorpayService = razorpayService;
     }
 
     public static class CartItemRequest {
@@ -346,31 +347,84 @@ public class PaymentController {
             }
 
             try {
-                String cfOrderId = "CF-ORD-" + savedOrder.getId() + "-" + System.currentTimeMillis();
-                String returnUrl = cashfreeService.buildReturnUrl(savedOrder.getId());
-                Map<String, Object> cfRes = cashfreeService.createOrder(
-                        cfOrderId, savedOrder.getTotalAmount(), savedOrder.getSubtotal(), null, request.userId, customerPhone, "customer@ruvo.in", returnUrl
+                // Use the already-resolved customer fields (populated from UserRepository above)
+                String userEmail = "customer@ruvo.in";
+                String userPhone = customerPhone;
+                if (request.userId != null) {
+                    try {
+                        Long uid = Long.parseLong(request.userId.replaceAll("[^0-9]", ""));
+                        User resolvedUser = userRepository.findById(uid).orElse(null);
+                        if (resolvedUser != null && resolvedUser.getMobileNumber() != null) {
+                            userPhone = resolvedUser.getMobileNumber();
+                        }
+                    } catch (Exception ignored) {}
+                }
+
+                // 12. CREATE RAZORPAY ORDER
+                String shopVendorId = shop != null ? shop.getRazorpayAccountId() : null;
+                BigDecimal totalAmount = savedOrder.getTotalAmount();
+                BigDecimal productAmount = savedOrder.getSubtotal();
+                Map<String, Object> rzpRes = razorpayService.createOrder(
+                        String.valueOf(savedOrder.getId()),
+                        totalAmount,
+                        productAmount,
+                        shopVendorId,
+                        userEmail,
+                        userPhone
                 );
 
+                if (rzpRes == null) {
+                    savedOrder.setPaymentStatus("FAILED");
+                    savedOrder.setOrderStatus("PAYMENT_FAILED");
+                    orderRepository.save(savedOrder);
+                    restoreReservedStock(cartItems);
+                    if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
+                        walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
+                    }
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("message", "Razorpay did not return a response."));
+                }
+
+                String rzpOrderId = rzpRes.get("razorpay_order_id") != null ? rzpRes.get("razorpay_order_id").toString() : null;
+
+                if (rzpOrderId == null || rzpOrderId.isBlank()) {
+                    savedOrder.setPaymentStatus("FAILED");
+                    savedOrder.setOrderStatus("PAYMENT_FAILED");
+                    orderRepository.save(savedOrder);
+                    restoreReservedStock(cartItems);
+                    if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
+                        walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
+                    }
+                    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .body(Map.of("message", "Razorpay order ID missing."));
+                }
+
+                // 13. SAVE PAYMENT ATTEMPT
                 Payment payment = Payment.builder()
                         .orderId(savedOrder.getId())
                         .userId(request.userId)
-                        .paymentMethod("ONLINE")
+                        .paymentMethod("RAZORPAY")
                         .paymentStatus("PENDING")
-                        .amount(savedOrder.getTotalAmount())
+                        .amount(totalAmount)
                         .currency("INR")
-                        .cashfreeOrderId(cfOrderId)
+                        .razorpayOrderId(rzpOrderId)
+                        .razorpayStatus("CREATED")
+                        .processingAttempts(0)
                         .build();
+
                 paymentRepository.save(payment);
 
-                return ResponseEntity.ok(Map.of(
+                return ResponseEntity.ok(
+                    Map.of(
                         "success", true,
                         "orderId", savedOrder.getId(),
-                        "paymentMethod", "ONLINE",
-                        "cashfreeOrderId", cfOrderId,
-                        "paymentSessionId", cfRes.get("payment_session_id"),
-                        "amount", savedOrder.getTotalAmount()
-                ));
+                        "paymentMethod", "RAZORPAY",
+                        "razorpayOrderId", rzpOrderId,
+                        "amount", totalAmount,
+                        "currency", "INR"
+                    )
+                );
+
             } catch (Exception e) {
                 savedOrder.setPaymentStatus("FAILED");
                 savedOrder.setOrderStatus("PAYMENT_FAILED");

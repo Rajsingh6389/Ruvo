@@ -13,7 +13,7 @@ import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.service.DeliveryService;
 import Ranex.ruvo.service.NotificationService;
 import Ranex.ruvo.service.RuvoCommissionService;
-import Ranex.ruvo.service.CashfreeService;
+import Ranex.ruvo.service.RazorpayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -55,7 +55,7 @@ public class DeliveryController {
     private final Ranex.ruvo.repository.SettlementRepository settlementRepository;
     private final Ranex.ruvo.repository.UserRepository userRepository;
     private final RuvoCommissionService commissionService;
-    private final CashfreeService cashfreeService;
+    private final RazorpayService razorpayService;
     private final Ranex.ruvo.repository.PaymentRepository paymentRepository;
     private final Ranex.ruvo.repository.OrderItemRepository orderItemRepository;
     private final Ranex.ruvo.repository.ShopRepository shopRepository;
@@ -70,7 +70,7 @@ public class DeliveryController {
                               Ranex.ruvo.repository.SettlementRepository settlementRepository,
                               Ranex.ruvo.repository.UserRepository userRepository,
                               RuvoCommissionService commissionService,
-                              CashfreeService cashfreeService,
+                              RazorpayService razorpayService,
                               Ranex.ruvo.repository.PaymentRepository paymentRepository,
                               Ranex.ruvo.repository.OrderItemRepository orderItemRepository,
                               Ranex.ruvo.repository.ShopRepository shopRepository) {
@@ -84,7 +84,7 @@ public class DeliveryController {
         this.settlementRepository = settlementRepository;
         this.userRepository = userRepository;
         this.commissionService = commissionService;
-        this.cashfreeService = cashfreeService;
+        this.razorpayService = razorpayService;
         this.paymentRepository = paymentRepository;
         this.orderItemRepository = orderItemRepository;
         this.shopRepository = shopRepository;
@@ -318,7 +318,7 @@ public class DeliveryController {
                 settlementRepository.save(codSettlement);
             } else {
                 // ─── UPI / ONLINE PAYMENT ────────────────────────────────
-                // Customer already paid via Cashfree. The Cashfree split routed:
+                // Customer already paid via Razorpay. The Razorpay split routed:
                 //   productAmount → shop vendor account
                 //   deliveryFee   → RuVo (to forward to partner)
                 //   platformFee   → RuVo (platform revenue)
@@ -344,7 +344,7 @@ public class DeliveryController {
                     .status("PAID")
                     .build();
 
-                // 2. RuVo platform fee (already collected via Cashfree split)
+                // 2. RuVo platform fee (already collected via Razorpay split)
                 Settlement ruvoFee = Settlement.builder()
                     .shopId(order.getShopId())
                     .amount(platformFee)
@@ -353,7 +353,7 @@ public class DeliveryController {
                     .status("PAID")
                     .build();
 
-                // 3. Shop UPI revenue (what shop received from Cashfree split)
+                // 3. Shop UPI revenue (what shop received from Razorpay split)
                 java.math.BigDecimal shopNetRevenue = totalAmount.subtract(deliveryFee).subtract(platformFee)
                     .max(java.math.BigDecimal.ZERO);
 
@@ -388,33 +388,33 @@ public class DeliveryController {
                 }
 
                 // ─── INSTANT DELIVERY FEE TRANSFER TO PARTNER ─────────────
-                // If partner has a Cashfree vendor ID, transfer delivery fee
-                // instantly via Cashfree post-payment split API.
+                // If partner has a Razorpay vendor ID, transfer delivery fee
+                // instantly via Razorpay post-payment split API.
                 // Otherwise, the PARTNER_EARNING ledger record tracks what
                 // RuVo owes the partner (manual payout later).
-                if (p.getCashfreeVendorId() != null && !p.getCashfreeVendorId().isBlank()
+                if (p.getRazorpayAccountId() != null && !p.getRazorpayAccountId().isBlank()
                         && deliveryFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
                     try {
-                        // Find the Cashfree order ID for this order
+                        // Find the Razorpay payment ID for this order
                         paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
-                            String cfOrderId = payment.getCashfreeOrderId();
-                            if (cfOrderId != null && !cfOrderId.isBlank()) {
-                                cashfreeService.transferToVendor(
-                                    cfOrderId,
-                                    p.getCashfreeVendorId(),
+                            String rzpPaymentId = payment.getRazorpayPaymentId();
+                            if (rzpPaymentId != null && !rzpPaymentId.isBlank()) {
+                                razorpayService.transferToLinkedAccount(
+                                    rzpPaymentId,
+                                    p.getRazorpayAccountId(),
                                     deliveryFee,
                                     String.valueOf(order.getId())
                                 );
                                 System.out.println("[DeliveryController] Instant transfer ₹"
                                     + deliveryFee + " to partner #" + p.getId()
-                                    + " (vendor: " + p.getCashfreeVendorId() + ")"
+                                    + " (vendor: " + p.getRazorpayAccountId() + ")"
                                     + " for order #" + order.getId());
                             }
                         });
                     } catch (Exception e) {
                         // Transfer failed — partner still has the PARTNER_EARNING record
                         // RuVo can settle manually. Don't block delivery confirmation.
-                        System.err.println("[DeliveryController] Cashfree transfer to partner failed for order #"
+                        System.err.println("[DeliveryController] Razorpay transfer to partner failed for order #"
                             + order.getId() + ": " + e.getMessage()
                             + " — partner earning tracked in ledger for manual payout.");
                     }

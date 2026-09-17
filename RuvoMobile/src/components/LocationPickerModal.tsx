@@ -47,68 +47,7 @@ type SavedAddressItem = {
   lng?: number;
 };
 
-const DEFAULT_SAVED_ADDRESSES: SavedAddressItem[] = [
-  {
-    id: '1',
-    name: 'Smridhi Grand Avenue',
-    address: 'G-2003, Smridhi Grand Avenue, Greater Noida West Link Road, Amrapali Dream Valley',
-    distance: '207 m',
-    icon: 'home-outline',
-    details: {
-      house: 'G-2003',
-      street: 'Smridhi Grand Avenue',
-      landmark: 'Greater Noida West Link Road',
-      area: 'Amrapali Dream Valley',
-      city: 'Greater Noida',
-      state: 'Uttar Pradesh',
-      pincode: '201306',
-      receiverName: 'User',
-      phone: '9876543210',
-    },
-    lat: 28.5833,
-    lng: 77.4475,
-  },
-  {
-    id: '2',
-    name: 'Home',
-    address: 'C1203 Proview Laboni, Crossings Republik Road, Chipiyana Buzurg',
-    distance: '3.6 km',
-    icon: 'home-outline',
-    details: {
-      house: 'C1203',
-      street: 'Proview Laboni',
-      landmark: 'Crossings Republik Road',
-      area: 'Chipiyana Buzurg',
-      city: 'Ghaziabad',
-      state: 'Uttar Pradesh',
-      pincode: '201016',
-      receiverName: 'User',
-      phone: '9876543210',
-    },
-    lat: 28.628,
-    lng: 77.437,
-  },
-  {
-    id: '3',
-    name: 'aligarh railway station platform',
-    address: 'Plateform Number 3, Railway Station Road, Civil Lines, Aligarh',
-    distance: '99.2 km',
-    icon: 'navigate-outline',
-    details: {
-      house: 'Platform 3',
-      street: 'Railway Station Road',
-      landmark: 'Civil Lines',
-      area: 'Railway Colony',
-      city: 'Aligarh',
-      state: 'Uttar Pradesh',
-      pincode: '202001',
-      receiverName: 'User',
-      phone: '9876543210',
-    },
-    lat: 27.8974,
-    lng: 78.088,
-  },
-];
+const DEFAULT_SAVED_ADDRESSES: SavedAddressItem[] = [];
 
 export const LocationPickerModal = ({ visible, onClose }: Props) => {
   const { colors } = useTheme();
@@ -315,16 +254,16 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                 {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
                 <Field label="Address Label (e.g. Home, Office, Flat 402)" value={editingLabel} onChangeText={setEditingLabel} placeholder="e.g. Home" />
-                <Field label="House / Flat / Floor *" value={form.house} onChangeText={v => update('house', v)} placeholder="e.g. G-2003, 20th floor" />
-                <Field label="Street / Building *" value={form.street} onChangeText={v => update('street', v)} placeholder="e.g. Smridhi Grand Avenue" />
-                <Field label="Landmark" value={form.landmark} onChangeText={v => update('landmark', v)} placeholder="Near Link Road" />
-                <Field label="Area / Locality *" value={form.area} onChangeText={v => update('area', v)} placeholder="Amrapali Dream Valley" />
+                <Field label="House / Flat / Floor *" value={form.house} onChangeText={v => update('house', v)} placeholder="e.g. Flat 402, 4th Floor" />
+                <Field label="Street / Building *" value={form.street} onChangeText={v => update('street', v)} placeholder="e.g. Main Market Road, Sector 62" />
+                <Field label="Landmark" value={form.landmark} onChangeText={v => update('landmark', v)} placeholder="e.g. Near City Metro Station" />
+                <Field label="Area / Locality *" value={form.area} onChangeText={v => update('area', v)} placeholder="e.g. Civil Lines / Sector B" />
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
-                    <Field label="City *" value={form.city} onChangeText={v => update('city', v)} placeholder="Greater Noida" />
+                    <Field label="City *" value={form.city} onChangeText={v => update('city', v)} placeholder="e.g. New Delhi" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Field label="Pincode *" value={form.pincode} onChangeText={v => update('pincode', v)} placeholder="201306" keyboardType="number-pad" />
+                    <Field label="Pincode *" value={form.pincode} onChangeText={v => update('pincode', v)} placeholder="6-digit pincode" keyboardType="number-pad" />
                   </View>
                 </View>
                 <Field label="Phone *" value={form.phone} onChangeText={v => update('phone', v)} placeholder="10-digit phone" keyboardType="phone-pad" />
@@ -490,16 +429,22 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                       </Text>
                     </View>
                     <Text style={styles.mapLocAddress} numberOfLines={2}>
-                      {location?.fullAddress || `${form.house ? form.house + ', ' : ''}${form.street ? form.street + ', ' : ''}${form.area ? form.area + ', ' : ''}${form.city || 'Greater Noida'}`}
+                      {location?.fullAddress || `${form.house ? form.house + ', ' : ''}${form.street ? form.street + ', ' : ''}${form.area ? form.area + ', ' : ''}${form.city || ''}`}
                     </Text>
 
                     <TouchableOpacity
                       style={styles.confirmProceedBtn}
                       onPress={() => {
+                        if (location?.details) {
+                          setForm(prev => ({
+                            ...location.details,
+                            house: prev.house || (location.details.house ?? ''),
+                            phone: prev.phone || (location.details.phone ?? ''),
+                            receiverName: prev.receiverName || (location.details.receiverName ?? ''),
+                          }));
+                        }
                         if (searchQuery.trim()) {
                           update('area', searchQuery);
-                        } else if (location?.details) {
-                          setForm(location.details);
                         }
                         setShowMapConfirmModal(false);
                         if (!showAddNewView) {

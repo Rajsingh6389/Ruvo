@@ -30,6 +30,14 @@ import { EditShopScreen } from './screens/marketplace/EditShopScreen';
 import NotificationsScreen from './screens/marketplace/NotificationsScreen';
 import { ManageOffersScreen } from './screens/marketplace/ManageOffersScreen';
 
+// Onboarding screens
+import { Step1_ShopDetails } from './screens/onboarding/Step1_ShopDetails';
+import { Step2_Aadhaar } from './screens/onboarding/Step2_Aadhaar';
+import { Step3_BankAccount } from './screens/onboarding/Step3_BankAccount';
+import { Step4_OnboardingFee } from './screens/onboarding/Step4_OnboardingFee';
+import { Step4_Success } from './screens/onboarding/Step4_Success';
+import { Step5_ShopSelect } from './screens/onboarding/Step5_ShopSelect';
+
 export type DrawerParamList = {
   ShopkeeperDashboard: undefined;
   ShopOrders: undefined;
@@ -42,6 +50,7 @@ export type DrawerParamList = {
 
 export type ShopStackParamList = {
   Login: undefined;
+  Onboarding: undefined;
   MainDrawer: undefined;
   EditShop: { shop: any };
   ShopOrders: { shopId: string; shopName: string };
@@ -210,8 +219,30 @@ function MainDrawerNavigator() {
   );
 }
 
+const OnboardingStackNav = createNativeStackNavigator();
+
+function OnboardingNavigator({ initialStatus }: { initialStatus: string }) {
+  let initialRoute = 'Step1_ShopDetails';
+  if (initialStatus === 'AADHAAR_PENDING') initialRoute = 'Step2_Aadhaar';
+  else if (initialStatus === 'BANK_PENDING') initialRoute = 'Step3_BankAccount';
+  else if (initialStatus === 'FEE_PENDING') initialRoute = 'Step4_OnboardingFee';
+  else if (initialStatus === 'SHOP_SELECT_PENDING') initialRoute = 'Step5_ShopSelect';
+  else if (initialStatus === 'PENDING_APPROVAL') initialRoute = 'Step4_Success';
+
+  return (
+    <OnboardingStackNav.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
+      <OnboardingStackNav.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
+      <OnboardingStackNav.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
+      <OnboardingStackNav.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
+      <OnboardingStackNav.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
+      <OnboardingStackNav.Screen name="Step4_Success" component={Step4_Success} />
+      <OnboardingStackNav.Screen name="Step5_ShopSelect" component={Step5_ShopSelect} />
+    </OnboardingStackNav.Navigator>
+  );
+}
+
 export const ShopNavigator = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, onboardingStatus } = useAuth();
   const { theme } = useTheme();
   const [launchComplete, setLaunchComplete] = useState(false);
 
@@ -224,6 +255,10 @@ export const ShopNavigator = () => {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {!isAuthenticated ? (
               <Stack.Screen name="Login" component={LoginScreen as any} />
+            ) : onboardingStatus !== 'APPROVED' ? (
+              <Stack.Screen name="Onboarding">
+                {() => <OnboardingNavigator initialStatus={onboardingStatus} />}
+              </Stack.Screen>
             ) : (
               <>
                 <Stack.Screen name="MainDrawer" component={MainDrawerNavigator} />
