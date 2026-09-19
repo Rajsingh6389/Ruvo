@@ -19,6 +19,10 @@ public class DeliveryPartnerController {
 
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final Ranex.ruvo.repository.UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private Ranex.ruvo.service.CloudinaryService cloudinaryService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private Ranex.ruvo.service.RazorpayService razorpayService;
 
     public DeliveryPartnerController(DeliveryPartnerRepository deliveryPartnerRepository, Ranex.ruvo.repository.UserRepository userRepository) {
         this.deliveryPartnerRepository = deliveryPartnerRepository;
@@ -112,11 +116,68 @@ public class DeliveryPartnerController {
         return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
     }
 
+    // Aadhaar Document Photo Upload
+    @PostMapping("/{id}/aadhaar")
+    public ResponseEntity<?> uploadAadhaarDetails(
+            @PathVariable Long id,
+            @RequestParam("aadhaarNumber") String aadhaarNumber,
+            @RequestParam("aadhaarName") String aadhaarName,
+            @RequestPart(value = "front", required = false) org.springframework.web.multipart.MultipartFile front,
+            @RequestPart(value = "back", required = false) org.springframework.web.multipart.MultipartFile back
+    ) {
+        try {
+            Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findById(id);
+            if (partnerOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Delivery Partner not found");
+            DeliveryPartner partner = partnerOpt.get();
+
+            partner.setAadhaarNumber(aadhaarNumber.trim());
+            partner.setAadhaarName(aadhaarName.trim());
+
+            if (front != null && !front.isEmpty() && cloudinaryService != null) {
+                String frontUrl = cloudinaryService.uploadImage(front, "ruvo/partners/aadhaar");
+                partner.setAadhaarFrontUrl(frontUrl);
+            }
+            if (back != null && !back.isEmpty() && cloudinaryService != null) {
+                String backUrl = cloudinaryService.uploadImage(back, "ruvo/partners/aadhaar");
+                partner.setAadhaarBackUrl(backUrl);
+            }
+
+            return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload Aadhaar details: " + e.getMessage());
+        }
+    }
+
+    // Bank Account Details Endpoint
+    @PostMapping("/{id}/bank-account")
+    public ResponseEntity<?> updateBankAccount(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findById(id);
+        if (partnerOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Delivery Partner not found");
+        DeliveryPartner partner = partnerOpt.get();
+
+        String acc = body.get("bankAccountNumber") != null ? body.get("bankAccountNumber") : body.get("accountNumber");
+        String ifsc = body.get("ifscCode") != null ? body.get("ifscCode") : body.get("ifsc");
+        String upi = body.get("upiId");
+
+        if (acc != null && !acc.isBlank()) partner.setBankAccountNumber(acc.trim());
+        if (ifsc != null && !ifsc.isBlank()) partner.setIfscCode(ifsc.trim().toUpperCase());
+        if (upi != null && !upi.isBlank()) partner.setUpiId(upi.trim());
+
+        if (!Boolean.TRUE.equals(partner.getApproved()) && partner.getRazorpayAccountId() == null) {
+            partner.setRazorpayAccountId("acc_pending_approval");
+        }
+
+        return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
+    }
+
     // Admin Endpoints
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingPartners() {
         if (!isAdmin()) return ResponseEntity.status(403).build();
-        return ResponseEntity.ok(deliveryPartnerRepository.findByApprovedFalse());
+        return ResponseEntity.ok(deliveryPartnerRepository.findPendingApproval());
     }
 
     @PatchMapping("/{id}/approve")
@@ -127,6 +188,22 @@ public class DeliveryPartnerController {
         if (partnerOpt.isPresent()) {
             DeliveryPartner partner = partnerOpt.get();
             partner.setApproved(true);
+            partner.setAadhaarVerified(true);
+
+            // Automatically create Razorpay Linked Account on Admin Approval
+            String ifsc = partner.getIfscCode();
+            String acc = partner.getBankAccountNumber();
+            if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank() && razorpayService != null) {
+                String accountId = partner.getRazorpayAccountId();
+                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval")) {
+                    String name = partner.getName();
+                    String email = partner.getId() + "@partner.ruvo.in";
+                    String phone = partner.getPhone() != null ? partner.getPhone() : "9999999999";
+                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
+                    partner.setRazorpayAccountId(accountId);
+                }
+            }
+
             return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
         }
         return ResponseEntity.notFound().build();

@@ -38,6 +38,9 @@ public class ShopController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
+    private Ranex.ruvo.service.RazorpayService razorpayService;
+
     private String getCurrentPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
@@ -120,6 +123,18 @@ public class ShopController {
         if (shop.getBannerUrl() != null) {
             shop.setBannerUrl(
                     buildFileUrl(shop.getBannerUrl(), request)
+            );
+        }
+
+        if (shop.getAadhaarFrontUrl() != null) {
+            shop.setAadhaarFrontUrl(
+                    buildFileUrl(shop.getAadhaarFrontUrl(), request)
+            );
+        }
+
+        if (shop.getAadhaarBackUrl() != null) {
+            shop.setAadhaarBackUrl(
+                    buildFileUrl(shop.getAadhaarBackUrl(), request)
             );
         }
 
@@ -381,7 +396,8 @@ public class ShopController {
             @RequestPart(value = "banner", required = false)
             MultipartFile banner,
             @RequestPart(value = "images", required = false)
-            MultipartFile[] images
+            MultipartFile[] images,
+            HttpServletRequest request
     ) {
 
         try {
@@ -533,7 +549,7 @@ public class ShopController {
                     shopRepository.save(shop);
 
 
-            return ResponseEntity.ok(savedShop);
+            return ResponseEntity.ok(prepareShopResponse(savedShop, request));
 
 
         } catch (Exception e) {
@@ -551,13 +567,58 @@ public class ShopController {
 
 
     // =========================================================
-    // 9. Approve shop
+    // 8.5 Upload Aadhaar Details & Documents
+    // =========================================================
+
+    @PostMapping("/{id}/aadhaar")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<?> uploadAadhaarDetails(
+            @PathVariable Long id,
+            @RequestParam("aadhaarNumber") String aadhaarNumber,
+            @RequestParam("aadhaarName") String aadhaarName,
+            @RequestPart(value = "front", required = false) MultipartFile front,
+            @RequestPart(value = "back", required = false) MultipartFile back,
+            HttpServletRequest request
+    ) {
+        try {
+            java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+            if (shopOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Shop not found with id: " + id);
+            }
+            Shop shop = shopOpt.get();
+            if (!canManageShop(shop)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Unauthorized to update shop Aadhaar details.");
+            }
+
+            shop.setAadhaarNumber(aadhaarNumber.trim());
+            shop.setAadhaarName(aadhaarName.trim());
+
+            if (front != null && !front.isEmpty()) {
+                String frontUrl = cloudinaryService.uploadImage(front, "ruvo/shops/aadhaar");
+                shop.setAadhaarFrontUrl(frontUrl);
+            }
+            if (back != null && !back.isEmpty()) {
+                String backUrl = cloudinaryService.uploadImage(back, "ruvo/shops/aadhaar");
+                shop.setAadhaarBackUrl(backUrl);
+            }
+
+            Shop savedShop = shopRepository.save(shop);
+            return ResponseEntity.ok(prepareShopResponse(savedShop, request));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload Aadhaar details: " + e.getMessage());
+        }
+    }
+
+
+    // =========================================================
+    // 9. Approve shop (Trigger Razorpay Linked Account Creation)
     // =========================================================
 
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> approveShop(
-            @PathVariable Long id
+            @PathVariable Long id,
+            HttpServletRequest request
     ) {
 
         java.util.Optional<Shop> shopOpt =
@@ -566,12 +627,25 @@ public class ShopController {
         if (shopOpt.isPresent()) {
 
             Shop shop = shopOpt.get();
-
             shop.setApproved(true);
+            shop.setAadhaarVerified(true);
 
-            return ResponseEntity.ok(
-                    shopRepository.save(shop)
-            );
+            // Automatically create Razorpay Linked Account on Admin Approval
+            String ifsc = shop.getIfscCode();
+            String acc = shop.getBankAccountNumber();
+            if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank()) {
+                String accountId = shop.getRazorpayAccountId();
+                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy")) {
+                    String name = shop.getName();
+                    String email = (shop.getOwner() != null && shop.getOwner().contains("@")) ? shop.getOwner() : shop.getId() + "@shop.ruvo.in";
+                    String phone = shop.getPhone() != null ? shop.getPhone() : "9999999999";
+                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
+                    shop.setRazorpayAccountId(accountId);
+                }
+            }
+
+            Shop savedShop = shopRepository.save(shop);
+            return ResponseEntity.ok(prepareShopResponse(savedShop, request));
         }
 
         return ResponseEntity
@@ -786,7 +860,11 @@ public class ShopController {
         if (updatedShop.getDeliveryAvailable() != null) existingShop.setDeliveryAvailable(updatedShop.getDeliveryAvailable());
         if (updatedShop.getLatitude() != null) existingShop.setLatitude(updatedShop.getLatitude());
         if (updatedShop.getLongitude() != null) existingShop.setLongitude(updatedShop.getLongitude());
-
+        if (updatedShop.getBankAccountNumber() != null) existingShop.setBankAccountNumber(updatedShop.getBankAccountNumber().trim());
+        if (updatedShop.getIfscCode() != null) existingShop.setIfscCode(updatedShop.getIfscCode().trim());
+        if (updatedShop.getUpiId() != null) existingShop.setUpiId(updatedShop.getUpiId().trim());
+        if (updatedShop.getBankName() != null) existingShop.setBankName(updatedShop.getBankName().trim());
+        if (updatedShop.getBankAccountHolder() != null) existingShop.setBankAccountHolder(updatedShop.getBankAccountHolder().trim());
         Shop savedShop = shopRepository.save(existingShop);
         return ResponseEntity.ok(prepareShopResponse(savedShop, request));
     }
@@ -825,6 +903,8 @@ public class ShopController {
             if (map.get("ifscCode") != null) existingShop.setIfscCode((String) map.get("ifscCode"));
             if (map.get("latitude") != null) existingShop.setLatitude(Double.parseDouble(map.get("latitude").toString()));
             if (map.get("longitude") != null) existingShop.setLongitude(Double.parseDouble(map.get("longitude").toString()));
+            if (map.get("bankName") != null) existingShop.setBankName((String) map.get("bankName"));
+            if (map.get("bankAccountHolder") != null) existingShop.setBankAccountHolder((String) map.get("bankAccountHolder"));
             if (map.get("deliveryAvailable") != null) existingShop.setDeliveryAvailable(Boolean.parseBoolean(map.get("deliveryAvailable").toString()));
 
             if (logo != null && !logo.isEmpty()) {

@@ -3,6 +3,7 @@ package Ranex.ruvo.controller;
 import Ranex.ruvo.dto.ApiResponse;
 import Ranex.ruvo.model.*;
 import Ranex.ruvo.repository.*;
+import Ranex.ruvo.service.RazorpayService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,14 +21,20 @@ public class PartnerAdminController {
     private final PartnerVerificationRepository verifications;
     private final UserRepository users;
     private final PartnerAccountRepository partnerAccounts;
+    private final DeliveryPartnerRepository deliveryPartnerRepository;
+    private final RazorpayService razorpayService;
 
     public PartnerAdminController(PartnerProfileRepository p, PartnerVehicleRepository v,
-                                  PartnerVerificationRepository vr, UserRepository u, PartnerAccountRepository pa) {
+                                  PartnerVerificationRepository vr, UserRepository u, PartnerAccountRepository pa,
+                                  DeliveryPartnerRepository deliveryPartnerRepository,
+                                  RazorpayService razorpayService) {
         this.profiles = p;
         this.vehicles = v;
         this.verifications = vr;
         this.users = u;
         this.partnerAccounts = pa;
+        this.deliveryPartnerRepository = deliveryPartnerRepository;
+        this.razorpayService = razorpayService;
     }
 
     @GetMapping("/pending")
@@ -47,6 +54,26 @@ public class PartnerAdminController {
             item.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
                     .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
             item.put("status", p.getVerificationStatus().name());
+
+            // Link matching DeliveryPartner entity if present to extract documents & bank details
+            Optional<DeliveryPartner> dpOpt = Optional.empty();
+            if (user != null && user.getId() != null) {
+                dpOpt = deliveryPartnerRepository.findByUserIdFlexible(String.valueOf(user.getId()));
+            }
+            if (dpOpt.isEmpty() && user.getMobileNumber() != null) {
+                dpOpt = deliveryPartnerRepository.findByPhoneFlexible(user.getMobileNumber());
+            }
+            if (dpOpt.isPresent()) {
+                DeliveryPartner dp = dpOpt.get();
+                item.put("aadhaarNumber", dp.getAadhaarNumber());
+                item.put("aadhaarName", dp.getAadhaarName());
+                item.put("aadhaarFrontUrl", dp.getAadhaarFrontUrl());
+                item.put("aadhaarBackUrl", dp.getAadhaarBackUrl());
+                item.put("bankAccountNumber", dp.getBankAccountNumber());
+                item.put("ifscCode", dp.getIfscCode());
+                item.put("upiId", dp.getUpiId());
+                item.put("razorpayAccountId", dp.getRazorpayAccountId());
+            }
 
             if (vehicle.isPresent()) {
                 Map<String, Object> vMap = new HashMap<>();
@@ -102,6 +129,31 @@ public class PartnerAdminController {
             k.setStatus(VerificationStatus.APPROVED);
             verifications.save(k);
         });
+
+        // Trigger Razorpay Linked Account creation and DB persistence for matching DeliveryPartner
+        if (deliveryPartnerRepository != null && razorpayService != null && user != null) {
+            Optional<DeliveryPartner> dpOpt = deliveryPartnerRepository.findByUserIdFlexible(String.valueOf(user.getId()));
+            if (dpOpt.isEmpty() && user.getMobileNumber() != null) {
+                dpOpt = deliveryPartnerRepository.findByPhoneFlexible(user.getMobileNumber());
+            }
+            if (dpOpt.isPresent()) {
+                DeliveryPartner dp = dpOpt.get();
+                dp.setApproved(true);
+                String ifsc = dp.getIfscCode();
+                String acc = dp.getBankAccountNumber();
+                if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank()) {
+                    String accountId = dp.getRazorpayAccountId();
+                    if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval")) {
+                        String name = user.getName() != null ? user.getName() : dp.getName();
+                        String email = user.getId() + "@partner.ruvo.in";
+                        String phone = user.getMobileNumber() != null ? user.getMobileNumber() : dp.getPhone();
+                        accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
+                        dp.setRazorpayAccountId(accountId);
+                    }
+                }
+                deliveryPartnerRepository.save(dp);
+            }
+        }
 
         return ResponseEntity.ok(ApiResponse.ok("Partner profile successfully approved", null));
     }

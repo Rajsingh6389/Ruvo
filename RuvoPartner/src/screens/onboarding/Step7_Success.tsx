@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Step7_Success - RuvoPartner Onboarding (Redesigned)
  * Awaiting admin approval screen with premium UI.
  * All polling, approval check, and navigation logic preserved.
@@ -22,7 +22,6 @@ import { CtaBtn, InfoBox } from './OnboardingShared';
 const STEPS_SUMMARY = [
   { icon: 'person-outline'           as const, label: 'Basic Details Submitted' },
   { icon: 'car-outline'              as const, label: 'Vehicle Type Selected' },
-  { icon: 'card-outline'             as const, label: 'Aadhaar Verified' },
   { icon: 'wallet-outline'           as const, label: 'Bank Account Added' },
   { icon: 'storefront-outline'       as const, label: 'Shops Selected' },
   { icon: 'shield-checkmark-outline' as const, label: 'Admin Approval' },

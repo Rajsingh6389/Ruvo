@@ -21,6 +21,7 @@ public class AdminOverviewController {
     private final PartnerVehicleRepository partnerVehicleRepository;
     private final PartnerVerificationRepository partnerVerificationRepository;
     private final PartnerAccountRepository partnerAccountRepository;
+    private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final PaymentRepository paymentRepository;
@@ -32,6 +33,7 @@ public class AdminOverviewController {
                                   PartnerVehicleRepository partnerVehicleRepository,
                                   PartnerVerificationRepository partnerVerificationRepository,
                                   PartnerAccountRepository partnerAccountRepository,
+                                  DeliveryPartnerRepository deliveryPartnerRepository,
                                   OrderRepository orderRepository,
                                   ProductRepository productRepository,
                                   PaymentRepository paymentRepository,
@@ -42,6 +44,7 @@ public class AdminOverviewController {
         this.partnerVehicleRepository = partnerVehicleRepository;
         this.partnerVerificationRepository = partnerVerificationRepository;
         this.partnerAccountRepository = partnerAccountRepository;
+        this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.paymentRepository = paymentRepository;
@@ -145,10 +148,32 @@ public class AdminOverviewController {
             item.put("status", p.getVerificationStatus() != null ? p.getVerificationStatus().name() : "APPROVED");
             item.put("isAvailable", user != null && Boolean.TRUE.equals(user.getIsAvailable()));
 
+            // Link matching DeliveryPartner entity if present to extract documents & bank details
+            Optional<DeliveryPartner> dpOpt = Optional.empty();
+            if (user != null && user.getId() != null) {
+                dpOpt = deliveryPartnerRepository.findByUserIdFlexible(String.valueOf(user.getId()));
+            }
+            if (dpOpt.isEmpty() && mobile != null) {
+                dpOpt = deliveryPartnerRepository.findByPhoneFlexible(mobile);
+            }
+            if (dpOpt.isPresent()) {
+                DeliveryPartner dp = dpOpt.get();
+                item.put("aadhaarNumber", dp.getAadhaarNumber());
+                item.put("aadhaarName", dp.getAadhaarName());
+                item.put("aadhaarFrontUrl", dp.getAadhaarFrontUrl());
+                item.put("aadhaarBackUrl", dp.getAadhaarBackUrl());
+                item.put("bankAccountNumber", dp.getBankAccountNumber());
+                item.put("ifscCode", dp.getIfscCode());
+                item.put("upiId", dp.getUpiId());
+                item.put("razorpayAccountId", dp.getRazorpayAccountId());
+            }
+
             if (vehicle.isPresent()) {
                 Map<String, Object> vMap = new HashMap<>();
                 vMap.put("vehicleType", vehicle.get().getVehicleType());
                 vMap.put("vehicleNumber", vehicle.get().getVehicleNumber());
+                vMap.put("vehicleModel", vehicle.get().getVehicleModel());
+                vMap.put("vehicleCapacity", vehicle.get().getVehicleCapacity());
                 item.put("vehicle", vMap);
             }
 
@@ -156,6 +181,11 @@ public class AdminOverviewController {
                 Map<String, Object> kMap = new HashMap<>();
                 kMap.put("fullName", verification.get().getFullName());
                 kMap.put("address", verification.get().getAddress());
+                kMap.put("city", verification.get().getCity());
+                kMap.put("state", verification.get().getState());
+                kMap.put("pincode", verification.get().getPincode());
+                kMap.put("identityDocumentType", verification.get().getIdentityDocumentType());
+                kMap.put("identityDocumentNumber", verification.get().getIdentityDocumentNumber());
                 item.put("kyc", kMap);
             }
 

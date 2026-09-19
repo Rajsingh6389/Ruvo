@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,7 +27,9 @@ import {
 } from './OnboardingShared';
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+const MAPS_API_KEY: string =
+  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
+  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 const MAX_SHOPS = 8;
 
 interface NearbyShop {
@@ -554,7 +557,7 @@ export const Step6_ShopSelection = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      {!isManageMode && <StepBar current={6} colors={colors} typography={typography} />}
+      {!isManageMode && <StepBar current={5} colors={colors} typography={typography} />}
 
       <ScrollView
         contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}

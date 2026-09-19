@@ -1,10 +1,10 @@
-﻿/**
+/**
  * Onboarding Step 4 — Onboarding Fee
  * Currently ₹0. Partner sees a confirmation card and proceeds.
  * Future: integrate Razorpay / payment gateway here.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, ScrollView, StyleSheet, Text, Animated,
   TouchableOpacity, KeyboardAvoidingView, Platform,
@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
+import { API_BASE_URL } from '../../config/api';
 import {
   StepBar, ScreenHeader, SectionCard,
   CtaBtn, InfoBox, ErrorBox,
@@ -24,6 +25,33 @@ export const Step4_OnboardingFee = () => {
   const { colors, typography, spacing, shadows } = useTheme();
   const [accepted, setAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [feeInfo, setFeeInfo] = useState<{
+    feeAmount: number;
+    isFree: boolean;
+    remainingFreeSlots: number;
+    message: string;
+  }>({
+    feeAmount: 0,
+    isFree: true,
+    remainingFreeSlots: 100,
+    message: 'First 100 Delivery Partners get FREE onboarding!',
+  });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/onboarding/fee?type=PARTNER`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFeeInfo({
+            feeAmount: data.feeAmount ?? 0,
+            isFree: data.isFree ?? true,
+            remainingFreeSlots: data.remainingFreeSlots ?? 0,
+            message: data.message ?? '',
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Pulse animation on the ₹0 badge
   const pulse = useRef(new Animated.Value(1)).current;
@@ -42,7 +70,7 @@ export const Step4_OnboardingFee = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={4} colors={colors} typography={typography} />
+      <StepBar current={3} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
@@ -54,7 +82,10 @@ export const Step4_OnboardingFee = () => {
             subtitle="One-time fee to activate your RuVo Delivery Partner account."
             colors={colors}
             typography={typography}
-            onBack={() => navigation.goBack()}
+            onBack={() => {
+              if (navigation.canGoBack()) navigation.goBack();
+              else navigation.navigate('Step2_VehicleType');
+            }}
           />
 
           {/* Fee highlight card */}
@@ -77,13 +108,17 @@ export const Step4_OnboardingFee = () => {
                 ONBOARDING FEE
               </Text>
               <View style={s.feeAmountRow}>
-                <Text style={[typography.headingXL, { color: '#FFFFFF', fontSize: 52, fontFamily: 'Poppins_800ExtraBold' }]}>₹0</Text>
-                <View style={[s.freeBadge, { backgroundColor: '#FFFFFF', borderRadius: RADIUS.pill }]}>
-                  <Text style={[typography.caption, { color: colors.primary, fontFamily: 'Poppins_800ExtraBold', fontSize: 11 }]}>FREE</Text>
+                <Text style={[typography.headingXL, { color: '#FFFFFF', fontSize: 52, fontFamily: 'Poppins_800ExtraBold' }]}>
+                  ₹{feeInfo.feeAmount}
+                </Text>
+                <View style={[s.freeBadge, { backgroundColor: feeInfo.isFree ? '#FFFFFF' : 'rgba(255,255,255,0.2)', borderRadius: RADIUS.pill }]}>
+                  <Text style={[typography.caption, { color: feeInfo.isFree ? colors.primary : '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 11 }]}>
+                    {feeInfo.isFree ? 'FREE OFFER' : 'REGULAR'}
+                  </Text>
                 </View>
               </View>
-              <Text style={[typography.body, { color: 'rgba(255,255,255,0.75)', marginTop: 6, textAlign: 'center' }]}>
-                No charges to get started today
+              <Text style={[typography.body, { color: 'rgba(255,255,255,0.85)', marginTop: 6, textAlign: 'center', fontFamily: 'Poppins_600SemiBold' }]}>
+                {feeInfo.message}
               </Text>
             </Animated.View>
           </TouchableOpacity>
@@ -106,10 +141,13 @@ export const Step4_OnboardingFee = () => {
             ))}
           </SectionCard>
 
-          {/* Note about future pricing */}
+          {/* Note about pricing */}
           <InfoBox
-            text="The onboarding fee is ₹0 right now. RuVo may introduce a nominal fee in the future — you will be notified well in advance."
-            variant="warning"
+            text={feeInfo.isFree
+              ? `First 100 delivery partners get 100% FREE onboarding. ${feeInfo.remainingFreeSlots} slot(s) remaining!`
+              : `Standard onboarding fee of ₹${feeInfo.feeAmount} applies for activation.`
+            }
+            variant={feeInfo.isFree ? 'success' : 'warning'}
             colors={colors}
             typography={typography}
           />
@@ -131,8 +169,8 @@ export const Step4_OnboardingFee = () => {
               {accepted && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
             </View>
             <Text style={[typography.body, { color: colors.textSecondary, flex: 1, lineHeight: 20 }]}>
-              I understand the onboarding fee is currently{' '}
-              <Text style={{ color: colors.primary, fontFamily: 'Poppins_700Bold' }}>₹0</Text> and agree to the{' '}
+              I understand the onboarding fee is{' '}
+              <Text style={{ color: colors.primary, fontFamily: 'Poppins_700Bold' }}>₹{feeInfo.feeAmount}</Text> and agree to the{' '}
               <Text style={{ color: colors.primary, fontFamily: 'Poppins_600SemiBold' }}>RuVo Partner Terms & Conditions</Text>.
             </Text>
           </TouchableOpacity>

@@ -151,7 +151,7 @@ public class RuvoCommissionService {
                 outstanding,
                 outstanding,
                 null, // RuVo commission is directly paid to RuVo, no split
-                "shop" + shopId + "@ruvo.in",
+                "shop" + shopId + "@ruvomobile.me",
                 shop.getPhone() != null && !shop.getPhone().isBlank() ? shop.getPhone() : "9999999999"
         );
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as Location from 'expo-location';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
 export type GeocodedAddress = {
   fullAddress: string;
@@ -237,6 +237,110 @@ export async function geocodeAddress(address: string): Promise<GeocodedCoordinat
   return null;
 }
 
+export type LocationSearchResult = {
+  id: string;
+  title: string;
+  subtitle: string;
+  latitude: number;
+  longitude: number;
+  details: GeocodedAddress;
+};
+
+/** Searches location suggestions live using Nominatim & Expo Geocoding APIs */
+export async function searchLocationSuggestions(query: string): Promise<LocationSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 3) return [];
+
+  const results: LocationSearchResult[] = [];
+
+  // 1. Try Nominatim Search API
+  try {
+    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+      params: { q: trimmed, format: 'json', limit: 5, addressdetails: 1, countrycodes: 'in' },
+      headers: { 'User-Agent': 'RuVoMobileApp' },
+      timeout: 5000,
+    });
+
+    if (Array.isArray(response.data)) {
+      for (const item of response.data) {
+        const lat = Number(item.lat);
+        const lon = Number(item.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+        const addr = item.address || {};
+        const house = addr.house_number || addr.building || addr.amenity || addr.shop || '';
+        const street = addr.road || addr.pedestrian || addr.suburb || '';
+        const area = addr.suburb || addr.neighbourhood || addr.quarter || addr.village || addr.district || '';
+        const city = addr.city || addr.town || addr.county || addr.state_district || '';
+        const state = addr.state || '';
+        const pincode = addr.postcode || '';
+        const landmark = addr.amenity || addr.shop || addr.historic || '';
+
+        const title = item.display_name.split(',')[0]?.trim() || area || city || 'Location Result';
+        const subtitle = item.display_name.split(',').slice(1).join(', ').trim();
+
+        results.push({
+          id: item.place_id ? String(item.place_id) : `nom-${lat}-${lon}`,
+          title,
+          subtitle,
+          latitude: lat,
+          longitude: lon,
+          details: {
+            house,
+            street,
+            area,
+            city,
+            state,
+            pincode,
+            landmark,
+            fullAddress: item.display_name,
+            shortAddress: [title, city].filter(Boolean).join(', '),
+          },
+        });
+      }
+    }
+  } catch {
+    /* Fall through */
+  }
+
+  // 2. Expo Geocoding Fallback if Nominatim yields < 2 results
+  if (results.length < 2) {
+    try {
+      const geoResults = await Location.geocodeAsync(trimmed);
+      if (geoResults && geoResults.length > 0) {
+        for (let i = 0; i < Math.min(geoResults.length, 3); i++) {
+          const g = geoResults[i];
+          const lat = g.latitude;
+          const lon = g.longitude;
+
+          // Perform reverse lookup for details
+          const rev = await callExpoReverseGeocode(lat, lon);
+          const title = rev?.shortAddress || trimmed;
+          const subtitle = rev?.fullAddress || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+          results.push({
+            id: `expo-${i}-${lat}-${lon}`,
+            title,
+            subtitle,
+            latitude: lat,
+            longitude: lon,
+            details: rev || {
+              ...emptyAddress(),
+              fullAddress: subtitle,
+              shortAddress: title,
+              city: trimmed,
+            },
+          });
+        }
+      }
+    } catch {
+      /* Safe fallback */
+    }
+  }
+
+  return results;
+}
+
 export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
   const result = await geocodeDetails(lat, lon);
   return result.fullAddress || null;
@@ -253,3 +357,4 @@ export async function getPincode(lat: number, lon: number): Promise<string | nul
 }
 
 export { composeFullAddress, emptyAddress };
+

@@ -36,9 +36,10 @@ class AdminSeeder {
             // Seed pricing if empty
             if (pricingRepo.count() == 0) {
                 pricingRepo.saveAll(List.of(
-                    PricingConfig.builder().fromKm(0.0).toKm(2.0).deliveryFee(10.0).platformFee(5.0).isActive(true).build(),
-                    PricingConfig.builder().fromKm(2.0).toKm(3.0).deliveryFee(15.0).platformFee(5.0).isActive(true).build(),
-                    PricingConfig.builder().fromKm(3.0).toKm(5.0).deliveryFee(20.0).platformFee(5.0).isActive(true).build()
+                    PricingConfig.builder().fromKm(0.0).toKm(1.0).deliveryFee(10.0).platformFee(5.0).isActive(true).build(),
+                    PricingConfig.builder().fromKm(1.0).toKm(2.0).deliveryFee(15.0).platformFee(5.0).isActive(true).build(),
+                    PricingConfig.builder().fromKm(2.0).toKm(3.0).deliveryFee(20.0).platformFee(5.0).isActive(true).build(),
+                    PricingConfig.builder().fromKm(3.0).toKm(5.0).deliveryFee(25.0).platformFee(5.0).isActive(true).build()
                 ));
             }
         };

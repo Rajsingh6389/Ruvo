@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
 export type GeocodedAddress = {
   fullAddress: string;

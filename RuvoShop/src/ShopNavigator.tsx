@@ -32,7 +32,6 @@ import { ManageOffersScreen } from './screens/marketplace/ManageOffersScreen';
 
 // Onboarding screens
 import { Step1_ShopDetails } from './screens/onboarding/Step1_ShopDetails';
-import { Step2_Aadhaar } from './screens/onboarding/Step2_Aadhaar';
 import { Step3_BankAccount } from './screens/onboarding/Step3_BankAccount';
 import { Step4_OnboardingFee } from './screens/onboarding/Step4_OnboardingFee';
 import { Step4_Success } from './screens/onboarding/Step4_Success';
@@ -85,8 +84,10 @@ function MainDrawerNavigator() {
           const shop = data[0];
           setShopName(shop.name || shopName);
           setShopCategory(shop.category || shopCategory);
-          if (shop.logoUrl || shop.bannerUrl || shop.image) {
-            let img = shop.logoUrl || shop.bannerUrl || shop.image;
+          const firstImage = Array.isArray(shop.images) && shop.images.length > 0 ? shop.images[0] : null;
+          let img = shop.logoUrl || shop.logo || shop.bannerUrl || shop.image || firstImage;
+          if (img && typeof img === 'string' && img.trim() !== '' && img !== 'null') {
+            img = img.trim();
             if (!img.startsWith('http')) {
               img = `${API_BASE_URL}${img.startsWith('/') ? '' : '/'}${img}`;
             }
@@ -223,8 +224,7 @@ const OnboardingStackNav = createNativeStackNavigator();
 
 function OnboardingNavigator({ initialStatus }: { initialStatus: string }) {
   let initialRoute = 'Step1_ShopDetails';
-  if (initialStatus === 'AADHAAR_PENDING') initialRoute = 'Step2_Aadhaar';
-  else if (initialStatus === 'BANK_PENDING') initialRoute = 'Step3_BankAccount';
+  if (initialStatus === 'AADHAAR_PENDING' || initialStatus === 'BANK_PENDING') initialRoute = 'Step3_BankAccount';
   else if (initialStatus === 'FEE_PENDING') initialRoute = 'Step4_OnboardingFee';
   else if (initialStatus === 'SHOP_SELECT_PENDING') initialRoute = 'Step5_ShopSelect';
   else if (initialStatus === 'PENDING_APPROVAL') initialRoute = 'Step4_Success';
@@ -232,7 +232,6 @@ function OnboardingNavigator({ initialStatus }: { initialStatus: string }) {
   return (
     <OnboardingStackNav.Navigator initialRouteName={initialRoute} screenOptions={{ headerShown: false }}>
       <OnboardingStackNav.Screen name="Step1_ShopDetails" component={Step1_ShopDetails} />
-      <OnboardingStackNav.Screen name="Step2_Aadhaar" component={Step2_Aadhaar} />
       <OnboardingStackNav.Screen name="Step3_BankAccount" component={Step3_BankAccount} />
       <OnboardingStackNav.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
       <OnboardingStackNav.Screen name="Step4_Success" component={Step4_Success} />

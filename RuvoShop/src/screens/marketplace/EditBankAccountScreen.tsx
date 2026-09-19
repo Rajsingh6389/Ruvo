@@ -84,7 +84,7 @@ export const EditBankAccountScreen = () => {
           if (Array.isArray(shops) && shops.length > 0) {
             const shop = shops[0];
             setForm({
-              accountHolder: shop.accountHolder || shop.owner || '',
+              accountHolder: shop.bankAccountHolder || shop.owner || '',
               accountNumber: shop.bankAccountNumber || '',
               confirmAccount: shop.bankAccountNumber || '',
               ifsc: shop.ifscCode || '',
@@ -124,6 +124,21 @@ export const EditBankAccountScreen = () => {
       if (!Array.isArray(shops) || shops.length === 0) throw new Error('No shop found to update bank details');
 
       const shop = shops[0];
+
+      // 1. Submit bank change request to Razorpay Route service
+      const rzpRes = await fetch(`${API_BASE_URL}/api/seller/razorpay/bank/change`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          shopId: shop.id,
+          accountNumber: accountNumber.trim(),
+          ifscCode: ifsc.trim().toUpperCase(),
+          beneficiaryName: accountHolder.trim(),
+          confirmChange: true,
+        }),
+      });
+
+      // 2. Also update shop bank details in MySQL
       const updateRes = await fetch(`${API_BASE_URL}/api/shops/${shop.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -132,10 +147,12 @@ export const EditBankAccountScreen = () => {
           bankAccountNumber: accountNumber.trim(),
           ifscCode: ifsc.trim().toUpperCase(),
           upiId: upiId.trim() || null,
+          bankName: bankName,
+          bankAccountHolder: accountHolder.trim(),
         }),
       });
 
-      if (updateRes.ok) {
+      if (updateRes.ok || rzpRes.ok) {
         setSaved(true);
         Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
         setTimeout(() => navigation.goBack(), 1800);

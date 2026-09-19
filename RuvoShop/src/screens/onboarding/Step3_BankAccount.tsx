@@ -87,15 +87,22 @@ export const Step3_BankAccount = () => {
       const myShop = shops?.[0];
       if (!myShop) throw new Error('No shop found. Please complete previous steps again.');
 
-      const res = await fetch(`${API_BASE_URL}/api/payments/razorpay/register-shop-vendor`, {
+      let res = await fetch(`${API_BASE_URL}/api/seller/razorpay/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           shopId: myShop.id,
-          accountNumber,
-          ifsc,
+          legalBusinessName: myShop.name,
+          email: myShop.email,
+          phone: myShop.phone,
+          ownerName: accountHolder,
+          bankAccountNumber: accountNumber,
+          ifscCode: ifsc,
+          bankName: bankName,
         }),
       });
+
+
 
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
@@ -114,10 +121,14 @@ export const Step3_BankAccount = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={3} colors={colors} typography={typography} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StepBar current={2} colors={colors} typography={typography} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -126,7 +137,10 @@ export const Step3_BankAccount = () => {
             title="Bank Account"
             subtitle="Shop settlements will be deposited to this account every week."
             colors={colors} typography={typography}
-            onBack={() => navigation.goBack()}
+            onBack={() => {
+              if (navigation.canGoBack()) navigation.goBack();
+              else navigation.navigate('Step1_ShopDetails');
+            }}
           />
 
           <InfoBox

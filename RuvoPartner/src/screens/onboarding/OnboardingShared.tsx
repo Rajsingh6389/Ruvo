@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OnboardingShared - RuvoPartner (Redesigned)
  * Premium shared primitives used by all 7 onboarding steps.
  * Replaces StyleSheet.create() with inline styles for consistency.
@@ -18,12 +18,11 @@ import { RADIUS } from '../../theme/radius';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-export const TOTAL_STEPS = 7;
+export const TOTAL_STEPS = 6;
 
 export const STEP_META = [
   { icon: 'person-outline'             as const, label: 'Details' },
   { icon: 'car-outline'                as const, label: 'Vehicle' },
-  { icon: 'card-outline'               as const, label: 'Aadhaar' },
   { icon: 'wallet-outline'             as const, label: 'Fee' },
   { icon: 'card-outline'               as const, label: 'Bank' },
   { icon: 'storefront-outline'         as const, label: 'Shops' },

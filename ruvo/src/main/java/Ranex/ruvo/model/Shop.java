@@ -39,6 +39,9 @@ public class Shop {
 
     // Display name for the shop owner (kept for backwards compatibility)
     private String owner;
+    
+    // Contact email for the shop / owner
+    private String email;
 
     // Actual user id of the account that registered the shop — used to look up
     // "my shops" regardless of approval status. Should match AuthToken.userId.
@@ -74,12 +77,34 @@ public class Shop {
     @Column(name = "active")
     private Boolean active = true;
 
+    // Aadhaar Verification & Documents
+    @Column(name = "aadhaar_number")
+    private String aadhaarNumber;
+
+    @Column(name = "aadhaar_name")
+    private String aadhaarName;
+
+    @Column(name = "aadhaar_front_url")
+    private String aadhaarFrontUrl;
+
+    @Column(name = "aadhaar_back_url")
+    private String aadhaarBackUrl;
+
+    @Builder.Default
+    @Column(name = "aadhaar_verified")
+    private Boolean aadhaarVerified = false;
+
     // Split Payment Settlement Details
     @Column(name = "upi_id")
     private String upiId;
-
     @Column(name = "bank_account_number")
     private String bankAccountNumber;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "bank_account_holder")
+    private String bankAccountHolder;
 
     @Column(name = "ifsc_code")
     private String ifscCode;

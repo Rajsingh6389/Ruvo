@@ -348,7 +348,7 @@ public class PaymentController {
 
             try {
                 // Use the already-resolved customer fields (populated from UserRepository above)
-                String userEmail = "customer@ruvo.in";
+                String userEmail = "customer@ruvomobile.me";
                 String userPhone = customerPhone;
                 if (request.userId != null) {
                     try {

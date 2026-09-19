@@ -202,8 +202,8 @@ export const MyProductsScreen = () => {
       {/* HEADER */}
       <View className="bg-white px-6 py-4 shadow-sm border-b border-gray-100 z-10 flex-row items-center justify-between">
         <View className="flex-row items-center gap-4">
-          <TouchableOpacity onPress={() => navigation.openDrawer ? navigation.openDrawer() : navigation.goBack()} className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:bg-gray-100">
-            <Ionicons name="menu-outline" size={24} color="#111827" />
+          <TouchableOpacity onPress={() => navigation.goBack()} className="w-10 h-10 bg-gray-50 rounded-full border border-gray-100 items-center justify-center active:bg-gray-100">
+            <Ionicons name="arrow-back" size={24} color="#111827" />
           </TouchableOpacity>
           <View>
             <Text className="text-xl font-black text-gray-900 tracking-tight">My Products</Text>

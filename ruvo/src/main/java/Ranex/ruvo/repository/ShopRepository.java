@@ -26,9 +26,10 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByCategoryAndApprovedTrue(@Param("category") String category);
 
     // Shops still waiting on admin review (for an admin dashboard).
-    // NULL-safe so older rows created before the approved column default existed
-    // still appear for approval instead of disappearing from admin.
-    @Query("SELECT s FROM Shop s WHERE s.approved IS NULL OR s.approved = false")
+    // Filters out shops that have not yet uploaded basic bank and KYC data 
+    // so incomplete onboardings do not flood the admin queue.
+    @Query("SELECT s FROM Shop s WHERE (s.approved IS NULL OR s.approved = false) " +
+           "AND s.bankAccountNumber IS NOT NULL AND s.bankAccountNumber != ''")
     List<Shop> findPendingApproval();
 
     // Haversine formula to find approved shops within X kilometers, nearest first.

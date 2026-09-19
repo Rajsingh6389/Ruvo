@@ -90,7 +90,9 @@ public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner
     }
 
 
-    List<DeliveryPartner> findByApprovedFalse();
+    @Query("SELECT dp FROM DeliveryPartner dp WHERE (dp.approved IS NULL OR dp.approved = false) " +
+           "AND dp.bankAccountNumber IS NOT NULL AND dp.bankAccountNumber != ''")
+    List<DeliveryPartner> findPendingApproval();
 
     List<DeliveryPartner> findByShopId(Long shopId);
     List<DeliveryPartner> findByShopIdAndApprovedTrueAndActiveTrueAndAvailableTrue(Long shopId);

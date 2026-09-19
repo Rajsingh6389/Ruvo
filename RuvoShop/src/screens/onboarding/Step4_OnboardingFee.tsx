@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RuvoShop Onboarding — Step 4: Onboarding Fee
  * Currently ₹0. Shop owner sees a confirmation card and proceeds.
  * Future: integrate Razorpay / payment gateway here.
@@ -57,7 +57,10 @@ export const Step4_OnboardingFee = () => {
             subtitle="One-time fee to activate your RuVo Shop account."
             colors={colors}
             typography={typography}
-            onBack={() => navigation.goBack()}
+            onBack={() => {
+              if (navigation.canGoBack()) navigation.goBack();
+              else navigation.navigate('Step3_BankAccount');
+            }}
           />
 
           {/* Fee highlight card */}

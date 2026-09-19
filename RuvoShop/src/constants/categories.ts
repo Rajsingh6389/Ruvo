@@ -12,11 +12,11 @@ export const PRODUCT_CATEGORIES: string[] = [
   'Fruits & Vegetables',
   'Snacks',
   'Personal Care',
-  'Household',
+  'Cafe',
   'Stationery',
   'Pharmacy',
   'Electronics',
-  'Cafe',
+  'Household',
   'General Store',
   'Other',
 ];

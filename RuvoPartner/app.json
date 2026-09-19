@@ -11,7 +11,7 @@
     "ios": {
       "bundleIdentifier": "com.ruvo.partner",
       "config": {
-        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuvoPartner needs your location to track deliveries and update your availability.",
@@ -26,7 +26,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
         }
       },
       "predictiveBackGestureEnabled": false,
@@ -43,7 +43,7 @@
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
     },
     "plugins": [
       "expo-font",
@@ -56,7 +56,15 @@
           "locationWhenInUsePermission": "Allow RuvoPartner to use your location to fill your registration address."
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

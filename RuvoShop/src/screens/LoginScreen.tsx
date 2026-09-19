@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,78 @@ interface ApiResponse<T> {
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+
+// ── Animated Background (Merchant Emerald & Gold Theme) ──
+const AnimatedShopBackground = () => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.85, duration: 3800, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 3800, useNativeDriver: true }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -18, duration: 4200, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 18, duration: 4200, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
+      {/* 1. Top Right Emerald Glowing Sphere */}
+      <Animated.View
+        style={{
+          position: 'absolute', top: -70, right: -60, width: 260, height: 260,
+          borderRadius: 130, opacity: pulseAnim,
+          transform: [{ translateY: floatAnim }]
+        }}
+      >
+        <LinearGradient
+          colors={['#059669', '#10B981']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* 2. Top Left Merchant Gold Circle */}
+      <Animated.View
+        style={{
+          position: 'absolute', top: 80, left: -60, width: 160, height: 160,
+          borderRadius: 80, opacity: Animated.multiply(pulseAnim, 0.7),
+          transform: [{ translateY: Animated.multiply(floatAnim, -0.8) }]
+        }}
+      >
+        <LinearGradient
+          colors={['#D97706', '#F59E0B']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* 3. Bottom Left Teal Orb */}
+      <Animated.View
+        style={{
+          position: 'absolute', bottom: -50, left: -40, width: 220, height: 220,
+          borderRadius: 110, opacity: Animated.multiply(pulseAnim, 0.6),
+          transform: [{ translateY: floatAnim }]
+        }}
+      >
+        <LinearGradient
+          colors={['#0D9488', '#14B8A6']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
+      {/* Glassmorphism soft overlay */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.78)' }]} />
+    </View>
+  );
+};
 
 export const LoginScreen = ({ navigation }: Props) => {
   const { login, requiredRole } = useAuth();
@@ -114,20 +186,21 @@ export const LoginScreen = ({ navigation }: Props) => {
   const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View style={[styles.screen, { backgroundColor: '#F4FBF7' }]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Warm ambient gradient top wash */}
-      <LinearGradient
-        colors={[colors.primarySoft || '#FFC72C', colors.background]}
-        style={[styles.topGradient, { paddingTop: insets.top }]}
-        pointerEvents="none"
-      />
+      {/* Animated Merchant Background */}
+      <AnimatedShopBackground />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 32 }]}
+          contentContainerStyle={[styles.container, { paddingHorizontal: spacing.gutter, paddingTop: insets.top + 24, paddingBottom: insets.bottom + 120 }]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Brand mark */}
@@ -294,8 +367,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   brandRow: {
     flexDirection: 'row',

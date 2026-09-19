@@ -24,10 +24,9 @@ import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { VerificationStatusScreen } from '../screens/VerificationStatusScreen';
 import { ActiveDevicesScreen } from '../screens/ActiveDevicesScreen';
 
-// Onboarding flow (7 steps)
+// Onboarding flow (6 steps)
 import { Step1_BasicDetails }  from '../screens/onboarding/Step1_BasicDetails';
 import { Step2_VehicleType }   from '../screens/onboarding/Step2_VehicleType';
-import { Step3_Aadhaar }       from '../screens/onboarding/Step3_Aadhaar';
 import { Step4_OnboardingFee } from '../screens/onboarding/Step4_OnboardingFee';
 import { Step5_BankAccount }   from '../screens/onboarding/Step5_BankAccount';
 import { Step6_ShopSelection } from '../screens/onboarding/Step6_ShopSelection';
@@ -42,7 +41,6 @@ export type RootStackParamList = {
   // Onboarding (shown when verificationStatus === 'NEW')
   Step1_BasicDetails: undefined;
   Step2_VehicleType: undefined;
-  Step3_Aadhaar: undefined;
   Step4_OnboardingFee: undefined;
   Step5_BankAccount: undefined;
   Step6_ShopSelection: undefined;
@@ -169,7 +167,6 @@ export const AppNavigator = () => {
             <>
               <Stack.Screen name="Step1_BasicDetails"  component={Step1_BasicDetails}  />
               <Stack.Screen name="Step2_VehicleType"   component={Step2_VehicleType}   />
-              <Stack.Screen name="Step3_Aadhaar"       component={Step3_Aadhaar}       />
               <Stack.Screen name="Step4_OnboardingFee" component={Step4_OnboardingFee} />
               <Stack.Screen name="Step5_BankAccount"   component={Step5_BankAccount}   />
               <Stack.Screen name="Step6_ShopSelection" component={Step6_ShopSelection} />

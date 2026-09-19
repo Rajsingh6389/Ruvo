@@ -31,59 +31,105 @@ interface ApiResponse<T> { message: string; data: T; }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
-// ── Static Background Shapes ──
-const BackgroundShapes = ({ isDark }: { isDark: boolean }) => {
-  const opacityVal = isDark ? 0.35 : 0.6;
-  
+// ── Animated Background Shapes (Looping Pulsing & Floating Glow) ──
+const AnimatedBackgroundShapes = ({ isDark }: { isDark: boolean }) => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // 1. Continuous pulsing opacity
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.8, duration: 3500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 3500, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // 2. Gentle floating vertical motion
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -15, duration: 4000, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 15, duration: 4000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const baseOpacity = isDark ? 0.35 : 0.65;
+
   return (
     <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
-      {/* 1. Top Right Orange Rectangle (Rotated) */}
-      <LinearGradient 
-        colors={['#FF7A00', '#FFB74D']}
+      {/* 1. Top Right Sunset Orange Blob (Pulsing & Floating) */}
+      <Animated.View
         style={{
-          position: 'absolute', top: -50, right: -40, width: 200, height: 200,
-          borderRadius: 40, transform: [{ rotate: '45deg' }], opacity: opacityVal
+          position: 'absolute', top: -60, right: -50, width: 240, height: 240,
+          borderRadius: 120, opacity: Animated.multiply(pulseAnim, baseOpacity),
+          transform: [{ translateY: floatAnim }, { rotate: '45deg' }]
         }}
-      />
+      >
+        <LinearGradient
+          colors={['#FF7A00', '#FF4500']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
       
-      {/* 2. Top Left Yellow Circle */}
-      <LinearGradient 
-        colors={['#F5B700', '#FFD54F']}
+      {/* 2. Top Left Warm Amber Circle */}
+      <Animated.View
         style={{
-          position: 'absolute', top: 60, left: -60, width: 140, height: 140,
-          borderRadius: 70, opacity: opacityVal
+          position: 'absolute', top: 50, left: -70, width: 180, height: 180,
+          borderRadius: 90, opacity: Animated.multiply(pulseAnim, baseOpacity * 0.9),
+          transform: [{ translateY: Animated.multiply(floatAnim, -0.8) }]
         }}
-      />
+      >
+        <LinearGradient
+          colors={['#F59E0B', '#FBBF24']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-      {/* 3. Middle Left Purple Blob / Pill */}
-      <LinearGradient 
-        colors={['#8B5CF6', '#A78BFA']}
+      {/* 3. Middle Left Purple/Pink Coral Blob */}
+      <Animated.View
         style={{
-          position: 'absolute', top: 350, left: -40, width: 90, height: 200,
-          borderRadius: 45, transform: [{ rotate: '-15deg' }], opacity: opacityVal
+          position: 'absolute', top: 320, left: -50, width: 120, height: 220,
+          borderRadius: 60, opacity: Animated.multiply(pulseAnim, baseOpacity * 0.8),
+          transform: [{ translateY: floatAnim }, { rotate: '-20deg' }]
         }}
-      />
+      >
+        <LinearGradient
+          colors={['#EC4899', '#8B5CF6']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-      {/* 4. Middle Right Blue Polygon */}
-      <LinearGradient 
-        colors={['#2563EB', '#60A5FA']}
+      {/* 4. Middle Right Customer Electric Blue Sphere */}
+      <Animated.View
         style={{
-          position: 'absolute', top: 300, right: -30, width: 120, height: 120,
-          borderRadius: 20, transform: [{ rotate: '30deg' }], opacity: opacityVal * 0.8
+          position: 'absolute', top: 280, right: -40, width: 150, height: 150,
+          borderRadius: 75, opacity: Animated.multiply(pulseAnim, baseOpacity * 0.7),
+          transform: [{ translateY: Animated.multiply(floatAnim, -1.2) }]
         }}
-      />
+      >
+        <LinearGradient
+          colors={['#3B82F6', '#60A5FA']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
       
-      {/* 5. Bottom Center Green Circle */}
-      <LinearGradient 
-        colors={['#16A34A', '#4ADE80']}
+      {/* 5. Bottom Emerald Prosperity Arc */}
+      <Animated.View
         style={{
-          position: 'absolute', bottom: -50, left: '20%', width: 250, height: 150,
-          borderRadius: 125, opacity: opacityVal * 0.7
+          position: 'absolute', bottom: -60, left: '15%', width: 280, height: 180,
+          borderRadius: 140, opacity: Animated.multiply(pulseAnim, baseOpacity * 0.6),
+          transform: [{ translateY: floatAnim }]
         }}
-      />
+      >
+        <LinearGradient
+          colors={['#10B981', '#34D399']}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
 
-      {/* Glassmorphism subtle overlay to blend everything together */}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.3)' }]} />
+      {/* Glassmorphism soft wash */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(10,10,12,0.45)' : 'rgba(255,255,255,0.35)' }]} />
     </View>
   );
 };
@@ -192,13 +238,21 @@ export const LoginScreen = ({ navigation }: Props) => {
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-      {/* ── Geometric Background ── */}
-      <BackgroundShapes isDark={isDark} />
+      {/* ── Animated Background ── */}
+      <AnimatedBackgroundShapes isDark={isDark} />
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + (SW * 0.1) }]}
+          contentContainerStyle={[
+            styles.container,
+            { paddingTop: insets.top + (SW * 0.06), paddingBottom: insets.bottom + 120 }
+          ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* ── Graphic Header ── */}
@@ -385,7 +439,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   
   // Header

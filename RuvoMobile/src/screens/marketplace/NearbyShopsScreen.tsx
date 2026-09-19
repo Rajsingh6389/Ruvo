@@ -3,9 +3,11 @@ import {
   ActivityIndicator,
   Animated,
   Image,
+  Modal,
   ScrollView,
   Text,
   Pressable,
+  TouchableOpacity,
   View,
   StatusBar,
   StyleSheet,
@@ -29,6 +31,7 @@ import type { Shop } from '../../types';
 import type { RootStackParamList } from '../../types/navigation';
 import { CATEGORIES, PRODUCT_IMAGES, SHOP_IMAGES, getCategoryImage } from '../../assets/cloudinary';
 import { LoadingState, EmptyState, ErrorState } from '../../components/design-system';
+import { OnboardingShopEmptyState } from '../../components/OnboardingShopEmptyState';
 import { resolveImageUrl } from '../../utils/imageUrl';
 
 type NearbyShopsRouteProp = RouteProp<RootStackParamList, 'NearbyShops'>;
@@ -105,6 +108,7 @@ export const NearbyShopsScreen = () => {
   const [shopsLoading, setShopsLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const sidebarWidth = 80; // w-20 is 80px
   const rightPaneWidth = screenWidth - sidebarWidth;
   const isSmallDevice = rightPaneWidth < 280; // Force 1-column on narrow side-panes
@@ -214,18 +218,176 @@ export const NearbyShopsScreen = () => {
 
   if (shops.length === 0) {
     return (
-      <EmptyState
-        icon="storefront"
-        title={categoryFilter ? `No ${categoryFilter} shops found` : 'No shops found'}
-        subtitle="Try another category or browse all nearby shops."
-        action={{
-          label: categoryFilter ? 'View all shops' : 'Go Home',
-          onPress: () =>
-            categoryFilter
-              ? (navigation as any).setParams({ category: undefined })
-              : (navigation.navigate as any)(ROUTES.HOME),
-        }}
-      />
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar backgroundColor="#FF6B35" barStyle="light-content" />
+
+        {/* ── U-Shaped RuVo Orange Banner Header ──────────────────────── */}
+        <View 
+          style={{ 
+            backgroundColor: '#FF6B35', 
+            borderBottomLeftRadius: 32, 
+            borderBottomRightRadius: 32,
+            shadowColor: '#FF6B35',
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            elevation: 8,
+          }} 
+          className="px-4 pt-3 pb-5"
+        >
+          <View className="flex-row items-center justify-between mb-3">
+            <Pressable
+              onPress={() => navigation.canGoBack() ? navigation.goBack() : (navigation.navigate as any)(ROUTES.HOME)}
+              style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+              className="w-10 h-10 rounded-full items-center justify-center"
+            >
+              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            </Pressable>
+
+            <View className="items-center flex-1">
+              <Text style={{ color: '#FFFFFF' }} className="text-lg font-black">
+                {categoryFilter || 'Nearby Shops'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.88)' }} className="text-xs font-semibold">
+                0 shops around you
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => (navigation.navigate as any)(ROUTES.CART)}
+              style={{ backgroundColor: 'rgba(255,255,255,0.22)' }}
+              className="w-10 h-10 rounded-full items-center justify-center relative"
+            >
+              <Ionicons name="bag-outline" size={22} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {/* ── Category Selector Bar inside NearbyShops ─────────────────── */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-3"
+            contentContainerStyle={{ gap: 8 }}
+          >
+            <Pressable
+              onPress={() => (navigation as any).setParams({ category: undefined })}
+              style={{
+                backgroundColor: !categoryFilter ? '#FFFFFF' : 'rgba(255,255,255,0.22)',
+              }}
+              className="px-4 h-8 rounded-full flex-row items-center gap-1.5"
+            >
+              <Text style={{ color: !categoryFilter ? '#FF6B35' : '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 }}>
+                All
+              </Text>
+            </Pressable>
+            {CATEGORIES.map(cat => {
+              const isSelected = categoryFilter === cat.label;
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => (navigation as any).setParams({ category: cat.label })}
+                  style={{
+                    backgroundColor: isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.22)',
+                  }}
+                  className="px-3.5 h-8 rounded-full flex-row items-center gap-1.5"
+                >
+                  <Text style={{ color: isSelected ? '#FF6B35' : '#FFFFFF', fontFamily: 'Poppins_800ExtraBold', fontSize: 12 }}>
+                    {cat.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <OnboardingShopEmptyState
+          category={categoryFilter}
+          onExploreMore={() => setIsCategoryModalOpen(true)}
+          onResetCategory={() => (navigation as any).setParams({ category: undefined })}
+        />
+
+        {/* ── Category Selection Modal Sheet ──────────────────────── */}
+        <Modal
+          visible={isCategoryModalOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setIsCategoryModalOpen(false)}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: isDark ? '#171A1F' : '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: '80%' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: colors.textPrimary }}>
+                  Explore All Categories
+                </Text>
+                <TouchableOpacity onPress={() => setIsCategoryModalOpen(false)}>
+                  <Ionicons name="close-circle" size={26} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+                {/* Show All Option */}
+                <TouchableOpacity
+                  onPress={() => {
+                    (navigation as any).setParams({ category: undefined });
+                    setIsCategoryModalOpen(false);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: !categoryFilter ? '#FFF0ED' : (isDark ? '#232730' : '#F9FAFB'),
+                    padding: 14,
+                    borderRadius: 16,
+                    borderWidth: 1.5,
+                    borderColor: !categoryFilter ? '#FF6B35' : (isDark ? '#333A48' : '#EAF0F6'),
+                  }}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF6B35', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <Ionicons name="grid-outline" size={22} color="#FFFFFF" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontFamily: 'Poppins_700Bold', color: !categoryFilter ? '#FF6B35' : colors.textPrimary }}>
+                      All Categories
+                    </Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>View all registered stores near you</Text>
+                  </View>
+                  {!categoryFilter && <Ionicons name="checkmark-circle" size={22} color="#FF6B35" />}
+                </TouchableOpacity>
+
+                {CATEGORIES.map(cat => {
+                  const isSelected = categoryFilter === cat.label;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => {
+                        (navigation as any).setParams({ category: cat.label });
+                        setIsCategoryModalOpen(false);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: isSelected ? '#FFF0ED' : (isDark ? '#232730' : '#F9FAFB'),
+                        padding: 12,
+                        borderRadius: 16,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? '#FF6B35' : (isDark ? '#333A48' : '#EAF0F6'),
+                      }}
+                    >
+                      <Image
+                        source={{ uri: cat.image }}
+                        style={{ width: 44, height: 44, borderRadius: 22, marginRight: 14 }}
+                      />
+                      <Text style={{ flex: 1, fontSize: 15, fontFamily: 'Poppins_700Bold', color: isSelected ? '#FF6B35' : colors.textPrimary }}>
+                        {cat.label}
+                      </Text>
+                      {isSelected && <Ionicons name="checkmark-circle" size={22} color="#FF6B35" />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
     );
   }
 
@@ -390,24 +552,11 @@ export const NearbyShopsScreen = () => {
         {/* ── Right Main Panel: Products or Empty State ─────────────── */}
         <View style={{ backgroundColor: colors.background }} className="flex-1">
           {shops.length === 0 ? (
-            <View style={{ backgroundColor: colors.surface }} className="flex-1 items-center justify-center p-6">
-              <View className="w-16 h-16 rounded-full bg-ruvo-yellow-soft items-center justify-center mb-3">
-                <Ionicons name="storefront-outline" size={32} color="#B77900" />
-              </View>
-              <Text style={{ color: colors.textPrimary }} className="text-base font-black text-center">
-                No Shops Found for "{categoryFilter || 'Selected Category'}"
-              </Text>
-              <Text style={{ color: colors.textSecondary }} className="text-xs text-center mt-1.5 px-3 leading-relaxed">
-                There are currently no registered shops in this category. Please select another category above or browse all shops.
-              </Text>
-              <Pressable
-                onPress={() => (navigation as any).setParams({ category: undefined })}
-                className="mt-4 bg-ruvo-yellow rounded-xl px-4 h-10 flex-row items-center justify-center gap-2"
-              >
-                <Ionicons name="grid-outline" size={15} color="#111827" />
-                <Text className="font-extrabold text-xs text-ruvo-ink">Show All Categories</Text>
-              </Pressable>
-            </View>
+            <OnboardingShopEmptyState
+              category={categoryFilter}
+              onExploreMore={() => (navigation as any).setParams({ category: undefined })}
+              onResetCategory={() => (navigation as any).setParams({ category: undefined })}
+            />
           ) : selectedShop ? (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
               {/* Selected Shop Header */}
@@ -552,6 +701,88 @@ export const NearbyShopsScreen = () => {
           </BlurView>
         </Animated.View>
       )}
+
+      {/* ── Category Selection Modal Sheet ──────────────────────── */}
+      <Modal
+        visible={isCategoryModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsCategoryModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: isDark ? '#171A1F' : '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: colors.textPrimary }}>
+                Explore All Categories
+              </Text>
+              <TouchableOpacity onPress={() => setIsCategoryModalOpen(false)}>
+                <Ionicons name="close-circle" size={26} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+              {/* Show All Option */}
+              <TouchableOpacity
+                onPress={() => {
+                  (navigation as any).setParams({ category: undefined });
+                  setIsCategoryModalOpen(false);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: !categoryFilter ? '#FFF0ED' : (isDark ? '#232730' : '#F9FAFB'),
+                  padding: 14,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderColor: !categoryFilter ? '#FF6B35' : (isDark ? '#333A48' : '#EAF0F6'),
+                }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#FF6B35', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Ionicons name="grid-outline" size={22} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontFamily: 'Poppins_700Bold', color: !categoryFilter ? '#FF6B35' : colors.textPrimary }}>
+                    All Categories
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>View all registered stores near you</Text>
+                </View>
+                {!categoryFilter && <Ionicons name="checkmark-circle" size={22} color="#FF6B35" />}
+              </TouchableOpacity>
+
+              {CATEGORIES.map(cat => {
+                const isSelected = categoryFilter === cat.label;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => {
+                      (navigation as any).setParams({ category: cat.label });
+                      setIsCategoryModalOpen(false);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: isSelected ? '#FFF0ED' : (isDark ? '#232730' : '#F9FAFB'),
+                      padding: 12,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: isSelected ? '#FF6B35' : (isDark ? '#333A48' : '#EAF0F6'),
+                    }}
+                  >
+                    <Image
+                      source={{ uri: cat.image }}
+                      style={{ width: 44, height: 44, borderRadius: 22, marginRight: 14 }}
+                    />
+                    <Text style={{ flex: 1, fontSize: 15, fontFamily: 'Poppins_700Bold', color: isSelected ? '#FF6B35' : colors.textPrimary }}>
+                      {cat.label}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark-circle" size={22} color="#FF6B35" />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

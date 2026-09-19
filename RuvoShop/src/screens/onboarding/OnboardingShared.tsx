@@ -20,11 +20,10 @@ import { RADIUS } from '../../theme/radius';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-export const TOTAL_STEPS = 4;
+export const TOTAL_STEPS = 3;
 
 export const STEP_META = [
   { icon: 'storefront-outline'           as const, label: 'Details' },
-  { icon: 'card-outline'                 as const, label: 'Aadhaar' },
   { icon: 'wallet-outline'               as const, label: 'Bank' },
   { icon: 'checkmark-circle-outline'     as const, label: 'Done' },
 ];
@@ -92,24 +91,24 @@ interface ScreenHeaderProps {
   typography?: any;
 }
 
-export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, icon, onBack }) => (
+export const ScreenHeader: React.FC<ScreenHeaderProps> = ({ title, subtitle, icon, onBack, colors, typography }) => (
   <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12 }}>
     {onBack && (
       <TouchableOpacity
         onPress={onBack}
-        style={{ width: 36, height: 36, backgroundColor: '#F0ECE7', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
+        style={{ width: 36, height: 36, backgroundColor: colors?.surfaceSunken || '#F0ECE7', borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}
       >
-        <Ionicons name="arrow-back" size={20} color="#231C10" />
+        <Ionicons name="arrow-back" size={20} color={colors?.textPrimary || '#231C10'} />
       </TouchableOpacity>
     )}
     {icon && (
-      <View style={{ width: 36, height: 36, backgroundColor: ACCENT_SOFT, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
-        <Ionicons name={icon} size={18} color="#A07800" />
+      <View style={{ width: 36, height: 36, backgroundColor: colors?.primarySoft || ACCENT_SOFT, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={18} color={colors?.primary || '#A07800'} />
       </View>
     )}
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: '#231C10' }}>{title}</Text>
-      {subtitle && <Text style={{ fontSize: 12, color: '#6B5E52', marginTop: 2, fontFamily: 'Poppins_500Medium' }}>{subtitle}</Text>}
+      <Text style={[typography?.headingM, { fontSize: 18, fontFamily: 'Poppins_800ExtraBold', color: colors?.textPrimary || '#231C10' }]}>{title}</Text>
+      {subtitle && <Text style={[typography?.caption, { fontSize: 12, color: colors?.textSecondary || '#6B5E52', marginTop: 2, fontFamily: 'Poppins_500Medium' }]}>{subtitle}</Text>}
     </View>
   </View>
 );

@@ -99,8 +99,35 @@ const STATUS_FILTERS = [
 const formatImageUrl = (url?: string) => {
   if (!url) return null;
   const trimmed = url.trim();
+  if (trimmed === 'null' || trimmed === 'undefined') return null;
   return trimmed.startsWith('http') ? trimmed : `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
+
+export const getShopLogoUrl = (shopData: any): string | null => {
+  if (!shopData) return null;
+
+  const candidates = [
+    shopData.logoUrl,
+    shopData.logo,
+    shopData.imageUrl,
+    shopData.image,
+    shopData.bannerUrl,
+    shopData.banner,
+    shopData.shopLogo,
+    Array.isArray(shopData.images) && shopData.images.length > 0 ? shopData.images[0] : null,
+  ];
+
+  for (const raw of candidates) {
+    if (raw && typeof raw === 'string' && raw.trim() !== '' && raw !== 'null' && raw !== 'undefined') {
+      const formatted = formatImageUrl(raw);
+      if (formatted) return formatted;
+    }
+  }
+
+  // No real logo found — return null so the storefront icon placeholder shows
+  return null;
+};
+
 
 // ── Main Component ───────────────────────────────────────────────────────────
 export default function ShopkeeperDashboardScreen() {
@@ -420,10 +447,10 @@ export default function ShopkeeperDashboardScreen() {
             {/* Drawer Header */}
             <View style={{ backgroundColor: '#F5B700', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.4)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', overflow: 'hidden' }}>
-                  {shop?.logoUrl || shop?.bannerUrl ? (
+                <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF', overflow: 'hidden' }}>
+                  {getShopLogoUrl(shop) ? (
                     <Image
-                      source={{ uri: formatImageUrl(shop.logoUrl || shop.bannerUrl) || undefined }}
+                      source={{ uri: getShopLogoUrl(shop)! }}
                       style={{ width: '100%', height: '100%' }}
                       resizeMode="cover"
                     />
@@ -512,8 +539,14 @@ export default function ShopkeeperDashboardScreen() {
                 <Text className="text-xl font-black text-gray-900">Dashboard</Text>
                 <View className="w-2 h-2 rounded-full bg-emerald-500" />
               </View>
-              <View className="flex-row items-center gap-1 mt-0.5">
-                <Ionicons name="storefront" size={12} color="#D99B00" />
+              <View className="flex-row items-center gap-1.5 mt-0.5">
+                <View className="w-7 h-7 rounded-full bg-amber-50 border border-amber-300 overflow-hidden items-center justify-center">
+                  {getShopLogoUrl(shop) ? (
+                    <Image source={{ uri: getShopLogoUrl(shop)! }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  ) : (
+                    <Ionicons name="storefront" size={14} color="#D99B00" />
+                  )}
+                </View>
                 <Text className="text-xs font-extrabold text-amber-700" numberOfLines={1}>{shopName}</Text>
               </View>
             </View>
@@ -854,7 +887,7 @@ function DashboardTab({
   onNavigateAddProduct,
   onNavigateEditProduct,
 }: any) {
-  const shopLogo = shop ? formatImageUrl(shop.logoUrl || shop.bannerUrl || shop.image) : null;
+  const shopLogo = getShopLogoUrl(shop);
   const recentProducts = products.slice(0, 4);
 
   return (

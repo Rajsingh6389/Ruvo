@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   StatusBar,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,8 +107,15 @@ export const OtpVerificationScreen = () => {
         <Ionicons name="arrow-back" size={22} color="#FFF" />
       </TouchableOpacity>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <View className="flex-1 justify-center px-6 items-center">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 24, paddingBottom: 120 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={true}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="items-center">
           {/* Icon */}
           <View className="w-20 h-20 items-center justify-center mb-6 rounded-[24px] bg-[#FF7A00]/10 border border-[#FF7A00]/30 animate-pulse">
             <Ionicons name="shield-checkmark" size={40} color="#FF7A00" />
@@ -205,6 +213,7 @@ export const OtpVerificationScreen = () => {
             </View>
           </View>
         </View>
+      </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

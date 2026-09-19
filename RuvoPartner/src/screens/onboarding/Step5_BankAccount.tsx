@@ -32,7 +32,7 @@ const BANKS = [
 
 export const Step5_BankAccount = () => {
   const navigation = useNavigation<any>();
-  const { token, authenticatedFetch } = useAuth();
+  const { token, userId, user, authenticatedFetch } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
 
   const [accountHolder, setAccountHolder] = useState('');
@@ -83,13 +83,18 @@ export const Step5_BankAccount = () => {
     startSpinner();
     Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/api/payments/razorpay/register-partner-vendor`, {
+      const activePartnerId = user?.userId || (userId ? parseInt(userId, 10) : null);
+      if (!activePartnerId) throw new Error('Partner session expired. Please sign in again.');
+
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/partner/razorpay/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          partnerId: user?.userId,
-          accountNumber,
-          ifsc,
+          partnerId: activePartnerId,
+          bankAccountNumber: accountNumber,
+          ifscCode: ifsc,
+          beneficiaryName: accountHolder,
+          bankName: bankName,
         }),
       });
 
@@ -112,10 +117,14 @@ export const Step5_BankAccount = () => {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
-      <StepBar current={5} colors={colors} typography={typography} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StepBar current={4} colors={colors} typography={typography} />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

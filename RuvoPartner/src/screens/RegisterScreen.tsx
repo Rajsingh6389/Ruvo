@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,75 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
+// ── Animated Partner Background (Electric Fleet Blue & Cyber Cyan) ──
+const AnimatedPartnerBackground = () => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.9, duration: 3200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 3200, useNativeDriver: true }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -16, duration: 3800, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 16, duration: 3800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }} pointerEvents="none">
+      {/* 1. Top Right Electric Blue Speed Aura */}
+      <Animated.View
+        style={{
+          position: 'absolute', top: -80, right: -80, width: 280, height: 280,
+          borderRadius: 140, opacity: pulseAnim,
+          transform: [{ translateY: floatAnim }]
+        }}
+      >
+        <LinearGradient
+          colors={['#2563EB', '#3B82F6']}
+          style={{ width: '100%', height: '100%', borderRadius: 140 }}
+        />
+      </Animated.View>
+
+      {/* 2. Bottom Left Cyber Cyan Radar Glow */}
+      <Animated.View
+        style={{
+          position: 'absolute', bottom: -80, left: -80, width: 260, height: 260,
+          borderRadius: 130, opacity: Animated.multiply(pulseAnim, 0.7),
+          transform: [{ translateY: Animated.multiply(floatAnim, -1) }]
+        }}
+      >
+        <LinearGradient
+          colors={['#0284C7', '#06B6D4']}
+          style={{ width: '100%', height: '100%', borderRadius: 130 }}
+        />
+      </Animated.View>
+
+      {/* Dark Ambient Overlay */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(11, 15, 25, 0.8)' }} />
+    </View>
+  );
+};
+
 export const RegisterScreen = () => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { token, setVerificationStatus, authenticatedFetch, logout } = useAuth();
 
   const [fullName, setFullName] = useState('');
@@ -129,15 +188,17 @@ export const RegisterScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-ink">
+    <View className="flex-1 bg-[#0A0E1A]">
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Decorative Glow Elements */}
-      <View className="absolute top-0 right-[-100px] w-80 h-80 bg-[#FF7A00]/10 rounded-full blur-3xl opacity-40 pointer-events-none" />
-      <View className="absolute bottom-[-100px] left-[-100px] w-80 h-80 bg-blue-500/10 rounded-full blur-3xl opacity-30 pointer-events-none" />
+      {/* Electric Fleet Ambient Glow Background */}
+      <AnimatedPartnerBackground />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-4 z-10 border-b border-gray-800 bg-ruvo-ink/90">
+      <View 
+        className="flex-row items-center justify-between px-5 py-4 z-10 border-b border-gray-800/80 bg-[#0A0E1A]/80"
+        style={{ paddingTop: insets.top + 8 }}
+      >
         <TouchableOpacity 
           className="w-10 h-10 items-center justify-center rounded-full bg-white/5 border border-white/10"
           onPress={() => {
@@ -153,21 +214,21 @@ export const RegisterScreen = () => {
         >
           <Ionicons name="arrow-back" size={20} color="#FFF" />
         </TouchableOpacity>
-        <Text className="text-white text-lg font-black tracking-widest uppercase">Partner Registration</Text>
+        <Text className="text-white text-base font-black tracking-widest uppercase">Partner Registration</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 32, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-          <Text className="text-[#FF7A00] text-sm font-black tracking-widest uppercase mb-1">Step 1 of 2</Text>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 24, paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false}>
+          <Text className="text-[#FF7A00] text-xs font-black tracking-widest uppercase mb-1">Step 1 of 2</Text>
           <Text className="text-white text-3xl font-black tracking-tight mb-2">
             Build your Profile
           </Text>
-          <Text className="text-gray-400 text-sm font-bold leading-5 mb-8">
-            Complete your profile to join the secure RuVo delivery network.
+          <Text className="text-gray-400 text-sm font-bold leading-5 mb-6">
+            Complete your profile details to join the secure RuVo delivery fleet network.
           </Text>
 
-          {/* Form Card */}
+          {/* Form Glass Card */}
           <View 
             className="w-full bg-[#1C2026] border border-gray-800 rounded-[32px] p-6 mb-6"
             style={{ shadowColor: '#000', shadowOffset: {width: 0, height: 12}, shadowOpacity: 0.4, shadowRadius: 24, elevation: 12 }}
@@ -226,9 +287,10 @@ export const RegisterScreen = () => {
             <Text className="text-white text-lg font-black tracking-tight mb-4">Location Details</Text>
             
             <TouchableOpacity 
-              className={`flex-row items-center justify-center p-4 rounded-2xl border mb-5 gap-2 ${locating ? 'bg-[#FF7A00]/10 border-[#FF7A00]/30' : 'bg-[#FF7A00]/5 border-[#FF7A00]/20'}`}
+              className={`flex-row items-center justify-center p-4 rounded-2xl border mb-5 gap-2 ${locating ? 'bg-[#FF7A00]/10 border-[#FF7A00]/30' : 'bg-[#FF7A00]/10 border-[#FF7A00]/30'}`}
               onPress={useCurrentLocation}
               disabled={locating}
+              activeOpacity={0.8}
             >
               {locating ? (
                 <ActivityIndicator color="#FF7A00" size="small" />
@@ -333,6 +395,6 @@ export const RegisterScreen = () => {
 
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };

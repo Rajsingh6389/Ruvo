@@ -78,7 +78,10 @@ export const Step5_ShopSelect = () => {
           subtitle="Your shop will be visible to nearby delivery partners on RuVo."
           colors={colors}
           typography={typography}
-          onBack={() => navigation.goBack()}
+          onBack={() => {
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate('Step4_OnboardingFee');
+          }}
         />
 
         {/* Partner coverage visual */}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, {useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -33,6 +34,77 @@ interface ApiResponse<T> {
 }
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
+
+// ── Animated Partner Background (Electric Fleet Blue & Cyber Cyan) ──
+const AnimatedPartnerBackground = () => {
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.9, duration: 3200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.4, duration: 3200, useNativeDriver: true }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -16, duration: 3800, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 16, duration: 3800, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }} pointerEvents="none">
+      {/* 1. Top Right Electric Blue Speed Aura */}
+      <Animated.View
+        style={{
+          position: 'absolute', top: -80, right: -80, width: 280, height: 280,
+          borderRadius: 140, opacity: pulseAnim,
+          transform: [{ translateY: floatAnim }]
+        }}
+      >
+        <LinearGradient
+          colors={['#2563EB', '#3B82F6']}
+          style={{ width: '100%', height: '100%', borderRadius: 140 }}
+        />
+      </Animated.View>
+
+      {/* 2. Bottom Left Cyber Cyan Radar Glow */}
+      <Animated.View
+        style={{
+          position: 'absolute', bottom: -80, left: -80, width: 260, height: 260,
+          borderRadius: 130, opacity: Animated.multiply(pulseAnim, 0.7),
+          transform: [{ translateY: Animated.multiply(floatAnim, -1) }]
+        }}
+      >
+        <LinearGradient
+          colors={['#0284C7', '#06B6D4']}
+          style={{ width: '100%', height: '100%', borderRadius: 130 }}
+        />
+      </Animated.View>
+
+      {/* 3. Center Glow Pulse */}
+      <Animated.View
+        style={{
+          position: 'absolute', top: '40%', left: '30%', width: 160, height: 160,
+          borderRadius: 80, opacity: Animated.multiply(pulseAnim, 0.35),
+          transform: [{ scale: Animated.add(1, Animated.multiply(pulseAnim, 0.2)) }]
+        }}
+      >
+        <LinearGradient
+          colors={['#4F46E5', '#3B82F6']}
+          style={{ width: '100%', height: '100%', borderRadius: 80 }}
+        />
+      </Animated.View>
+
+      {/* Dark Ambient Overlay */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(11, 15, 25, 0.75)' }} />
+    </View>
+  );
+};
 
 export const LoginScreen = ({ navigation }: Props) => {
   const { login } = useAuth();
@@ -114,21 +186,21 @@ export const LoginScreen = ({ navigation }: Props) => {
   const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);
 
   return (
-    <View className="flex-1 bg-ruvo-ink">
+    <View className="flex-1 bg-[#0A0E1A]">
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* Decorative Glow Elements */}
-      <View className="absolute top-[-100px] right-[-100px] w-64 h-64 bg-[#FF7A00]/20 rounded-full blur-3xl opacity-50" />
-      <View className="absolute bottom-[-100px] left-[-100px] w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl opacity-50" />
+      {/* Decorative Animated Glow Background */}
+      <AnimatedPartnerBackground />
 
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40, paddingTop: insets.top + 32, paddingHorizontal: 24 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 120, paddingTop: insets.top + 24, paddingHorizontal: 24 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Brand Row */}

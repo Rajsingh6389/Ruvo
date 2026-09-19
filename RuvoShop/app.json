@@ -15,14 +15,14 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
         }
       }
     },
     "ios": {
       "bundleIdentifier": "com.ruvo.shop",
       "config": {
-        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
       }
     },
     "splash": {
@@ -32,7 +32,7 @@
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
     },
     "web": {
       "bundler": "metro"
@@ -47,7 +47,15 @@
           "locationWhenInUsePermission": "Allow RuVo Shop to use your location to fill your shop address."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

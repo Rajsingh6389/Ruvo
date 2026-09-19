@@ -71,7 +71,12 @@ public class PricingService {
 
         if (configs != null && !configs.isEmpty()) {
             for (PricingConfig cfg : configs) {
-                if (distanceKm >= cfg.getFromKm() && distanceKm < cfg.getToKm()) {
+                // Ensure distanceKm matches within slab fromKm <= distanceKm < toKm, or distanceKm <= toKm for max bound
+                boolean isLastSlab = cfg.getToKm() != null && cfg.getToKm() >= 5.0;
+                boolean inRange = isLastSlab 
+                        ? (distanceKm >= cfg.getFromKm() && distanceKm <= cfg.getToKm())
+                        : (distanceKm >= cfg.getFromKm() && distanceKm < cfg.getToKm());
+                if (inRange) {
                     baseFee  = cfg.getDeliveryFee();
                     modifier = resolveCartModifier(cfg, cartValue);
                     break;
@@ -94,10 +99,10 @@ public class PricingService {
 
     /** Hard-coded default slabs used when DB is empty. */
     private double fallbackDeliveryFee(double distanceKm) {
-        if (distanceKm < 2)  return 10.0;
-        if (distanceKm < 4)  return 20.0;
-        if (distanceKm < 5)  return 30.0;
-        return 50.0; // >5 km — DistanceUtils isServiceable should block this
+        if (distanceKm < 1.0) return 10.0; // 0 - 1 km  → ₹10
+        if (distanceKm < 2.0) return 15.0; // 1 - 2 km  → ₹15
+        if (distanceKm < 3.0) return 20.0; // 2 - 3 km  → ₹20
+        return 25.0;                        // 3 - 5 km  → ₹25
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -110,6 +115,13 @@ public class PricingService {
             return configs.get(0).getPlatformFee();
         }
         return DEFAULT_PLATFORM_FEE;
+    }
+
+    /** Platform fee scaled dynamically by item quantity: base fee + (items * perItemCharge) */
+    public double calculatePlatformFee(int totalItemsCount) {
+        double baseFee = getPlatformFee();
+        if (totalItemsCount <= 1) return baseFee;
+        return baseFee + ((totalItemsCount - 1) * 2.0); // e.g. ₹5 base + ₹2 for each extra item
     }
 
     public double getGstRate() {
@@ -162,19 +174,24 @@ public class PricingService {
             throw new IllegalArgumentException("We are not in your area right now");
         }
 
-        // Subtotal
+        // Subtotal & Total Item Quantity
         double subtotal = 0.0;
+        int totalItemCount = 0;
         if (items != null) {
             for (QuoteItemRequest item : items) {
                 Product p = productRepository.findById(item.getProductId()).orElse(null);
-                if (p != null) subtotal += p.getSellingPrice() * item.getQuantity();
+                if (p != null) {
+                    int qty = item.getQuantity() != null ? item.getQuantity() : 1;
+                    subtotal += p.getSellingPrice() * qty;
+                    totalItemCount += qty;
+                }
             }
         }
 
         // Fees
         double deliveryFee        = calculateDeliveryFee(distanceKm, subtotal);
         boolean isFreeDelivery    = deliveryFee == 0.0;
-        double platformFee        = getPlatformFee();
+        double platformFee        = calculatePlatformFee(totalItemCount);
         double gstOnPlatformFee   = calculateGstOnPlatformFee(platformFee);
 
         // Grand total (customer pays)
@@ -195,9 +212,9 @@ public class PricingService {
             ruvoRevenue = platformFee; // RuVo keeps platformFee, pays gstOnPlatformFee to govt
         }
 
-        // Shop net = subtotal − platformFee − gstOnPlatformFee
-        // (coupon discount already handled server-side at order creation)
-        double shopPayout = round2(subtotal - platformFee - gstOnPlatformFee);
+        // Shop net = subtotal
+        // (Platform fee + GST are paid by the customer on top of subtotal; coupon discounts are handled at order placement)
+        double shopPayout = round2(subtotal);
 
         Map<String, Object> response = new HashMap<>();
         response.put("subtotal",           round2(subtotal));

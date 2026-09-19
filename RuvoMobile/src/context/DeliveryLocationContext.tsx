@@ -111,8 +111,22 @@ async function getCurrentPosition(): Promise<{ latitude: number; longitude: numb
     throw new Error('Location services (GPS) are disabled on your device.');
   }
 
+  // 1. Try instant last known position first (<50ms)
+  try {
+    const lastPos = await Location.getLastKnownPositionAsync({});
+    if (lastPos && lastPos.coords && Number.isFinite(lastPos.coords.latitude) && Number.isFinite(lastPos.coords.longitude)) {
+      return {
+        latitude: lastPos.coords.latitude,
+        longitude: lastPos.coords.longitude,
+      };
+    }
+  } catch {
+    /* Fall back to active current position */
+  }
+
+  // 2. Use Balanced accuracy for fast resolution (<1 sec vs 15 sec for Highest)
   const pos = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Highest,
+    accuracy: Location.Accuracy.Balanced,
   });
   return {
     latitude: pos.coords.latitude,

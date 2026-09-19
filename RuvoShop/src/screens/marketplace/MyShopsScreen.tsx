@@ -29,9 +29,13 @@ import { Badge } from '../../components/ui/Badge';
 import { SearchInput } from '../../components/ui/Input';
 import { EmptyState } from '../../components/ui/EmptyState';
 
+import { getShopLogoUrl } from './ShopkeeperDashboardScreen';
+
 function resolveImage(url?: string): string | null {
   if (!url) return null;
-  return url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  const trimmed = url.trim();
+  if (trimmed === 'null' || trimmed === 'undefined') return null;
+  return trimmed.startsWith('http') ? trimmed : `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 }
 
 export const MyShopsScreen = () => {
@@ -151,7 +155,7 @@ export const MyShopsScreen = () => {
   const ShopCard = ({ item, index }: { item: Shop; index: number }) => {
     const shopData = item as Shop & { category?: string; address?: string; phone?: string; settlementBlocked?: boolean };
     const approved = Boolean(item.approved);
-    const logoUri = resolveImage(item.logoUrl);
+    const logoUri = getShopLogoUrl(item);
     const bannerUri = resolveImage(item.bannerUrl || (item as any).imageUrl);
 
     return (

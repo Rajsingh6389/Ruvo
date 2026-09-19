@@ -18,6 +18,10 @@ import {
   useDeliveryLocation,
   type AddressDetails,
 } from '../context/DeliveryLocationContext';
+import {
+  searchLocationSuggestions,
+  type LocationSearchResult,
+} from '../utils/locationUtils';
 
 type Props = {
   visible: boolean;
@@ -73,6 +77,9 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
   const [showAddNewView, setShowAddNewView] = useState(false);
   const [showMapConfirmModal, setShowMapConfirmModal] = useState(false);
 
+  const [searchResults, setSearchResults] = useState<LocationSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   useEffect(() => {
     if (visible) {
       setForm(location?.details ?? emptyForm());
@@ -81,9 +88,33 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
       setFormError(null);
       setShowAddNewView(false);
       setShowMapConfirmModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
       startTracking();
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 3) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchLocationSuggestions(searchQuery);
+        setSearchResults(res);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const update = (key: keyof AddressDetails, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -91,8 +122,8 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
 
   const handleUseGps = async () => {
     setFormError(null);
-    await refreshFromGps();
-    setShowMapConfirmModal(true);
+    setShowMapConfirmModal(true); // Open modal INSTANTLY (0ms latency!)
+    refreshFromGps().catch(() => {}); // Fetch GPS coordinates asynchronously
   };
 
   const handleSelectAddressItem = async (item: { details: AddressDetails; latitude?: number; longitude?: number; name?: string }) => {
@@ -204,16 +235,54 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
           {/* SEARCH BAR */}
           <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TextInput
-              placeholder="Search an area or address"
+              placeholder="Search an area, locality or landmark"
               placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
               style={[styles.searchInput, { color: colors.textPrimary }]}
             />
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
+            {isSearching ? (
+              <ActivityIndicator size="small" color="#FF6B35" />
+            ) : (
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+            )}
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
+            {searchResults.length > 0 && !showAddNewView && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SEARCH RESULTS ({searchResults.length})</Text>
+                <View style={[styles.savedCardBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  {searchResults.map((res, index) => (
+                    <View key={res.id}>
+                      {index > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
+                      <TouchableOpacity
+                        style={styles.addressRow}
+                        onPress={() => handleSelectAddressItem({
+                          name: res.title,
+                          details: {
+                            ...res.details,
+                            receiverName: location?.details?.receiverName || '',
+                            phone: location?.details?.phone || '',
+                          },
+                          latitude: res.latitude,
+                          longitude: res.longitude,
+                        })}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.addressIconBox, { backgroundColor: colors.surface }]}>
+                          <Ionicons name="location" size={20} color="#FF6B35" />
+                        </View>
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={[styles.addressName, { color: colors.textPrimary }]} numberOfLines={1}>{res.title}</Text>
+                          <Text style={[styles.addressFullText, { color: colors.textSecondary }]} numberOfLines={2}>{res.subtitle || res.details.fullAddress}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
             {showAddNewView ? (
               /* ADD NEW ADDRESS FORM VIEW */
               <View style={styles.formContainer}>
@@ -238,10 +307,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                     marginBottom: 16,
                     gap: 8,
                   }}
-                  onPress={async () => {
-                    await refreshFromGps();
-                    setShowMapConfirmModal(true);
-                  }}
+                  onPress={handleUseGps}
                   activeOpacity={0.7}
                 >
                   <Ionicons name="location" size={18} color="#FF6B35" />
@@ -251,13 +317,50 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                   {isLoading && <ActivityIndicator size="small" color="#FF6B35" />}
                 </TouchableOpacity>
 
+                {/* SWIGGY-STYLE ADDRESS TAG CATEGORY SELECTOR */}
+                <Text style={{ fontSize: 12, fontFamily: 'Poppins_700Bold', color: '#374151', marginBottom: 8 }}>
+                  SAVE ADDRESS AS
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  {[
+                    { label: 'Home', icon: 'home-outline', color: '#FF5722' },
+                    { label: 'Work', icon: 'briefcase-outline', color: '#3B82F6' },
+                    { label: 'Friends', icon: 'people-outline', color: '#8B5CF6' },
+                    { label: 'Other', icon: 'location-outline', color: '#10B981' },
+                  ].map(tag => {
+                    const active = (editingLabel || 'Home').toLowerCase() === tag.label.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={tag.label}
+                        onPress={() => setEditingLabel(tag.label)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          backgroundColor: active ? tag.color : '#F3F4F6',
+                          borderWidth: 1,
+                          borderColor: active ? tag.color : '#E5E7EB',
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name={tag.icon as any} size={15} color={active ? '#FFFFFF' : '#6B7280'} />
+                        <Text style={{ fontSize: 12, fontFamily: 'Poppins_700Bold', color: active ? '#FFFFFF' : '#374151' }}>
+                          {tag.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
                 {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
-                <Field label="Address Label (e.g. Home, Office, Flat 402)" value={editingLabel} onChangeText={setEditingLabel} placeholder="e.g. Home" />
-                <Field label="House / Flat / Floor *" value={form.house} onChangeText={v => update('house', v)} placeholder="e.g. Flat 402, 4th Floor" />
-                <Field label="Street / Building *" value={form.street} onChangeText={v => update('street', v)} placeholder="e.g. Main Market Road, Sector 62" />
-                <Field label="Landmark" value={form.landmark} onChangeText={v => update('landmark', v)} placeholder="e.g. Near City Metro Station" />
-                <Field label="Area / Locality *" value={form.area} onChangeText={v => update('area', v)} placeholder="e.g. Civil Lines / Sector B" />
+                <Field label="Flat / House / Floor / Building *" value={form.house} onChangeText={v => update('house', v)} placeholder="e.g. Flat 402, 4th Floor, Royal residency" />
+                <Field label="Street / Road / Area *" value={form.street} onChangeText={v => update('street', v)} placeholder="e.g. Main Market Road, Sector 62" />
+                <Field label="Landmark (Optional)" value={form.landmark} onChangeText={v => update('landmark', v)} placeholder="e.g. Near City Metro Station / Opp. Green Park" />
+                <Field label="Locality / Sector *" value={form.area} onChangeText={v => update('area', v)} placeholder="e.g. Civil Lines / Sector B" />
                 <View style={styles.row}>
                   <View style={{ flex: 1 }}>
                     <Field label="City *" value={form.city} onChangeText={v => update('city', v)} placeholder="e.g. New Delhi" />
@@ -266,6 +369,7 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                     <Field label="Pincode *" value={form.pincode} onChangeText={v => update('pincode', v)} placeholder="6-digit pincode" keyboardType="number-pad" />
                   </View>
                 </View>
+                <Field label="Receiver Name *" value={form.receiverName} onChangeText={v => update('receiverName', v)} placeholder="e.g. Rahul Sharma" />
                 <Field label="Phone *" value={form.phone} onChangeText={v => update('phone', v)} placeholder="10-digit phone" keyboardType="phone-pad" />
 
                 <TouchableOpacity style={styles.confirmBtn} onPress={handleSaveFormAddress} disabled={saving}>
@@ -277,24 +381,40 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                 {/* 2 TOP QUICK ACTION CARDS */}
                 <View style={styles.cardsRow}>
                   {/* Current Location */}
-                  <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={handleUseGps} activeOpacity={0.7}>
-                    <View style={[styles.iconCircle, { backgroundColor: colors.primary + '18' }]}>
-                      <Ionicons name="navigate-outline" size={20} color={colors.primary} />
+                  <TouchableOpacity
+                    style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={handleUseGps}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.iconCircle, { backgroundColor: '#FFF0ED' }]}>
+                      {isLoading ? (
+                        <ActivityIndicator size="small" color="#FF6B35" />
+                      ) : (
+                        <Ionicons name="navigate-outline" size={20} color="#FF6B35" />
+                      )}
                     </View>
-                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Use Current Location</Text>
+                    <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                      {isLoading ? 'Locating...' : 'Use Current Location'}
+                    </Text>
                   </TouchableOpacity>
 
                   {/* Add New Address */}
-                  <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => { setEditingId(null); setForm(emptyForm()); setShowAddNewView(true); }} activeOpacity={0.7}>
-                    <View style={[styles.iconCircle, { backgroundColor: colors.primary + '18' }]}>
-                      <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+                  <TouchableOpacity
+                    style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={() => { setEditingId(null); setForm(emptyForm()); setShowAddNewView(true); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.iconCircle, { backgroundColor: '#FFF0ED' }]}>
+                      <Ionicons name="add-circle-outline" size={22} color="#FF6B35" />
                     </View>
                     <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Add New Address</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* SAVED ADDRESSES SECTION */}
-                <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SAVED ADDRESSES ({displayAddresses.length})</Text>
+                <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+                  SAVED ADDRESSES ({displayAddresses.length})
+                </Text>
 
                 <View style={[styles.savedCardBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   {displayAddresses.map((item, index) => {
@@ -308,12 +428,12 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                             onPress={() => handleSelectAddressItem(item)}
                             activeOpacity={0.7}
                           >
-                            <View style={[styles.addressIconBox, { backgroundColor: colors.surface }]}>
-                              <Ionicons name={item.isSavedUserItem ? "bookmark" : "location"} size={20} color={colors.primary} />
-                              <Text style={[styles.distBadge, { color: colors.textSecondary }]}>{item.distance}</Text>
+                            <View style={[styles.addressIconBox, { backgroundColor: '#FFF0ED' }]}>
+                              <Ionicons name="location" size={22} color="#FF6B35" />
+                              <Text style={[styles.distBadge, { color: '#FF6B35' }]}>{item.distance}</Text>
                             </View>
 
-                            <View style={{ flex: 1, marginLeft: 12, marginRight: 8 }}>
+                            <View style={{ flex: 1, marginLeft: 14, marginRight: 8 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                 <Text style={[styles.addressName, { color: colors.textPrimary }]} numberOfLines={1}>
                                   {item.name}
@@ -331,12 +451,12 @@ export const LocationPickerModal = ({ visible, onClose }: Props) => {
                           </TouchableOpacity>
 
                           {/* EDIT & DELETE BUTTONS */}
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <TouchableOpacity onPress={() => handleEditAddress(item)} style={{ padding: 6 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <TouchableOpacity onPress={() => handleEditAddress(item)} style={{ padding: 6 }} hitSlop={8}>
                               <Ionicons name="create-outline" size={20} color="#3B82F6" />
                             </TouchableOpacity>
                             {item.isSavedUserItem && (
-                              <TouchableOpacity onPress={() => handleDeleteAddress(item.id)} style={{ padding: 6 }}>
+                              <TouchableOpacity onPress={() => handleDeleteAddress(item.id)} style={{ padding: 6 }} hitSlop={8}>
                                 <Ionicons name="trash-outline" size={20} color="#EF4444" />
                               </TouchableOpacity>
                             )}

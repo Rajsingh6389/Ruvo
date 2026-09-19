@@ -242,19 +242,26 @@ public class RazorpayController {
             Shop shop = shopRepository.findById(shopId).orElse(null);
             if (shop == null) return badRequest("Shop not found.");
 
-            if (shop.getRazorpayAccountId() != null && !shop.getRazorpayAccountId().isBlank()) {
-                return badRequest("Shop already registered as vendor.");
-            }
-
             String name = shop.getName();
-            String email = shopId + "@shop.ruvo.in";
-            String phone = shop.getPhone() != null ? shop.getPhone() : "0000000000";
+            String email = (shop.getOwner() != null && shop.getOwner().contains("@")) ? shop.getOwner() : shopId + "@shop.ruvo.in";
+            String phone = shop.getPhone() != null ? shop.getPhone() : "9999999999";
             
-            String ifsc = body.get("ifsc") != null ? body.get("ifsc").toString() : null;
-            String acc = body.get("accountNumber") != null ? body.get("accountNumber").toString() : null;
+            String ifsc = body.get("ifsc") != null ? body.get("ifsc").toString() : shop.getIfscCode();
+            String acc = body.get("accountNumber") != null ? body.get("accountNumber").toString() : shop.getBankAccountNumber();
 
-            String accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
-            shop.setRazorpayAccountId(accountId);
+            if (ifsc != null && !ifsc.isBlank()) shop.setIfscCode(ifsc.trim().toUpperCase());
+            if (acc != null && !acc.isBlank()) shop.setBankAccountNumber(acc.trim());
+
+            String accountId = shop.getRazorpayAccountId();
+            if (Boolean.TRUE.equals(shop.getApproved())) {
+                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval") || (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank())) {
+                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
+                    shop.setRazorpayAccountId(accountId);
+                }
+            } else if (accountId == null || accountId.isBlank()) {
+                accountId = "acc_pending_approval";
+                shop.setRazorpayAccountId(accountId);
+            }
             shopRepository.save(shop);
 
             return ResponseEntity.ok(Map.of("success", true, "accountId", accountId));
@@ -273,19 +280,26 @@ public class RazorpayController {
             Ranex.ruvo.model.DeliveryPartner partner = deliveryPartnerRepository.findById(partnerId).orElse(null);
             if (partner == null) return badRequest("Partner not found.");
 
-            if (partner.getRazorpayAccountId() != null && !partner.getRazorpayAccountId().isBlank()) {
-                return badRequest("Partner already registered as vendor.");
-            }
-
             String name = partner.getName();
             String email = partnerId + "@partner.ruvo.in";
             String phone = partner.getPhone() != null ? partner.getPhone() : "0000000000";
             
-            String ifsc = body.get("ifsc") != null ? body.get("ifsc").toString() : null;
-            String acc = body.get("accountNumber") != null ? body.get("accountNumber").toString() : null;
+            String ifsc = body.get("ifsc") != null ? body.get("ifsc").toString() : partner.getIfscCode();
+            String acc = body.get("accountNumber") != null ? body.get("accountNumber").toString() : partner.getBankAccountNumber();
 
-            String accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
-            partner.setRazorpayAccountId(accountId);
+            if (ifsc != null && !ifsc.isBlank()) partner.setIfscCode(ifsc.trim().toUpperCase());
+            if (acc != null && !acc.isBlank()) partner.setBankAccountNumber(acc.trim());
+
+            String accountId = partner.getRazorpayAccountId();
+            if (Boolean.TRUE.equals(partner.getApproved())) {
+                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval") || (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank())) {
+                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
+                    partner.setRazorpayAccountId(accountId);
+                }
+            } else if (accountId == null || accountId.isBlank()) {
+                accountId = "acc_pending_approval";
+                partner.setRazorpayAccountId(accountId);
+            }
             deliveryPartnerRepository.save(partner);
 
             return ResponseEntity.ok(Map.of("success", true, "accountId", accountId));

@@ -43,32 +43,10 @@ public class CloudinaryService {
                 return url.toString();
             }
         } catch (Exception e) {
-            System.err.println("Cloudinary upload failed (" + e.getMessage() + "). Falling back to local disk storage.");
+            System.err.println("Cloudinary upload failed: " + e.getMessage());
+            throw new IOException("Failed to upload image to Cloudinary", e);
         }
-
-        return saveLocally(file, folder);
-    }
-
-    private String saveLocally(MultipartFile file, String folder) {
-        try {
-            String sanitizedFolder = (folder == null ? "general" : folder.replace("ruvo/", "")).replaceAll("[^a-zA-Z0-9_/]", "");
-            java.nio.file.Path uploadDir = java.nio.file.Paths.get("uploads", sanitizedFolder);
-            if (!java.nio.file.Files.exists(uploadDir)) {
-                java.nio.file.Files.createDirectories(uploadDir);
-            }
-            String originalName = file.getOriginalFilename();
-            String ext = ".jpg";
-            if (originalName != null && originalName.contains(".")) {
-                ext = originalName.substring(originalName.lastIndexOf("."));
-            }
-            String fileName = java.util.UUID.randomUUID().toString() + ext;
-            java.nio.file.Path filePath = uploadDir.resolve(fileName);
-            java.nio.file.Files.copy(file.getInputStream(), filePath);
-
-            return "uploads/" + sanitizedFolder + "/" + fileName;
-        } catch (Exception ex) {
-            System.err.println("Local file save fallback failed: " + ex.getMessage());
-            return null;
-        }
+        
+        return null;
     }
 }

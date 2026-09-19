@@ -16,7 +16,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
         }
       },
       "permissions": [
@@ -30,7 +30,7 @@
     "ios": {
       "bundleIdentifier": "com.ruvo.mobile",
       "config": {
-        "googleMapsApiKey": "AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0"
+        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuVo uses your location to find nearby shops and fill delivery addresses.",
@@ -45,8 +45,7 @@
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
-
+      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
     },
     "plugins": [
       [
@@ -62,10 +61,17 @@
         }
       ],
       "expo-asset",
-      "expo-build-properties",
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

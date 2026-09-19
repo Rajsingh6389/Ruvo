@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Onboarding Step 1 — Basic Details
  * Collects full name, DOB, and current address.
  * Posts to /api/partner/verification then advances to VehicleType.
@@ -14,6 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { Region } from 'react-native-maps';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -25,7 +26,9 @@ import {
   StyledInput, CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
 
-const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+const MAPS_API_KEY: string =
+  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
+  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
 async function googleReverseGeocode(lat: number, lng: number) {
   try {
@@ -157,8 +160,12 @@ export const Step1_BasicDetails = () => {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
       <StepBar current={1} colors={colors} typography={typography} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
+        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Image source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799444/4ebac18d-5a03-4c16-bce2-4d6992e86c07.png' }} style={{ width: '100%', height: 160, borderRadius: RADIUS.md, marginBottom: 16 }} resizeMode="cover" />
           <ScreenHeader
             icon="person-outline"

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Onboarding Step 2 — Vehicle Type & Details
  * Lets the partner pick vehicle type, enter reg number, model, capacity and fuel.
  * Posts to /api/partner/vehicle then navigates to Aadhaar step.
@@ -71,7 +71,7 @@ export const Step2_VehicleType = () => {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
-      navigation.navigate('Step3_Aadhaar');
+      navigation.navigate('Step4_OnboardingFee');
     } catch (e: any) {
       setError(e.message || 'Submission failed.');
     } finally { setLoading(false); }

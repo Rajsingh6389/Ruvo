@@ -24,12 +24,13 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import * as Location from 'expo-location';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const MAPS_API_KEY: string =
   (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
 export interface LocationResult {
   latitude: number;
@@ -54,52 +55,80 @@ interface MapLocationPickerProps {
 async function reverseGeocodeGoogle(lat: number, lng: number): Promise<Partial<LocationResult>> {
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
+    console.log('[GoogleGeocoding Partner] Requesting reverse geocode for:', lat, lng);
     const res  = await fetch(url);
     const json = await res.json();
-    if (json.status !== 'OK' || !json.results?.length) return {};
-
-    const best = json.results[0];
-    const components: Record<string, string> = {};
-    for (const comp of best.address_components ?? []) {
-      for (const type of comp.types) {
-        components[type] = comp.long_name;
+    console.log('[GoogleGeocoding Partner] Response status:', json.status, json.error_message ? `Error: ${json.error_message}` : '');
+    
+    if (json.status === 'OK' && json.results?.length) {
+      const best = json.results[0];
+      const components: Record<string, string> = {};
+      for (const comp of best.address_components ?? []) {
+        for (const type of comp.types) {
+          components[type] = comp.long_name;
+        }
       }
+
+      // Build clean street address
+      const streetParts = [
+        components['street_number'],
+        components['route'],
+        components['sublocality_level_2'],
+        components['sublocality_level_1'] || components['sublocality'],
+        components['neighborhood'],
+      ].filter(Boolean);
+
+      const result = {
+        address         : streetParts.join(', ') || components['premise'] || '',
+        city            : components['locality'] || components['administrative_area_level_2'] || '',
+        state           : components['administrative_area_level_1'] || '',
+        pincode         : components['postal_code'] || '',
+        formattedAddress: best.formatted_address || '',
+      };
+      console.log('[GoogleGeocoding Partner] Resolved address:', result.formattedAddress);
+      return result;
     }
-
-    // Build clean street address
-    const streetParts = [
-      components['street_number'],
-      components['route'],
-      components['sublocality_level_2'],
-      components['sublocality_level_1'] || components['sublocality'],
-      components['neighborhood'],
-    ].filter(Boolean);
-
-    return {
-      address        : streetParts.join(', ') || components['premise'] || '',
-      city           : components['locality'] || components['administrative_area_level_2'] || '',
-      state          : components['administrative_area_level_1'] || '',
-      pincode        : components['postal_code'] || '',
-      formattedAddress: best.formatted_address || '',
-    };
-  } catch {
-    return {};
+    console.warn('[GoogleGeocoding Partner] Web API non-OK status (' + json.status + '). Falling back to native device geocoder...');
+  } catch (err) {
+    console.error('[GoogleGeocoding Partner] Web API fetch error:', err);
   }
+
+  // ── Native Expo Location Fallback ──────────────────────────────────────────
+  try {
+    const places = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+    if (places && places.length > 0) {
+      const p = places[0];
+      const streetParts = [p.streetNumber, p.street, p.subregion !== p.city ? p.subregion : null, p.district].filter(Boolean);
+      const fallbackResult = {
+        address         : streetParts.join(', ') || p.name || '',
+        city            : p.city || p.subregion || '',
+        state           : p.region || '',
+        pincode         : p.postalCode || '',
+        formattedAddress: [streetParts.join(', ') || p.name, p.city || p.subregion, p.region, p.postalCode].filter(Boolean).join(', '),
+      };
+      console.log('[NativeGeocoding Partner Fallback] Resolved:', fallbackResult.formattedAddress);
+      return fallbackResult;
+    }
+  } catch (expoErr) {
+    console.error('[NativeGeocoding Partner Fallback Error]:', expoErr);
+  }
+  return {};
 }
 
 const DEFAULT_REGION: Region = {
   latitude      : 20.5937,
   longitude     : 78.9629,
-  latitudeDelta : 8,
-  longitudeDelta: 8,
+  latitudeDelta : 0.01,
+  longitudeDelta: 0.01,
 };
 
 export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   visible, onClose, onConfirm, initialRegion, title = 'Pick Location', colors, typography,
 }) => {
-  const mapRef  = useRef<MapView>(null);
-  const [region,    setRegion]    = useState<Region>(initialRegion ?? DEFAULT_REGION);
+  const mapRef = useRef<MapView>(null);
+  const currentRegionRef = useRef<Region>(initialRegion ?? DEFAULT_REGION);
   const [geocoding, setGeocoding] = useState(false);
+  const [locatingUser, setLocatingUser] = useState(false);
   const [preview,   setPreview]   = useState<Partial<LocationResult>>({});
 
   const geocodeAndPreview = useCallback(async (lat: number, lng: number) => {
@@ -109,21 +138,64 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     setGeocoding(false);
   }, []);
 
+  const fetchAndGoToCurrentLocation = useCallback(async () => {
+    setLocatingUser(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.warn('[MapLocationPicker Partner] Location permission denied');
+        setLocatingUser(false);
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      console.log('[MapLocationPicker Partner] Fetched user current location:', pos.coords.latitude, pos.coords.longitude);
+      const newRegion: Region = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        latitudeDelta: 0.005,
+        longitudeDelta: 0.005,
+      };
+      currentRegionRef.current = newRegion;
+      mapRef.current?.animateToRegion(newRegion, 600);
+      geocodeAndPreview(pos.coords.latitude, pos.coords.longitude);
+    } catch (err) {
+      console.warn('[MapLocationPicker Partner] Error getting current GPS position:', err);
+    } finally {
+      setLocatingUser(false);
+    }
+  }, [geocodeAndPreview]);
+
+  React.useEffect(() => {
+    if (visible) {
+      if (initialRegion) {
+        currentRegionRef.current = initialRegion;
+        geocodeAndPreview(initialRegion.latitude, initialRegion.longitude);
+      } else {
+        fetchAndGoToCurrentLocation();
+      }
+    }
+  }, [visible, initialRegion, fetchAndGoToCurrentLocation, geocodeAndPreview]);
+
   const handleRegionChangeComplete = useCallback((r: Region) => {
-    setRegion(r);
+    console.log('[MapView Partner] Region change complete:', r.latitude, r.longitude);
+    currentRegionRef.current = r;
     geocodeAndPreview(r.latitude, r.longitude);
   }, [geocodeAndPreview]);
 
-  const handlePlaceSelected = useCallback((data: any, detail: any) => {
+  const handlePlaceSelected = useCallback((data: any, detail: any = null) => {
+    console.log('[GooglePlacesAutocomplete Partner] Place selected:', data?.description, 'Detail:', detail?.geometry?.location);
     const loc = detail?.geometry?.location;
-    if (!loc) return;
+    if (!loc) {
+      console.warn('[GooglePlacesAutocomplete Partner] Missing location in details:', detail);
+      return;
+    }
     const newRegion: Region = {
       latitude      : loc.lat,
       longitude     : loc.lng,
       latitudeDelta : 0.008,
       longitudeDelta: 0.008,
     };
-    setRegion(newRegion);
+    currentRegionRef.current = newRegion;
     mapRef.current?.animateToRegion(newRegion, 500);
     geocodeAndPreview(loc.lat, loc.lng);
   }, [geocodeAndPreview]);
@@ -133,9 +205,10 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       Alert.alert('Loading…', 'Still resolving address. Please wait a moment.');
       return;
     }
+    const finalCoords = currentRegionRef.current;
     onConfirm({
-      latitude        : region.latitude,
-      longitude       : region.longitude,
+      latitude        : finalCoords.latitude,
+      longitude       : finalCoords.longitude,
       address         : preview.address         || '',
       city            : preview.city            || '',
       state           : preview.state           || '',
@@ -165,8 +238,12 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             onPress={handlePlaceSelected}
             fetchDetails
             query={{ key: MAPS_API_KEY, language: 'en', components: 'country:in' }}
+            onFail={(error) => console.error('[GooglePlacesAutocomplete Partner ERROR]:', error)}
+            textInputProps={{
+              placeholderTextColor: colors.textHint,
+            }}
             styles={{
-              container  : { flex: 0 },
+              container  : { flex: 0, zIndex: 999 },
               textInput  : {
                 ...typography.body,
                 color           : colors.textPrimary,
@@ -175,8 +252,21 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 paddingHorizontal: 12,
                 height          : 44,
               },
-              listView   : { backgroundColor: colors.card },
-              row        : { backgroundColor: colors.card, paddingVertical: 10 },
+              listView   : {
+                backgroundColor: colors.card,
+                position: 'absolute',
+                top: 50,
+                left: 0,
+                right: 0,
+                borderRadius: 8,
+                elevation: 5,
+                zIndex: 1000,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+              },
+              row        : { backgroundColor: colors.card, paddingVertical: 12 },
               description: { color: colors.textPrimary },
               separator  : { backgroundColor: colors.border },
             }}
@@ -194,9 +284,9 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         <View style={s.mapContainer}>
           <MapView
             ref={mapRef}
-            style={StyleSheet.absoluteFillObject}
+            style={StyleSheet.absoluteFill}
             provider={PROVIDER_GOOGLE}
-            region={region}
+            initialRegion={initialRegion ?? DEFAULT_REGION}
             onRegionChangeComplete={handleRegionChangeComplete}
             showsUserLocation
             showsMyLocationButton={false}
@@ -209,12 +299,17 @@ export const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           </View>
 
           {/* My-location FAB */}
-          <TouchableOpacity style={[s.myLocationBtn, { backgroundColor: colors.card }]} onPress={() => {
-            if (initialRegion) {
-              mapRef.current?.animateToRegion({ ...initialRegion, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 500);
-            }
-          }}>
-            <Ionicons name="locate" size={20} color={colors.primary} />
+          <TouchableOpacity
+            style={[s.myLocationBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={fetchAndGoToCurrentLocation}
+            disabled={locatingUser}
+            activeOpacity={0.8}
+          >
+            {locatingUser ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="locate" size={22} color={colors.primary} />
+            )}
           </TouchableOpacity>
         </View>
 

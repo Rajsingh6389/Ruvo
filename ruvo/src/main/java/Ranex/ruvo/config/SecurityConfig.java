@@ -89,7 +89,8 @@ public class SecurityConfig {
                             "/api/partner/auth/verify-otp",
                             "/api/partner/auth/refresh",
                             "/api/auth/otp/send",
-                            "/api/auth/otp/verify"
+                            "/api/auth/otp/verify",
+                            "/api/onboarding/fee"
                     ).permitAll()
 
                     .requestMatchers(
@@ -109,10 +110,20 @@ public class SecurityConfig {
                     ).permitAll()
 
                     .requestMatchers(
+                            "/api/offers/shop/**",
+                            "/api/offers/validate"
+                    ).permitAll()
+
+                    .requestMatchers(
                             "/api/payments/cashfree/return",
                             "/api/payments/cashfree/webhook",
-                            "/api/ruvo/commission/webhook"
+                            "/api/ruvo/commission/webhook",
+                            "/api/webhooks/razorpay/**"
                     ).permitAll()
+
+                    .requestMatchers(
+                            "/api/seller/razorpay/**"
+                    ).hasAnyRole("SHOP_OWNER", "ADMIN")
 
                     .requestMatchers(
                             "/api/orders/**",

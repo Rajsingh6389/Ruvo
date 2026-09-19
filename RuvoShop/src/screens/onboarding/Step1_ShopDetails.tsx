@@ -1,4 +1,4 @@
-﻿/**
+/**
  * RuvoShop Onboarding — Step 1: Shop Details
  * Collects shop name, category, phone, and address.
  * Posts to /api/shop/onboarding/register then advances to Aadhaar.
@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import Constants from 'expo-constants';
 import { Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -25,7 +26,9 @@ import {
   StyledInput, CtaBtn, ErrorBox, formatErrorMessage,
 } from './OnboardingShared';
 
-const MAPS_API_KEY = 'AIzaSyBHLzfYTywdmSUoGSm6xyoqL2kPOVjM9B0';
+const MAPS_API_KEY: string =
+  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
+  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
 async function googleReverseGeocode(lat: number, lng: number) {
   try {
@@ -225,6 +228,7 @@ export const Step1_ShopDetails = () => {
     setLoading(true);
     try {
       const ownerIdentifier = userId || (user as any)?.phone || phone.replace(/\D/g, '') || 'owner_default';
+      const defaultLogoFallback = `https://res.cloudinary.com/qbm45y5k/image/upload/v1711000000/ruvo/categories/${category.toLowerCase().replace(/[^a-z0-9]/g, '_')}.png`;
       const shopPayload = {
         name: shopName.trim(),
         category,
@@ -233,6 +237,7 @@ export const Step1_ShopDetails = () => {
         ownerId: ownerIdentifier,
         gstin: gstin.trim() || null,
         approved: false,
+        logoUrl: logo?.uri ? undefined : defaultLogoFallback,
       };
       let createdShop: any = null;
 
@@ -244,14 +249,14 @@ export const Step1_ShopDetails = () => {
         formData.append('logo', {
           uri: logo.uri,
           name: logo.fileName || 'logo.jpg',
-          type: logo.type || 'image/jpeg',
+          type: logo.mimeType || (logo.type && logo.type.includes('/') ? logo.type : 'image/jpeg'),
         } as any);
 
         if (banner?.uri) {
           formData.append('banner', {
             uri: banner.uri,
             name: banner.fileName || 'banner.jpg',
-            type: banner.type || 'image/jpeg',
+            type: banner.mimeType || (banner.type && banner.type.includes('/') ? banner.type : 'image/jpeg'),
           } as any);
         }
 
@@ -259,7 +264,7 @@ export const Step1_ShopDetails = () => {
           formData.append('images', {
             uri: img.uri,
             name: img.fileName || `gallery_${idx}.jpg`,
-            type: img.type || 'image/jpeg',
+            type: img.mimeType || (img.type && img.type.includes('/') ? img.type : 'image/jpeg'),
           } as any);
         });
 
@@ -327,8 +332,8 @@ export const Step1_ShopDetails = () => {
         throw new Error('Shop registration did not return a shop ID. Please try again.');
       }
 
-      await setOnboardingStatus('AADHAAR_PENDING');
-      navigation.navigate('Step2_Aadhaar');
+      await setOnboardingStatus('BANK_PENDING');
+      navigation.navigate('Step3_BankAccount');
     } catch (e: any) {
       console.warn('Shop creation catch:', e?.message);
       setError(formatErrorMessage(e) || 'Could not submit your shop for review. Please try again.');
@@ -366,9 +371,13 @@ export const Step1_ShopDetails = () => {
         </Text>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+      >
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

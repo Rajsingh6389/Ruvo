@@ -10,6 +10,7 @@
     imageUrl?: string;
     address: string;
     owner?: string;
+    email?: string;
     ownerId: string;
     phone: string;
     rating?: number;
@@ -65,7 +66,7 @@
       formData.append('logo', {
         uri: logo.uri,
         name: logo.fileName || `logo_${Date.now()}.jpg`,
-        type: logo.type || 'image/jpeg',
+        type: logo.mimeType || (logo.type && logo.type.includes('/') ? logo.type : 'image/jpeg'),
       } as any);
     }
 
@@ -73,7 +74,7 @@
       formData.append('banner', {
         uri: banner.uri,
         name: banner.fileName || `banner_${Date.now()}.jpg`,
-        type: banner.type || 'image/jpeg',
+        type: banner.mimeType || (banner.type && banner.type.includes('/') ? banner.type : 'image/jpeg'),
       } as any);
     }
 
@@ -84,7 +85,7 @@
         formData.append('images', {
           uri: img.uri,
           name: img.fileName || `gallery_${Date.now()}_${index}.jpg`,
-          type: img.type || 'image/jpeg',
+          type: img.mimeType || (img.type && img.type.includes('/') ? img.type : 'image/jpeg'),
         } as any);
       });
     }
@@ -117,14 +118,14 @@
         formData.append('logo', {
           uri: logo.uri,
           name: logo.fileName || `logo_${Date.now()}.jpg`,
-          type: logo.type || 'image/jpeg',
+          type: logo.mimeType || (logo.type && logo.type.includes('/') ? logo.type : 'image/jpeg'),
         } as any);
       }
       if (banner) {
         formData.append('banner', {
           uri: banner.uri,
           name: banner.fileName || `banner_${Date.now()}.jpg`,
-          type: banner.type || 'image/jpeg',
+          type: banner.mimeType || (banner.type && banner.type.includes('/') ? banner.type : 'image/jpeg'),
         } as any);
       }
       if (galleryImages && galleryImages.length > 0) {
@@ -132,7 +133,7 @@
           formData.append('images', {
             uri: img.uri,
             name: img.fileName || `gallery_${Date.now()}_${index}.jpg`,
-            type: img.type || 'image/jpeg',
+            type: img.mimeType || (img.type && img.type.includes('/') ? img.type : 'image/jpeg'),
           } as any);
         });
       }
@@ -206,14 +207,23 @@
   export async function checkShopApprovalStatus(
     ownerId: string,
     token: string,
-  ): Promise<'APPROVED' | 'PENDING_APPROVAL' | 'NEW'> {
+  ): Promise<'APPROVED' | 'BANK_PENDING' | 'AADHAAR_PENDING' | 'PENDING_APPROVAL' | 'NEW'> {
     try {
       const shops = await getMyShops(ownerId, token);
       if (!Array.isArray(shops) || shops.length === 0) return 'NEW';
       const hasApproved = shops.some(
         s => (s as any).approved === true || (s as any).isApproved === true || (s as any).status === 'APPROVED',
       );
-      return hasApproved ? 'APPROVED' : 'PENDING_APPROVAL';
+      if (hasApproved) return 'APPROVED';
+
+      const pendingShop = shops[shops.length - 1] as any;
+
+      // Bank Details Check (This is the primary constraint)
+      if (!pendingShop.bankAccountNumber || pendingShop.bankAccountNumber.trim() === '') {
+        return 'BANK_PENDING';
+      }
+
+      return 'PENDING_APPROVAL';
     } catch {
       return 'NEW';
     }
