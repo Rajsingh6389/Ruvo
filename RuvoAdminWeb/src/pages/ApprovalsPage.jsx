@@ -324,9 +324,14 @@ export const ApprovalsPage = ({ shops, partners, onRefresh }) => {
 
               {/* Bank Account Details */}
               <div style={{ marginBottom: 24, padding: 16, borderRadius: 12, border: '1px solid #E2E8F0', backgroundColor: '#F0FDF4' }}>
-                <h4 style={{ margin: '0 0 12px', fontSize: 14, color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
-                  💳 Bank & Settlement Account Details
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h4 style={{ margin: 0, fontSize: 14, color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700 }}>
+                    💳 Bank & Settlement Account Details
+                  </h4>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px', backgroundColor: '#DCFCE7', color: '#15803D', borderRadius: 6, fontSize: 12, fontWeight: 700, border: '1px solid #BBF7D0' }}>
+                    ✅ Razorpay Verified
+                  </div>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                   <div>
                     <span style={{ fontSize: 12, color: '#64748B', display: 'block' }}>Bank Account Number</span>

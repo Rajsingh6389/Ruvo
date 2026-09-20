@@ -59,11 +59,12 @@ export const Step7_Success = () => {
     if (!token) return;
     setChecking(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partners/me`, {
+      const res = await fetch(`${API_BASE_URL}/api/partner/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
-      const data = await res.json();
+      const response = await res.json();
+      const data = response.data || response;
       const approved =
         data.status === 'APPROVED' || data.approved === true ||
         data.isApproved === true || data.verificationStatus === 'APPROVED';

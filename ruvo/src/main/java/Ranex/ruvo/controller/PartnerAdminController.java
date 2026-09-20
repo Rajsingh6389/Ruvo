@@ -23,11 +23,15 @@ public class PartnerAdminController {
     private final PartnerAccountRepository partnerAccounts;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final RazorpayService razorpayService;
+    private final SellerBankAccountRepository sellerBankAccountRepository;
+    private final RazorpayLinkedAccountRepository linkedAccountRepository;
 
     public PartnerAdminController(PartnerProfileRepository p, PartnerVehicleRepository v,
                                   PartnerVerificationRepository vr, UserRepository u, PartnerAccountRepository pa,
                                   DeliveryPartnerRepository deliveryPartnerRepository,
-                                  RazorpayService razorpayService) {
+                                  RazorpayService razorpayService,
+                                  SellerBankAccountRepository sellerBankAccountRepository,
+                                  RazorpayLinkedAccountRepository linkedAccountRepository) {
         this.profiles = p;
         this.vehicles = v;
         this.verifications = vr;
@@ -35,6 +39,8 @@ public class PartnerAdminController {
         this.partnerAccounts = pa;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.razorpayService = razorpayService;
+        this.sellerBankAccountRepository = sellerBankAccountRepository;
+        this.linkedAccountRepository = linkedAccountRepository;
     }
 
     @GetMapping("/pending")
@@ -65,12 +71,32 @@ public class PartnerAdminController {
             }
             if (dpOpt.isPresent()) {
                 DeliveryPartner dp = dpOpt.get();
+                
+                Optional<SellerBankAccount> activeBank = sellerBankAccountRepository.findByPartnerIdAndIsActiveTrue(dp.getId());
+                if (activeBank.isEmpty()) {
+                    continue;
+                }
+                
                 item.put("aadhaarNumber", dp.getAadhaarNumber());
                 item.put("aadhaarName", dp.getAadhaarName());
                 item.put("aadhaarFrontUrl", dp.getAadhaarFrontUrl());
                 item.put("aadhaarBackUrl", dp.getAadhaarBackUrl());
-                item.put("bankAccountNumber", dp.getBankAccountNumber());
-                item.put("ifscCode", dp.getIfscCode());
+                
+                String accNum = dp.getBankAccountNumber();
+                String ifsc = dp.getIfscCode();
+                if (accNum == null || accNum.isBlank()) {
+                    List<SellerBankAccount> banks = sellerBankAccountRepository.findByPartnerIdOrderByCreatedAtDesc(dp.getId());
+                    if (banks != null && !banks.isEmpty()) {
+                        SellerBankAccount bank = banks.get(0);
+                        if (bank.getAccountNumberEncrypted() != null) {
+                            accNum = new String(java.util.Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), java.nio.charset.StandardCharsets.UTF_8);
+                            ifsc = bank.getIfscCode();
+                        }
+                    }
+                }
+                
+                item.put("bankAccountNumber", accNum);
+                item.put("ifscCode", ifsc);
                 item.put("upiId", dp.getUpiId());
                 item.put("razorpayAccountId", dp.getRazorpayAccountId());
             }
@@ -139,16 +165,23 @@ public class PartnerAdminController {
             if (dpOpt.isPresent()) {
                 DeliveryPartner dp = dpOpt.get();
                 dp.setApproved(true);
+                
+                List<SellerBankAccount> banks = sellerBankAccountRepository.findByPartnerIdOrderByCreatedAtDesc(dp.getId());
+                if (banks != null && !banks.isEmpty()) {
+                    SellerBankAccount bank = banks.get(0);
+                    if (bank.getAccountNumberEncrypted() != null) {
+                        String decAcc = new String(java.util.Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), java.nio.charset.StandardCharsets.UTF_8);
+                        dp.setBankAccountNumber(decAcc);
+                        dp.setIfscCode(bank.getIfscCode());
+                    }
+                }
+                
                 String ifsc = dp.getIfscCode();
                 String acc = dp.getBankAccountNumber();
                 if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank()) {
-                    String accountId = dp.getRazorpayAccountId();
-                    if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval")) {
-                        String name = user.getName() != null ? user.getName() : dp.getName();
-                        String email = user.getId() + "@partner.ruvo.in";
-                        String phone = user.getMobileNumber() != null ? user.getMobileNumber() : dp.getPhone();
-                        accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
-                        dp.setRazorpayAccountId(accountId);
+                    Optional<RazorpayLinkedAccount> linkedAccountOpt = linkedAccountRepository.findByPartnerId(dp.getId());
+                    if (linkedAccountOpt.isPresent()) {
+                        dp.setRazorpayAccountId(linkedAccountOpt.get().getRazorpayAccountId());
                     }
                 }
                 deliveryPartnerRepository.save(dp);

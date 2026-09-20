@@ -1,0 +1,10 @@
+App.tsx(2,8): error TS2882: Cannot find module or type declarations for side-effect import of './global.css'.
+src/context/AuthContext.tsx(237,27): error TS2304: Cannot find name 'global'.
+src/context/AuthContext.tsx(238,5): error TS2304: Cannot find name 'global'.
+src/context/AuthContext.tsx(238,27): error TS7019: Rest parameter 'args' implicitly has an 'any[]' type.
+src/context/AuthContext.tsx(248,7): error TS2304: Cannot find name 'global'.
+src/hooks/useNetworkStatus.ts(62,3): error TS2322: Type '(input: global.RequestInfo, init?: RequestInit | undefined) => Promise<Response>' is not assignable to type '{ (input: RequestInfo | URL, init?: RequestInit | undefined): Promise<Response>; (input: RequestInfo, init?: RequestInit | undefined): Promise<...>; }'.
+  Types of parameters 'input' and 'input' are incompatible.
+    Type 'RequestInfo | URL' is not assignable to type 'RequestInfo'.
+      Type 'URL' is not assignable to type 'RequestInfo'.
+        Type 'URL' is missing the following properties from type 'Request': cache, credentials, destination, headers, and 18 more.

@@ -22,7 +22,7 @@ import {
   StyledInput, CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
 
-type VerifyState = 'idle' | 'verifying' | 'done' | 'error';
+type VerifyState = 'idle' | 'verifying' | 'review' | 'done' | 'error';
 
 const BANKS = [
   'State Bank of India', 'HDFC Bank', 'ICICI Bank',
@@ -106,6 +106,38 @@ export const Step3_BankAccount = () => {
 
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+
+      let bankStatus = body.data?.bankStatus || 'UNDER_REVIEW';
+
+      if (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
+         setVState('review');
+         
+         // Poll loop
+         while (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
+            await new Promise(r => setTimeout(r, 4000));
+            try {
+               const pollRes = await fetch(`${API_BASE_URL}/api/seller/razorpay/bank/status?shopId=${myShop.id}`, { headers: { Authorization: `Bearer ${token}` } });
+               const pollBody = await pollRes.json();
+               if (pollRes.ok && pollBody.data) {
+                  const activeMask = pollBody.data.activeBankAccountMasked;
+                  if (activeMask && activeMask !== 'None') {
+                     bankStatus = 'ACTIVE';
+                  } else {
+                     const pendingStatus = pollBody.data.pendingBankStatus;
+                     if (pendingStatus && pendingStatus !== 'NONE') {
+                        bankStatus = pendingStatus;
+                     }
+                  }
+               }
+            } catch (pollErr) {
+               console.log("Polling error", pollErr);
+            }
+         }
+      }
+
+      if (bankStatus !== 'ACTIVE') {
+         throw new Error("Bank account was not accepted. Status: " + bankStatus);
+      }
 
       stopSpinner();
       setVState('done');
@@ -315,17 +347,36 @@ export const Step3_BankAccount = () => {
                 <Ionicons name="sync-outline" size={36} color={colors.primary} />
               </Animated.View>
               <Text style={[typography.headingS, { color: colors.textPrimary, marginTop: 12 }]}>
-                Verifying bank details…
+                Submitting bank details…
               </Text>
               <Text style={[typography.body, { color: colors.textSecondary, marginTop: 4 }]}>
-                This usually takes a few seconds.
+                Securely linking with Razorpay Route.
+              </Text>
+            </View>
+          )}
+
+          {/* Review Polling spinner */}
+          {vState === 'review' && (
+            <View style={[
+              s.spinnerCard,
+              { backgroundColor: colors.surfaceSunken, borderColor: colors.warning, borderWidth: 1, borderRadius: RADIUS.card },
+              shadows.md,
+            ]}>
+              <Animated.View style={{ transform: [{ rotate: spinDeg }] }}>
+                <Ionicons name="sync-circle-outline" size={42} color={colors.warning} />
+              </Animated.View>
+              <Text style={[typography.headingS, { color: colors.warning, marginTop: 12, textAlign: 'center' }]}>
+                Bank Review Under Review
+              </Text>
+              <Text style={[typography.body, { color: colors.textSecondary, marginTop: 8, textAlign: 'center' }]}>
+                Razorpay is verifying your account details in real-time. This may take a few moments. Please do not close this screen.
               </Text>
             </View>
           )}
 
           <ErrorBox error={error} colors={colors} typography={typography} />
 
-          {vState !== 'done' && vState !== 'verifying' && (
+          {vState !== 'done' && vState !== 'verifying' && vState !== 'review' && (
             <CtaBtn
               label="Verify & Open Shop"
               onPress={handleVerify}

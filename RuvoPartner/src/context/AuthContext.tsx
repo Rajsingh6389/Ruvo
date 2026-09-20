@@ -6,6 +6,7 @@ import { partnerService, PartnerProfile } from '../services/partnerService';
 
 export type User = {
   userId: number;
+  partnerId?: number;
   name: string;
   mobileNumber: string;
   verificationStatus: string;

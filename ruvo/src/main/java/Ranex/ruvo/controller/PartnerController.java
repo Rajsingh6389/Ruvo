@@ -175,6 +175,44 @@ public class PartnerController {
         return ResponseEntity.ok(Map.of("success", true, "data", result));
     }
 
+    @GetMapping("/shop-preferences")
+    public ResponseEntity<?> getShopPreferences(
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
+        DeliveryPartner dp = resolveDeliveryPartner(principal);
+        if (dp == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Partner profile not found."));
+        }
+        
+        String preferredIds = dp.getPreferredShopIds();
+        if (preferredIds == null || preferredIds.isBlank()) {
+            return ResponseEntity.ok(Map.of("success", true, "shopIds", List.of(), "data", List.of()));
+        }
+
+        List<Long> idsToLoad = Arrays.stream(preferredIds.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(Long::parseLong)
+                .toList();
+
+        List<Shop> shops = shopRepository.findAllById(idsToLoad);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Shop s : shops) {
+             Map<String, Object> map = new HashMap<>();
+             map.put("id", s.getId());
+             map.put("name", s.getName());
+             map.put("address", s.getAddress() != null ? s.getAddress() : "");
+             map.put("category", s.getCategory() != null ? s.getCategory() : "General");
+             map.put("latitude", s.getLatitude());
+             map.put("longitude", s.getLongitude());
+             map.put("logo", s.getLogoUrl());
+             map.put("distanceKm", 0.0);
+             map.put("fullAddress", s.getAddress() != null ? s.getAddress() : "");
+             map.put("phone", s.getOwnerId() != null ? s.getOwnerId() : ""); // Fallback, normally shop model lacks direct phone but we send ownerId
+             result.add(map);
+        }
+        return ResponseEntity.ok(Map.of("success", true, "shopIds", idsToLoad, "data", result));
+    }
+
     @PostMapping("/shop-preferences")
     public ResponseEntity<?> updateShopPreferences(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal,

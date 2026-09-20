@@ -97,11 +97,7 @@ public class RazorpayService {
 
         try {
             if (keyId == null || keySecret == null || keyId.isBlank() || keySecret.isBlank()) {
-                System.out.println("⚠️ [Razorpay Route API] Razorpay API keys not configured. Generating fallback dummy linked account ID.");
-                String dummyId = "acc_dummy" + System.currentTimeMillis();
-                System.out.println("🟢 [Razorpay Route API] Linked Account ID assigned: " + dummyId);
-                System.out.println("================================================================================");
-                return dummyId;
+                throw new IllegalStateException("Razorpay API keys not configured.");
             }
 
             // Razorpay v2 Account Creation Endpoint
@@ -181,16 +177,28 @@ public class RazorpayService {
             }
             
             System.err.println("🔴 [Razorpay Route API] HTTP Error " + responseCode + " - Response: " + responseStr.toString());
-            String fallbackId = "acc_dummy" + System.currentTimeMillis();
-            System.out.println("⚠️ [Razorpay Route API] Fallback ID assigned: " + fallbackId);
-            System.out.println("================================================================================");
-            return fallbackId;
+            
+            String errorMessage = responseStr.toString();
+            try {
+                JSONObject errJson = new JSONObject(responseStr.toString());
+                if (errJson.has("error")) {
+                    String desc = errJson.getJSONObject("error").optString("description", "");
+                    if (desc.toLowerCase().contains("access denied")) {
+                        errorMessage = "Razorpay Route Access Denied: Your API keys do not have active Razorpay Route permissions. Please enable Route in your Razorpay Dashboard.";
+                    } else if (desc.toLowerCase().contains("authentication failed")) {
+                        errorMessage = "Razorpay Integration Failed: Invalid API Keys. Please contact Admin.";
+                    } else if (!desc.isBlank()) {
+                        errorMessage = desc;
+                    }
+                }
+            } catch (Exception ignored) {}
+
+            throw new IllegalStateException("Razorpay error: " + errorMessage);
+        } catch (RuntimeException re) {
+            throw re;
         } catch (Exception e) {
             System.err.println("🔴 [Razorpay Route API] Connection / Request Exception: " + e.getMessage());
-            String fallbackId = "acc_dummy" + System.currentTimeMillis();
-            System.out.println("⚠️ [Razorpay Route API] Fallback ID assigned: " + fallbackId);
-            System.out.println("================================================================================");
-            return fallbackId;
+            throw new IllegalStateException(e.getMessage());
         }
     }
 

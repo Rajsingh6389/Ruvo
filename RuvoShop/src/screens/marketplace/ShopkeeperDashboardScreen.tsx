@@ -149,7 +149,7 @@ export default function ShopkeeperDashboardScreen() {
 
   const openDrawer = () => {
     setShowDrawer(true);
-    RNAnimated.spring(drawerAnim, { toValue: 0, friction: 8, tension: 55, useNativeDriver: true }).start();
+    RNAnimated.timing(drawerAnim, { toValue: 0, duration: 250, useNativeDriver: true }).start();
   };
   const closeDrawer = () => {
     RNAnimated.timing(drawerAnim, { toValue: -Dimensions.get('window').width * 0.78, duration: 220, useNativeDriver: true }).start(() => setShowDrawer(false));
@@ -774,11 +774,11 @@ export default function ShopkeeperDashboardScreen() {
              if (incomingOrder?.id) setIgnoredOrderIds(prev => [...prev, incomingOrder.id]);
              setIncomingOrder(null);
           }} />
-          <Animated.View entering={FadeInDown.duration(400).springify()} className="bg-white rounded-t-[32px] overflow-hidden shadow-2xl">
+          <Animated.View entering={FadeInDown.duration(400)} className="bg-white rounded-t-[32px] overflow-hidden shadow-2xl">
             {/* Urgency Header */}
             <View className="bg-amber-500 px-xl py-4 flex-row items-center justify-between">
               <View className="flex-row items-center gap-2">
-                 <Ionicons name="notifications" size={24} color="#FFFFFF" className="animate-bounce" />
+                 <Ionicons name="notifications" size={24} color="#FFFFFF" />
                  <Text className="text-lg font-black text-white uppercase tracking-widest mt-0.5">New Order Alert</Text>
               </View>
               {countdowns[incomingOrder?.id] && (

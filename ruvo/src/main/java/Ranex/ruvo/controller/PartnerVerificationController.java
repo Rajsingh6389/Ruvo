@@ -54,6 +54,13 @@ public class PartnerVerificationController {
 
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("userId", user.getId());
+        
+        Long partnerId = deliveryPartners.findByUserId(user.getMobileNumber())
+                .or(() -> deliveryPartners.findByPhone(user.getMobileNumber()))
+                .map(DeliveryPartner::getId)
+                .orElse(null);
+        responseData.put("partnerId", partnerId);
+        
         responseData.put("name", user.getName());
         responseData.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
                 .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));

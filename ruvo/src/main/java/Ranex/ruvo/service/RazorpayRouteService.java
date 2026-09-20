@@ -138,14 +138,16 @@ public class RazorpayRouteService {
                     log.info("Successfully created Razorpay Linked Account: {} for shopId {}", razorpayAccountId, shopId);
                 } else {
                     log.error("Razorpay Linked Account API failed (HTTP {}): {}", response.statusCode, response.body);
-                    throw new RuntimeException("Razorpay error: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay error:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Exception creating Razorpay Linked Account for shopId {}: {}", shopId, e.getMessage());
-                throw new RuntimeException("Errror connecting to Razorpay: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay API keys not configured. Cannot create Linked Account.");
+            throw new IllegalStateException("Razorpay API keys not configured. Cannot create Linked Account.");
         }
 
         RazorpayLinkedAccount account = RazorpayLinkedAccount.builder()
@@ -160,9 +162,6 @@ public class RazorpayRouteService {
                 .build();
 
         RazorpayLinkedAccount savedAccount = linkedAccountRepository.save(account);
-
-        shop.setRazorpayAccountId(razorpayAccountId);
-        shopRepository.save(shop);
 
         return savedAccount;
     }
@@ -232,14 +231,17 @@ public class RazorpayRouteService {
                     JSONObject resJson = new JSONObject(response.body);
                     razorpayAccountId = resJson.getString("id");
                     if (resJson.has("status")) status = resJson.getString("status");
+                    log.info("Successfully created Razorpay Linked Account: {} for partnerId {}", razorpayAccountId, partnerId);
                 } else {
-                    throw new RuntimeException("Razorpay error: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay error:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
-                throw new RuntimeException("Errror connecting to Razorpay: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay API keys not configured.");
+            throw new IllegalStateException("Razorpay API keys not configured.");
         }
 
         RazorpayLinkedAccount account = RazorpayLinkedAccount.builder()
@@ -252,11 +254,8 @@ public class RazorpayRouteService {
                 .contactName(partner.getName() != null ? partner.getName() : finalName)
                 .status(status)
                 .build();
-
+        
         RazorpayLinkedAccount savedAccount = linkedAccountRepository.save(account);
-        partner.setRazorpayAccountId(razorpayAccountId);
-        deliveryPartnerRepository.save(partner);
-
         return savedAccount;
     }
 
@@ -315,14 +314,16 @@ public class RazorpayRouteService {
                     log.info("Created Razorpay Stakeholder {} for account {}", stakeholderId, linkedAccount.getRazorpayAccountId());
                 } else {
                     log.error("Razorpay Stakeholder API error (HTTP {}): {}", response.statusCode, response.body);
-                    throw new RuntimeException("Razorpay Stakeholder creation failed: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay Stakeholder creation failed:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Error creating Razorpay Stakeholder for shopId {}: {}", shopId, e.getMessage());
-                throw new RuntimeException("Failed to create Razorpay Stakeholder: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay credentials missing or Linked Account is invalid.");
+            throw new IllegalStateException("Razorpay credentials missing or Linked Account is invalid.");
         }
 
         RazorpayStakeholder stakeholder = RazorpayStakeholder.builder()
@@ -378,14 +379,17 @@ public class RazorpayRouteService {
                     JSONObject resJson = new JSONObject(response.body);
                     stakeholderId = resJson.optString("id", "sth_" + System.currentTimeMillis());
                     status = resJson.optString("status", "created");
+                    log.info("Created Razorpay Stakeholder {} for partner linked account {}", stakeholderId, linkedAccount.getRazorpayAccountId());
                 } else {
-                    throw new RuntimeException("Razorpay Stakeholder creation failed: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay Stakeholder creation failed:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
-                throw new RuntimeException("Failed to create Razorpay Stakeholder: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay credentials missing or invalid.");
+            throw new IllegalStateException("Razorpay credentials missing or invalid.");
         }
 
         RazorpayStakeholder stakeholder = RazorpayStakeholder.builder()
@@ -438,14 +442,16 @@ public class RazorpayRouteService {
                     log.info("Requested Route product for account {}: status {}", linkedAccount.getRazorpayAccountId(), productStatus);
                 } else {
                     log.error("Route Product request API error (HTTP {}): {}", response.statusCode, response.body);
-                    throw new RuntimeException("Razorpay Route Product Request rejected: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay Route Product Request rejected:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Error requesting Route product for shopId {}: {}", shopId, e.getMessage());
-                throw new RuntimeException("Exception requesting Route Product: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay credentials missing or Linked Account is invalid.");
+            throw new IllegalStateException("Razorpay credentials missing or Linked Account is invalid.");
         }
 
         RazorpayProductConfig config = RazorpayProductConfig.builder()
@@ -497,14 +503,17 @@ public class RazorpayRouteService {
                     if (resJson.has("requirements")) {
                         pendingReqsJson = resJson.get("requirements").toString();
                     }
+                    log.info("Requested Route product for account {}: status {}", linkedAccount.getRazorpayAccountId(), productStatus);
                 } else {
-                    throw new RuntimeException("Razorpay Route Product Request rejected: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay Route Product Request rejected:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
-                throw new RuntimeException("Exception requesting Route Product: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay credentials missing or invalid.");
+            throw new IllegalStateException("Razorpay credentials missing or invalid.");
         }
 
         RazorpayProductConfig config = RazorpayProductConfig.builder()
@@ -558,6 +567,8 @@ public class RazorpayRouteService {
                     config = productConfigRepository.save(config);
                     log.info("Fetched Route product config for shopId {}: status={}", shopId, fetchedStatus);
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Error fetching Route product config for shopId {}: {}", shopId, e.getMessage());
             }
@@ -597,7 +608,10 @@ public class RazorpayRouteService {
                         linkedAccountRepository.save(linkedAccount);
                     }
                     config = productConfigRepository.save(config);
+                    log.info("Fetched Route product config for account {}: status={}", linkedAccount.getRazorpayAccountId(), fetchedStatus);
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Error fetching Route product config: {}", e.getMessage());
             }
@@ -637,11 +651,13 @@ public class RazorpayRouteService {
                     log.info("Updated Route onboarding data for shopId {}: new status={}", shopId, updatedStatus);
                 } else {
                     log.error("Error updating Route product config (HTTP {}): {}", response.statusCode, response.body);
-                    throw new RuntimeException("Razorpay rejected onboarding update: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay rejected onboarding update:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Exception updating Route onboarding data for shopId {}: {}", shopId, e.getMessage());
-                throw new RuntimeException("Failed to update Razorpay onboarding: " + e.getMessage(), e);
+                throw new IllegalStateException(e.getMessage(), e);
             }
         } else {
             config.setStatus("under_review");
@@ -723,14 +739,16 @@ public class RazorpayRouteService {
                     log.info("Submitted settlement bank details to Razorpay for shopId {}: status={}", shopId, rzpStatus);
                 } else {
                     log.error("Razorpay Bank Details update error (HTTP {}): {}", response.statusCode, response.body);
-                    throw new RuntimeException("Razorpay Bank verification rejected: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Razorpay Bank verification rejected:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
                 log.error("Exception submitting bank details to Razorpay for shopId {}: {}", shopId, e.getMessage());
-                throw new RuntimeException("Failed to submit Bank details to Razorpay: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         } else {
-            throw new RuntimeException("Razorpay credentials missing or Linked Account is invalid.");
+            throw new IllegalStateException("Razorpay credentials missing or Linked Account is invalid.");
         }
 
         SellerBankAccount newBankAccount = SellerBankAccount.builder()
@@ -749,10 +767,6 @@ public class RazorpayRouteService {
                 old.setIsActive(false);
                 bankAccountRepository.save(old);
             });
-
-            shop.setBankAccountNumber(cleanAcc);
-            shop.setIfscCode(cleanIfsc);
-            shopRepository.save(shop);
         }
 
         SellerBankAccount savedBank = bankAccountRepository.save(newBankAccount);
@@ -836,11 +850,14 @@ public class RazorpayRouteService {
                     config.setStatus(productStatus);
                     if (resJson.has("requirements")) config.setPendingRequirements(resJson.get("requirements").toString());
                     productConfigRepository.save(config);
+                    log.info("Submitted settlement bank details to Razorpay for partnerId {}: status={}", partnerId, rzpStatus);
                 } else {
-                    throw new RuntimeException("Bank validation rejected: " + response.body);
+                    throw new IllegalStateException(extractRazorpayError(response.body, "Bank validation rejected:"));
                 }
+            } catch (RuntimeException re) {
+                throw re;
             } catch (Exception e) {
-                throw new RuntimeException("Failed to submit Bank details: " + e.getMessage());
+                throw new IllegalStateException(e.getMessage());
             }
         }
 
@@ -860,9 +877,6 @@ public class RazorpayRouteService {
                 old.setIsActive(false);
                 bankAccountRepository.save(old);
             });
-            partner.setBankAccountNumber(cleanAcc);
-            partner.setIfscCode(cleanIfsc);
-            deliveryPartnerRepository.save(partner);
         }
 
         SellerBankAccount savedBank = bankAccountRepository.save(newBankAccount);
@@ -894,7 +908,9 @@ public class RazorpayRouteService {
         }
         try {
             return Utils.verifyWebhookSignature(rawPayload, signatureHeader, webhookSecret);
-        } catch (Exception e) {
+        } catch (RuntimeException re) {
+                throw re;
+            } catch (Exception e) {
             log.error("Webhook signature verification failed: {}", e.getMessage());
             return false;
         }
@@ -958,6 +974,16 @@ public class RazorpayRouteService {
                                 bank.setStatus("ACTIVE");
                                 bank.setIsActive(true);
                                 bankAccountRepository.save(bank);
+                                
+                                shopRepository.findById(account.getShopId()).ifPresent(shop -> {
+                                    if (Boolean.TRUE.equals(shop.getApproved())) {
+                                        String decAcc = new String(Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), StandardCharsets.UTF_8);
+                                        shop.setBankAccountNumber(decAcc);
+                                        shop.setIfscCode(bank.getIfscCode());
+                                        shopRepository.save(shop);
+                                    }
+                                });
+
                                 log.info("Activated pending bank account for shopId {}", account.getShopId());
                             });
                         } else if (account.getPartnerId() != null) {
@@ -973,6 +999,16 @@ public class RazorpayRouteService {
                                 bank.setStatus("ACTIVE");
                                 bank.setIsActive(true);
                                 bankAccountRepository.save(bank);
+                                
+                                deliveryPartnerRepository.findById(account.getPartnerId()).ifPresent(partner -> {
+                                    if (Boolean.TRUE.equals(partner.getApproved())) {
+                                        String decAcc = new String(Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), StandardCharsets.UTF_8);
+                                        partner.setBankAccountNumber(decAcc);
+                                        partner.setIfscCode(bank.getIfscCode());
+                                        deliveryPartnerRepository.save(partner);
+                                    }
+                                });
+
                                 log.info("Activated pending bank account for partnerId {}", account.getPartnerId());
                             });
                         }
@@ -1008,6 +1044,26 @@ public class RazorpayRouteService {
     private String encryptAccountNumber(String acc) {
         if (acc == null || acc.isBlank()) return null;
         return Base64.getEncoder().encodeToString(acc.getBytes(StandardCharsets.UTF_8));
+    }
+
+    
+    private String extractRazorpayError(String responseBody, String defaultMsg) {
+        if (responseBody == null || responseBody.isBlank()) return defaultMsg;
+        try {
+            JSONObject json = new JSONObject(responseBody);
+            if (json.has("error")) {
+                JSONObject err = json.getJSONObject("error");
+                String desc = err.optString("description", "");
+                if (desc.toLowerCase().contains("authentication failed")) {
+                    return "Razorpay Integration Failed: Invalid API Keys. Please contact Admin.";
+                }
+                if (desc.toLowerCase().contains("access denied")) {
+                    return "Razorpay Route Access Denied: Your API keys do not have active Razorpay Route permissions. Please enable Route in your Razorpay Dashboard.";
+                }
+                return desc.isBlank() ? defaultMsg + ": " + responseBody : defaultMsg + ": " + desc;
+            }
+        } catch (Exception ignored) {}
+        return defaultMsg + ": " + responseBody;
     }
 
     private HttpResponse executeRazorpayApi(String method, String urlString, String bodyJson) throws Exception {

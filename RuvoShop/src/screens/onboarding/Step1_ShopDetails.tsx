@@ -285,30 +285,24 @@ export const Step1_ShopDetails = () => {
             throw new Error('Session expired. Please log in again.');
           } else {
             const errData = await res.text().catch(() => '');
-            console.warn('Multipart upload fallback:', res.status, errData);
+            console.log('\n=======================================');
+            console.log('SHOP MULTIPART UPLOAD FAILED!');
+            console.log('Status code:', res.status);
+            console.log('Error details:', errData);
+            console.log('=======================================\n');
+            throw new Error(`Upload failed (Status ${res.status}): ${errData.substring(0, 50)}... Check console logs for details.`);
           }
         } catch (e: any) {
-          if (e?.message?.includes('Session expired')) throw e;
-          console.warn('Multipart upload network error:', e?.message);
+          if (e?.message?.includes('Session expired') || e?.message?.includes('Upload failed')) throw e;
+          console.log('\n=======================================');
+          console.log('SHOP MULTIPART UPLOAD NETWORK ERROR!');
+          console.log('Message:', e?.message);
+          console.log('=======================================\n');
+          throw new Error('Network error during upload: ' + e?.message);
         }
 
-        // Fallback to standard JSON endpoint if multipart upload failed or logo was empty
-        if (!uploaded) {
-          const fallbackRes = await fetch(`${API_BASE_URL}/api/shops`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(shopPayload),
-          });
-
-          if (!fallbackRes.ok) {
-            const message = await fallbackRes.text().catch(() => '');
-            throw new Error(formatErrorMessage(message) || `Shop registration failed (${fallbackRes.status})`);
-          }
-          createdShop = await fallbackRes.json().catch(() => null);
-        }
+        // We removed the JSON fallback when a logo is present, 
+        // to prevent silent failures where the logo isn't saved.
       } else {
         // Standard JSON register endpoint /api/shops
         const res = await fetch(`${API_BASE_URL}/api/shops`, {

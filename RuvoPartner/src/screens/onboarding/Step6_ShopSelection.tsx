@@ -30,7 +30,7 @@ const { height: SCREEN_H } = Dimensions.get('window');
 const MAPS_API_KEY: string =
   (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
   'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
-const MAX_SHOPS = 8;
+const MAX_SHOPS = 10;
 
 interface NearbyShop {
   id: number;
@@ -336,9 +336,9 @@ export const Step6_ShopSelection = () => {
       const ownerId = user?.userId || user?.mobileNumber || '';
       const params = lat != null ? `?lat=${lat}&lng=${lng}&radius=5` : '';
       
-      const [nearbyRes, myShopsRes] = await Promise.allSettled([
+      const [nearbyRes, prefsRes] = await Promise.allSettled([
         fetch(`${API_BASE_URL}/api/partner/nearby-shops${params}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, { headers: { Authorization: `Bearer ${token}` } })
+        fetch(`${API_BASE_URL}/api/partner/shop-preferences`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
       let freshNearbyShops: NearbyShop[] = [];
@@ -356,18 +356,24 @@ export const Step6_ShopSelection = () => {
          }
       }
 
-      if (myShopsRes.status === 'fulfilled' && myShopsRes.value.ok) {
-        const data = await myShopsRes.value.json();
-        freshMyShops = data?.data ?? data ?? [];
+      if (prefsRes.status === 'fulfilled' && prefsRes.value.ok) {
+        const data = await prefsRes.value.json();
+        const preferredShops = data?.data ?? [];
+        const preferredShopIds: number[] = data?.shopIds ?? [];
+        if (preferredShopIds.length > 0) {
+          setSelected(new Set(preferredShopIds));
+          AsyncStorage.setItem('selectedShopIds', JSON.stringify(preferredShopIds)).catch(() => {});
+        }
+        
+        // Merge preferredShops into nearbyShops if not already there
+        const nearbyIds = new Set(freshNearbyShops.map((s: any) => s.id));
+        const missingPreferred = preferredShops.filter((s: NearbyShop) => !nearbyIds.has(s.id));
+        freshNearbyShops = [...missingPreferred, ...freshNearbyShops];
       }
 
-      // Hide my shops from the nearby list if they overlap
-      const myShopIds = new Set(freshMyShops.map(s => s.id));
-      freshNearbyShops = freshNearbyShops.filter(s => !myShopIds.has(s.id));
-
       setShops(freshNearbyShops);
-      setMyShops(freshMyShops);
-      AsyncStorage.setItem('cachedNearbyShops', JSON.stringify([...freshNearbyShops, ...freshMyShops])).catch(() => {});
+      setMyShops([]);
+      AsyncStorage.setItem('cachedNearbyShops', JSON.stringify(freshNearbyShops)).catch(() => {});
       
     } catch {
       setError('Could not fetch shops properly.');
@@ -656,20 +662,7 @@ export const Step6_ShopSelection = () => {
           </View>
         ) : (
           <View style={s.shopList}>
-            {/* ── Section 1: My Shops ── */}
-            {myShops.length > 0 && (
-              <View style={{ marginBottom: 16 }}>
-                <View style={[s.sectionHeaderRow, { marginBottom: 10 }]}>
-                  <Ionicons name="storefront" size={18} color="#D97706" />
-                  <Text style={[typography.headingS, { color: '#B45309', fontSize: 16 }]}>
-                    My Registered Shops
-                  </Text>
-                </View>
-                {myShops.map(item => (
-                  <React.Fragment key={`my-${item.id}`}>{renderShop({ item })}</React.Fragment>
-                ))}
-              </View>
-            )}
+            {/* (Removed: My Registered Shops logic which was wrongly used for merchant APIs) */}
 
             {/* ── Section 2: Selected Nearby Shops ── */}
             {selectedShopList.length > 0 && (

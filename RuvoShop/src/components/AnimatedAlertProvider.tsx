@@ -39,7 +39,7 @@ export const AnimatedAlertProvider = ({ children }: { children: React.ReactNode 
             className="flex-1 bg-black/60 items-center justify-center px-8"
           >
             <Animated.View 
-              entering={ZoomIn.duration(250).springify().damping(15)} 
+              entering={ZoomIn.duration(200)} 
               exiting={ZoomOut.duration(200)} 
               className="w-full max-w-sm bg-white rounded-3xl overflow-hidden p-6"
             >

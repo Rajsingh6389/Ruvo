@@ -65,6 +65,7 @@ export const NotificationsScreen = () => {
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
+  const [filter, setFilter] = useState<'ALL' | 'ORDERS' | 'ALERTS'>('ALL');
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -98,6 +99,13 @@ export const NotificationsScreen = () => {
 
   const unreadCount = items.filter(n => !n.isRead).length;
 
+  const filteredNotifs = filter === 'ALL' ? items : items.filter(n => {
+    const isOrder = n.type !== 'CANCELLED_NO_PARTNER_FOUND' && n.type !== 'SYSTEM_ALERT';
+    if (filter === 'ORDERS') return isOrder;
+    if (filter === 'ALERTS') return !isOrder;
+    return true;
+  });
+
   return (
     <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
       {/* Header */}
@@ -130,8 +138,24 @@ export const NotificationsScreen = () => {
         </View>
       </View>
 
+      {/* Tabs */}
+      <View className="flex-row px-lg py-md bg-ruvo-surface border-b border-warm-300 gap-sm">
+        {['ALL', 'ORDERS', 'ALERTS'].map((tab) => (
+          <TouchableOpacity 
+            key={tab} 
+            activeOpacity={0.8}
+            className={`px-lg py-sm rounded-[20px] ${filter === tab ? 'bg-ruvo-ink' : 'bg-warm-100'}`}
+            onPress={() => setFilter(tab as any)}
+          >
+            <Text className={`text-[13px] font-bold ${filter === tab ? 'text-white' : 'text-warm-600'}`}>
+              {tab === 'ALL' ? 'All' : tab === 'ORDERS' ? 'Orders' : 'Alerts & Updates'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <FlatList
-        data={items}
+        data={filteredNotifs}
         keyExtractor={x => String(x.id)}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={load} tintColor="#16A34A" colors={['#16A34A']} />

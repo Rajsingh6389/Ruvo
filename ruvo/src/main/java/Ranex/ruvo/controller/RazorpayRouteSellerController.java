@@ -125,22 +125,16 @@ public class RazorpayRouteSellerController {
 
             RazorpayProductConfig productConfig = razorpayRouteService.requestRouteProduct(request.shopId);
 
+            SellerBankAccount bankAccount = null;
             if (request.bankAccountNumber != null && !request.bankAccountNumber.isBlank() &&
                 request.ifscCode != null && !request.ifscCode.isBlank()) {
-                razorpayRouteService.submitSettlementBankDetails(
+                bankAccount = razorpayRouteService.submitSettlementBankDetails(
                         request.shopId,
                         request.bankAccountNumber,
                         request.ifscCode,
                         request.ownerName != null ? request.ownerName : shop.getName(),
                         getSellerIdFromPrincipal(principal)
                 );
-
-                // Update standard shop entity fields to reflect completion of Bank Details
-                shop.setBankAccountNumber(request.bankAccountNumber);
-                shop.setIfscCode(request.ifscCode);
-                if (request.ownerName != null) shop.setBankAccountHolder(request.ownerName);
-                if (request.bankName != null) shop.setBankName(request.bankName);
-                shopRepository.save(shop);
             }
 
             Map<String, Object> data = new HashMap<>();
@@ -150,6 +144,7 @@ public class RazorpayRouteSellerController {
             data.put("productStatus", productConfig.getStatus());
             data.put("stakeholderId", stakeholder.getRazorpayStakeholderId());
             data.put("pendingRequirements", productConfig.getPendingRequirements());
+            data.put("bankStatus", bankAccount != null ? bankAccount.getStatus() : null);
 
             return ResponseEntity.ok(ApiResponse.ok("Razorpay Route onboarding initiated successfully.", data));
         } catch (Exception e) {

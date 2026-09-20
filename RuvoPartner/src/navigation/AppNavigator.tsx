@@ -23,6 +23,7 @@ import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { OtpVerificationScreen } from '../screens/OtpVerificationScreen';
 import { VerificationStatusScreen } from '../screens/VerificationStatusScreen';
 import { ActiveDevicesScreen } from '../screens/ActiveDevicesScreen';
+import { EditBankAccountScreen } from '../screens/EditBankAccountScreen';
 
 // Onboarding flow (6 steps)
 import { Step1_BasicDetails }  from '../screens/onboarding/Step1_BasicDetails';
@@ -50,6 +51,7 @@ export type RootStackParamList = {
   // Main app
   MainTabs: undefined;
   ManageShops: undefined;
+  EditBankAccount: undefined;
   ActiveDelivery: { deliveryId: number };
   ActiveDevices: undefined;
   History: undefined;
@@ -153,6 +155,7 @@ export const AppNavigator = () => {
             <>
               <Stack.Screen name="MainTabs"      component={TabNavigator}          />
               <Stack.Screen name="ManageShops"   component={Step6_ShopSelection}  />
+              <Stack.Screen name="EditBankAccount" component={EditBankAccountScreen} />
               <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
               <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
               <Stack.Screen name="History"        component={HistoryScreen}        />

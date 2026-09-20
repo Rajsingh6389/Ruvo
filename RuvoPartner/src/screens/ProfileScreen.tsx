@@ -56,45 +56,19 @@ export const ProfileScreen = () => {
 
   const loadSelectedShops = async () => {
     try {
-      const raw = await AsyncStorage.getItem('selectedShopIds');
-      const ids: number[] = raw ? JSON.parse(raw) : [];
-
-      if (!Array.isArray(ids) || ids.length === 0) {
+      const res = await fetch(`${API_BASE_URL}/api/partner/shop-preferences`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const arr = json?.data || [];
+        setSelectedShops(arr);
+        if (json?.shopIds) {
+          AsyncStorage.setItem('selectedShopIds', JSON.stringify(json.shopIds)).catch(() => {});
+        }
+      } else {
         setSelectedShops([]);
-        return;
       }
-
-      const cachedStr = await AsyncStorage.getItem('cachedNearbyShops');
-      let cachedShops: SelectedShopDetail[] = [];
-      if (cachedStr) {
-        try { cachedShops = JSON.parse(cachedStr); } catch {}
-      }
-
-      let matched: SelectedShopDetail[] = [];
-      if (Array.isArray(cachedShops) && cachedShops.length > 0) {
-        matched = cachedShops.filter(s => ids.includes(s.id));
-      }
-
-      let finalMatched = [...matched];
-      const missingIds = ids.filter(id => !matched.some(m => m.id === id));
-      
-      if (missingIds.length > 0) {
-        await Promise.all(missingIds.map(async (id) => {
-          try {
-            const res = await fetch(`${API_BASE_URL}/api/shops/${id}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            if (res.ok) {
-              const shopData = await res.json();
-              finalMatched.push(shopData);
-            }
-          } catch (e) {
-            console.error('Failed to fetch missing shop detail for id:', id, e);
-          }
-        }));
-      }
-
-      setSelectedShops(finalMatched);
     } catch {
       setSelectedShops([]);
     }
@@ -357,6 +331,35 @@ export const ProfileScreen = () => {
             )}
           </Animated.View>
         )}
+
+        {/* Financial Details Section */}
+        <Animated.View entering={FadeInUp.delay(400).duration(500)}>
+          <View className="flex-row justify-between items-center mb-3 ml-1">
+            <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest">
+              Financial Details
+            </Text>
+          </View>
+          <View className="mb-6 bg-[#1C2026] border border-gray-800 rounded-[28px] p-2 shadow-lg shadow-black/40">
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditBankAccount')}
+              activeOpacity={0.7}
+              className="flex-row items-center p-3 gap-4"
+            >
+              <View className="w-10 h-10 bg-green-500/10 border border-green-500/20 rounded-2xl items-center justify-center">
+                <Ionicons name="wallet" size={18} color="#10B981" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base text-white font-black">
+                  Bank & Settlement
+                </Text>
+                <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-4">
+                  Manage weekly payout bank Account
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
 
         {/* Security Section */}
         <Animated.View entering={FadeInUp.delay(500).duration(500)}>

@@ -41,6 +41,12 @@ public class ShopController {
     @Autowired
     private Ranex.ruvo.service.RazorpayService razorpayService;
 
+    @Autowired
+    private Ranex.ruvo.repository.SellerBankAccountRepository sellerBankAccountRepository;
+
+    @Autowired
+    private Ranex.ruvo.repository.RazorpayLinkedAccountRepository linkedAccountRepository;
+
     private String getCurrentPrincipal() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) return null;
@@ -113,6 +119,18 @@ public class ShopController {
             Shop shop,
             HttpServletRequest request
     ) {
+
+        if (shop.getBankAccountNumber() == null || shop.getBankAccountNumber().isBlank()) {
+            java.util.List<Ranex.ruvo.model.SellerBankAccount> banks = sellerBankAccountRepository.findByShopIdOrderByCreatedAtDesc(shop.getId());
+            if (banks != null && !banks.isEmpty()) {
+                Ranex.ruvo.model.SellerBankAccount bank = banks.get(0);
+                if (bank.getAccountNumberEncrypted() != null) {
+                    String decAcc = new String(java.util.Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), java.nio.charset.StandardCharsets.UTF_8);
+                    shop.setBankAccountNumber(decAcc);
+                    shop.setIfscCode(bank.getIfscCode());
+                }
+            }
+        }
 
         if (shop.getLogoUrl() != null) {
             shop.setLogoUrl(
@@ -207,6 +225,11 @@ public class ShopController {
 
         List<Shop> shops =
                 shopRepository.findPendingApproval();
+                
+        shops = shops.stream().filter(shop -> {
+            java.util.Optional<Ranex.ruvo.model.SellerBankAccount> activeBank = sellerBankAccountRepository.findByShopIdAndIsActiveTrue(shop.getId());
+            return activeBank.isPresent();
+        }).toList();
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -629,18 +652,24 @@ public class ShopController {
             Shop shop = shopOpt.get();
             shop.setApproved(true);
             shop.setAadhaarVerified(true);
+            
+            java.util.List<Ranex.ruvo.model.SellerBankAccount> banks = sellerBankAccountRepository.findByShopIdOrderByCreatedAtDesc(shop.getId());
+            if (banks != null && !banks.isEmpty()) {
+                Ranex.ruvo.model.SellerBankAccount bank = banks.get(0);
+                if (bank.getAccountNumberEncrypted() != null) {
+                    String decAcc = new String(java.util.Base64.getDecoder().decode(bank.getAccountNumberEncrypted()), java.nio.charset.StandardCharsets.UTF_8);
+                    shop.setBankAccountNumber(decAcc);
+                    shop.setIfscCode(bank.getIfscCode());
+                }
+            }
 
-            // Automatically create Razorpay Linked Account on Admin Approval
+            // Automatically bind Razorpay Linked Account on Admin Approval
             String ifsc = shop.getIfscCode();
             String acc = shop.getBankAccountNumber();
             if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank()) {
-                String accountId = shop.getRazorpayAccountId();
-                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy")) {
-                    String name = shop.getName();
-                    String email = (shop.getOwner() != null && shop.getOwner().contains("@")) ? shop.getOwner() : shop.getId() + "@shop.ruvo.in";
-                    String phone = shop.getPhone() != null ? shop.getPhone() : "9999999999";
-                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
-                    shop.setRazorpayAccountId(accountId);
+                java.util.Optional<Ranex.ruvo.model.RazorpayLinkedAccount> linkedAccountOpt = linkedAccountRepository.findByShopId(shop.getId());
+                if (linkedAccountOpt.isPresent()) {
+                    shop.setRazorpayAccountId(linkedAccountOpt.get().getRazorpayAccountId());
                 }
             }
 

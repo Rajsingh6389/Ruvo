@@ -190,19 +190,8 @@ public class DeliveryPartnerController {
             partner.setApproved(true);
             partner.setAadhaarVerified(true);
 
-            // Automatically create Razorpay Linked Account on Admin Approval
-            String ifsc = partner.getIfscCode();
-            String acc = partner.getBankAccountNumber();
-            if (ifsc != null && acc != null && !ifsc.isBlank() && !acc.isBlank() && razorpayService != null) {
-                String accountId = partner.getRazorpayAccountId();
-                if (accountId == null || accountId.isBlank() || accountId.startsWith("acc_dummy") || accountId.equals("acc_pending_approval")) {
-                    String name = partner.getName();
-                    String email = partner.getId() + "@partner.ruvo.in";
-                    String phone = partner.getPhone() != null ? partner.getPhone() : "9999999999";
-                    accountId = razorpayService.createLinkedAccount(name, email, phone, ifsc, acc);
-                    partner.setRazorpayAccountId(accountId);
-                }
-            }
+            // Razorpay Linked Account is now managed entirely by the onboarding flow (RazorpayRoutePartnerController).
+            // We no longer automatically create fallback linked accounts here.
 
             return ResponseEntity.ok(deliveryPartnerRepository.save(partner));
         }

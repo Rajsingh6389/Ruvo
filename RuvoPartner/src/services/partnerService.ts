@@ -1,7 +1,7 @@
 import { api, unwrap } from './api';
 
 export type PartnerProfile = {
-  userId: number; name: string; mobileNumber: string;
+  userId: number; partnerId?: number; name: string; mobileNumber: string;
   verificationStatus: string; adminReason?: string | null;
   vehicle?: { vehicleType: string; vehicleNumber: string; vehicleModel?: string } | null;
   kyc?: { address?: string; city?: string; state?: string; pincode?: string } | null;

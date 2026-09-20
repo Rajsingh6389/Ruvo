@@ -110,21 +110,16 @@ public class RazorpayRoutePartnerController {
 
             RazorpayProductConfig productConfig = razorpayRouteService.requestPartnerRouteProduct(request.partnerId);
 
+            SellerBankAccount bankAccount = null;
             if (request.bankAccountNumber != null && !request.bankAccountNumber.isBlank() &&
                 request.ifscCode != null && !request.ifscCode.isBlank()) {
-                razorpayRouteService.submitPartnerSettlementBankDetails(
+                bankAccount = razorpayRouteService.submitPartnerSettlementBankDetails(
                         request.partnerId,
                         request.bankAccountNumber,
                         request.ifscCode,
                         request.beneficiaryName != null ? request.beneficiaryName : partner.getName(),
                         getPartnerIdFromPrincipal(principal)
                 );
-                
-                partner.setBankAccountNumber(request.bankAccountNumber);
-                partner.setIfscCode(request.ifscCode);
-                partner.setBankName(request.bankName);
-                partner.setBankAccountHolder(request.beneficiaryName);
-                deliveryPartnerRepository.save(partner);
             }
 
             Map<String, Object> data = new HashMap<>();
@@ -134,6 +129,7 @@ public class RazorpayRoutePartnerController {
             data.put("productStatus", productConfig.getStatus());
             data.put("stakeholderId", stakeholder.getRazorpayStakeholderId());
             data.put("pendingRequirements", productConfig.getPendingRequirements());
+            data.put("bankStatus", bankAccount != null ? bankAccount.getStatus() : null);
 
             return ResponseEntity.ok(ApiResponse.ok("Razorpay Route onboarding initiated successfully.", data));
         } catch (Exception e) {
@@ -242,12 +238,6 @@ public class RazorpayRoutePartnerController {
                     request.beneficiaryName,
                     getPartnerIdFromPrincipal(principal)
             );
-            
-            partner.setBankAccountNumber(request.accountNumber);
-            partner.setIfscCode(request.ifscCode);
-            partner.setBankName(request.bankName);
-            partner.setBankAccountHolder(request.beneficiaryName);
-            deliveryPartnerRepository.save(partner);
 
             Map<String, Object> result = new HashMap<>();
             result.put("partnerId", request.partnerId);
