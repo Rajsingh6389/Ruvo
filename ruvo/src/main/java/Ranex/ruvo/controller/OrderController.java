@@ -8,6 +8,7 @@ import Ranex.ruvo.model.OrderStatus;
 import Ranex.ruvo.model.Delivery;
 import Ranex.ruvo.model.User;
 import Ranex.ruvo.model.RefundReason;
+import Ranex.ruvo.model.Payment;
 import Ranex.ruvo.repository.OrderItemRepository;
 import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.repository.ProductRepository;
@@ -44,6 +45,8 @@ public class OrderController {
     private final UserRepository userRepository;
     private final Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository;
     private final RefundService refundService;
+    private final Ranex.ruvo.repository.PaymentRepository paymentRepository;
+    private final Ranex.ruvo.service.RazorpayRouteService razorpayRouteService;
 
     public OrderController(OrderRepository orderRepository,
                            ProductRepository productRepository,
@@ -56,7 +59,9 @@ public class OrderController {
                            DeliveryRepository deliveryRepository,
                            UserRepository userRepository,
                            Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository,
-                           RefundService refundService) {
+                           RefundService refundService,
+                           Ranex.ruvo.repository.PaymentRepository paymentRepository,
+                           Ranex.ruvo.service.RazorpayRouteService razorpayRouteService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
@@ -69,6 +74,8 @@ public class OrderController {
         this.userRepository = userRepository;
         this.deliveryRequestRepository = deliveryRequestRepository;
         this.refundService = refundService;
+        this.paymentRepository = paymentRepository;
+        this.razorpayRouteService = razorpayRouteService;
     }
 
     @PostMapping
@@ -652,6 +659,20 @@ public class OrderController {
                 deliveryRepository.save(delivery);
             }
         }
+
+        // Trigger payment splitting if Delivered via UPI/Online
+        if ("DELIVERED".equalsIgnoreCase(status) && ("ONLINE".equalsIgnoreCase(order.getPaymentMethod()) || "RAZORPAY".equalsIgnoreCase(order.getPaymentMethod()))) {
+            paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
+                if (payment.getRazorpayPaymentId() != null && !payment.getRazorpayPaymentId().isBlank()) {
+                    try {
+                        razorpayRouteService.createTransferOnDelivery(order, payment.getRazorpayPaymentId());
+                    } catch (Exception e) {
+                        System.err.println("Failed to trigger Razerpay route transfer for order: " + order.getId() + ", Error: " + e.getMessage());
+                    }
+                }
+            });
+        }
+
         return ResponseEntity.ok(Map.of("success", true, "message", "Order status updated to " + status));
     }
 

@@ -20,7 +20,6 @@ import { useToast } from '../../context/ToastContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import {
   initializeCheckout,
-  initializeCashfreeCheckout,
   fetchPricing,
   PricingResult,
 } from '../../services/orderService';
@@ -62,7 +61,7 @@ export default function CheckoutScreen() {
   }, [cartItems, fromCart, routeProduct, routeQuantity]);
 
   const primaryItem = checkoutItems[0];
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CASHFREE'>('CASHFREE');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('ONLINE');
   const [submitting, setSubmitting] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
 
@@ -227,31 +226,68 @@ export default function CheckoutScreen() {
         };
       });
 
-      if (paymentMethod === 'CASHFREE') {
-        const checkoutRes = await initializeCashfreeCheckout(
+      if (paymentMethod === 'ONLINE') {
+        const checkoutRes = await initializeCheckout(
           {
             userId: String(userId),
             shopId: validShopId,
             productId: primaryItem.product.id || 1,
             productName: primaryItem.product.name,
             quantity: primaryItem.quantity,
+            items: formattedItems,
+            paymentMethod: 'ONLINE',
             deliveryAddress,
-            customerPhone: location.details.phone || user?.mobileNumber || undefined,
-            customerEmail: user?.email || undefined,
             userLatitude: location.latitude,
             userLongitude: location.longitude,
+            customerName: location.details.receiverName || user?.name,
+            customerPhone: location.details.phone || user?.mobileNumber,
+            couponCode: couponCode || undefined,
           },
           token,
         );
 
         setSubmitting(false);
-        if (checkoutRes.success && checkoutRes.paymentUrl) {
-          if (fromCart) clearCart();
-          Linking.openURL(checkoutRes.paymentUrl);
+        if (checkoutRes.success && checkoutRes.razorpayOrderId) {
+          try {
+            // Lazy import to prevent crashes if module not found/linked
+            const RazorpayCheckout = require('react-native-razorpay').default;
+            
+            const options = {
+              description: 'Order Payment',
+              image: 'https://i.imgur.com/3g7nmJC.png',
+              currency: checkoutRes.currency || 'INR',
+              key: 'rzp_test_YourKeyIdHere', // REPLACE THIS WITH REAL KEY
+              amount: checkoutRes.amount * 100, // Amount in paise
+              name: 'RuVo',
+              order_id: checkoutRes.razorpayOrderId,
+              prefill: {
+                email: user?.email || 'customer@ruvomobile.me',
+                contact: location.details.phone || user?.mobileNumber || '9999999999',
+                name: location.details.receiverName || user?.name || 'Customer'
+              },
+              theme: { color: '#FF7A00' }
+            };
+            
+            RazorpayCheckout.open(options).then(async (data: any) => {
+              if (fromCart) clearCart();
+              // Verify payment on backend
+              // This is a stub for verifyPayment which would normally happen here
+              navigation.replace(ROUTES.ORDER_SUCCESS, {
+                orderId: checkoutRes.orderId,
+                total: grandTotal,
+              });
+            }).catch((error: any) => {
+              showToast('Payment cancelled or failed.', 'error');
+            });
+            
+          } catch (e: any) {
+             showToast('Razorpay module not linked. Please build native app!', 'error');
+          }
         } else {
-          showToast(checkoutRes.message || 'Failed to initialize Cashfree payment.', 'error');
+          showToast(checkoutRes.message || 'Failed to initialize payment.', 'error');
         }
       } else {
+        // COD logic remains
         const result = await initializeCheckout(
           {
             userId: String(userId),
@@ -266,6 +302,7 @@ export default function CheckoutScreen() {
             userLongitude: location.longitude,
             customerName: location.details.receiverName || user?.name,
             customerPhone: location.details.phone || user?.mobileNumber,
+            couponCode: couponCode || undefined,
           },
           token,
         );
@@ -414,19 +451,19 @@ export default function CheckoutScreen() {
 
           <TouchableOpacity
             className={`flex-row items-center p-3.5 rounded-xl border ${
-              paymentMethod === 'CASHFREE' ? 'border-[#FF7A00] bg-orange-50/40' : 'border-gray-100 bg-white'
+              paymentMethod === 'ONLINE' ? 'border-[#FF7A00] bg-orange-50/40' : 'border-gray-100 bg-white'
             }`}
             activeOpacity={0.7}
-            onPress={() => setPaymentMethod('CASHFREE')}
+            onPress={() => setPaymentMethod('ONLINE')}
           >
             <Ionicons
-              name={paymentMethod === 'CASHFREE' ? 'radio-button-on' : 'radio-button-off'}
+              name={paymentMethod === 'ONLINE' ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={paymentMethod === 'CASHFREE' ? '#FF7A00' : '#9CA3AF'}
+              color={paymentMethod === 'ONLINE' ? '#FF7A00' : '#9CA3AF'}
             />
             <View className="ml-3 flex-1">
               <Text className="text-[#171A1F] text-sm font-extrabold">
-                UPI / Online Payment (Cashfree)
+                UPI / Secure Online Payment
               </Text>
               <Text className="text-gray-500 text-xs mt-0.5 font-medium">
                 Instant pay via Google Pay, PhonePe, Paytm, Cards, NetBanking

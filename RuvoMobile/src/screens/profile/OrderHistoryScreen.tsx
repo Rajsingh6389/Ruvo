@@ -131,6 +131,13 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
   const shopInitials = shopName.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase();
   const shopLogoUri = formatProductImageUrl((item as any).shopLogoUrl);
 
+  const getThemeVars = () => {
+    if (isCancelled) return { color: colors.error, bg: colors.errorSoft };
+    if (isDelivered) return { color: colors.success, bg: colors.successSoft };
+    return { color: colors.primary, bg: colors.primarySoft };
+  };
+  const { color: stColor, bg: stBg } = getThemeVars();
+
   return (
     <TouchableOpacity
       activeOpacity={0.96}
@@ -138,21 +145,21 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
       style={[
         cardStyles.card,
         {
-          backgroundColor: st.badgeBg,
+          backgroundColor: stBg,
           borderRadius: radius.card,
-          borderColor: st.cardLeft + '40',
+          borderColor: colors.border,
         },
         shadows.md,
       ]}
     >
       {/* Left accent bar */}
-      <View style={[cardStyles.accentBar, { backgroundColor: st.cardLeft }]} />
+      <View style={[cardStyles.accentBar, { backgroundColor: stColor }]} />
 
       <View style={cardStyles.inner}>
         {/* ─ Row 1: Status pill only (no order ID) ─────────────────── */}
-        <View style={[cardStyles.pill, { backgroundColor: st.pillBg, borderRadius: radius.xs, alignSelf: 'flex-start' }]}>
-          <Ionicons name={st.icon} size={12} color={st.pillText} />
-          <Text style={[typography.overline, { color: st.pillText, fontSize: 10, marginLeft: 4 }]}>{st.label}</Text>
+        <View style={[cardStyles.pill, { backgroundColor: stBg, borderRadius: radius.xs, alignSelf: 'flex-start' }]}>
+          <Ionicons name={st.icon} size={12} color={stColor} />
+          <Text style={[typography.overline, { color: stColor, fontSize: 10, marginLeft: 4 }]}>{st.label}</Text>
         </View>
 
         {/* ─ Row 2: Shop logo + name ───────────────────────────────────── */}
@@ -163,8 +170,8 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
               style={[cardStyles.shopLogoImg, { borderRadius: 20 }]}
             />
           ) : (
-            <View style={[cardStyles.shopLogoImg, { borderRadius: 20, backgroundColor: st.cardLeft, alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={{ color: '#fff', fontFamily: 'Poppins_700Bold', fontSize: 14 }}>{shopInitials}</Text>
+            <View style={[cardStyles.shopLogoImg, { borderRadius: 20, backgroundColor: stBg, alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={{ color: stColor, fontFamily: 'Poppins_700Bold', fontSize: 14 }}>{shopInitials}</Text>
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -261,7 +268,7 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
           <View style={[cardStyles.divider, { backgroundColor: colors.border }]} />
           <View style={cardStyles.billRow}>
             <Text style={[typography.bodyStrong, { color: colors.textPrimary }]}>Total</Text>
-            <Text style={[typography.headingS, { color: st.pillText, fontSize: 15 }]}>₹{item.totalAmount}</Text>
+            <Text style={[typography.headingS, { color: stColor, fontSize: 15 }]}>₹{item.totalAmount}</Text>
           </View>
         </View>
 
@@ -297,7 +304,7 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
               style={[
                 cardStyles.btn,
                 {
-                  backgroundColor: isActive ? colors.primary : isCancelled ? '#FEE2E2' : '#D1FAE5',
+                  backgroundColor: isActive ? colors.primary : isCancelled ? colors.errorSoft : colors.successSoft,
                   borderRadius: radius.button,
                 },
                 isActive && shadows.brand,
@@ -307,12 +314,12 @@ function OrderCard({ item, colors, typography, radius, shadows, navigation }: an
               <Ionicons
                 name={isActive ? 'navigate' : 'eye-outline'}
                 size={13}
-                color={isActive ? colors.onPrimary : isCancelled ? '#991B1B' : '#065F46'}
+                color={isActive ? colors.onPrimary : isCancelled ? colors.error : colors.success}
               />
               <Text style={[
                 typography.bodyStrong,
                 {
-                  color: isActive ? colors.onPrimary : isCancelled ? '#991B1B' : '#065F46',
+                  color: isActive ? colors.onPrimary : isCancelled ? colors.error : colors.success,
                   fontSize: 12,
                 },
               ]}>
@@ -415,9 +422,9 @@ export default function OrderHistoryScreen() {
       {/* ─ LEGEND ──────────────────────────────────────────────────────── */}
       <View style={[styles.legend, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         {[
-          { color: '#16A34A', label: 'Delivered' },
-          { color: '#F97316', label: 'In Progress' },
-          { color: '#DC2626', label: 'Cancelled' },
+          { color: colors.success, label: 'Delivered' },
+          { color: colors.primary, label: 'In Progress' },
+          { color: colors.error, label: 'Cancelled' },
         ].map(item => (
           <View key={item.label} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: item.color }]} />

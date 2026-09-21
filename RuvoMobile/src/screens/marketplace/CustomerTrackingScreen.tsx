@@ -158,9 +158,15 @@ export default function CustomerTrackingScreen() {
 
   const handleCancelOrder = () => {
     if (!orderId || !token) return;
+    
+    const isOnline = order?.paymentMethod === 'ONLINE' || order?.paymentMethod === 'RAZORPAY';
+    const warningMsg = isOnline 
+      ? `Are you sure you want to cancel? Since you paid online, only the product value (₹${order?.subtotal || order?.totalAmount}) will be refunded. Delivery & Platform fees are non-refundable. This action cannot be undone.`
+      : 'Are you sure you want to cancel this order? This action cannot be undone.';
+      
     Alert.alert(
       'Cancel Order',
-      'Are you sure you want to cancel this order? This action cannot be undone.',
+      warningMsg,
       [
         { text: 'No, Keep Order', style: 'cancel' },
         {
@@ -318,7 +324,7 @@ export default function CustomerTrackingScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ color: colors.textSecondary, marginTop: 12, fontFamily: 'Poppins_700Bold' }}>Loading live tracking...</Text>
       </SafeAreaView>
     );
@@ -327,9 +333,9 @@ export default function CustomerTrackingScreen() {
   if (!order) {
     return (
       <SafeAreaView style={[styles.loaderBox, { backgroundColor: colors.background }]}>
-        <Ionicons name="alert-circle-outline" size={52} color="#EF4444" />
+        <Ionicons name="alert-circle-outline" size={52} color={colors.error} />
         <Text style={{ color: colors.textPrimary, marginTop: 12, fontFamily: 'Poppins_800ExtraBold' }}>Order not found.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]} onPress={() => navigation.goBack()}>
           <Text style={{ color: '#FFF', fontFamily: 'Poppins_800ExtraBold' }}>Go Back</Text>
         </TouchableOpacity>
       </SafeAreaView>
@@ -371,8 +377,8 @@ export default function CustomerTrackingScreen() {
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-      {/* ── MAP HERO (Top 45% of Screen) ─────────────────────────────────── */}
-      <View style={styles.heroMap}>
+      {/* ── MAP HERO (Full Screen Background) ─────────────────────────────────── */}
+      <View style={[styles.heroMap, { height: '100%', position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }]}>
         {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
           <MapView
             style={StyleSheet.absoluteFill}
@@ -380,33 +386,33 @@ export default function CustomerTrackingScreen() {
             showsUserLocation={false}
           >
             <Marker coordinate={destination} title="Drop Location">
-              <View style={[styles.markerBase, { backgroundColor: '#111827' }]}>
+              <View style={[styles.markerBase, { backgroundColor: colors.primary }]}>
                 <Ionicons name="home" size={16} color="#FFF" />
               </View>
             </Marker>
             {validDestLat !== shopLat && (
               <Marker coordinate={{ latitude: shopLat, longitude: shopLng }} title="Shop">
-                <View style={[styles.markerBase, { backgroundColor: '#EF4444' }]}>
+                <View style={[styles.markerBase, { backgroundColor: colors.error }]}>
                   <Ionicons name="storefront" size={16} color="#FFF" />
                 </View>
               </Marker>
             )}
             {partnerLocation && (
               <Marker coordinate={partnerLocation} title="Rider">
-                <View style={[styles.riderMarker, { backgroundColor: '#10B981' }]}>
+                <View style={[styles.riderMarker, { backgroundColor: colors.success }]}>
                   <Ionicons name="bicycle" size={20} color="#FFF" />
                 </View>
               </Marker>
             )}
             {partnerLocation ? (
-              <Polyline coordinates={[partnerLocation, destination]} strokeColor="#10B981" strokeWidth={5} />
+              <Polyline coordinates={[partnerLocation, destination]} strokeColor={colors.success} strokeWidth={5} />
             ) : (shopLat && shopLng) ? (
-              <Polyline coordinates={[{ latitude: shopLat, longitude: shopLng }, destination]} strokeColor="#9CA3AF" strokeWidth={4} lineDashPattern={[8, 8]} />
+              <Polyline coordinates={[{ latitude: shopLat, longitude: shopLng }, destination]} strokeColor={colors.textHint} strokeWidth={4} lineDashPattern={[8, 8]} />
             ) : null}
           </MapView>
         ) : (
           <View style={styles.mapPlaceholder}>
-            <Ionicons name={isCancelled ? "close-circle" : "checkmark-circle"} size={64} color={isCancelled ? '#EF4444' : '#10B981'} />
+            <Ionicons name={isCancelled ? "close-circle" : "checkmark-circle"} size={64} color={isCancelled ? colors.error : colors.success} />
             <Text style={styles.mapPlaceholderText}>
               {isCancelled ? 'Order Cancelled' : 'Order Delivered Successfully'}
             </Text>
@@ -420,102 +426,44 @@ export default function CustomerTrackingScreen() {
 
       {/* ── FLOATING HEADER ──────────────────────────────────────────────── */}
       <View style={styles.floatingHeader}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.floatBtn}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatBtn, { backgroundColor: colors.surface }]}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.floatBtn}>
-          <Text style={styles.helpBtnText}>Help</Text>
+        <TouchableOpacity style={[styles.floatBtn, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.helpBtnText, { color: colors.textPrimary }]}>Help</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── OVERLAPPING BOTTOM SHEET CONTENT ─────────────────────────────── */}
       <ScrollView
-        style={styles.sheetContainer}
-        contentContainerStyle={styles.sheetContent}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
       >
-        {/* ── EXPANDABLE MAP SECTION (Blinkit Style) ────────────────── */}
-        <View style={{ height: isMapExpanded ? 340 : 190, marginHorizontal: 16, marginTop: 14, borderRadius: 24, overflow: 'hidden', elevation: 4 }} className="shadow-sm relative">
-          {(!isCancelled && order.orderStatus !== 'DELIVERED') ? (
-            <MapView
-              style={StyleSheet.absoluteFill}
-              initialRegion={{ ...destination, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
-            >
-              {/* User Location Marker */}
-              <Marker coordinate={destination} title="Delivery Address" pinColor="#059669" />
+        {/* Transparent Spacer to show background map */}
+        <View style={{ height: isMapExpanded ? '100%' : 300, minHeight: isMapExpanded ? 600 : 300 }} pointerEvents="none" />
 
-              {/* Shop Location Marker */}
-              {order.shopLatitude && order.shopLongitude && (
-                <Marker
-                  coordinate={{ latitude: order.shopLatitude, longitude: order.shopLongitude }}
-                  title={order.shopName || "Store"}
-                >
-                  <View style={[styles.partnerMarker, { backgroundColor: '#FF6B35' }]}>
-                    <Ionicons name="storefront" size={18} color="#FFF" />
-                  </View>
-                </Marker>
-              )}
-
-              {/* Delivery Partner Marker */}
-              {partnerLocation && (
-                <Marker coordinate={partnerLocation} title="Delivery Partner">
-                  <View style={styles.partnerMarker}>
-                    <Ionicons name="bicycle" size={20} color="#FFF" />
-                  </View>
-                </Marker>
-              )}
-
-              {/* Polyline Route */}
-              {partnerLocation ? (
-                <Polyline
-                  coordinates={[partnerLocation, destination]}
-                  strokeColor="#059669"
-                  strokeWidth={4}
-                  lineDashPattern={[6, 4]}
-                />
-              ) : (order.shopLatitude && order.shopLongitude) ? (
-                <Polyline
-                  coordinates={[
-                    { latitude: order.shopLatitude, longitude: order.shopLongitude },
-                    destination,
-                  ]}
-                  strokeColor="#FF6B35"
-                  strokeWidth={3.5}
-                  lineDashPattern={[8, 5]}
-                />
-              ) : null}
-            </MapView>
-          ) : (
-            <View style={[styles.mapPlaceholder, { backgroundColor: colors.card }]}>
-              <Ionicons name="map" size={48} color={isCancelled ? '#FCA5A5' : '#D1D5DB'} />
-              <Text style={{ color: colors.textSecondary, marginTop: 10, textAlign: 'center', paddingHorizontal: 24, fontWeight: '700' }}>
-                {isCancelled
-                  ? 'Order was cancelled. No delivery in progress.'
-                  : 'Order delivered successfully.'}
-              </Text>
-            </View>
-          )}
-
-          {/* Floating Map Toggle Button */}
+        {isMapExpanded && (
           <TouchableOpacity
-            onPress={() => setIsMapExpanded(!isMapExpanded)}
-            style={{ backgroundColor: 'rgba(23, 26, 31, 0.85)' }}
-            className="absolute bottom-3 right-3 px-3 py-1.5 rounded-full flex-row items-center gap-1.5 shadow-md"
+            onPress={() => setIsMapExpanded(false)}
+            style={{ 
+              alignSelf: 'center', 
+              backgroundColor: colors.surface, 
+              paddingHorizontal: 16, 
+              paddingVertical: 8, 
+              borderRadius: 20, 
+              marginTop: -50, 
+              marginBottom: 20,
+              elevation: 4, 
+              shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4,
+              flexDirection: 'row', alignItems: 'center', gap: 6 
+            }}
           >
-            <Ionicons name={isMapExpanded ? "contract" : "expand"} size={14} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
-              {isMapExpanded ? 'Minimize Map' : 'Tap to Expand'}
-            </Text>
+            <Ionicons name="contract" size={16} color={colors.textPrimary} />
+            <Text style={{ color: colors.textPrimary, fontFamily: 'Poppins_700Bold', fontSize: 13 }}>Minimize Map</Text>
           </TouchableOpacity>
-
-          {isLive && (
-            <Animated.View style={[styles.liveBadge, { transform: [{ scale: pulseAnim }] }]}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </Animated.View>
-          )}
-        </View>
+        )}
 
         {/* ── PROMOTIONAL CAROUSEL ─────────── */}
         {!isMapExpanded && (
@@ -543,7 +491,7 @@ export default function CustomerTrackingScreen() {
                       {banner.title}
                     </Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                      <TouchableOpacity style={{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
                         <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 12 }}>Enquire Now</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => setIsMapExpanded(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -559,7 +507,7 @@ export default function CustomerTrackingScreen() {
             {/* Pagination dots */}
             <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 12, gap: 6 }}>
               {PROMO_BANNERS.map((_, idx) => (
-                <View key={idx} style={{ width: idx === 0 ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: idx === 0 ? '#FF6B35' : colors.border }} />
+                <View key={idx} style={{ width: idx === 0 ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: idx === 0 ? colors.primary : colors.border }} />
               ))}
             </View>
           </View>
@@ -567,19 +515,19 @@ export default function CustomerTrackingScreen() {
 
         {/* ── UPSELL BANNER (Forgot to add something?) ─────────── */}
         {!isCancelled && order.orderStatus === 'SHOP_ACCEPTED' && upsellTimeLeft > 0 && (
-          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: '#FFF2EC', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#FFE0D3', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ backgroundColor: '#FF6B35', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ marginHorizontal: 16, marginTop: 16, backgroundColor: colors.warningSoft, borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ backgroundColor: colors.primary, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 20 }}>🧙</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#171A1F', fontSize: 14, fontWeight: '800' }}>Forgot to add something?</Text>
-              <Text style={{ color: '#555149', fontSize: 12, marginTop: 2 }}>Add now at no extra fee</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: '800' }}>Forgot to add something?</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Add now at no extra fee</Text>
             </View>
             <View style={{ alignItems: 'flex-end', gap: 6 }}>
-              <Text style={{ color: '#EF4444', fontWeight: '900', fontSize: 14 }}>
+              <Text style={{ color: colors.error, fontWeight: '900', fontSize: 14 }}>
                 {String(Math.floor(upsellTimeLeft / 60)).padStart(2, '0')}:{String(upsellTimeLeft % 60).padStart(2, '0')}
               </Text>
-              <TouchableOpacity style={{ backgroundColor: '#FF6B35', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+              <TouchableOpacity style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
                 <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 11 }}>Add Items</Text>
               </TouchableOpacity>
             </View>
@@ -789,24 +737,24 @@ export default function CustomerTrackingScreen() {
 
         {/* Animated Timeline or Red Cancel Card */}
         {!isCancelled ? (
-          <View style={[styles.card, { backgroundColor: '#FFF', padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border }]}>
+          <View style={[styles.card, { backgroundColor: colors.card, padding: 24, borderRadius: 16, borderWidth: 1, borderColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <View style={{ width: 24, alignItems: 'center', marginRight: 16, marginTop: 4 }}>
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#D1D5DB' }} />
-                <View style={{ width: 2, height: 38, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? colors.success : colors.border }} />
+                <View style={{ width: 2, height: 38, backgroundColor: isStepActive('accepted', order.orderStatus || '') ? colors.success : colors.border, marginVertical: 4 }} />
                 
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#D1D5DB' }} />
-                <View style={{ width: 2, height: 38, backgroundColor: (order.deliveryPartnerId) ? '#059669' : '#E5E7EB', marginVertical: 4 }} />
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: (order.deliveryPartnerId) ? colors.success : colors.border }} />
+                <View style={{ width: 2, height: 38, backgroundColor: (order.deliveryPartnerId) ? colors.success : colors.border, marginVertical: 4 }} />
 
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('pickedup', order.orderStatus || '') ? '#059669' : '#F59E0B' }} />
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: isStepActive('pickedup', order.orderStatus || '') ? colors.success : colors.border }} />
               </View>
               
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: isStepActive('accepted', order.orderStatus || '') ? '#171A1F' : '#9CA3AF', height: 52 }}>shop accepted</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: (order.deliveryPartnerId) ? '#171A1F' : '#9CA3AF', height: 52 }}>delivery partner assigned</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: isStepActive('accepted', order.orderStatus || '') ? colors.textPrimary : colors.textHint, height: 52 }}>shop accepted</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: (order.deliveryPartnerId) ? colors.textPrimary : colors.textHint, height: 52 }}>delivery partner assigned</Text>
                 
                 <View>
-                  <Text style={{ fontSize: 18, fontWeight: '800', color: '#171A1F' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: colors.textPrimary }}>
                     {isStepActive('pickedup', order.orderStatus || '') ? 'Order picked up 🚴' : 'Your order is getting packed'}
                   </Text>
                   {!isStepActive('pickedup', order.orderStatus || '') && (
@@ -817,14 +765,14 @@ export default function CustomerTrackingScreen() {
             </View>
           </View>
         ) : (
-          <View style={styles.cancelCard}>
-            <Ionicons name="close-circle" size={40} color="#D94A4A" />
-            <Text style={styles.cancelCardTitle}>
+          <View style={[styles.cancelCard, { backgroundColor: colors.errorSoft, borderColor: colors.error }]}>
+            <Ionicons name="close-circle" size={40} color={colors.error} />
+            <Text style={[styles.cancelCardTitle, { color: colors.error }]}>
               {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
                 ? 'Order Timed Out'
                 : 'Order Not Accepted'}
             </Text>
-            <Text style={styles.cancelCardSub}>
+            <Text style={[styles.cancelCardSub, { color: colors.error }]}>
               {order.orderStatus === 'SHOP_TIMEOUT' || order.orderStatus === 'CANCELLED_SHOP_TIMEOUT'
                 ? 'The shopkeeper did not accept your order in time. Your order has been automatically cancelled.'
                 : order.orderStatus === 'SHOP_REJECTED'
@@ -834,29 +782,42 @@ export default function CustomerTrackingScreen() {
                 : order.orderStatus === 'CANCELLED_BY_SHOP'
                 ? 'The shopkeeper cancelled this order.'
                 : order.orderStatus === 'CANCELLED_BY_USER'
-                ? 'You cancelled this order.'
+                ? 'You cancelled this order. Only the product value will be refunded (fees are non-refundable).'
                 : 'This order was cancelled.'}
             </Text>
           </View>
         )}
 
         {/* Payment Method */}
-        <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: '#FFF', padding: 18, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ fontSize: 13, color: '#555149', fontWeight: '600' }}>
+        <View style={{ marginHorizontal: 16, marginTop: 14, backgroundColor: colors.card, padding: 18, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>
             You can pay online now or at delivery.
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
             <View>
-              <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '800', letterSpacing: 0.5 }}>PAYING VIA ▼</Text>
-              <Text style={{ fontSize: 16, color: '#171A1F', fontWeight: '900', marginTop: 4 }}>
+              <Text style={{ fontSize: 11, color: colors.textHint, fontWeight: '800', letterSpacing: 0.5 }}>PAYING VIA ▼</Text>
+              <Text style={{ fontSize: 16, color: colors.textPrimary, fontWeight: '900', marginTop: 4 }}>
                 {order.paymentMethod === 'ONLINE' ? 'BHIM UPI' : 'Cash on Delivery'}
               </Text>
             </View>
-            <TouchableOpacity style={{ backgroundColor: '#171A1F', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 }}>
-              <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
+            <TouchableOpacity style={{ backgroundColor: colors.textPrimary, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10 }}>
+              <Text style={{ color: colors.background, fontWeight: '900', fontSize: 14 }}>Pay ₹{order.totalAmount}</Text>
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Cancel Button (Only if not already cancelled or out for delivery) */}
+        {!isCancelled && order.orderStatus !== 'OUT_FOR_DELIVERY' && order.orderStatus !== 'DELIVERED' && (
+          <TouchableOpacity onPress={handleCancelOrder} style={{ alignSelf: 'center', marginTop: 24, paddingVertical: 8, marginBottom: 30 }} disabled={cancelling}>
+            {cancelling ? (
+              <ActivityIndicator color={colors.error} size="small" />
+            ) : (
+              <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: colors.error, textDecorationLine: 'underline' }}>
+                Cancel Order
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
 
       </ScrollView>
     </View>

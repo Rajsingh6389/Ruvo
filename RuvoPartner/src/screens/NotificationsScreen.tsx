@@ -19,6 +19,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { partnerService } from '../services/partnerService';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -62,6 +63,8 @@ const colorForType = (type: string): string => {
 
 export const NotificationsScreen = () => {
   const { token } = useAuth();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -107,11 +110,11 @@ export const NotificationsScreen = () => {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-ruvo-bg" edges={['top']}>
+    <SafeAreaView className="flex-1" style={{ backgroundColor: colors.background }} edges={['top']}>
       {/* Header */}
-      <View className="bg-ruvo-surface border-b border-warm-300 px-lg py-md flex-row items-center justify-between">
+      <View className="px-lg py-md flex-row items-center justify-between border-b" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
         <View>
-          <Text className="text-xl font-extrabold text-ruvo-ink">Notifications</Text>
+          <Text className="text-xl font-extrabold" style={{ color: colors.textPrimary }}>Notifications</Text>
           {unreadCount > 0 && (
             <Text className="text-xs font-bold text-ruvo-accent mt-xs">{unreadCount} unread</Text>
           )}
@@ -119,19 +122,21 @@ export const NotificationsScreen = () => {
         <View className="flex-row items-center gap-sm">
           <TouchableOpacity
             onPress={load}
-            className="w-9 h-9 bg-green-100 rounded-full items-center justify-center"
+            style={{ backgroundColor: colors.successSoft }}
+            className="w-9 h-9 rounded-full items-center justify-center"
           >
-            <Ionicons name="refresh" size={18} color="#16A34A" />
+            <Ionicons name="refresh" size={18} color={colors.success} />
           </TouchableOpacity>
           {unreadCount > 0 && (
             <TouchableOpacity
               onPress={markAllRead}
               disabled={markingAll}
-              className="bg-green-100 px-md py-xs rounded-lg min-w-[32px] items-center"
+              style={{ backgroundColor: colors.successSoft }}
+              className="px-md py-xs rounded-lg min-w-[32px] items-center"
             >
               {markingAll
-                ? <ActivityIndicator size="small" color="#16A34A" />
-                : <Text className="text-xs font-bold text-ruvo-accent">Mark all read</Text>
+                ? <ActivityIndicator size="small" color={colors.success} />
+                : <Text className="text-xs font-bold" style={{ color: colors.success }}>Mark all read</Text>
               }
             </TouchableOpacity>
           )}
@@ -139,15 +144,16 @@ export const NotificationsScreen = () => {
       </View>
 
       {/* Tabs */}
-      <View className="flex-row px-lg py-md bg-ruvo-surface border-b border-warm-300 gap-sm">
+      <View className="flex-row px-lg py-md border-b gap-sm" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
         {['ALL', 'ORDERS', 'ALERTS'].map((tab) => (
           <TouchableOpacity 
             key={tab} 
             activeOpacity={0.8}
-            className={`px-lg py-sm rounded-[20px] ${filter === tab ? 'bg-ruvo-ink' : 'bg-warm-100'}`}
+            className={`px-lg py-sm rounded-[20px]`}
+            style={{ backgroundColor: filter === tab ? colors.primary : colors.surfaceSunken }}
             onPress={() => setFilter(tab as any)}
           >
-            <Text className={`text-[13px] font-bold ${filter === tab ? 'text-white' : 'text-warm-600'}`}>
+            <Text className={`text-[13px] font-bold`} style={{ color: filter === tab ? '#171A1F' : colors.textSecondary }}>
               {tab === 'ALL' ? 'All' : tab === 'ORDERS' ? 'Orders' : 'Alerts & Updates'}
             </Text>
           </TouchableOpacity>
@@ -158,13 +164,13 @@ export const NotificationsScreen = () => {
         data={filteredNotifs}
         keyExtractor={x => String(x.id)}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={load} tintColor="#16A34A" colors={['#16A34A']} />
+          <RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.success} colors={[colors.success]} />
         }
         contentContainerClassName={`px-lg pt-lg pb-2xl ${items.length === 0 ? 'flex-grow' : ''}`}
         ItemSeparatorComponent={() => <View className="h-sm" />}
         ListEmptyComponent={
           loading
-            ? <View className="flex-1 items-center justify-center py-3xl"><ActivityIndicator color="#16A34A" size="large" /></View>
+            ? <View className="flex-1 items-center justify-center py-3xl"><ActivityIndicator color={colors.success} size="large" /></View>
             : <EmptyState icon="notifications-off-outline" title="All caught up!" description="No notifications yet. Delivery requests and updates will appear here." />
         }
         renderItem={({ item, index }) => {
@@ -174,11 +180,11 @@ export const NotificationsScreen = () => {
               <TouchableOpacity
                 onPress={() => markRead(item)}
                 activeOpacity={0.75}
-                className={`rounded-xl p-md flex-row items-start gap-md border ${
-                  item.isRead
-                    ? 'bg-ruvo-surface border-warm-300'
-                    : 'bg-green-50 border-green-300'
-                }`}
+                className={`rounded-xl p-md flex-row items-start gap-md border`}
+                style={{
+                  backgroundColor: item.isRead ? colors.surface : colors.successSoft,
+                  borderColor: item.isRead ? colors.border : colors.success
+                }}
               >
                 {/* Type icon */}
                 <View
@@ -191,20 +197,20 @@ export const NotificationsScreen = () => {
                 {/* Content */}
                 <View className="flex-1">
                   <View className="flex-row items-center justify-between mb-xs gap-sm">
-                    <Text className="flex-1 text-sm font-extrabold text-ruvo-ink" numberOfLines={1}>
+                    <Text className="flex-1 text-sm font-extrabold" style={{ color: colors.textPrimary }} numberOfLines={1}>
                       {item.title}
                     </Text>
-                    <Text className="text-xs text-warm-600 font-semibold flex-shrink-0">
+                    <Text className="text-xs font-semibold flex-shrink-0" style={{ color: colors.textSecondary }}>
                       {item.createdAt ? formatAgo(item.createdAt) : ''}
                     </Text>
                   </View>
-                  <Text className="text-sm text-warm-600 leading-5" numberOfLines={3}>
+                  <Text className="text-sm leading-5" style={{ color: colors.textSecondary }} numberOfLines={3}>
                     {item.message}
                   </Text>
                   {item.orderId && (
-                    <View className="mt-xs bg-warm-200 self-start px-sm py-xs rounded-md flex-row items-center gap-xs">
-                      <Ionicons name="receipt-outline" size={11} color="#A79E92" />
-                      <Text className="text-xs text-warm-700 font-semibold">Order #{item.orderId}</Text>
+                    <View className="mt-xs self-start px-sm py-xs rounded-md flex-row items-center gap-xs" style={{ backgroundColor: colors.surfaceSunken }}>
+                      <Ionicons name="receipt-outline" size={11} color={colors.textHint} />
+                      <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>Order #{item.orderId}</Text>
                     </View>
                   )}
                 </View>

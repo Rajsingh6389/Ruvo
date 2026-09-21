@@ -392,31 +392,49 @@ public class DeliveryController {
                 // instantly via Razorpay post-payment split API.
                 // Otherwise, the PARTNER_EARNING ledger record tracks what
                 // RuVo owes the partner (manual payout later).
-                if (p.getRazorpayAccountId() != null && !p.getRazorpayAccountId().isBlank()
-                        && deliveryFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
                     try {
                         // Find the Razorpay payment ID for this order
                         paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
                             String rzpPaymentId = payment.getRazorpayPaymentId();
                             if (rzpPaymentId != null && !rzpPaymentId.isBlank()) {
-                                razorpayService.transferToLinkedAccount(
-                                    rzpPaymentId,
-                                    p.getRazorpayAccountId(),
-                                    deliveryFee,
-                                    String.valueOf(order.getId())
-                                );
-                                System.out.println("[DeliveryController] Instant transfer ₹"
-                                    + deliveryFee + " to partner #" + p.getId()
-                                    + " (vendor: " + p.getRazorpayAccountId() + ")"
-                                    + " for order #" + order.getId());
+                                // 1. Transfer to Partner
+                                if (p.getRazorpayAccountId() != null && !p.getRazorpayAccountId().isBlank()
+                                        && deliveryFee.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                                    try {
+                                        razorpayService.transferToLinkedAccount(
+                                            rzpPaymentId,
+                                            p.getRazorpayAccountId(),
+                                            deliveryFee,
+                                            String.valueOf(order.getId())
+                                        );
+                                        System.out.println("[DeliveryController] Instant transfer ₹"
+                                            + deliveryFee + " to partner #" + p.getId()
+                                            + " for order #" + order.getId());
+                                    } catch (Exception e) {}
+                                }
+                                
+                                // 2. Transfer to Shop
+                                shopRepository.findById(order.getShopId()).ifPresent(shop -> {
+                                    if (shop.getRazorpayAccountId() != null && !shop.getRazorpayAccountId().isBlank()
+                                            && shopNetRevenue.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                                        try {
+                                            razorpayService.transferToLinkedAccount(
+                                                rzpPaymentId,
+                                                shop.getRazorpayAccountId(),
+                                                shopNetRevenue,
+                                                String.valueOf(order.getId())
+                                            );
+                                            System.out.println("[DeliveryController] Instant transfer ₹"
+                                                + shopNetRevenue + " to shop #" + shop.getId()
+                                                + " for order #" + order.getId());
+                                        } catch (Exception e) {}
+                                    }
+                                });
                             }
                         });
                     } catch (Exception e) {
-                        // Transfer failed — partner still has the PARTNER_EARNING record
-                        // RuVo can settle manually. Don't block delivery confirmation.
-                        System.err.println("[DeliveryController] Razorpay transfer to partner failed for order #"
-                            + order.getId() + ": " + e.getMessage()
-                            + " — partner earning tracked in ledger for manual payout.");
+                        System.err.println("[DeliveryController] Razorpay transfer to partner/shop failed for order #"
+                            + order.getId() + ": " + e.getMessage());
                     }
                 }
             }

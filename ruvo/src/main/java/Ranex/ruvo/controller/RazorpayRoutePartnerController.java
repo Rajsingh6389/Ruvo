@@ -200,9 +200,26 @@ public class RazorpayRoutePartnerController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("partnerId", partnerId);
-        response.put("activeBankAccountMasked", activeBank.map(SellerBankAccount::getAccountNumberMasked).orElse("None"));
-        response.put("activeIfsc", activeBank.map(SellerBankAccount::getIfscCode).orElse("None"));
-        response.put("activeBeneficiaryName", activeBank.map(SellerBankAccount::getBeneficiaryName).orElse("None"));
+        
+        // Legacy fallback from delivery_partners table
+        boolean hasLegacyBank = activeBank.isEmpty() && pendingBank.isEmpty() && partner.getBankAccountNumber() != null && !partner.getBankAccountNumber().isEmpty();
+        
+        if (activeBank.isPresent()) {
+            response.put("activeBankAccountMasked", activeBank.get().getAccountNumberMasked());
+            response.put("activeIfsc", activeBank.get().getIfscCode());
+            response.put("activeBeneficiaryName", activeBank.get().getBeneficiaryName());
+        } else if (hasLegacyBank) {
+            String acc = partner.getBankAccountNumber();
+            String masked = acc.length() > 4 ? "******" + acc.substring(acc.length() - 4) : acc;
+            response.put("activeBankAccountMasked", masked);
+            response.put("activeIfsc", partner.getIfscCode() != null ? partner.getIfscCode() : "None");
+            response.put("activeBeneficiaryName", partner.getBankAccountHolder() != null ? partner.getBankAccountHolder() : "None");
+        } else {
+            response.put("activeBankAccountMasked", "None");
+            response.put("activeIfsc", "None");
+            response.put("activeBeneficiaryName", "None");
+        }
+
         response.put("hasPendingBankChange", pendingBank.isPresent() && (activeBank.isEmpty() || !pendingBank.get().getId().equals(activeBank.get().getId())));
         response.put("pendingBankAccountMasked", pendingBank.map(SellerBankAccount::getAccountNumberMasked).orElse(null));
         response.put("pendingBankStatus", pendingBank.map(SellerBankAccount::getStatus).orElse("NONE"));

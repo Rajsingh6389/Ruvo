@@ -109,11 +109,12 @@ export const Step3_BankAccount = () => {
 
       let bankStatus = body.data?.bankStatus || 'UNDER_REVIEW';
 
+      let attempts = 0;
       if (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
          setVState('review');
          
-         // Poll loop
-         while (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
+         while ((bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') && attempts < 2) {
+            attempts++;
             await new Promise(r => setTimeout(r, 4000));
             try {
                const pollRes = await fetch(`${API_BASE_URL}/api/seller/razorpay/bank/status?shopId=${myShop.id}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -135,15 +136,20 @@ export const Step3_BankAccount = () => {
          }
       }
 
-      if (bankStatus !== 'ACTIVE') {
-         throw new Error("Bank account was not accepted. Status: " + bankStatus);
+      if (bankStatus === 'FAILED' || bankStatus === 'REJECTED' || bankStatus === 'SUSPENDED') {
+         throw new Error("Bank account was rejected. Status: " + bankStatus);
       }
 
       stopSpinner();
-      setVState('done');
+      if (bankStatus === 'ACTIVE') {
+         setVState('done');
+      } else {
+         setVState('review');
+      }
+      
       // Advance to approval waiting screen
       await setOnboardingStatus('PENDING_APPROVAL');
-      setTimeout(() => navigation.navigate('Step4_Success', { shopName: 'Your Shop' }), 1600);
+      setTimeout(() => navigation.navigate('Step4_Success', { shopName: 'Your Shop' }), 2000);
     } catch (e: any) {
       stopSpinner();
       setVState('error');
@@ -362,14 +368,12 @@ export const Step3_BankAccount = () => {
               { backgroundColor: colors.surfaceSunken, borderColor: colors.warning, borderWidth: 1, borderRadius: RADIUS.card },
               shadows.md,
             ]}>
-              <Animated.View style={{ transform: [{ rotate: spinDeg }] }}>
-                <Ionicons name="sync-circle-outline" size={42} color={colors.warning} />
-              </Animated.View>
+              <Ionicons name="time-outline" size={42} color={colors.warning} />
               <Text style={[typography.headingS, { color: colors.warning, marginTop: 12, textAlign: 'center' }]}>
-                Bank Review Under Review
+                Under Review
               </Text>
               <Text style={[typography.body, { color: colors.textSecondary, marginTop: 8, textAlign: 'center' }]}>
-                Razorpay is verifying your account details in real-time. This may take a few moments. Please do not close this screen.
+                Razorpay is verifying your account details. You can proceed in the meantime!
               </Text>
             </View>
           )}

@@ -219,8 +219,12 @@ public class RazorpayController {
                             Order order = orderRepository.findById(payment.getOrderId()).orElse(null);
                             if (order != null) {
                                 order.setPaymentStatus("SUCCESS");
-                                order.setOrderStatus(OrderStatus.SHOP_PENDING);
+                                order.setOrderStatus("SHOP_PENDING");
                                 orderRepository.save(order);
+                                
+                                try {
+                                    notificationService.notifyShop(order);
+                                } catch (Exception ignored) {}
                             }
                         }
                     }

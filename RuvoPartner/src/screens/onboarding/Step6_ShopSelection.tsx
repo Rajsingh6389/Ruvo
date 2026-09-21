@@ -167,7 +167,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
               coordinate={{ latitude: region.latitude, longitude: region.longitude }}
               title={shop.name}
               description={shop.address}
-              pinColor={isSelected ? '#22C55E' : colors.primary}
+              pinColor={isSelected ? colors.success : colors.primary}
             />
           </MapView>
         )}
@@ -188,9 +188,9 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
                   {shop.name}
                 </Text>
                 {shop.rating && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                    <Ionicons name="star" size={12} color="#D97706" />
-                    <Text style={{ fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: '#92400E', marginLeft: 3 }}>{shop.rating}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warningSoft, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <Ionicons name="star" size={12} color={colors.warning} />
+                    <Text style={{ fontSize: 11, fontFamily: 'Poppins_800ExtraBold', color: colors.warning, marginLeft: 3 }}>{shop.rating}</Text>
                   </View>
                 )}
               </View>
@@ -268,32 +268,13 @@ export const Step6_ShopSelection = () => {
   const [mapShop,      setMapShop]      = useState<NearbyShop | null>(null);
   const [mapVisible,   setMapVisible]   = useState(false);
 
-  // 7-Day Edit Cooldown Lock
-  const [isLocked,        setIsLocked]        = useState(false);
-  const [nextAllowedDate, setNextAllowedDate] = useState<string | null>(null);
-
   const checkCooldownAndSavedSelection = async () => {
     try {
-      const lastUpdateStr = await AsyncStorage.getItem('lastShopSelectionUpdate');
       const savedShopsStr = await AsyncStorage.getItem('selectedShopIds');
-
       if (savedShopsStr) {
         const parsedIds: number[] = JSON.parse(savedShopsStr);
         if (Array.isArray(parsedIds) && parsedIds.length > 0) {
           setSelected(new Set(parsedIds));
-        }
-      }
-
-      if (lastUpdateStr) {
-        const lastUpdateMs = parseInt(lastUpdateStr, 10);
-        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        if (now < lastUpdateMs + SEVEN_DAYS_MS) {
-          setIsLocked(true);
-          const allowedDate = new Date(lastUpdateMs + SEVEN_DAYS_MS);
-          setNextAllowedDate(allowedDate.toLocaleDateString(undefined, {
-            month: 'short', day: 'numeric', year: 'numeric',
-          }));
         }
       }
     } catch {
@@ -386,10 +367,6 @@ export const Step6_ShopSelection = () => {
   useEffect(() => { loadShops(); }, [loadShops]);
 
   const toggle = (id: number) => {
-    if (isLocked) {
-      setError(`Shop selection is locked until ${nextAllowedDate}. Changes allowed once every 7 days.`);
-      return;
-    }
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -407,7 +384,6 @@ export const Step6_ShopSelection = () => {
   };
 
   const selectAll  = () => {
-    if (isLocked) { setError(`Shop selection is locked until ${nextAllowedDate}.`); return; }
     if (selected.size >= MAX_SHOPS) {
       setError(`You can select a maximum of ${MAX_SHOPS} shops.`);
       return;
@@ -418,7 +394,6 @@ export const Step6_ShopSelection = () => {
     setError(null);
   };
   const clearAll   = () => {
-    if (isLocked) { setError(`Shop selection is locked until ${nextAllowedDate}.`); return; }
     setSelected(new Set());
     setError(null);
   };
@@ -514,7 +489,7 @@ export const Step6_ShopSelection = () => {
             </Text>
             {item.rating && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                <Ionicons name="star" size={12} color="#D97706" />
+                <Ionicons name="star" size={12} color={colors.warning} />
                 <Text style={{ fontSize: 11, fontFamily: 'Poppins_700Bold', color: colors.textSecondary }}>{item.rating}</Text>
               </View>
             )}
@@ -584,24 +559,6 @@ export const Step6_ShopSelection = () => {
           typography={typography}
           onBack={() => navigation.goBack()}
         />
-
-        {isLocked && (
-          <InfoBox
-            text={`🔒 Shop selection locked: You last updated your shop preferences recently. You can update your selected shops again on ${nextAllowedDate} (changes allowed once every 7 days).`}
-            variant="warning"
-            colors={colors}
-            typography={typography}
-          />
-        )}
-
-        {isLocked && (
-          <InfoBox
-            text={`🔒 Shop selection locked: You last updated your shop preferences recently. You can update your selected shops again on ${nextAllowedDate} (changes allowed once every 7 days).`}
-            variant="warning"
-            colors={colors}
-            typography={typography}
-          />
-        )}
 
         {/* Selection controls */}
         {fetchState === 'done' && shops.length > 0 && (

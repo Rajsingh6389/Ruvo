@@ -5,10 +5,10 @@
  * Production: replace simulateVerify() with real penny-drop / bank-validation API.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, ScrollView, StyleSheet, Text, Animated,
-  KeyboardAvoidingView, Platform, TouchableOpacity,
+  KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,6 +44,40 @@ export const Step5_BankAccount = () => {
   const [vState,         setVState]        = useState<VerifyState>('idle');
   const [error,          setError]         = useState<string | null>(null);
   const [focused,        setFocused]       = useState<string | null>(null);
+  
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [hasExistingBank, setHasExistingBank] = useState(false);
+  const [existingMasked, setExistingMasked] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const fetchExisting = async () => {
+      try {
+        const activePartnerId = user?.partnerId || user?.userId || (userId ? parseInt(userId, 10) : null);
+        if (!activePartnerId) return;
+        const res = await authenticatedFetch(`${API_BASE_URL}/api/partner/razorpay/bank/status?partnerId=${activePartnerId}`);
+        const body = await res.json();
+        if (active && res.ok && body.data) {
+           const d = body.data;
+           if (d.activeBankAccountMasked && d.activeBankAccountMasked !== 'None') {
+             setHasExistingBank(true);
+             setExistingMasked(d.activeBankAccountMasked);
+             setAccountHolder(d.activeBeneficiaryName && d.activeBeneficiaryName !== 'None' ? d.activeBeneficiaryName : '');
+             setIfsc(d.activeIfsc && d.activeIfsc !== 'None' ? d.activeIfsc : '');
+           } else if (d.pendingBankAccountMasked && d.pendingBankAccountMasked !== 'None') {
+             setHasExistingBank(true);
+             setExistingMasked(d.pendingBankAccountMasked);
+             if (d.activeBeneficiaryName && d.activeBeneficiaryName !== 'None') setAccountHolder(d.activeBeneficiaryName);
+             if (d.activeIfsc && d.activeIfsc !== 'None') setIfsc(d.activeIfsc);
+           }
+        }
+      } catch (e) {} finally {
+        if (active) setInitialLoading(false);
+      }
+    };
+    fetchExisting();
+    return () => { active = false; };
+  }, [user, userId, authenticatedFetch]);
 
   const spinAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -66,6 +100,9 @@ export const Step5_BankAccount = () => {
   const spinDeg = spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   const validate = () => {
+    if (hasExistingBank && accountNumber.trim() === '') {
+       return null; 
+    }
     if (!accountHolder.trim())            return 'Account holder name is required.';
     if (accountNumber.length < 9)         return 'Enter a valid account number (min 9 digits).';
     if (accountNumber !== confirmAccount) return 'Account numbers do not match.';
@@ -78,6 +115,12 @@ export const Step5_BankAccount = () => {
   const handleVerify = async () => {
     const err = validate();
     if (err) { setError(err); return; }
+    
+    if (hasExistingBank && accountNumber.trim() === '') {
+       navigation.navigate('Step6_ShopSelection');
+       return;
+    }
+
     setError(null);
     setVState('verifying');
     startSpinner();
@@ -103,10 +146,12 @@ export const Step5_BankAccount = () => {
 
       let bankStatus = body.data?.bankStatus || 'UNDER_REVIEW';
 
+      let attempts = 0;
       if (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
          setVState('review');
          
-         while (bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') {
+         while ((bankStatus === 'UNDER_REVIEW' || bankStatus === 'PENDING') && attempts < 2) {
+            attempts++;
             await new Promise(r => setTimeout(r, 4000));
             try {
                const pollRes = await authenticatedFetch(`${API_BASE_URL}/api/partner/razorpay/bank/status?partnerId=${activePartnerId}`, { method: 'GET' });
@@ -128,13 +173,18 @@ export const Step5_BankAccount = () => {
          }
       }
 
-      if (bankStatus !== 'ACTIVE') {
-         throw new Error("Bank account was not accepted. Status: " + bankStatus);
+      if (bankStatus === 'FAILED' || bankStatus === 'REJECTED' || bankStatus === 'SUSPENDED') {
+         throw new Error("Bank account was rejected. Status: " + bankStatus);
       }
 
       stopSpinner();
-      setVState('done');
-      setTimeout(() => navigation.navigate('Step6_ShopSelection'), 1500);
+      if (bankStatus === 'ACTIVE') {
+         setVState('done');
+      } else {
+         setVState('review');
+      }
+      
+      setTimeout(() => navigation.navigate('Step6_ShopSelection'), 2000);
     } catch (e: any) {
       stopSpinner();
       setVState('error');
@@ -170,12 +220,27 @@ export const Step5_BankAccount = () => {
 
           <InfoBox
             text="Bank verification processes in real-time. Make sure details match."
-            variant="warning"
             colors={colors}
             typography={typography}
           />
 
-          {vState === 'done' ? (
+          {hasExistingBank && (
+             <InfoBox
+               text={`Existing Bank Account: ${existingMasked}. Leave account number blank to keep this, or enter new details to update.`}
+               icon="checkmark-circle"
+               colors={colors}
+               typography={typography}
+             />
+          )}
+
+          {initialLoading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[typography.body, { color: colors.textSecondary, marginTop: 12 }]}>
+                Loading bank details...
+              </Text>
+            </View>
+          ) : vState === 'done' ? (
             /* ── Success state ─────────────────────────────────────────── */
             <Animated.View
               style={[
@@ -362,27 +427,25 @@ export const Step5_BankAccount = () => {
               { backgroundColor: colors.surfaceSunken, borderColor: colors.warning, borderWidth: 1, borderRadius: RADIUS.card },
               shadows.md,
             ]}>
-              <Animated.View style={{ transform: [{ rotate: spinDeg }] }}>
-                <Ionicons name="sync-circle-outline" size={42} color={colors.warning} />
-              </Animated.View>
+              <Ionicons name="time-outline" size={42} color={colors.warning} />
               <Text style={[typography.headingS, { color: colors.warning, marginTop: 12, textAlign: 'center' }]}>
-                Bank Review Under Review
+                Under Review
               </Text>
               <Text style={[typography.body, { color: colors.textSecondary, marginTop: 8, textAlign: 'center' }]}>
-                Razorpay is verifying your account details in real-time. This may take a few moments. Please do not close this screen.
+                Razorpay is verifying your account details. You can proceed to the next step in the meantime!
               </Text>
             </View>
           )}
 
           <ErrorBox error={error} colors={colors} typography={typography} />
 
-          {vState !== 'done' && vState !== 'verifying' && vState !== 'review' && (
+          {vState !== 'done' && vState !== 'verifying' && vState !== 'review' && !initialLoading && (
             <CtaBtn
-              label="Verify & Continue"
+              label={hasExistingBank && accountNumber.trim() === '' ? "Continue with Existing Bank" : "Verify & Continue"}
               onPress={handleVerify}
               colors={colors}
               typography={typography}
-              icon="shield-checkmark-outline"
+              icon={hasExistingBank && accountNumber.trim() === '' ? "arrow-forward" : "shield-checkmark-outline"}
             />
           )}
 

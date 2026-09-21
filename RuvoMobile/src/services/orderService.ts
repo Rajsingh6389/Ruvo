@@ -54,29 +54,7 @@ export async function initializeCheckout(checkoutData: {
   return parseOrThrow(res);
 }
 
-export async function initializeCashfreeCheckout(checkoutData: {
-  userId: string;
-  shopId: number;
-  productId: number;
-  productName: string;
-  quantity: number;
-  deliveryAddress: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  userLatitude?: number;
-  userLongitude?: number;
-  couponCode?: string;
-}, token: string): Promise<any> {
-  const res = await fetch(`${API_BASE_URL}/api/payments/cashfree/checkout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(checkoutData),
-  });
-  return parseOrThrow(res);
-}
+
 
 export async function verifyPayment(verifyData: {
   orderId: number;

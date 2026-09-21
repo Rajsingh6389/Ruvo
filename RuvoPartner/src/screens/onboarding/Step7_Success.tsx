@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { API_BASE_URL } from '../../config/api';
 import { CtaBtn, InfoBox } from './OnboardingShared';
 
@@ -31,6 +32,8 @@ export const Step7_Success = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { token } = useAuth();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
 
   const selectedShopCount = route.params?.selectedShopCount || 0;
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
@@ -89,8 +92,8 @@ export const Step7_Success = () => {
   const isApproved = approvalStatus === 'approved';
   const isRejected = approvalStatus === 'rejected';
 
-  const statusColor = isApproved ? '#16A34A' : isRejected ? '#DC2626' : '#F59E0B';
-  const statusBg    = isApproved ? '#DCFCE7' : isRejected ? '#FEE2E2' : '#FEF3C7';
+  const statusColor = isApproved ? colors.success : isRejected ? colors.error : colors.warning;
+  const statusBg    = isApproved ? colors.successSoft : isRejected ? colors.errorSoft : colors.warningSoft;
   const statusIcon  = isApproved ? 'checkmark-circle' as const : isRejected ? 'close-circle' as const : 'time' as const;
   const statusTitle = isApproved ? 'Account Approved!' : isRejected ? 'Application Rejected' : 'Awaiting Approval';
   const statusMsg   = isApproved
@@ -100,7 +103,7 @@ export const Step7_Success = () => {
     : 'Your registration has been submitted. Our team will review it shortly.';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FBF8F2' }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
@@ -125,22 +128,22 @@ export const Step7_Success = () => {
               )}
             </Animated.View>
 
-            <Text style={{ fontSize: 26, fontFamily: 'Poppins_800ExtraBold', color: '#231C10', textAlign: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 26, fontFamily: 'Poppins_800ExtraBold', color: colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
               {statusTitle}
             </Text>
-            <Text style={{ fontSize: 15, color: '#6B5E52', textAlign: 'center', lineHeight: 22, maxWidth: 300 }}>
+            <Text style={{ fontSize: 15, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, maxWidth: 300 }}>
               {statusMsg}
             </Text>
           </View>
 
           {/* Completion Summary */}
           <View style={{
-            backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: StyleSheet.hairlineWidth,
-            borderColor: '#EDE4D8', padding: 16, marginBottom: 16,
-            shadowColor: '#2E2313', shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+            backgroundColor: colors.surface, borderRadius: 16, borderWidth: isDark ? 1 : StyleSheet.hairlineWidth,
+            borderColor: colors.border, padding: 16, marginBottom: 16,
+            shadowColor: isDark ? '#000' : '#2E2313', shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isDark ? 0.3 : 0.05, shadowRadius: 6, elevation: 2,
           }}>
-            <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#A79E92', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: colors.textHint, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>
               Registration Summary
             </Text>
             {STEPS_SUMMARY.map((step, idx) => {
@@ -150,14 +153,14 @@ export const Step7_Success = () => {
                 <View key={step.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: idx < STEPS_SUMMARY.length - 1 ? 12 : 0 }}>
                   <View style={{
                     width: 32, height: 32, borderRadius: 16,
-                    backgroundColor: stepDone ? '#DCFCE7' : '#FEF3C7',
+                    backgroundColor: stepDone ? colors.successSoft : colors.warningSoft,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Ionicons name={stepDone ? 'checkmark' : 'time'} size={16} color={stepDone ? '#16A34A' : '#D97706'} />
+                    <Ionicons name={stepDone ? 'checkmark' : 'time'} size={16} color={stepDone ? colors.success : colors.warning} />
                   </View>
-                  <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: '#231C10' }}>{step.label}</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Poppins_600SemiBold', color: colors.textPrimary }}>{step.label}</Text>
                   {isLast && !isApproved && checking && (
-                    <Text style={{ fontSize: 11, color: '#D97706', fontFamily: 'Poppins_600SemiBold' }}>Checking…</Text>
+                    <Text style={{ fontSize: 11, color: colors.warning, fontFamily: 'Poppins_600SemiBold' }}>Checking…</Text>
                   )}
                 </View>
               );
@@ -181,8 +184,8 @@ export const Step7_Success = () => {
                 gap: 8, paddingVertical: 12, marginBottom: 16,
               }}
             >
-              <Ionicons name="refresh" size={16} color="#16A34A" />
-              <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#16A34A' }}>
+              <Ionicons name="refresh" size={16} color={colors.primary} />
+              <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: colors.primary }}>
                 {checking ? 'Checking…' : 'Check approval status'}
               </Text>
             </TouchableOpacity>

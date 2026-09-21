@@ -18,6 +18,7 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { API_BASE_URL } from '../config/api';
 
@@ -51,8 +52,42 @@ export const ProfileScreen = () => {
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
 
+  const { colors, typography, shadows, spacing } = useTheme();
+
   const [selectedShops, setSelectedShops] = useState<SelectedShopDetail[]>([]);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
+  const [activeBankAccountMasked, setActiveBankAccountMasked] = useState<string | null>(null);
+  const [pendingBankAccountMasked, setPendingBankAccountMasked] = useState<string | null>(null);
+  const [fetchingBank, setFetchingBank] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused || !token) return;
+    const loadBank = async () => {
+      const partnerId = user?.partnerId || user?.userId;
+      if (!partnerId) return;
+      setFetchingBank(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/partner/razorpay/bank/status?partnerId=${partnerId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          console.log("[ProfileScreen] Fetched Partner Bank Status:", data.data);
+          if (data && data.data) {
+            setActiveBankAccountMasked(data.data.activeBankAccountMasked !== 'None' ? data.data.activeBankAccountMasked : null);
+            setPendingBankAccountMasked(data.data.pendingBankAccountMasked !== 'None' && data.data.pendingBankAccountMasked ? data.data.pendingBankAccountMasked : null);
+          }
+        } else {
+          console.log("[ProfileScreen] Error fetching bank status:", res.status);
+        }
+      } catch (e) {
+         console.log("[ProfileScreen] Exception fetching bank status:", e);
+      } finally {
+        setFetchingBank(false);
+      }
+    };
+    loadBank();
+  }, [isFocused, token, user]);
 
   const loadSelectedShops = async () => {
     try {
@@ -349,12 +384,19 @@ export const ProfileScreen = () => {
                 <Ionicons name="wallet" size={18} color="#10B981" />
               </View>
               <View className="flex-1">
-                <Text className="text-base text-white font-black">
+                <Text style={[typography.body, { color: colors.textPrimary, fontFamily: 'Poppins_700Bold' }]}>
                   Bank & Settlement
                 </Text>
-                <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-widest leading-4">
-                  Manage weekly payout bank Account
-                </Text>
+                
+                {fetchingBank && !activeBankAccountMasked && !pendingBankAccountMasked ? (
+                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>Loading...</Text>
+                ) : activeBankAccountMasked ? (
+                  <Text style={[typography.caption, { color: colors.success, fontFamily: 'Poppins_800ExtraBold', marginTop: 4, textTransform: 'uppercase' }]}>{activeBankAccountMasked}</Text>
+                ) : pendingBankAccountMasked ? (
+                  <Text style={[typography.caption, { color: colors.warning, fontFamily: 'Poppins_800ExtraBold', marginTop: 4, textTransform: 'uppercase' }]}>{pendingBankAccountMasked} (Pending)</Text>
+                ) : (
+                  <Text style={[typography.caption, { color: colors.textSecondary, marginTop: 4 }]}>Manage weekly payout account</Text>
+                )}
               </View>
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
             </TouchableOpacity>

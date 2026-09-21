@@ -1012,9 +1012,78 @@ public class RazorpayRouteService {
                                 log.info("Activated pending bank account for partnerId {}", account.getPartnerId());
                             });
                         }
+                    } else if ("suspended".equalsIgnoreCase(accountStatus) || "rejected".equalsIgnoreCase(accountStatus)) {
+                        if (account.getShopId() != null) {
+                            Optional<SellerBankAccount> pendingBankOpt = bankAccountRepository.findFirstByShopIdAndStatusOrderByCreatedAtDesc(account.getShopId(), "UNDER_REVIEW");
+                            if (pendingBankOpt.isEmpty()) {
+                                pendingBankOpt = bankAccountRepository.findFirstByShopIdAndStatusOrderByCreatedAtDesc(account.getShopId(), "PENDING");
+                            }
+                            pendingBankOpt.ifPresent(bank -> {
+                                bank.setStatus("FAILED");
+                                bank.setIsActive(false);
+                                bankAccountRepository.save(bank);
+                                log.info("Bank account review failed for shopId {}, marked as FAILED", account.getShopId());
+                            });
+                        } else if (account.getPartnerId() != null) {
+                            Optional<SellerBankAccount> pendingBankOpt = bankAccountRepository.findFirstByPartnerIdAndStatusOrderByCreatedAtDesc(account.getPartnerId(), "UNDER_REVIEW");
+                            if (pendingBankOpt.isEmpty()) {
+                                pendingBankOpt = bankAccountRepository.findFirstByPartnerIdAndStatusOrderByCreatedAtDesc(account.getPartnerId(), "PENDING");
+                            }
+                            pendingBankOpt.ifPresent(bank -> {
+                                bank.setStatus("FAILED");
+                                bank.setIsActive(false);
+                                bankAccountRepository.save(bank);
+                                log.info("Bank account review failed for partnerId {}, marked as FAILED", account.getPartnerId());
+                            });
+                        }
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Create Transfer for Shop when order is marked DELIVERED
+     */
+    @Transactional
+    public void createTransferOnDelivery(Order order, String razorpayPaymentId) {
+        if (razorpayPaymentId == null || razorpayPaymentId.isEmpty()) {
+            log.error("No razorpayPaymentId provided for transfer of order {}", order.getId());
+            return;
+        }
+
+        Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+        if (shop == null || shop.getRazorpayAccountId() == null || !shop.getRazorpayAccountId().startsWith("acc_")) {
+            log.warn("Shop {} does not have a valid Razorpay Route Linked Account for transfer.", order.getShopId());
+            return;
+        }
+
+        try {
+            // Calculate amount to transfer -> which is the subtotal (product price)
+            double subtotal = order.getSubtotal() != null ? order.getSubtotal().doubleValue() : order.getTotalAmount().doubleValue();
+            long amountInPaise = Math.round(subtotal * 100);
+
+            JSONObject transferObj = new JSONObject();
+            transferObj.put("account", shop.getRazorpayAccountId());
+            transferObj.put("amount", amountInPaise);
+            transferObj.put("currency", "INR");
+
+            org.json.JSONArray transfersArray = new org.json.JSONArray();
+            transfersArray.put(transferObj);
+
+            JSONObject payload = new JSONObject();
+            payload.put("transfers", transfersArray);
+
+            String url = "https://api.razorpay.com/v1/payments/" + razorpayPaymentId + "/transfers";
+            HttpResponse response = executeRazorpayApi("POST", url, payload.toString());
+            
+            if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
+                log.info("Successfully created transfer of {} paise for order {} to shop {} ({})", amountInPaise, order.getId(), shop.getId(), shop.getRazorpayAccountId());
+            } else {
+                log.error("Transfer failed for order {} (HTTP {}): {}", order.getId(), response.statusCode, response.body);
+            }
+        } catch (Exception e) {
+            log.error("Error creating transfer on delivery for order {}: {}", order.getId(), e.getMessage());
         }
     }
 

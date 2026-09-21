@@ -24,12 +24,14 @@ public class IdentityAuthController {
     private final SmsService sms;
     private final IdentityRoleProvisioningService provisioning;
     private final PartnerProfileRepository partnerProfiles;
+    private final UserRepository users;
 
     public IdentityAuthController(AuthIdentityRepository identities, AuthIdentityRoleRepository roles,
                                   OtpVerificationRepository otps, JwtService jwt, SmsService sms,
-                                  IdentityRoleProvisioningService provisioning, PartnerProfileRepository partnerProfiles) {
+                                  IdentityRoleProvisioningService provisioning, PartnerProfileRepository partnerProfiles,
+                                  UserRepository users) {
         this.identities = identities; this.roles = roles; this.otps = otps; this.jwt = jwt; this.sms = sms; this.provisioning = provisioning;
-        this.partnerProfiles = partnerProfiles;
+        this.partnerProfiles = partnerProfiles; this.users = users;
     }
 
     @PostMapping("/otp/send")
@@ -64,6 +66,11 @@ public class IdentityAuthController {
         if (identity.getStatus() == AccountStatus.BLOCKED) return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.ok("Account is suspended", null));
         if (roles.findByIdentityAndRole(identity, role).isEmpty()) roles.save(AuthIdentityRole.builder().identity(identity).role(role).build());
         identity.setLastLogin(Instant.now()); identities.save(identity);
+        if (role == Role.USER) {
+            if (users.findByMobileNumberFlexible(mobile).isEmpty()) {
+                users.save(User.builder().mobileNumber(mobile).name("RuVo User").role(Role.USER).status(AccountStatus.APPROVED).build());
+            }
+        }
         if (role == Role.DELIVERY_PARTNER) {
             provisioning.provisionDeliveryPartner(identity);
             // Look up the actual verification status after provisioning

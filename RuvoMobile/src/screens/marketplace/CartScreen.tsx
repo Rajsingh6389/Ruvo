@@ -28,7 +28,7 @@ import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { API_BASE_URL } from '../../config/api';
-import { initializeCheckout, initializeCashfreeCheckout, fetchPricing, PricingResult } from '../../services/orderService';
+import { initializeCheckout, fetchPricing, PricingResult } from '../../services/orderService';
 import { getShopDetails } from '../../services/shopService';
 import { validateCoupon } from '../../services/offerService';
 
@@ -51,7 +51,7 @@ export default function CartScreen() {
   const { location } = useDeliveryLocation();
   const { showToast } = useToast();
 
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CASHFREE'>('COD');
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD');
   const [submitting, setSubmitting] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
   const [billExpanded, setBillExpanded] = useState(true);
@@ -240,26 +240,62 @@ export default function CartScreen() {
         showToast('Order placed successfully!', 'success');
         (navigation.navigate as any)(ROUTES.ORDER_SUCCESS, { orderId: order.id });
       } else {
-        const paymentRes = await initializeCashfreeCheckout(
+        const checkoutRes = await initializeCheckout(
           {
             userId: String(user?.id ?? ''),
             shopId: Number(shopId),
             productId: primaryItem?.product.id || 0,
             productName: primaryItem?.product.name || '',
             quantity: primaryItem?.quantity || 1,
-            deliveryAddress: getDeliveryLocationLabel(location),
-            customerPhone: (user as any)?.phone || (user as any)?.phoneNumber,
+            paymentMethod: 'ONLINE',
+            items: cartItems.map(i => ({
+              productId: i.product.id!,
+              productName: i.product.name,
+              quantity: i.quantity,
+              price: i.product.sellingPrice,
+            })),
             userLatitude: location.latitude,
             userLongitude: location.longitude,
+            deliveryAddress: getDeliveryLocationLabel(location),
+            customerName: user?.name,
+            customerPhone: (user as any)?.phone || (user as any)?.phoneNumber,
             couponCode: appliedCoupon?.code,
           },
           token
         );
-        clearCart();
-        if (paymentRes.paymentLink) {
-          await Linking.openURL(paymentRes.paymentLink);
+        
+        if (checkoutRes.success && checkoutRes.razorpayOrderId) {
+          try {
+            const RazorpayCheckout = require('react-native-razorpay').default;
+            const options = {
+              description: 'Order Payment',
+              image: 'https://i.imgur.com/3g7nmJC.png',
+              currency: checkoutRes.currency || 'INR',
+              key: 'rzp_test_YourKeyIdHere', // REPLACE THIS
+              amount: checkoutRes.amount * 100,
+              name: 'RuVo',
+              order_id: checkoutRes.razorpayOrderId,
+              prefill: {
+                email: user?.email || 'customer@ruvomobile.me',
+                contact: (user as any)?.phone || '9999999999',
+                name: (user as any)?.name || 'Customer'
+              },
+              theme: { color: '#FF7A00' }
+            };
+            
+            RazorpayCheckout.open(options).then((data: any) => {
+              clearCart();
+              (navigation.navigate as any)(ROUTES.ORDER_SUCCESS, { orderId: checkoutRes.orderId });
+            }).catch(() => {
+              showToast('Payment cancelled or failed.', 'error');
+            });
+            
+          } catch (e: any) {
+             showToast('Razorpay module not linked. Please build native app!', 'error');
+          }
+        } else {
+          showToast(checkoutRes.message || 'Failed to initialize payment.', 'error');
         }
-        (navigation.navigate as any)(ROUTES.ORDER_SUCCESS, { orderId: paymentRes.orderId });
       }
     } catch (err: any) {
       showToast(err?.message || 'Failed to place order', 'error');

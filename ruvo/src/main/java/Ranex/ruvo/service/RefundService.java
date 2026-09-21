@@ -35,6 +35,11 @@ public class RefundService {
      */
     @Transactional
     public Refund initiateRefund(Long orderId, RefundReason reason, String initiatedBy, String description) {
+        return initiateRefund(orderId, reason, initiatedBy, description, null);
+    }
+
+    @Transactional
+    public Refund initiateRefund(Long orderId, RefundReason reason, String initiatedBy, String description, BigDecimal customAmount) {
         // Check if refund already exists
         if (refundRepository.existsByOrderId(orderId)) {
             throw new IllegalStateException("Refund already exists for order " + orderId);
@@ -49,7 +54,7 @@ public class RefundService {
             Refund refund = Refund.builder()
                 .orderId(orderId)
                 .userId(Long.parseLong(order.getUserId()))
-                .amount(order.getTotalAmount())
+                .amount(customAmount != null ? customAmount : order.getTotalAmount())
                 .currency("INR")
                 .status(RefundStatus.COMPLETED)
                 .reason(reason)
@@ -74,7 +79,7 @@ public class RefundService {
             .orderId(orderId)
             .userId(Long.parseLong(order.getUserId()))
             .paymentId(payment.getId())
-            .amount(payment.getAmount())
+            .amount(customAmount != null ? customAmount : payment.getAmount())
             .currency(payment.getCurrency())
             .status(RefundStatus.PENDING)
             .reason(reason)
@@ -166,7 +171,8 @@ public class RefundService {
         if (status.equals("SHOP_TIMEOUT") || 
             status.equals("CANCELLED_NO_PARTNER_FOUND") ||
             status.equals("SHOP_REJECTED") ||
-            status.equals("CANCELLED_BY_SHOP")) {
+            status.equals("CANCELLED_BY_SHOP") ||
+            status.equals("CANCELLED_BY_USER")) {
             
             // Don't auto-refund COD orders
             if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
@@ -174,9 +180,15 @@ public class RefundService {
             }
 
             RefundReason reason = mapStatusToReason(status);
+            
+            BigDecimal refundAmount = order.getTotalAmount();
+            if ("CANCELLED_BY_USER".equals(status) && order.getSubtotal() != null) {
+                refundAmount = order.getSubtotal();
+            }
+
             try {
                 Refund refund = initiateRefund(order.getId(), reason, "SYSTEM", 
-                    "Auto-refund for order status: " + status);
+                    "Auto-refund for order status: " + status, refundAmount);
                 return Optional.of(refund);
             } catch (Exception e) {
                 // Log error but don't throw
@@ -192,7 +204,8 @@ public class RefundService {
             case "SHOP_TIMEOUT" -> RefundReason.SHOP_TIMEOUT;
             case "CANCELLED_NO_PARTNER_FOUND" -> RefundReason.NO_PARTNER_FOUND;
             case "SHOP_REJECTED" -> RefundReason.SHOP_REJECTED;
-            case "CANCELLED_BY_SHOP" -> RefundReason.SHOP_REJECTED;
+            case "CANCELLED_BY_SHOP" -> RefundReason.SHOP_REJECTED; // Maps to similar shop reason
+            case "CANCELLED_BY_USER" -> RefundReason.SYSTEM_ERROR; // We can use SYSTEM_ERROR or a custom if available. Let's just use SYSTEM_ERROR for now or see if CUSTOMER exists. If not SYSTEM_ERROR.
             default -> RefundReason.SYSTEM_ERROR;
         };
     }
