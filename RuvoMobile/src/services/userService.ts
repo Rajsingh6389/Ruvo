@@ -12,7 +12,10 @@ export interface User {
 
 export async function getUserProfile(token: string): Promise<User> {
   const res = await fetch(`${API_BASE_URL}/auth/me`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Skip-Global-401': 'true',
+    },
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) throw new Error(body?.message || 'Failed to fetch user profile');

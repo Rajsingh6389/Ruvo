@@ -55,11 +55,11 @@ export const installNetworkMonitor = () => {
 
   // Reached through globalThis rather than `global` so this compiles the same
   // way whether or not the app pulls in Node's ambient types.
-  const scope = globalThis as unknown as { fetch: typeof fetch };
+  const scope = globalThis as unknown as { fetch: any };
   const originalFetch = scope.fetch;
   if (typeof originalFetch !== 'function') return;
 
-  scope.fetch = async (...args: Parameters<typeof originalFetch>) => {
+  scope.fetch = async (...args: any[]) => {
     try {
       const response = await originalFetch(...args);
       reportNetworkSuccess();

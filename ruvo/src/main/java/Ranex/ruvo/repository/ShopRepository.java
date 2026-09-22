@@ -21,15 +21,25 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByOwnerId(String ownerId);
     List<Shop> findByAuthIdentityId(Long authIdentityId);
 
+    @Query("SELECT s FROM Shop s WHERE " +
+           "(:authIdentityId IS NOT NULL AND s.authIdentityId = :authIdentityId) OR " +
+           "(:ownerId IS NOT NULL AND :ownerId != '' AND s.ownerId = :ownerId) OR " +
+           "(:mobile IS NOT NULL AND :mobile != '' AND (s.phone = :mobile OR s.ownerId = :mobile)) OR " +
+           "(:cleanMobile IS NOT NULL AND :cleanMobile != '' AND (s.phone = :cleanMobile OR s.ownerId = :cleanMobile))")
+    List<Shop> findByOwnerFlexible(
+            @Param("ownerId") String ownerId,
+            @Param("authIdentityId") Long authIdentityId,
+            @Param("mobile") String mobile,
+            @Param("cleanMobile") String cleanMobile);
+
     // Approved shops filtered by category — NULL-safe
     @Query("SELECT s FROM Shop s WHERE s.category = :category AND (s.approved IS NULL OR s.approved = true)")
     List<Shop> findByCategoryAndApprovedTrue(@Param("category") String category);
 
     // Shops still waiting on admin review (for an admin dashboard).
-    // Filters out shops that have not yet uploaded basic bank and KYC data 
-    // so incomplete onboardings do not flood the admin queue.
+    // STRICT GATE: Only shops whose bank accounts are verified by Razorpay and passed all RuVo risk checks (READY_FOR_ADMIN / ADMIN_PENDING) are admitted.
     @Query("SELECT s FROM Shop s WHERE (s.approved IS NULL OR s.approved = false) " +
-           "AND s.bankAccountNumber IS NOT NULL AND s.bankAccountNumber != ''")
+           "AND s.bankVerificationStatus IN ('READY_FOR_ADMIN', 'ADMIN_PENDING')")
     List<Shop> findPendingApproval();
 
     // Haversine formula to find approved shops within X kilometers, nearest first.

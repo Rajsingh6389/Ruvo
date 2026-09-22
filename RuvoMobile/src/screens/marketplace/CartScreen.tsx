@@ -12,12 +12,13 @@ import {
   Linking,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { getTabBarTotalHeight } from '../../constants/layout';
 
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -67,13 +68,8 @@ export default function CartScreen() {
   const [couponError, setCouponError] = useState<string | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  let tabBarHeight = 0;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    tabBarHeight = useBottomTabBarHeight();
-  } catch (_) {
-    tabBarHeight = 70;
-  }
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
 
   // 1. Fetch Dynamic Shop Details (Category, Min Order, Location)
   useEffect(() => {
@@ -342,7 +338,7 @@ export default function CartScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 140 }}
+        contentContainerStyle={{ paddingBottom: totalTabBarHeight + 120 }}
       >
         {/* ── 1. Dynamic Cart Items ───────────────────────────── */}
         <View style={styles.sectionContainer}>
@@ -638,7 +634,16 @@ export default function CartScreen() {
       </ScrollView>
 
       {/* ── Proceed to Checkout (Swiggy / Zomato Style Flow) ─── */}
-      <View style={[styles.stickyFooter, { paddingBottom: Math.max(tabBarHeight + 8, 16), backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.stickyFooter,
+          {
+            bottom: totalTabBarHeight + 6,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          },
+        ]}
+      >
         {cartTotal < 100 && (
           <View style={{ backgroundColor: '#FEE2E2', padding: 8, borderRadius: 8, marginBottom: 10, alignItems: 'center' }}>
             <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'Poppins_700Bold' }}>Minimum order amount is ₹100</Text>
@@ -837,12 +842,18 @@ const styles = StyleSheet.create({
   // Sticky footer
   stickyFooter: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
+    left: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 8,
+    shadowColor: '#171A1F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    zIndex: 90,
   },
   checkoutFullBtn: {
     flexDirection: 'row',

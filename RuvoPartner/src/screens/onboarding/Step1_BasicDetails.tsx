@@ -9,7 +9,7 @@ import {
   View, ScrollView, StyleSheet, TouchableOpacity,
   ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,6 +58,7 @@ async function googleReverseGeocode(lat: number, lng: number) {
 }
 
 export const Step1_BasicDetails = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { token, authenticatedFetch, logout } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
@@ -165,7 +166,7 @@ export const Step1_BasicDetails = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
-        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 40 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Image source={{ uri: 'https://res.cloudinary.com/qbm45y5k/image/upload/v1788799444/4ebac18d-5a03-4c16-bce2-4d6992e86c07.png' }} style={{ width: '100%', height: 160, borderRadius: RADIUS.md, marginBottom: 16 }} resizeMode="cover" />
           <ScreenHeader
             icon="person-outline"

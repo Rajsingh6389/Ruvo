@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/partner")
+@RequestMapping({"/api/partner", "/api/partners"})
 @Transactional
 public class PartnerVerificationController {
 
@@ -39,7 +39,7 @@ public class PartnerVerificationController {
         this.identities = id;
     }
 
-    @GetMapping("/profile")
+    @GetMapping({"/profile", "/profile/me"})
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProfile(@RequestHeader("Authorization") String authHeader) {
         User user = getUserFromHeader(authHeader);
         if (user == null) {
@@ -49,16 +49,50 @@ public class PartnerVerificationController {
         PartnerProfile profile = profiles.findByUser(user)
                 .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
 
+        // Check matching DeliveryPartner entity
+        Optional<DeliveryPartner> dpOpt = Optional.empty();
+        if (user.getMobileNumber() != null) {
+            dpOpt = deliveryPartners.findByPhoneFlexible(user.getMobileNumber())
+                    .or(() -> deliveryPartners.findByUserIdFlexible(user.getMobileNumber()));
+        }
+        if (dpOpt.isEmpty() && user.getId() != null) {
+            dpOpt = deliveryPartners.findByUserIdFlexible(String.valueOf(user.getId()));
+        }
+
+        boolean isApproved = (user.getStatus() == AccountStatus.APPROVED) || (dpOpt.isPresent() && Boolean.TRUE.equals(dpOpt.get().getApproved()));
+        if (isApproved) {
+            if (profile.getVerificationStatus() != VerificationStatus.APPROVED) {
+                profile.setVerificationStatus(VerificationStatus.APPROVED);
+                profiles.save(profile);
+            }
+            if (user.getStatus() != AccountStatus.APPROVED) {
+                user.setStatus(AccountStatus.APPROVED);
+                users.save(user);
+            }
+            if (dpOpt.isPresent() && !Boolean.TRUE.equals(dpOpt.get().getApproved())) {
+                dpOpt.get().setApproved(true);
+                deliveryPartners.save(dpOpt.get());
+            }
+        }
+
         Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
         Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
 
         Map<String, Object> responseData = new HashMap<>();
+        responseData.put("id", dpOpt.map(DeliveryPartner::getId).orElse(profile.getId()));
+        responseData.put("partnerId", dpOpt.map(DeliveryPartner::getId).orElse(profile.getId()));
         responseData.put("userId", user.getId());
-        responseData.put("name", user.getName());
+        responseData.put("name", user.getName() != null ? user.getName() : dpOpt.map(DeliveryPartner::getName).orElse("Rider"));
         responseData.put("mobileNumber", partnerAccounts.findBySecurityUser(user)
                 .map(PartnerAccount::getMobileNumber).orElse(user.getMobileNumber()));
+        responseData.put("phone", user.getMobileNumber());
         responseData.put("verificationStatus", profile.getVerificationStatus().name());
+        responseData.put("status", profile.getVerificationStatus().name());
+        responseData.put("profileStatus", profile.getVerificationStatus().name());
+        responseData.put("approved", isApproved);
+        responseData.put("isApproved", isApproved);
         responseData.put("adminReason", profile.getAdminReason());
+        responseData.put("isAvailable", user.getIsAvailable());
 
         if (vehicle.isPresent()) {
             Map<String, Object> vMap = new HashMap<>();
@@ -178,10 +212,10 @@ public class PartnerVerificationController {
                     deliveryPartners.save(dp);
                 });
 
-        // Check if both vehicle and KYC are submitted
+        // Vehicle and KYC submitted: set KYC_SUBMITTED (NOT UNDER_REVIEW until Bank Account is verified!)
         Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
         if (vehicle.isPresent()) {
-            profile.setVerificationStatus(VerificationStatus.UNDER_REVIEW);
+            profile.setVerificationStatus(VerificationStatus.KYC_SUBMITTED);
             profiles.save(profile);
         }
 
@@ -235,10 +269,10 @@ public class PartnerVerificationController {
         }
         vehicles.save(vehicle);
 
-        // Check if both vehicle and KYC are submitted
+        // Vehicle and KYC submitted: set KYC_SUBMITTED (NOT UNDER_REVIEW until Bank Account is verified!)
         Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
         if (verification.isPresent()) {
-            profile.setVerificationStatus(VerificationStatus.UNDER_REVIEW);
+            profile.setVerificationStatus(VerificationStatus.KYC_SUBMITTED);
             profiles.save(profile);
         }
 
@@ -247,7 +281,7 @@ public class PartnerVerificationController {
         return ResponseEntity.ok(ApiResponse.ok("Vehicle details saved successfully", resData));
     }
 
-    @GetMapping("/verification/status")
+    @GetMapping({"/verification/status", "/status"})
     public ResponseEntity<ApiResponse<Map<String, String>>> getVerificationStatus(@RequestHeader("Authorization") String authHeader) {
         User user = getUserFromHeader(authHeader);
         if (user == null) {
@@ -257,11 +291,42 @@ public class PartnerVerificationController {
         PartnerProfile profile = profiles.findByUser(user)
                 .orElseGet(() -> profiles.save(PartnerProfile.builder().user(user).verificationStatus(VerificationStatus.NEW).build()));
 
+        Optional<DeliveryPartner> dpOpt = Optional.empty();
+        if (user.getMobileNumber() != null) {
+            dpOpt = deliveryPartners.findByPhoneFlexible(user.getMobileNumber())
+                    .or(() -> deliveryPartners.findByUserIdFlexible(user.getMobileNumber()));
+        }
+        if (dpOpt.isEmpty() && user.getId() != null) {
+            dpOpt = deliveryPartners.findByUserIdFlexible(String.valueOf(user.getId()));
+        }
+
+        boolean isApproved = (user.getStatus() == AccountStatus.APPROVED) || (dpOpt.isPresent() && Boolean.TRUE.equals(dpOpt.get().getApproved()));
+        if (isApproved) {
+            if (profile.getVerificationStatus() != VerificationStatus.APPROVED) {
+                profile.setVerificationStatus(VerificationStatus.APPROVED);
+                profiles.save(profile);
+            }
+            if (user.getStatus() != AccountStatus.APPROVED) {
+                user.setStatus(AccountStatus.APPROVED);
+                users.save(user);
+            }
+            if (dpOpt.isPresent() && !Boolean.TRUE.equals(dpOpt.get().getApproved())) {
+                dpOpt.get().setApproved(true);
+                deliveryPartners.save(dpOpt.get());
+            }
+        }
+
         Optional<PartnerVehicle> vehicle = vehicles.findByPartnerProfile(profile);
         Optional<PartnerVerification> verification = verifications.findByPartnerProfile(profile);
 
+        String currentStatus = profile.getVerificationStatus().name();
+
         Map<String, String> statusMap = new HashMap<>();
-        statusMap.put("profileStatus", profile.getVerificationStatus().name());
+        statusMap.put("profileStatus", currentStatus);
+        statusMap.put("verificationStatus", currentStatus);
+        statusMap.put("status", currentStatus);
+        statusMap.put("approved", String.valueOf(isApproved));
+        statusMap.put("isApproved", String.valueOf(isApproved));
         statusMap.put("adminReason", profile.getAdminReason());
         statusMap.put("vehicleStatus", vehicle.map(v -> v.getStatus().name()).orElse("MISSING"));
         statusMap.put("kycStatus", verification.map(k -> k.getStatus().name()).orElse("MISSING"));

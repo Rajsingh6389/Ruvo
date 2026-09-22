@@ -23,7 +23,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -59,6 +59,8 @@ function isToday(dateStr?: string): boolean {
 }
 
 export const HistoryScreen = () => {
+  const insets = useSafeAreaInsets();
+  const bottomClearance = Math.max(insets.bottom, 16) + 28;
   const { token } = useAuth();
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -257,7 +259,7 @@ export const HistoryScreen = () => {
               progressBackgroundColor="#1C2026"
             />
           }
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: bottomClearance }}
           stickySectionHeadersEnabled={false}
         />
       )}

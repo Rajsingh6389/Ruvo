@@ -8,6 +8,7 @@ import Ranex.ruvo.repository.UserRepository;
 import Ranex.ruvo.security.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.http.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +33,8 @@ public class AuthenticationController {
     private final JwtService jwt;
     private final SmsService smsService;
     private final AuthIdentityRepository identities;
+    @Value("${ruvo.otp.auto-deliver:false}")
+    private boolean autoDeliverOtp;
 
     public AuthenticationController(UserRepository u, OtpVerificationRepository o, PasswordEncoder e, AuthenticationManager a, JwtService j, SmsService s, AuthIdentityRepository i) {
         this.users = u;  this.otps = o;  this.encoder = e;  this.auth = a;  this.jwt = j;  this.smsService = s; this.identities = i;
@@ -88,10 +91,16 @@ public class AuthenticationController {
         }
 
         otps.save(verification);
-        smsService.sendOtpSms(mobile, generatedOtp);
+        boolean smsSent = smsService.sendOtpSms(mobile, generatedOtp);
+        if (!smsSent && !autoDeliverOtp) {
+            verification.setResendCooldown(now); otps.save(verification);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.ok("OTP could not be sent. Configure SMS_API_KEY and try again.", null));
+        }
 
         Map<String, Object> responseData = new HashMap<>();
         responseData.put("cooldownSeconds", 60);
+        if (autoDeliverOtp) responseData.put("otpCode", generatedOtp);
 
         return ResponseEntity.ok(ApiResponse.ok("OTP sent successfully via SMS", responseData));
     }
@@ -234,13 +243,24 @@ public class AuthenticationController {
     }
 
     private User resolveUser(org.springframework.security.core.userdetails.User p) {
+        if (p == null) return null;
         String username = p.getUsername();
         if (username != null && username.startsWith("identity:")) {
             try {
                 Long identityId = Long.parseLong(username.substring(9));
                 Optional<AuthIdentity> ident = identities.findById(identityId);
                 if (ident.isPresent() && ident.get().getMobileNumber() != null) {
-                    return users.findByMobileNumberFlexible(ident.get().getMobileNumber()).orElse(null);
+                    String mob = ident.get().getMobileNumber();
+                    return users.findByMobileNumberFlexible(mob).orElseGet(() ->
+                        users.save(User.builder()
+                                .name("RuVo User")
+                                .mobileNumber(mob)
+                                .password(encoder.encode(UUID.randomUUID().toString()))
+                                .role(Role.USER)
+                                .status(AccountStatus.APPROVED)
+                                .walletBalance(java.math.BigDecimal.ZERO)
+                                .build())
+                    );
                 }
             } catch (NumberFormatException ignored) {}
         }

@@ -87,31 +87,40 @@ export const Step3_BankAccount = () => {
       const myShop = shops?.[0];
       if (!myShop) throw new Error('No shop found. Please complete previous steps again.');
 
-      let res = await fetch(`${API_BASE_URL}/api/seller/razorpay/onboard`, {
+      let res = await fetch(`${API_BASE_URL}/api/bank-account/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           shopId: myShop.id,
-          legalBusinessName: myShop.name,
-          email: myShop.email,
-          phone: myShop.phone,
-          ownerName: accountHolder,
-          bankAccountNumber: accountNumber,
-          ifscCode: ifsc,
+          accountHolderName: accountHolder.trim(),
+          accountNumber: accountNumber.trim(),
+          ifscCode: ifsc.trim().toUpperCase(),
           bankName: bankName,
         }),
       });
 
+      const resJson = await res.json().catch(() => null);
 
-
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+      if (!res.ok || !resJson?.success) {
+        const vStatus = resJson?.verificationStatus;
+        if (vStatus === 'NAME_MISMATCH') {
+          throw new Error('The account holder name does not match the bank records.');
+        } else if (vStatus === 'RISK_HOLD') {
+          throw new Error('Bank verification is on hold for security checks. Please contact support.');
+        } else if (vStatus === 'RAZORPAY_FAILED' || vStatus === 'FAILED') {
+          throw new Error(resJson?.message || 'Bank account verification failed. Please check your details.');
+        } else if (vStatus === 'VERIFICATION_ERROR') {
+          throw new Error('Bank verification provider is temporarily unreachable. Please try again later.');
+        } else {
+          throw new Error(resJson?.message || 'Bank account verification failed. Please verify your details.');
+        }
+      }
 
       stopSpinner();
       setVState('done');
       // Advance to approval waiting screen
       await setOnboardingStatus('PENDING_APPROVAL');
-      setTimeout(() => navigation.navigate('Step4_Success', { shopName: 'Your Shop' }), 1600);
+      setTimeout(() => navigation.navigate('Step4_Success', { shopName: myShop.name || 'Your Shop' }), 1600);
     } catch (e: any) {
       stopSpinner();
       setVState('error');

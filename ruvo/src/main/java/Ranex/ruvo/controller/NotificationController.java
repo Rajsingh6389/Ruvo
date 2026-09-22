@@ -5,6 +5,7 @@ import Ranex.ruvo.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -20,14 +21,39 @@ public class NotificationController {
     }
 
     /**
-     * Register device token for push notifications
+     * Register device token for push notifications (Supports both /register-token and /device-token)
      */
-    @PostMapping("/register-token")
+    @PostMapping(value = {"/register-token", "/device-token"})
     public ResponseEntity<?> registerToken(@RequestBody Map<String, Object> request) {
         try {
-            Long userId = Long.parseLong(request.get("userId").toString());
+            Object rawUserId = request.get("userId");
+            if (rawUserId == null) {
+                rawUserId = request.get("id");
+            }
+            if (rawUserId == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "userId is required"
+                ));
+            }
+            String userId = String.valueOf(rawUserId).trim();
+
             String userType = (String) request.get("userType");
+            if (userType == null || userType.isBlank()) {
+                userType = (String) request.get("appType");
+            }
+            if (userType == null || userType.isBlank()) {
+                userType = "CUSTOMER";
+            }
+
             String token = (String) request.get("token");
+            if (token == null || token.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "token is required"
+                ));
+            }
+
             String platform = (String) request.getOrDefault("platform", "ANDROID");
             String appVersion = (String) request.getOrDefault("appVersion", "1.0");
 
@@ -46,7 +72,7 @@ public class NotificationController {
     }
 
     /**
-     * Unregister device token
+     * Unregister device token (Supports /unregister-token and DELETE /device-token)
      */
     @PostMapping("/unregister-token")
     public ResponseEntity<?> unregisterToken(@RequestBody Map<String, String> request) {
@@ -66,13 +92,42 @@ public class NotificationController {
         }
     }
 
-    /**
-     * Get user notifications
-     */
-    @GetMapping("/mine")
-    public ResponseEntity<?> getUserNotifications(@RequestParam Long userId) {
+    @DeleteMapping("/device-token")
+    public ResponseEntity<?> deleteDeviceToken(@RequestParam(required = false) String token,
+                                               @RequestBody(required = false) Map<String, String> body) {
         try {
-            List<PushNotification> notifications = notificationService.getUserNotifications(userId);
+            String tok = token;
+            if (tok == null && body != null) {
+                tok = body.get("token");
+            }
+            if (tok != null) {
+                notificationService.unregisterDeviceToken(tok);
+            }
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Device token unregistered successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Failed to unregister token: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get user notifications (Supports /mine and GET /api/notifications)
+     */
+    @GetMapping({"/mine", ""})
+    public ResponseEntity<?> getUserNotifications(@RequestParam(required = false) String userId,
+                                                 @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
+        try {
+            String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : headerUserId;
+            if (effectiveUserId == null || effectiveUserId.isBlank()) {
+                return ResponseEntity.ok(Collections.emptyList());
+            }
+
+            List<PushNotification> notifications = notificationService.getUserNotifications(effectiveUserId);
             List<Map<String, Object>> notifList = notifications.stream()
                 .map(this::mapNotification)
                 .toList();
@@ -90,9 +145,15 @@ public class NotificationController {
      * Get unread notification count
      */
     @GetMapping("/unread-count")
-    public ResponseEntity<?> getUnreadCount(@RequestParam Long userId) {
+    public ResponseEntity<?> getUnreadCount(@RequestParam(required = false) String userId,
+                                            @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
         try {
-            long count = notificationService.getUnreadCount(userId);
+            String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : headerUserId;
+            if (effectiveUserId == null || effectiveUserId.isBlank()) {
+                return ResponseEntity.ok(Map.of("success", true, "count", 0));
+            }
+
+            long count = notificationService.getUnreadCount(effectiveUserId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "count", count
@@ -108,7 +169,7 @@ public class NotificationController {
     /**
      * Mark notification as read
      */
-    @PostMapping("/{notificationId}/read")
+    @RequestMapping(value = "/{notificationId}/read", method = {RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH})
     public ResponseEntity<?> markAsRead(@PathVariable Long notificationId) {
         try {
             notificationService.markAsRead(notificationId);
@@ -127,10 +188,23 @@ public class NotificationController {
     /**
      * Mark all notifications as read
      */
-    @PostMapping("/mark-all-read")
-    public ResponseEntity<?> markAllAsRead(@RequestParam Long userId) {
+    @RequestMapping(value = "/mark-all-read", method = {RequestMethod.POST, RequestMethod.PUT, RequestMethod.PATCH})
+    public ResponseEntity<?> markAllAsRead(@RequestParam(required = false) String userId,
+                                           @RequestBody(required = false) Map<String, Object> body,
+                                           @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
         try {
-            notificationService.markAllAsRead(userId);
+            String effectiveUserId = (userId != null && !userId.isBlank()) ? userId : null;
+            if (effectiveUserId == null && body != null && body.containsKey("userId")) {
+                effectiveUserId = String.valueOf(body.get("userId"));
+            }
+            if (effectiveUserId == null) {
+                effectiveUserId = headerUserId;
+            }
+
+            if (effectiveUserId != null && !effectiveUserId.isBlank()) {
+                notificationService.markAllAsRead(effectiveUserId);
+            }
+
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "message", "All notifications marked as read"
@@ -144,17 +218,19 @@ public class NotificationController {
     }
 
     private Map<String, Object> mapNotification(PushNotification n) {
-        return Map.of(
-            "id", n.getId(),
-            "userId", n.getUserId(),
-            "title", n.getTitle(),
-            "body", n.getBody(),
-            "type", n.getType(),
-            "referenceType", n.getReferenceType() != null ? n.getReferenceType() : "",
-            "referenceId", n.getReferenceId() != null ? n.getReferenceId() : 0,
-            "isRead", n.getIsRead(),
-            "createdAt", n.getCreatedAt().toString(),
-            "readAt", n.getReadAt() != null ? n.getReadAt().toString() : ""
-        );
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id", n.getId());
+        map.put("userId", n.getUserId() != null ? n.getUserId() : "");
+        map.put("title", n.getTitle() != null ? n.getTitle() : "");
+        map.put("body", n.getBody() != null ? n.getBody() : "");
+        map.put("type", n.getType() != null ? n.getType() : "");
+        map.put("referenceType", n.getReferenceType() != null ? n.getReferenceType() : "");
+        map.put("referenceId", n.getReferenceId() != null ? n.getReferenceId() : 0);
+        map.put("orderId", n.getOrderId() != null ? n.getOrderId() : 0);
+        map.put("data", n.getData() != null ? n.getData() : "{}");
+        map.put("isRead", Boolean.TRUE.equals(n.getIsRead()));
+        map.put("createdAt", n.getCreatedAt() != null ? n.getCreatedAt().toString() : "");
+        map.put("readAt", n.getReadAt() != null ? n.getReadAt().toString() : "");
+        return map;
     }
 }

@@ -8,7 +8,7 @@ import {
   View, ScrollView, StyleSheet, Text, Animated, Image,
   TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
@@ -26,6 +26,7 @@ import {
 type VerifyState = 'idle' | 'verifying' | 'done' | 'error';
 
 export const Step3_Aadhaar = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { user, userId, token } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
@@ -190,7 +191,7 @@ export const Step3_Aadhaar = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1 }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 32 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

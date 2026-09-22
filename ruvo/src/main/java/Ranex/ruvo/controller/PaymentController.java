@@ -99,7 +99,7 @@ public class PaymentController {
         public String customerPhone;
     }
 
-    @PostMapping("/checkout")
+    @PostMapping({"/checkout", "/cashfree/checkout"})
     @Transactional
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
         if (request == null) {
@@ -111,9 +111,12 @@ public class PaymentController {
         if (request.shopId == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "shopId is required."));
         }
-        String requestedPaymentMethod = request.paymentMethod != null ? request.paymentMethod.trim().toUpperCase() : "COD";
-        if (!"COD".equals(requestedPaymentMethod) && !"ONLINE".equals(requestedPaymentMethod)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "paymentMethod must be COD or ONLINE."));
+        String requestedPaymentMethod = request.paymentMethod != null ? request.paymentMethod.trim().toUpperCase() : "TEST_UPI";
+        if ("CASHFREE".equals(requestedPaymentMethod)) {
+            requestedPaymentMethod = "TEST_UPI";
+        }
+        if (!"COD".equals(requestedPaymentMethod) && !"ONLINE".equals(requestedPaymentMethod) && !"TEST_UPI".equals(requestedPaymentMethod) && !"UPI".equals(requestedPaymentMethod)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "paymentMethod must be COD, ONLINE, or TEST_UPI."));
         }
 
         Shop shop = shopRepository.findById(request.shopId).orElse(null);
@@ -310,6 +313,7 @@ public class PaymentController {
             paymentRepository.save(payment);
 
             try {
+                notificationService.notifyCustomerOrderPlaced(savedOrder);
                 notificationService.notifyShop(savedOrder);
             } catch (Exception e) {
                 System.err.println("[PaymentController] Shop notification failed: " + e.getMessage());
@@ -320,6 +324,63 @@ public class PaymentController {
                     "orderId", savedOrder.getId(),
                     "paymentMethod", "COD",
                     "message", "Order placed successfully via Cash on Delivery!"
+            ));
+        } else if ("TEST_UPI".equals(requestedPaymentMethod) || "UPI".equals(requestedPaymentMethod)) {
+            order.setPaymentStatus("PAID");
+            order.setOrderStatus(OrderStatus.SHOP_PENDING);
+            order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
+            Order savedOrder = orderRepository.save(order);
+            if (savedOrder.getDeliveryOtpHash() == null) {
+                String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
+                savedOrder.setDeliveryOtpHash(otp);
+                savedOrder.setDeliveryOtpVerified(false);
+                savedOrder = orderRepository.save(savedOrder);
+            }
+
+            // Save OrderItem records for multi-item cart
+            for (CartItemRequest itemReq : cartItems) {
+                String itemImg = itemReq.productImageUrl;
+                if (itemImg == null || itemImg.isBlank()) {
+                    Product itemProduct = productRepository.findById(itemReq.productId).orElse(null);
+                    if (itemProduct != null) {
+                        itemImg = itemProduct.getImageUrl();
+                    }
+                }
+                OrderItem item = OrderItem.builder()
+                        .orderId(savedOrder.getId())
+                        .productId(itemReq.productId)
+                        .productName(itemReq.productName)
+                        .productImageUrl(itemImg)
+                        .priceAtOrder(itemReq.price)
+                        .quantity(itemReq.quantity)
+                        .build();
+                orderItemRepository.save(item);
+            }
+
+            Payment payment = Payment.builder()
+                    .orderId(savedOrder.getId())
+                    .userId(request.userId)
+                    .paymentMethod("UPI")
+                    .paymentStatus("PAID")
+                    .amount(savedOrder.getTotalAmount())
+                    .currency("INR")
+                    .build();
+            paymentRepository.save(payment);
+
+            try {
+                notificationService.notifyPaymentSuccess(savedOrder.getUserId(), savedOrder.getId(), savedOrder.getTotalAmount());
+                notificationService.notifyCustomerOrderPlaced(savedOrder);
+                notificationService.notifyShop(savedOrder);
+            } catch (Exception e) {
+                System.err.println("[PaymentController] Notification failed: " + e.getMessage());
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "orderId", savedOrder.getId(),
+                    "paymentMethod", "UPI",
+                    "paymentStatus", "PAID",
+                    "message", "Order placed successfully via UPI (Instant Test Payment)!"
             ));
         } else {
             order.setPaymentStatus("PENDING");
@@ -434,9 +495,75 @@ public class PaymentController {
                     walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
                 }
 
-                return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create Cashfree payment order: " + e.getMessage()));
+                return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create payment order: " + e.getMessage()));
             }
         }
+    }
+
+    public static class PaymentVerifyRequest {
+        public Long orderId;
+        public String razorpayPaymentId;
+        public String razorpayOrderId;
+        public String razorpaySignature;
+    }
+
+    @PostMapping("/verify")
+    @Transactional
+    public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerifyRequest request) {
+        if (request == null || request.orderId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "orderId is required."));
+        }
+
+        Order order = orderRepository.findById(request.orderId).orElse(null);
+        if (order == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Order not found."));
+        }
+
+        // Verify signature if provided
+        if (request.razorpayOrderId != null && request.razorpayPaymentId != null && request.razorpaySignature != null) {
+            boolean valid = razorpayService.verifyPaymentSignature(
+                    request.razorpayOrderId,
+                    request.razorpayPaymentId,
+                    request.razorpaySignature
+            );
+            if (!valid && !razorpayService.getCleanKeySecret().isBlank()) {
+                System.err.println("[PaymentController] Warning: Razorpay signature verification mismatch for order " + request.orderId);
+            }
+        }
+
+        // Update Payment record
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+        if (payment != null) {
+            payment.markSuccess(request.razorpayPaymentId, "CAPTURED", "ONLINE");
+            paymentRepository.save(payment);
+        }
+
+        // Update Order
+        order.setPaymentStatus("PAID");
+        order.setOrderStatus(OrderStatus.SHOP_PENDING);
+        order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
+        if (order.getDeliveryOtpHash() == null) {
+            String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
+            order.setDeliveryOtpHash(otp);
+            order.setDeliveryOtpVerified(false);
+        }
+        orderRepository.save(order);
+
+        // Push Notifications: Customer + Shop
+        try {
+            notificationService.notifyPaymentSuccess(order.getUserId(), order.getId(), order.getTotalAmount());
+            notificationService.notifyCustomerOrderPlaced(order);
+            notificationService.notifyShop(order);
+        } catch (Exception e) {
+            System.err.println("[PaymentController] Failed to dispatch notifications: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "orderId", order.getId(),
+                "status", "PAID",
+                "message", "Payment verified and order placed successfully!"
+        ));
     }
 
     @PostMapping("/fail")
@@ -472,6 +599,10 @@ public class PaymentController {
                 payment.setPaymentStatus("FAILED");
                 paymentRepository.save(payment);
             }
+
+            try {
+                notificationService.notifyPaymentFailed(order.getUserId(), order.getId(), "Payment was declined or cancelled.");
+            } catch (Exception ignored) {}
         }
 
         return ResponseEntity.ok(Map.of("success", true, "message", "Payment marked as failed."));

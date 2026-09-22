@@ -23,7 +23,7 @@ import {
 installNetworkMonitor();
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
@@ -31,22 +31,33 @@ export default function App() {
     Poppins_800ExtraBold,
   });
 
-  if (!fontsLoaded) return null;
+  const [timeoutPassed, setTimeoutPassed] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimeoutPassed(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!fontsLoaded && !fontError && !timeoutPassed) {
+    return null;
+  }
 
   return (
     <ErrorBoundary>
-      <AnimatedAlertProvider>
-        <AuthProvider requiredRole="SHOP_OWNER">
-          <ThemeProvider>
-            <ToastProvider>
-              <SafeAreaProvider>
+      <SafeAreaProvider>
+        <AnimatedAlertProvider>
+          <AuthProvider requiredRole="SHOP_OWNER">
+            <ThemeProvider>
+              <ToastProvider>
                 <StatusBar barStyle="dark-content" />
                 <ShopNavigator />
-              </SafeAreaProvider>
-            </ToastProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </AnimatedAlertProvider>
+              </ToastProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </AnimatedAlertProvider>
+      </SafeAreaProvider>
     </ErrorBoundary>
   );
 }

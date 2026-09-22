@@ -233,8 +233,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [logout]);
 
   useEffect(() => {
-    const originalFetch = global.fetch;
-    global.fetch = async (...args) => {
+    const originalFetch = globalThis.fetch;
+    // @ts-ignore
+    globalThis.fetch = async (...args: any[]) => {
+      // @ts-ignore
       const response = await originalFetch(...args);
       const initInfo = args[1] as RequestInit | undefined;
       const skipGlobal = initInfo?.headers && (initInfo.headers as any)['X-Skip-Global-401'];
@@ -244,7 +246,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return response;
     };
     return () => {
-      global.fetch = originalFetch;
+      globalThis.fetch = originalFetch;
     };
   }, []);
 

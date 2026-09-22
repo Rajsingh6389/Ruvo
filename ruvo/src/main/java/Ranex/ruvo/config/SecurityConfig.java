@@ -90,12 +90,17 @@ public class SecurityConfig {
                             "/api/partner/auth/refresh",
                             "/api/auth/otp/send",
                             "/api/auth/otp/verify",
-                            "/api/onboarding/fee"
+                            "/api/onboarding/fee",
+                            "/api/notifications/register-token",
+                            "/api/notifications/device-token",
+                            "/api/notifications/unregister-token"
                     ).permitAll()
 
                     .requestMatchers(
-                            "/api/partner/**"
-                    ).hasAnyRole("DELIVERY_PARTNER", "PARTNER", "ADMIN")
+                            "/api/partner/**",
+                            "/api/partners/**",
+                            "/api/delivery-partners/**"
+                    ).hasAnyRole("DELIVERY_PARTNER", "PARTNER", "ADMIN", "USER")
 
                     .requestMatchers(
                             "/api/shop/**"
@@ -118,7 +123,8 @@ public class SecurityConfig {
                             "/api/payments/cashfree/return",
                             "/api/payments/cashfree/webhook",
                             "/api/ruvo/commission/webhook",
-                            "/api/webhooks/razorpay/**"
+                            "/api/webhooks/razorpay/**",
+                            "/api/bank-account/webhook"
                     ).permitAll()
 
                     .requestMatchers(
@@ -126,6 +132,7 @@ public class SecurityConfig {
                     ).hasAnyRole("SHOP_OWNER", "ADMIN")
 
                     .requestMatchers(
+                            "/api/bank-account/**",
                             "/api/orders/**",
                             "/api/payments/**",
                             "/api/delivery/**",

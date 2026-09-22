@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import { getExpoNotifications, isExpoGo } from '../services/notificationService';
 
 export interface DeliveryRequest {
   requestId: number;
@@ -13,24 +14,12 @@ export interface DeliveryRequest {
   deliveryFee?: number;
 }
 
-let Notifications: any = null;
-try {
-  Notifications = require('expo-notifications');
-  if (Notifications && Notifications.setNotificationHandler) {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
-  }
-} catch (e) {}
-
 export function useDeliveryAlerts(requests: DeliveryRequest[]) {
   const previousRequestsRef = useRef<DeliveryRequest[]>([]);
 
   useEffect(() => {
+    if (isExpoGo) return;
+    const Notifications = getExpoNotifications();
     if (!Notifications) return;
     const initNotifications = async () => {
       try {
@@ -55,6 +44,8 @@ export function useDeliveryAlerts(requests: DeliveryRequest[]) {
   }, []);
 
   useEffect(() => {
+    if (isExpoGo) return;
+    const Notifications = getExpoNotifications();
     if (!Notifications) return;
     const prevRequests = previousRequestsRef.current;
     

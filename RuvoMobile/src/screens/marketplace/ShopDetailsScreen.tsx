@@ -229,7 +229,7 @@ export const ShopDetailsScreen = () => {
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingTop: 16,
-          paddingBottom: 100,
+          paddingBottom: Math.max(insets.bottom, 16) + 32,
         }}
         numColumns={2}
         columnWrapperStyle={{ gap: 12 }}

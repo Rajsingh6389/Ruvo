@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,6 +18,7 @@ import { API_BASE_URL } from '../../config/api';
 import { sw, sh, sf } from '../../utils/responsive';
 
 export const RateOrderScreen = () => {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { token, user } = useAuth();
   const navigation = useNavigation();
@@ -128,7 +129,7 @@ export const RateOrderScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -138,7 +139,11 @@ export const RateOrderScreen = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: Math.max(insets.bottom, 16) + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Shop Info */}
         <View style={[styles.shopCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Ionicons name="storefront" size={sf(32)} color={colors.primary} />

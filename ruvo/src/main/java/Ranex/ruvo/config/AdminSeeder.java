@@ -1,6 +1,8 @@
 package Ranex.ruvo.config;
 
 import Ranex.ruvo.model.*;
+import Ranex.ruvo.repository.AuthIdentityRepository;
+import Ranex.ruvo.repository.AuthIdentityRoleRepository;
 import Ranex.ruvo.repository.PricingConfigRepository;
 import Ranex.ruvo.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
@@ -12,26 +14,58 @@ import java.util.List;
 @Configuration
 class AdminSeeder {
     @Bean
-    CommandLineRunner admin(UserRepository users, PasswordEncoder encoder, PricingConfigRepository pricingRepo) {
+    CommandLineRunner admin(
+            UserRepository users,
+            PasswordEncoder encoder,
+            PricingConfigRepository pricingRepo,
+            AuthIdentityRepository authIdentityRepo,
+            AuthIdentityRoleRepository authIdentityRoleRepo) {
         return a -> {
-            String adminMobile = "9125474036";
-            users.findByMobileNumberFlexible(adminMobile).or(() -> users.findByMobileNumberFlexible("+916389550338")).ifPresentOrElse(
-                user -> {
-                    user.setStatus(AccountStatus.APPROVED);
-                    user.setRole(Role.ADMIN);
-                    user.setPassword(encoder.encode("Raj@9125"));
-                    users.save(user);
-                },
-                () -> {
-                    users.save(User.builder()
-                        .name("RuVo Admin")
-                        .mobileNumber("+919125474036")
-                        .password(encoder.encode("Raj@9125"))
-                        .role(Role.ADMIN)
-                        .status(AccountStatus.APPROVED)
-                        .build());
-                }
+            List<String> adminMobiles = List.of(
+                "8630820486",
+                "9125474036",
+                "6389550338"
             );
+
+            for (String rawMobile : adminMobiles) {
+                String clean10 = rawMobile.replaceAll("[^0-9]", "");
+                if (clean10.length() == 12 && clean10.startsWith("91")) clean10 = clean10.substring(2);
+                String fullPhone = "+91" + clean10;
+
+                // 1. Seed or Upgrade in User table
+                users.findByMobileNumberFlexible(clean10).ifPresentOrElse(
+                    user -> {
+                        user.setStatus(AccountStatus.APPROVED);
+                        user.setRole(Role.ADMIN);
+                        users.save(user);
+                    },
+                    () -> {
+                        users.save(User.builder()
+                            .name("RuVo Admin")
+                            .mobileNumber(fullPhone)
+                            .password(encoder.encode("Raj@9125"))
+                            .role(Role.ADMIN)
+                            .status(AccountStatus.APPROVED)
+                            .build());
+                    }
+                );
+
+                // 2. Seed or Upgrade in AuthIdentity & AuthIdentityRole
+                try {
+                    AuthIdentity identity = authIdentityRepo.findByMobileNumberFlexible(clean10).orElseGet(() ->
+                        authIdentityRepo.save(AuthIdentity.builder()
+                            .mobileNumber(fullPhone)
+                            .status(AccountStatus.APPROVED)
+                            .build())
+                    );
+                    if (authIdentityRoleRepo.findByIdentityAndRole(identity, Role.ADMIN).isEmpty()) {
+                        authIdentityRoleRepo.save(AuthIdentityRole.builder()
+                            .identity(identity)
+                            .role(Role.ADMIN)
+                            .build());
+                    }
+                } catch (Exception ignored) {}
+            }
 
             // Seed pricing if empty
             if (pricingRepo.count() == 0) {

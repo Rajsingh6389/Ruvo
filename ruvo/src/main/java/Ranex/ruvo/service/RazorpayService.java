@@ -16,17 +16,25 @@ import java.util.Map;
 @Service
 public class RazorpayService {
 
-    @Value("${razorpay.key.id}")
+    @Value("${razorpay.key.id:}")
     private String keyId;
 
-    @Value("${razorpay.key.secret}")
+    @Value("${razorpay.key.secret:}")
     private String keySecret;
     
-    @Value("${razorpay.webhook.secret}")
+    @Value("${razorpay.webhook.secret:}")
     private String webhookSecret;
 
+    public String getCleanKeyId() {
+        return keyId != null ? keyId.replace("\"", "").replace("'", "").trim() : "";
+    }
+
+    public String getCleanKeySecret() {
+        return keySecret != null ? keySecret.replace("\"", "").replace("'", "").trim() : "";
+    }
+
     private RazorpayClient getClient() throws RazorpayException {
-        return new RazorpayClient(keyId, keySecret);
+        return new RazorpayClient(getCleanKeyId(), getCleanKeySecret());
     }
 
     public Map<String, Object> createOrder(
@@ -219,6 +227,22 @@ public class RazorpayService {
         try {
             return Utils.verifyWebhookSignature(payload, signature, webhookSecret);
         } catch (RazorpayException e) {
+            return false;
+        }
+    }
+
+    public boolean verifyPaymentSignature(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature) {
+        if (razorpaySignature == null || razorpaySignature.isBlank()) {
+            return false;
+        }
+        try {
+            JSONObject options = new JSONObject();
+            options.put("razorpay_order_id", razorpayOrderId);
+            options.put("razorpay_payment_id", razorpayPaymentId);
+            options.put("razorpay_signature", razorpaySignature);
+            return Utils.verifyPaymentSignature(options, getCleanKeySecret());
+        } catch (Exception e) {
+            System.err.println("Failed to verify payment signature: " + e.getMessage());
             return false;
         }
     }

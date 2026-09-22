@@ -240,6 +240,13 @@ function OnboardingNavigator({ initialStatus }: { initialStatus: string }) {
   );
 }
 
+import { useNotificationHandler } from './hooks/useNotificationHandler';
+
+function NotificationHandlerBridge() {
+  useNotificationHandler();
+  return null;
+}
+
 export const ShopNavigator = () => {
   const { isAuthenticated, isLoading, onboardingStatus } = useAuth();
   const { theme } = useTheme();
@@ -248,6 +255,7 @@ export const ShopNavigator = () => {
   return (
     <View style={{ flex: 1, backgroundColor: '#FAF7F0', position: 'relative' }}>
       <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
+        <NotificationHandlerBridge />
         {isLoading ? (
           <View style={{ flex: 1, backgroundColor: '#FAF7F0' }} />
         ) : (

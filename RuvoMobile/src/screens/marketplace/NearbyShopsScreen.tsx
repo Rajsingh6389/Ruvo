@@ -15,13 +15,14 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import Reanimated, { FadeInDown } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ROUTES } from '../../constants/routes';
+import { getTabBarTotalHeight } from '../../constants/layout';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getNearbyShops, getShops } from '../../services/shopService';
@@ -78,6 +79,8 @@ export const NearbyShopsScreen = () => {
   const { colors, theme: activeTheme } = useTheme();
   const isDark = activeTheme === 'dark';
   const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
 
   // Animation values for cart bounce feedback
   const cartScaleAnim = useRef(new Animated.Value(1)).current;
@@ -558,7 +561,7 @@ export const NearbyShopsScreen = () => {
               onResetCategory={() => (navigation as any).setParams({ category: undefined })}
             />
           ) : selectedShop ? (
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: totalTabBarHeight + (cartItems.length > 0 ? 84 : 24) }}>
               {/* Selected Shop Header */}
               <View style={{ backgroundColor: colors.surface, borderBottomColor: colors.border }} className="border-b p-3 flex-row items-center gap-3">
                 <Image source={{ uri: shopImage(selectedShop) }} style={{ backgroundColor: colors.surfaceSunken }} className="w-12 h-12 rounded-xl" resizeMode="cover" />
@@ -678,25 +681,42 @@ export const NearbyShopsScreen = () => {
 
       {cartItems.length > 0 && (
         <Animated.View
-          style={{ transform: [{ scale: barScaleAnim }], shadowColor: '#000', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.1, shadowRadius: 30, elevation: 20 }}
-          className="absolute bottom-0 left-0 right-0 overflow-hidden rounded-t-[40px] border-t border-white/80"
+          style={{
+            position: 'absolute',
+            bottom: totalTabBarHeight + 8,
+            left: 14,
+            right: 14,
+            zIndex: 90,
+            transform: [{ scale: barScaleAnim }],
+            shadowColor: '#FF7A00',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            elevation: 10,
+          }}
+          className="overflow-hidden rounded-[24px] border border-orange-500/30"
         >
-          <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={{ backgroundColor: isDark ? 'rgba(29,26,24,0.9)' : 'rgba(255,255,255,0.85)' }} className="px-5 pt-4 pb-safe flex-row items-center justify-between">
+          <BlurView
+            intensity={95}
+            tint={isDark ? "dark" : "light"}
+            style={{ backgroundColor: isDark ? 'rgba(23, 26, 31, 0.94)' : 'rgba(255, 255, 255, 0.94)' }}
+            className="px-4 py-2.5 flex-row items-center justify-between"
+          >
             <Pressable className="flex-row items-center gap-3" onPress={() => (navigation.navigate as any)(ROUTES.CART)}>
-              <View className="w-12 h-12 rounded-xl bg-ruvo-yellow items-center justify-center shadow-sm">
-                <Ionicons name="cart" size={24} color="#1A1A1A" />
+              <View className="w-10 h-10 rounded-xl bg-ruvo-yellow items-center justify-center shadow-sm">
+                <Ionicons name="cart" size={20} color="#1A1A1A" />
               </View>
               <View>
-                <Text style={{ color: colors.textSecondary }} className="text-[10px] font-black uppercase tracking-wider">Shopping Cart</Text>
-                <Text style={{ color: colors.textPrimary }} className="font-black text-lg">{cartItems.length} Items</Text>
+                <Text style={{ color: colors.textSecondary }} className="text-[9px] font-black uppercase tracking-wider">Shopping Cart</Text>
+                <Text style={{ color: colors.textPrimary }} className="font-black text-sm">{cartItems.length} {cartItems.length === 1 ? 'Item' : 'Items'}</Text>
               </View>
             </Pressable>
             <Pressable
               onPress={() => (navigation.navigate as any)(ROUTES.CHECKOUT, { fromCart: true })}
-              className="bg-ruvo-yellow rounded-2xl px-5 h-12 items-center justify-center flex-row gap-2"
+              className="bg-ruvo-yellow rounded-xl px-4 h-10 items-center justify-center flex-row gap-1.5 shadow-sm"
             >
-              <Text className="font-black text-ruvo-ink">₹{cartTotal}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#171A1F" />
+              <Text className="font-black text-ruvo-ink text-xs">₹{cartTotal}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#171A1F" />
             </Pressable>
           </BlurView>
         </Animated.View>

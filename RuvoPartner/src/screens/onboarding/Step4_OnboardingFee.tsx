@@ -9,7 +9,7 @@ import {
   View, ScrollView, StyleSheet, Text, Animated,
   TouchableOpacity, KeyboardAvoidingView, Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
@@ -21,6 +21,7 @@ import {
 } from './OnboardingShared';
 
 export const Step4_OnboardingFee = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { colors, typography, spacing, shadows } = useTheme();
   const [accepted, setAccepted] = useState(false);
@@ -73,7 +74,7 @@ export const Step4_OnboardingFee = () => {
       <StepBar current={3} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, paddingBottom: Math.max(insets.bottom, 16) + 32 }]}
           showsVerticalScrollIndicator={false}
         >
           <ScreenHeader

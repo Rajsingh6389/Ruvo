@@ -213,13 +213,21 @@ export const RuvoLaunchScreen: React.FC<RuvoLaunchScreenProps> = ({
     });
   }, [reduceMotion]);
 
-  // Safety fallback timer to guarantee splash dismisses after 2.5s maximum
+  // Safety fallback timer to guarantee splash dismisses after 2.0s maximum
   useEffect(() => {
     const timer = setTimeout(() => {
       setAnimationCompleted(true);
-    }, 2500);
+      Animated.timing(containerOpacity, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }).start(() => {
+        if (onFinish) onFinish();
+      });
+    }, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [onFinish]);
 
   // Once animation finishes and app is ready (auth resolved), fade out seamlessly
   useEffect(() => {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
 
 export const ActiveDevicesScreen = () => {
+  const insets = useSafeAreaInsets();
   const { authenticatedFetch, logout } = useAuth();
   const { colors } = useTheme();
 
@@ -99,7 +101,7 @@ export const ActiveDevicesScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Active Devices</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
@@ -113,7 +115,10 @@ export const ActiveDevicesScreen = () => {
         <FlatList
           data={sessions}
           keyExtractor={(item) => item.sessionId}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(insets.bottom, 16) + 24 }
+          ]}
           renderItem={({ item }) => (
             <View style={styles.sessionCard}>
               <View style={styles.deviceIconBox}>
@@ -146,7 +151,7 @@ export const ActiveDevicesScreen = () => {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

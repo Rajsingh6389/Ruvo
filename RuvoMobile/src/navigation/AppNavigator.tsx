@@ -11,6 +11,7 @@ import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
 import { RootStackParamList } from '../types/navigation';
 import { ROUTES } from '../constants/routes';
+import { getTabBarHeight, getTabBarMarginBottom } from '../constants/layout';
 
 // ─── Auth Screens ──────────────────────────────────────────
 import { SplashScreen }   from '../screens/SplashScreen';
@@ -55,7 +56,8 @@ const MainTabs = () => {
   const insets = useSafeAreaInsets();
 
   const isDark = theme === 'dark';
-  const tabHeight = 66 + Math.max(insets.bottom, 8);
+  const tabHeight = getTabBarHeight(insets.bottom);
+  const tabMarginBottom = getTabBarMarginBottom(insets.bottom);
 
   return (
     <Tab.Navigator
@@ -67,7 +69,7 @@ const MainTabs = () => {
           borderWidth: 0.5,
           height: tabHeight,
           marginHorizontal: 12,
-          marginBottom: Math.max(insets.bottom, 8),
+          marginBottom: tabMarginBottom,
           paddingBottom: Math.max(insets.bottom - 2, 8),
           paddingTop: 8,
           borderRadius: 24,
@@ -137,7 +139,14 @@ const MainTabs = () => {
 };
 
 // ── App Navigator ───────────────────────────────────────────
+import { useNotificationHandler } from '../hooks/useNotificationHandler';
+
 interface AppNavigatorProps { theme: Theme; }
+
+function NotificationHandlerBridge() {
+  useNotificationHandler();
+  return null;
+}
 
 export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -147,6 +156,7 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background, position: 'relative' }}>
       <NavigationContainer theme={theme}>
+        <NotificationHandlerBridge />
         {/* Do not render auth-dependent navigator until initial token check completes */}
         {isLoading ? (
           <View style={{ flex: 1, backgroundColor: colors.background }} />
@@ -184,13 +194,11 @@ export const AppNavigator = ({ theme }: AppNavigatorProps) => {
       </NavigationContainer>
 
       {!launchComplete && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999, backgroundColor: colors.background }}>
-          <RuvoLaunchScreen
-            isReady={!isLoading}
-            roleSubtitle="LOCAL • CONNECTED • MOVING"
-            onFinish={() => setLaunchComplete(true)}
-          />
-        </View>
+        <RuvoLaunchScreen
+          isReady={!isLoading}
+          roleSubtitle="LOCAL • CONNECTED • MOVING"
+          onFinish={() => setLaunchComplete(true)}
+        />
       )}
     </View>
   );

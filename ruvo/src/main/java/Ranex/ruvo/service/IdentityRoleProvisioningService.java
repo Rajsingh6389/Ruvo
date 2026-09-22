@@ -77,4 +77,19 @@ public class IdentityRoleProvisioningService {
         if (!Boolean.TRUE.equals(partner.getApproved())) { partner.setApproved(true); partnerChanged = true; }
         if (partnerChanged) partners.save(partner);
     }
+
+    @Transactional
+    public void provisionCustomer(AuthIdentity identity) {
+        String mobile = identity.getMobileNumber();
+        if (mobile == null) return;
+        users.findByMobileNumberFlexible(mobile).orElseGet(() ->
+                users.save(User.builder()
+                        .name("RuVo User")
+                        .mobileNumber(mobile)
+                        .password(encoder.encode(UUID.randomUUID().toString()))
+                        .role(Role.USER)
+                        .status(AccountStatus.APPROVED)
+                        .walletBalance(java.math.BigDecimal.ZERO)
+                        .build()));
+    }
 }

@@ -13,10 +13,13 @@ public class DeviceToken {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
-    @Column(name = "user_type", nullable = false)
-    private String userType; // USER, SHOP_OWNER, PARTNER
+    @Column(name = "user_type")
+    private String userType; // CUSTOMER, SHOP, PARTNER, ADMIN
+
+    @Column(name = "app_type")
+    private String appType; // CUSTOMER, SHOP, PARTNER, ADMIN
 
     @Column(name = "token", nullable = false, length = 500)
     private String token;
@@ -40,4 +43,28 @@ public class DeviceToken {
 
     @Column(name = "last_used_at")
     private Instant lastUsedAt;
+
+    @PrePersist
+    @PreUpdate
+    public void syncFields() {
+        if (this.appType == null && this.userType != null) {
+            this.appType = this.userType;
+        } else if (this.userType == null && this.appType != null) {
+            this.userType = this.appType;
+        }
+        if (this.createdAt == null) {
+            this.createdAt = Instant.now();
+        }
+        this.updatedAt = Instant.now();
+    }
+
+    public void setAppType(String appType) {
+        this.appType = appType;
+        this.userType = appType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
+        this.appType = userType;
+    }
 }

@@ -12,7 +12,7 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
@@ -20,6 +20,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { API_BASE_URL } from '../config/api';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 interface SelectedShopDetail {
   id: number;
@@ -47,6 +48,8 @@ const formatImgUrl = (url?: string): string | null => {
 };
 
 export const ProfileScreen = () => {
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const { user, token, logout, verificationStatus } = useAuth();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
@@ -150,7 +153,7 @@ export const ProfileScreen = () => {
 
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: totalTabBarHeight + 24 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Profile Card */}

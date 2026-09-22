@@ -10,7 +10,7 @@ import {
   View, ScrollView, StyleSheet, Text, Animated,
   KeyboardAvoidingView, Platform, TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -31,6 +31,7 @@ const BANKS = [
 ];
 
 export const Step5_BankAccount = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { token, userId, user, authenticatedFetch } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
@@ -86,20 +87,36 @@ export const Step5_BankAccount = () => {
       const activePartnerId = user?.userId || (userId ? parseInt(userId, 10) : null);
       if (!activePartnerId) throw new Error('Partner session expired. Please sign in again.');
 
-      const res = await authenticatedFetch(`${API_BASE_URL}/api/partner/razorpay/onboard`, {
+      const res = await authenticatedFetch(`${API_BASE_URL}/api/bank-account/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           partnerId: activePartnerId,
-          bankAccountNumber: accountNumber,
-          ifscCode: ifsc,
-          beneficiaryName: accountHolder,
+          userId: String(activePartnerId),
+          accountHolderName: accountHolder.trim(),
+          accountNumber: accountNumber.trim(),
+          ifscCode: ifsc.trim().toUpperCase(),
           bankName: bankName,
         }),
       });
 
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+      const body = await res.json().catch(() => null);
+      const isSuccess = res.ok && (body?.success === true || body?.verificationStatus === 'READY_FOR_ADMIN');
+
+      if (!isSuccess) {
+        const vStatus = body?.verificationStatus;
+        let errMsg = body?.message || 'Invalid bank account number or details. Please check and try again.';
+        if (vStatus === 'NAME_MISMATCH') {
+          errMsg = body?.message || 'The account holder name does not match the bank records.';
+        } else if (vStatus === 'RISK_HOLD') {
+          errMsg = body?.message || 'Bank verification is on hold for security checks. Please contact support.';
+        } else if (vStatus === 'ACCOUNT_NOT_FOUND' || vStatus === 'RAZORPAY_FAILED' || vStatus === 'FAILED') {
+          errMsg = body?.message || 'Invalid bank account number or details. Account does not exist in bank records.';
+        } else if (vStatus === 'VERIFICATION_ERROR') {
+          errMsg = 'Bank verification provider is temporarily unreachable. Please try again later.';
+        }
+        throw new Error(errMsg);
+      }
 
       stopSpinner();
       setVState('done');
@@ -107,7 +124,7 @@ export const Step5_BankAccount = () => {
     } catch (e: any) {
       stopSpinner();
       setVState('error');
-      setError(e?.message || 'Bank verification failed. Please check details and try again.');
+      setError(e?.message || 'Invalid bank account number or details. Please check and try again.');
     }
   };
 
@@ -124,7 +141,7 @@ export const Step5_BankAccount = () => {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: 120 }]}
+          contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, flexGrow: 1, paddingBottom: Math.max(insets.bottom, 16) + 40 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

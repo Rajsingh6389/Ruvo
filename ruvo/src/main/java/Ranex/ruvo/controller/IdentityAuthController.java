@@ -8,6 +8,7 @@ import Ranex.ruvo.security.JwtService;
 import Ranex.ruvo.service.IdentityRoleProvisioningService;
 import Ranex.ruvo.service.SmsService;
 import org.springframework.http.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -24,6 +25,8 @@ public class IdentityAuthController {
     private final SmsService sms;
     private final IdentityRoleProvisioningService provisioning;
     private final PartnerProfileRepository partnerProfiles;
+    @Value("${ruvo.otp.auto-deliver:false}")
+    private boolean autoDeliverOtp;
 
     public IdentityAuthController(AuthIdentityRepository identities, AuthIdentityRoleRepository roles,
                                   OtpVerificationRepository otps, JwtService jwt, SmsService sms,
@@ -44,8 +47,17 @@ public class IdentityAuthController {
         String code = String.format("%06d", new Random().nextInt(1_000_000));
         otp.setMobileNumber(mobile); otp.setOtpCode(code); otp.setExpiryTime(now.plus(5, ChronoUnit.MINUTES));
         otp.setAttempts(0); otp.setVerified(false); otp.setResendCooldown(now.plus(60, ChronoUnit.SECONDS));
-        otp.setResendCount(otp.getResendCount() + 1); otps.save(otp); sms.sendOtpSms(mobile, code);
-        return ResponseEntity.ok(ApiResponse.ok("OTP sent", Map.of("cooldownSeconds", 60)));
+        otp.setResendCount(otp.getResendCount() + 1); otps.save(otp);
+        boolean smsSent = sms.sendOtpSms(mobile, code);
+        if (!smsSent && !autoDeliverOtp) {
+            otp.setResendCooldown(now); otps.save(otp);
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiResponse.ok("OTP could not be sent. Configure SMS_API_KEY and try again.", null));
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("cooldownSeconds", 60);
+        if (autoDeliverOtp) response.put("otpCode", code);
+        return ResponseEntity.ok(ApiResponse.ok(autoDeliverOtp ? "OTP generated for local development" : "OTP sent", response));
     }
 
     @PostMapping("/otp/verify")
@@ -71,6 +83,8 @@ public class IdentityAuthController {
                     .map(p -> p.getVerificationStatus().name())
                     .orElse("NEW");
             return ResponseEntity.ok(ApiResponse.ok("Authenticated", new AuthToken(jwt.create(identity, role), "Bearer", identity.getId(), role.name(), status)));
+        } else if (role == Role.USER) {
+            provisioning.provisionCustomer(identity);
         }
         return ResponseEntity.ok(ApiResponse.ok("Authenticated", new AuthToken(jwt.create(identity, role), "Bearer", identity.getId(), role.name(), null)));
     }

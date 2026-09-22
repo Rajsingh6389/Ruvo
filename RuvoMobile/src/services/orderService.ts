@@ -35,7 +35,7 @@ export async function initializeCheckout(checkoutData: {
   productName: string;
   quantity: number;
   items?: Array<{ productId: number; productName: string; quantity: number; price?: number }>;
-  paymentMethod: 'COD' | 'ONLINE';
+  paymentMethod: 'COD' | 'ONLINE' | 'TEST_UPI' | 'UPI';
   deliveryAddress: string;
   userLatitude?: number;
   userLongitude?: number;

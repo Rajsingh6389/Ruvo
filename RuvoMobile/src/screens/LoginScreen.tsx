@@ -202,6 +202,7 @@ export const LoginScreen = ({ navigation }: Props) => {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
+      if (body?.data?.otpCode) setOtp(String(body.data.otpCode));
       navigateToStep2();
     } catch (err: any) {
       setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);
@@ -259,8 +260,8 @@ export const LoginScreen = ({ navigation }: Props) => {
           <View style={styles.headerBlock}>
             <View style={[
               styles.logoRing, 
-              { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.8)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
-              isDark ? shadows.md : shadows.sm
+              { backgroundColor: '#000000', borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#E5E7EB' },
+              shadows.md
             ]}>
               <Image
                 source={require('../../assets/images/RuvoIcon.png')}

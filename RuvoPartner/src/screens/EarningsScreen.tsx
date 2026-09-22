@@ -11,15 +11,18 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
 import { Delivery, Earnings, partnerService } from '../services/partnerService';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 export const EarningsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const { token } = useAuth();
 
   const [earnings, setEarnings] = useState<Earnings | null>(null);
@@ -139,7 +142,7 @@ export const EarningsScreen = () => {
               </Animated.View>
             </>
           }
-          contentContainerStyle={{ paddingBottom: 100, flexGrow: 1 }}
+          contentContainerStyle={{ paddingBottom: totalTabBarHeight + 24, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center mt-10">

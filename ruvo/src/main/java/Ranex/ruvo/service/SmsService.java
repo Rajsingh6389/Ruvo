@@ -32,7 +32,7 @@ public class SmsService {
      *
      * @param mobileNumber Target mobile number (e.g. +919876543210 or 9876543210)
      * @param otpCode      Generated 6-digit OTP
-     * @return true if successfully dispatched or simulated
+    * @return true only when the provider confirms dispatch
      */
     public boolean sendOtpSms(String mobileNumber, String otpCode) {
         String cleanMobile = extract10DigitMobile(mobileNumber);
@@ -42,8 +42,8 @@ public class SmsService {
         System.out.println("=================================================");
 
         if (apiKey == null || apiKey.isBlank() || apiKey.contains("${")) {
-            System.out.println("[SMS SERVICE] No SMS API Key configured. Operating in simulated SMS mode.");
-            return true;
+            System.err.println("[SMS SERVICE] SMS_API_KEY is not configured; OTP was not sent.");
+            return false;
         }
 
         try {
@@ -93,12 +93,12 @@ public class SmsService {
             ResponseEntity<String> response = restTemplate.exchange(otpUrl, HttpMethod.GET, entity, String.class);
 
             System.out.println("[SMS SERVICE] Fast2SMS OTP Route Response: " + response.getBody());
-            return response.getStatusCode().is2xxSuccessful();
+                return response.getStatusCode().is2xxSuccessful()
+                    && response.getBody() != null
+                    && response.getBody().contains("\"return\":true");
         } catch (Exception e) {
             System.err.println("[SMS SERVICE WARNING] Fast2SMS error (Account website verification pending in Fast2SMS dashboard): " + e.getMessage());
-            System.out.println(">>> [DEVELOPMENT OTP LOG] OTP Code for " + mobile10Digits + " is: " + otpCode + " <<<");
-            // Return true so authentication flow does not break while Fast2SMS finishes panel verification
-            return true;
+            return false;
         }
     }
 

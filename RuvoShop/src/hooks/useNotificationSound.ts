@@ -1,12 +1,48 @@
 import { Vibration, Platform, Alert } from 'react-native';
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { Audio } from 'expo-av';
 
 const VIBRATION_PATTERN_NEW_ORDER = [0, 500, 200, 500, 200, 800];
 const VIBRATION_PATTERN_NEW_REQUEST = [0, 400, 150, 400, 150, 600];
 
+const shopSoundSource = require('../../assets/images/sound/new_order.wav');
+
+let shopSoundObj: Audio.Sound | null = null;
+
+async function playShopOrderSound() {
+  try {
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (modeErr) {}
+
+    if (shopSoundObj) {
+      await shopSoundObj.replayAsync().catch(async () => {
+        await shopSoundObj?.unloadAsync().catch(() => {});
+        shopSoundObj = null;
+      });
+    }
+
+    if (!shopSoundObj) {
+      const { sound } = await Audio.Sound.createAsync(
+        shopSoundSource,
+        { shouldPlay: true, volume: 1.0 }
+      );
+      shopSoundObj = sound;
+      await sound.playAsync().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[RuvoShop Sound] Audio play error:', err);
+  }
+}
+
 /**
  * Hook that detects when new orders arrive and triggers
- * vibration + visual alert.
+ * vibration + audio sound + visual alert.
  *
  * @param pendingCount - number of SHOP_PENDING orders
  */
@@ -24,11 +60,13 @@ export const useOrderNotificationSound = (pendingCount: number) => {
   }, [pendingCount]);
 
   const triggerNewOrderAlert = useCallback((count: number) => {
-    // Vibrate with a distinctive pattern
+    // 1. Play real audio sound file
+    playShopOrderSound();
+
+    // 2. Vibrate with a distinctive pattern
     if (Platform.OS === 'android') {
       Vibration.vibrate(VIBRATION_PATTERN_NEW_ORDER, false);
     } else {
-      // iOS only supports fixed-length vibrate
       Vibration.vibrate(1000);
     }
 

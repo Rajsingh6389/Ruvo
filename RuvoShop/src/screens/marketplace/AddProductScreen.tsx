@@ -63,25 +63,43 @@ const InputField = ({ label, icon, value, onChangeText, placeholder, errorText, 
 
 export const AddProductScreen = () => {
   const route = useRoute<any>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { token, user, userId } = useAuth();
   const { showToast } = useToast();
 
   const [shopId, setShopId] = useState<number | string | undefined>(route.params?.shopId);
+  const [shopName, setShopName] = useState<string | null>(route.params?.shopName || null);
+  const [resolvingShop, setResolvingShop] = useState(!route.params?.shopId);
 
   useEffect(() => {
     async function resolveShopId() {
-      if (!shopId && token && (userId || user)) {
+      if (shopId) {
+        setResolvingShop(false);
+        return;
+      }
+      if (token) {
+        setResolvingShop(true);
         try {
-          const ownerId = userId || user?.email || '';
-          const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
+          const ownerId = userId || user?.id || user?.email || '';
+          let res = await fetch(`${API_BASE_URL}/api/shops/mine${ownerId ? `?ownerId=${encodeURIComponent(String(ownerId))}` : ''}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
+          if (!res.ok) {
+            res = await fetch(`${API_BASE_URL}/api/shops/mine`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          }
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
             setShopId(data[0].id);
+            setShopName(data[0].name || null);
           }
-        } catch (e) {}
+        } catch (e) {
+        } finally {
+          setResolvingShop(false);
+        }
+      } else {
+        setResolvingShop(false);
       }
     }
     resolveShopId();
@@ -156,7 +174,10 @@ export const AddProductScreen = () => {
   const handleSubmit = async () => {
     if (!validate()) return;
     if (!token) { showToast('You are not logged in', 'error'); return; }
-    if (!shopId) { showToast('Could not link to your shop', 'error'); return; }
+    if (!shopId) {
+      showToast('No shop is linked to your account. Please register your shop first.', 'error');
+      return;
+    }
     setLoading(true);
     try {
       const ap = parseFloat(actualPrice);
@@ -205,16 +226,48 @@ export const AddProductScreen = () => {
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-xl font-black text-gray-900 tracking-tight">Add New Product</Text>
-          <Text className="text-[11px] text-[#FF7A00] font-black uppercase tracking-widest mt-0.5">Grow Your Catalog</Text>
+          <Text className="text-[11px] text-[#FF7A00] font-black uppercase tracking-widest mt-0.5">
+            {shopName ? `Shop: ${shopName}` : 'Grow Your Catalog'}
+          </Text>
         </View>
       </View>
 
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 250 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 250 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Shop Status Banner */}
+          {!shopId && !resolvingShop && (
+            <Animated.View entering={FadeInUp.duration(400)} className="mb-4">
+              <View className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex-row items-center gap-3 shadow-sm">
+                <View className="w-10 h-10 rounded-full bg-amber-100 items-center justify-center">
+                  <Ionicons name="alert-circle" size={22} color="#D97706" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs font-black text-amber-900 uppercase tracking-wider">No Shop Connected</Text>
+                  <Text className="text-xs text-amber-700 mt-0.5">Please register your shop before adding products.</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Onboarding' as any, { screen: 'Step1_ShopDetails' })}
+                  className="bg-[#FF7A00] px-3 py-2 rounded-xl active:opacity-80"
+                >
+                  <Text className="text-[11px] font-black text-white uppercase tracking-wider">Register</Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          )}
+
+          {shopName && (
+            <View className="flex-row items-center gap-2 bg-emerald-50 border border-emerald-200/60 rounded-xl px-3.5 py-2 mb-4">
+              <Ionicons name="checkmark-circle" size={16} color="#059669" />
+              <Text className="text-xs font-bold text-emerald-800 flex-1" numberOfLines={1}>
+                Adding to: <Text className="font-black">{shopName}</Text>
+              </Text>
+            </View>
+          )}
+
           {/* Product Photos */}
           <Animated.View entering={FadeInUp.duration(500)}>
             <View className="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 mb-6 relative overflow-hidden">

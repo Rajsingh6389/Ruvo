@@ -95,7 +95,7 @@ export const AuthProvider = ({
 
         if (!mounted) return;
 
-        if (storedToken && storedRole === requiredRole) {
+        if (storedToken && (!storedRole || storedRole.toUpperCase() === requiredRole.toUpperCase())) {
           // Restore authentication immediately
           setToken(storedToken);
           setUserId(storedUserId);
@@ -143,17 +143,19 @@ export const AuthProvider = ({
     newUserId: string,
     role: string
   ): Promise<void> => {
-    if (role !== requiredRole) throw new Error(`This app requires a ${requiredRole} session.`);
+    if (role && role.toUpperCase() !== requiredRole.toUpperCase()) {
+      throw new Error(`This app requires a ${requiredRole} session.`);
+    }
 
     // Store token securely
     await SecureStore.setItemAsync('authToken', newToken);
     await AsyncStorage.multiSet([
-      ['userId', newUserId],
-      ['userRole', role],
+      ['userId', String(newUserId)],
+      ['userRole', role || requiredRole],
     ]);
 
     setToken(newToken);
-    setUserId(newUserId);
+    setUserId(String(newUserId));
     setIsAuthenticated(true);
 
     // Login is already successful.
@@ -203,10 +205,36 @@ export const AuthProvider = ({
     // @ts-ignore - React Native DOM fetch signature variance on global interceptor
     globalThis.fetch = async (...args: Parameters<typeof fetch>) => {
       const response = await originalFetch(...args);
-      const initInfo = args[1] as RequestInit | undefined;
-      const skipGlobal = initInfo?.headers && (initInfo.headers as any)['X-Skip-Global-401'];
-      if (response.status === 401 && !skipGlobal) {
-        logoutRef.current();
+      try {
+        const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url || '';
+        const initInfo = args[1] as RequestInit | undefined;
+        let skipGlobal = false;
+        if (initInfo?.headers) {
+          if (typeof (initInfo.headers as any).get === 'function') {
+            skipGlobal = (initInfo.headers as any).get('X-Skip-Global-401') === 'true' || (initInfo.headers as any).get('x-skip-global-401') === 'true';
+          } else if (typeof initInfo.headers === 'object') {
+            skipGlobal = (initInfo.headers as any)['X-Skip-Global-401'] === 'true' || (initInfo.headers as any)['x-skip-global-401'] === 'true';
+          }
+        }
+
+        const isAuthRoute = url.includes('/api/auth/') || url.includes('/auth/me');
+
+        let hasAuth = false;
+        if (initInfo?.headers) {
+          if (typeof (initInfo.headers as any).get === 'function') {
+            hasAuth = !!(initInfo.headers as any).get('Authorization') || !!(initInfo.headers as any).get('authorization');
+          } else if (typeof initInfo.headers === 'object') {
+            hasAuth = !!(initInfo.headers as any)['Authorization'] || !!(initInfo.headers as any)['authorization'];
+          }
+        }
+
+        // Only logout if it's a 401 on an authenticated business route (not auth/me, not login/verify, not with skip flag)
+        if (response.status === 401 && !skipGlobal && !isAuthRoute && hasAuth) {
+          console.warn('[Auth] Protected API returned 401 Unauthorized with auth header. Logging out.');
+          logoutRef.current();
+        }
+      } catch (e) {
+        // Safe failover
       }
       return response;
     };

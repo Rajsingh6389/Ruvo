@@ -28,8 +28,8 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
   const banners = data || defaultBanners;
   const bannerGap = 12;
   const horizontalPadding = sw(16);
-  const bannerWidth = Math.min(screenWidth - horizontalPadding * 2, 430);
-  const bannerHeight = Math.max(138, Math.min(sh(180), 190));
+  const bannerWidth = Math.min(screenWidth - horizontalPadding * 2, 440);
+  const bannerHeight = Math.max(136, Math.min(Math.round(bannerWidth * 0.46), 180));
 
   const scrollX = React.useRef(new Animated.Value(0)).current;
   const dotScale = React.useRef(new Animated.Value(1)).current;
@@ -97,12 +97,12 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
           ];
           const scale = scrollX.interpolate({
             inputRange,
-            outputRange: [1.2, 1, 1.2],
+            outputRange: [1.02, 1, 1.02],
             extrapolate: 'clamp',
           });
           const textOpacity = scrollX.interpolate({
             inputRange,
-            outputRange: [0.4, 1, 0.4],
+            outputRange: [0.7, 1, 0.7],
             extrapolate: 'clamp',
           });
 
@@ -116,10 +116,13 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
               {
                 width: bannerWidth,
                 height: bannerHeight,
-                borderRadius: radius.hero,
+                borderRadius: 20,
+                backgroundColor: colors.surfaceSunken,
+                borderWidth: 1,
+                borderColor: colors.border,
                 overflow: 'hidden',
               },
-              shadows.lg,
+              shadows.md,
             ]}
           >
             <Animated.Image
@@ -128,7 +131,7 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
               resizeMode="cover"
             />
             {(banner.title || banner.subtitle) && (
-              <Animated.View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.5)', opacity: textOpacity }]}>
+              <Animated.View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.45)', opacity: textOpacity }]}>
                 <View style={styles.content}>
                   {!!banner.title && (
                     <Text style={[typography.headingXL, styles.title, { 
@@ -161,24 +164,26 @@ export const RuvoBanner: React.FC<RuvoBannerProps> = ({
         })}
       </Animated.ScrollView>
 
-      <View style={styles.dotsContainer}>
-        {banners.map((_, index) => {
-          const isActive = index === activeIndex;
-          return (
-            <Animated.View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor: isActive ? colors.primary : colors.border,
-                  width: isActive ? sw(24) : sw(8),
-                },
-                isActive && animatedDotStyle,
-              ]}
-            />
-          );
-        })}
-      </View>
+      {banners.length > 1 && (
+        <View style={styles.dotsContainer}>
+          {banners.map((_, index) => {
+            const isActive = index === activeIndex;
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor: isActive ? '#FF7A00' : (colors.border || '#E5E7EB'),
+                    width: isActive ? sw(22) : sw(7),
+                  },
+                  isActive && animatedDotStyle,
+                ]}
+              />
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 };

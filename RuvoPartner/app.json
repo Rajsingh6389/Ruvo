@@ -22,7 +22,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#173F35"
+        "backgroundColor": "#000000"
       },
       "config": {
         "googleMaps": {
@@ -36,19 +36,21 @@
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7F8F3"
-    },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
       "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
       "@react-native-community/datetimepicker",
       [
         "expo-location",
@@ -57,6 +59,7 @@
         }
       ],
       "expo-status-bar",
+      "expo-notifications",
       [
         "expo-build-properties",
         {

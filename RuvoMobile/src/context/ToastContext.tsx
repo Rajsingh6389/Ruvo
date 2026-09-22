@@ -9,6 +9,8 @@ import React, {
 } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 type ToastType = 'success' | 'info' | 'error';
 
@@ -79,6 +81,8 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const backgroundColor =
     type === 'error' ? '#C62828' : type === 'info' ? '#1B5E20' : '#2E7D32';
 
+  const insets = useSafeAreaInsets();
+  const bottomOffset = getTabBarTotalHeight(insets.bottom) + 16;
   const value = useMemo(() => ({ showToast }), [showToast]);
 
   return (
@@ -89,7 +93,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
           pointerEvents="none"
           style={[
             styles.toast,
-            { backgroundColor, opacity, transform: [{ translateY }] },
+            { backgroundColor, opacity, transform: [{ translateY }], bottom: bottomOffset },
           ]}
         >
           <Ionicons name={iconName} size={18} color="#FFFFFF" />
@@ -109,7 +113,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    bottom: 88,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,

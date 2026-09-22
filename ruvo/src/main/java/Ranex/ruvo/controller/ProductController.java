@@ -38,6 +38,9 @@ public class ProductController {
     private ShopRepository shopRepository;
 
     @Autowired
+    private Ranex.ruvo.repository.AuthIdentityRepository authIdentityRepository;
+
+    @Autowired
     private CloudinaryService cloudinaryService;
 
 
@@ -105,22 +108,44 @@ public class ProductController {
     // =========================================================
 
     private boolean ownsShop(Long shopId) {
+        if (isAdmin()) return true;
         String principal = getCurrentPrincipal();
         if (principal == null) return false;
         Optional<Shop> shopOpt = shopRepository.findById(shopId);
         if (shopOpt.isEmpty()) return false;
         Shop shop = shopOpt.get();
-        // Legacy sessions use email/mobile as the JWT subject. Central Shop Owner
-        // OTP sessions use identity:<id>; registrations stored that same ID in
-        // ownerId and, for new records, authIdentityId.
+
         if (principal.startsWith("identity:")) {
             try {
                 Long identityId = Long.parseLong(principal.substring("identity:".length()));
                 String identityIdStr = String.valueOf(identityId);
-                // Check authIdentityId first (set by ShopOwnerController and updated ShopController)
+                // Check authIdentityId first
                 if (identityId.equals(shop.getAuthIdentityId())) return true;
-                // Fall back to ownerId comparison (for shops created before authIdentityId was added)
+                // Check ownerId comparison
                 if (identityIdStr.equals(shop.getOwnerId())) return true;
+
+                // Check mobile number match from AuthIdentity
+                Optional<Ranex.ruvo.model.AuthIdentity> identOpt = authIdentityRepository.findById(identityId);
+                if (identOpt.isPresent()) {
+                    String mobile = identOpt.get().getMobileNumber();
+                    String clean = mobile != null ? mobile.replaceAll("[^0-9]", "") : "";
+                    if (clean.length() == 12 && clean.startsWith("91")) clean = clean.substring(2);
+
+                    if (mobile != null && (mobile.equals(shop.getPhone()) || mobile.equals(shop.getOwnerId()))) {
+                        if (shop.getAuthIdentityId() == null) {
+                            shop.setAuthIdentityId(identityId);
+                            shopRepository.save(shop);
+                        }
+                        return true;
+                    }
+                    if (!clean.isEmpty() && (clean.equals(shop.getPhone()) || clean.equals(shop.getOwnerId()))) {
+                        if (shop.getAuthIdentityId() == null) {
+                            shop.setAuthIdentityId(identityId);
+                            shopRepository.save(shop);
+                        }
+                        return true;
+                    }
+                }
                 return false;
             } catch (NumberFormatException ignored) {
                 return false;

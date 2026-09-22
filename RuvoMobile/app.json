@@ -12,7 +12,7 @@
       "package": "com.ruvo.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/RuvoIcon.png",
-        "backgroundColor": "#173F35"
+        "backgroundColor": "#000000"
       },
       "config": {
         "googleMaps": {
@@ -38,16 +38,19 @@
         "NSPhotoLibraryUsageDescription": "RuVo needs photo library access to select images for uploads."
       }
     },
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
       "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
       [
         "expo-location",
         {
@@ -63,7 +66,7 @@
       "expo-asset",
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
+      "expo-notifications",
       [
         "expo-build-properties",
         {

@@ -5,9 +5,44 @@ import { Audio } from 'expo-av';
 const VIBRATION_PATTERN_NEW_REQUEST = [0, 400, 150, 400, 150, 600];
 const VIBRATION_PATTERN_NEW_ORDER = [0, 500, 200, 500, 200, 800];
 
+const soundSource = require('../../assets/sound/delivery_request.wav');
+
+let partnerSoundObj: Audio.Sound | null = null;
+
+async function playDeliverySound() {
+  try {
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (modeErr) {}
+
+    if (partnerSoundObj) {
+      await partnerSoundObj.replayAsync().catch(async () => {
+        await partnerSoundObj?.unloadAsync().catch(() => {});
+        partnerSoundObj = null;
+      });
+    }
+
+    if (!partnerSoundObj) {
+      const { sound } = await Audio.Sound.createAsync(
+        soundSource,
+        { shouldPlay: true, volume: 1.0 }
+      );
+      partnerSoundObj = sound;
+      await sound.playAsync().catch(() => {});
+    }
+  } catch (err) {
+    console.warn('[RuvoPartner Sound] Audio play error:', err);
+  }
+}
+
 /**
  * Hook for delivery partner - detects incoming delivery requests
- * and triggers vibration + visual popup alert.
+ * and triggers vibration + audio sound + visual popup alert.
  *
  * @param hasIncomingRequest - boolean indicating a new request arrived
  */
@@ -24,14 +59,15 @@ export const useDeliveryRequestSound = (hasIncomingRequest: boolean) => {
   }, [hasIncomingRequest]);
 
   const triggerRequestAlert = useCallback(async () => {
-    // Vibrate with a distinctive pattern
+    // 1. Play real audio sound file
+    playDeliverySound();
+
+    // 2. Vibrate with a distinctive pattern
     if (Platform.OS === 'android') {
       Vibration.vibrate(VIBRATION_PATTERN_NEW_REQUEST, false);
     } else {
       Vibration.vibrate(800);
     }
-
-    // Vibration alert (no expo-av native module dependency)
 
     setPopupMessage('New delivery request!');
     setShowPopup(true);
@@ -66,6 +102,10 @@ export const useNewDeliverySound = (deliveryCount: number) => {
   }, [deliveryCount]);
 
   const triggerAlert = useCallback((count: number) => {
+    // 1. Play real audio sound file
+    playDeliverySound();
+
+    // 2. Vibrate
     if (Platform.OS === 'android') {
       Vibration.vibrate(VIBRATION_PATTERN_NEW_ORDER, false);
     } else {
@@ -93,6 +133,7 @@ export const useNewDeliverySound = (deliveryCount: number) => {
  * Manual trigger - call from anywhere
  */
 export const playNotificationAlert = () => {
+  playDeliverySound();
   if (Platform.OS === 'android') {
     Vibration.vibrate(VIBRATION_PATTERN_NEW_REQUEST, false);
   } else {

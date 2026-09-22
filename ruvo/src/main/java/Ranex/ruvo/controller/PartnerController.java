@@ -239,27 +239,54 @@ public class PartnerController {
     public ResponseEntity<List<Delivery>> getActiveDeliveries(
             @AuthenticationPrincipal org.springframework.security.core.userdetails.User principal) {
 
-        // Delivery.partnerId references DeliveryPartner.id — NOT User.id.
-        // We must resolve the DeliveryPartner record to get the correct ID.
         DeliveryPartner dp = resolveDeliveryPartner(principal);
-        if (dp == null) {
-            // Fallback: try via User ID (legacy delivery records if any)
+        Long partnerId = null;
+        if (dp != null) {
+            partnerId = dp.getId();
+        } else if (principal != null) {
             try {
-                User partner = userRepository.findByMobileNumber(principal.getUsername())
-                        .orElseThrow(() -> new RuntimeException("Partner not found"));
-                List<Delivery> allDeliveries = deliveryRepository.findByPartnerId(partner.getId());
-                List<Delivery> active = allDeliveries.stream()
-                        .filter(d -> "ASSIGNED".equalsIgnoreCase(d.getStatus())
-                                || "PICKED_UP".equalsIgnoreCase(d.getStatus())
-                                || "OUT_FOR_DELIVERY".equalsIgnoreCase(d.getStatus()))
-                        .toList();
-                return ResponseEntity.ok(active);
-            } catch (Exception e) {
-                return ResponseEntity.ok(List.of());
-            }
+                User partner = userRepository.findByMobileNumber(principal.getUsername()).orElse(null);
+                if (partner != null) partnerId = partner.getId();
+            } catch (Exception ignored) {}
         }
 
-        List<Delivery> allDeliveries = deliveryRepository.findByPartnerId(dp.getId());
+        if (partnerId == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        // Auto-heal: Ensure any active order assigned to this partner has a Delivery entity in deliveryRepository
+        try {
+            List<Order> assignedOrders = orderRepository.findByDeliveryPartnerId(partnerId);
+            for (Order o : assignedOrders) {
+                String s = o.getOrderStatus();
+                if (s != null && ("DELIVERY_ASSIGNED".equals(s) || "PICKED_UP".equals(s) || "OUT_FOR_DELIVERY".equals(s))) {
+                    Delivery d = deliveryRepository.findByOrderId(o.getId()).orElse(null);
+                    String dStatus = "DELIVERY_ASSIGNED".equals(s) ? "ASSIGNED" : s;
+                    if (d == null) {
+                        Shop shop = o.getShopId() != null ? shopRepository.findById(o.getShopId()).orElse(null) : null;
+                        String pickupAddress = shop != null && shop.getAddress() != null ? shop.getAddress() : "Shop Location";
+                        d = Delivery.builder()
+                                .orderId(o.getId())
+                                .partnerId(partnerId)
+                                .status(dStatus)
+                                .pickupLocation(pickupAddress)
+                                .deliveryLocation(o.getDeliveryAddress() != null ? o.getDeliveryAddress() : "Customer Address")
+                                .deliveryFee(o.getDeliveryFee() != null ? o.getDeliveryFee().doubleValue() : 40.0)
+                                .assignedAt(Instant.now())
+                                .build();
+                        deliveryRepository.save(d);
+                    } else if (!partnerId.equals(d.getPartnerId()) || !dStatus.equals(d.getStatus())) {
+                        d.setPartnerId(partnerId);
+                        d.setStatus(dStatus);
+                        deliveryRepository.save(d);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[PartnerController] Auto-heal deliveries failed: " + e.getMessage());
+        }
+
+        List<Delivery> allDeliveries = deliveryRepository.findByPartnerId(partnerId);
         List<Delivery> active = allDeliveries.stream()
                 .filter(d -> "ASSIGNED".equalsIgnoreCase(d.getStatus())
                         || "PICKED_UP".equalsIgnoreCase(d.getStatus())

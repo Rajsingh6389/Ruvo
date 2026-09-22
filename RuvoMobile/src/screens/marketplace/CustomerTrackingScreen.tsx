@@ -13,7 +13,7 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,9 +24,6 @@ import { API_BASE_URL } from '../../config/api';
 
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { Client } from '@stomp/stompjs';
-// @ts-ignore
-import SockJS from 'sockjs-client';
-import 'text-encoding';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CANCELLED_STATUSES = [
@@ -91,7 +88,7 @@ const RUVO_FACTS = [
     badge: '10-15 MINS',
     bg: '#FFF2EC',
     border: '#FFE0D3',
-    iconBg: '#FF6B35',
+    iconBg: '#FF7A00',
   },
   {
     id: '2',
@@ -99,9 +96,9 @@ const RUVO_FACTS = [
     title: 'Support Local Sellers 🏪',
     subtitle: 'Every order directly empowers real shopkeepers in your own colony & city.',
     badge: 'LOCAL FIRST',
-    bg: '#ECFDF5',
-    border: '#A7F3D0',
-    iconBg: '#059669',
+    bg: '#FFF8EB',
+    border: '#FEE5B3',
+    iconBg: '#F4B400',
   },
   {
     id: '3',
@@ -109,9 +106,9 @@ const RUVO_FACTS = [
     title: 'Zero Surge Pricing Ever 🛡️',
     subtitle: 'No rain fees or unexpected surge price hikes. Fair & honest delivery charges always.',
     badge: 'FAIR PRICE',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-    iconBg: '#2563EB',
+    bg: '#F8F9FA',
+    border: '#E5E7EB',
+    iconBg: '#171A1F',
   },
   {
     id: '4',
@@ -119,14 +116,15 @@ const RUVO_FACTS = [
     title: '100% Fresh Guaranteed 🌿',
     subtitle: 'Fresh dairy, fruits, vegetables and essentials packed right before dispatch.',
     badge: 'SUPER FRESH',
-    bg: '#FEF3C7',
-    border: '#FDE68A',
-    iconBg: '#D97706',
+    bg: '#FFF7ED',
+    border: '#FFEDD5',
+    iconBg: '#EA580C',
   },
 ];
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function CustomerTrackingScreen() {
+  const insets      = useSafeAreaInsets();
   const navigation  = useNavigation<any>();
   const route       = useRoute<any>();
   const { colors, typography, radius, shadows, spacing }  = useTheme();
@@ -431,7 +429,7 @@ export default function CustomerTrackingScreen() {
       {/* ── OVERLAPPING BOTTOM SHEET CONTENT ─────────────────────────────── */}
       <ScrollView
         style={styles.sheetContainer}
-        contentContainerStyle={styles.sheetContent}
+        contentContainerStyle={[styles.sheetContent, { paddingBottom: Math.max(insets.bottom, 16) + 40 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#FF7A00" />}
       >
@@ -702,8 +700,8 @@ export default function CustomerTrackingScreen() {
           </View>
         </View>
 
-        {/* Delivery Verification OTP Card - Only shown when OUT_FOR_DELIVERY */}
-        {!isCancelled && (order.orderStatus === 'OUT_FOR_DELIVERY' || order.orderStatus === 'PICKED_UP') && (
+        {/* Delivery Verification OTP Card */}
+        {!isCancelled && order.orderStatus !== 'DELIVERED' && Boolean(order.deliveryOtpHash) && (
           <View style={styles.otpBox}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name="key-outline" size={18} color="#171A1F" />

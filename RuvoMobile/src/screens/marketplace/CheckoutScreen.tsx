@@ -5,14 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Image,
   Linking,
   TextInput,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { getDeliveryLocationLabel, useDeliveryLocation } from '../../context/DeliveryLocationContext';
@@ -45,6 +46,10 @@ export default function CheckoutScreen() {
   const { cartItems, clearCart } = useCart();
   const { location } = useDeliveryLocation();
   const { showToast } = useToast();
+  const { colors, theme } = useTheme();
+  const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, 12);
 
   const routeProduct = route.params?.product as Product | undefined;
   const routeQuantity = route.params?.quantity as number | undefined;
@@ -62,7 +67,7 @@ export default function CheckoutScreen() {
   }, [cartItems, fromCart, routeProduct, routeQuantity]);
 
   const primaryItem = checkoutItems[0];
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'CASHFREE'>('CASHFREE');
+  const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'COD'>('ONLINE');
   const [submitting, setSubmitting] = useState(false);
   const [locationPickerVisible, setLocationPickerVisible] = useState(false);
 
@@ -227,56 +232,45 @@ export default function CheckoutScreen() {
         };
       });
 
-      if (paymentMethod === 'CASHFREE') {
-        const checkoutRes = await initializeCashfreeCheckout(
-          {
-            userId: String(userId),
-            shopId: validShopId,
-            productId: primaryItem.product.id || 1,
-            productName: primaryItem.product.name,
-            quantity: primaryItem.quantity,
-            deliveryAddress,
-            customerPhone: location.details.phone || user?.mobileNumber || undefined,
-            customerEmail: user?.email || undefined,
-            userLatitude: location.latitude,
-            userLongitude: location.longitude,
-          },
-          token,
-        );
+      const chosenBackendMethod: 'TEST_UPI' | 'UPI' | 'COD' =
+        paymentMethod === 'COD' ? 'COD' : 'TEST_UPI';
 
-        setSubmitting(false);
-        if (checkoutRes.success && checkoutRes.paymentUrl) {
-          if (fromCart) clearCart();
-          Linking.openURL(checkoutRes.paymentUrl);
-        } else {
-          showToast(checkoutRes.message || 'Failed to initialize Cashfree payment.', 'error');
+      if (paymentMethod === 'UPI') {
+        const upiUrl = `upi://pay?pa=ruvo.merchant@okhdfcbank&pn=RuVo%20Marketplace&am=${grandTotal.toFixed(2)}&cu=INR&tn=Order-RuVo`;
+        try {
+          const canOpen = await Linking.canOpenURL(upiUrl);
+          if (canOpen) {
+            await Linking.openURL(upiUrl);
+          }
+        } catch (e) {
+          console.log('[Checkout] UPI deep link could not be opened directly:', e);
         }
-      } else {
-        const result = await initializeCheckout(
-          {
-            userId: String(userId),
-            shopId: validShopId,
-            productId: primaryItem.product.id || 1,
-            productName: primaryItem.product.name,
-            quantity: primaryItem.quantity,
-            items: formattedItems,
-            paymentMethod: 'COD',
-            deliveryAddress,
-            userLatitude: location.latitude,
-            userLongitude: location.longitude,
-            customerName: location.details.receiverName || user?.name,
-            customerPhone: location.details.phone || user?.mobileNumber,
-          },
-          token,
-        );
-
-        setSubmitting(false);
-        if (fromCart) clearCart();
-        navigation.replace(ROUTES.ORDER_SUCCESS, {
-          orderId: result.orderId,
-          total: grandTotal,
-        });
       }
+
+      const result = await initializeCheckout(
+        {
+          userId: String(userId),
+          shopId: validShopId,
+          productId: primaryItem.product.id || 1,
+          productName: primaryItem.product.name,
+          quantity: primaryItem.quantity,
+          items: formattedItems,
+          paymentMethod: chosenBackendMethod,
+          deliveryAddress,
+          userLatitude: location.latitude,
+          userLongitude: location.longitude,
+          customerName: location.details.receiverName || user?.name,
+          customerPhone: location.details.phone || user?.mobileNumber,
+        },
+        token,
+      );
+
+      setSubmitting(false);
+      if (fromCart) clearCart();
+      navigation.replace(ROUTES.ORDER_SUCCESS, {
+        orderId: result.orderId,
+        total: grandTotal,
+      });
     } catch (err: any) {
       setSubmitting(false);
       const errorMsg = err?.message || err?.toString() || 'Could not place order. Please check connection.';
@@ -319,7 +313,7 @@ export default function CheckoutScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 + bottomPadding }}
         showsVerticalScrollIndicator={false}
       >
         {/* ORDER ITEMS */}
@@ -414,19 +408,19 @@ export default function CheckoutScreen() {
 
           <TouchableOpacity
             className={`flex-row items-center p-3.5 rounded-xl border ${
-              paymentMethod === 'CASHFREE' ? 'border-[#FF7A00] bg-orange-50/40' : 'border-gray-100 bg-white'
+              paymentMethod === 'ONLINE' ? 'border-[#FF7A00] bg-orange-50/40' : 'border-gray-100 bg-white'
             }`}
             activeOpacity={0.7}
-            onPress={() => setPaymentMethod('CASHFREE')}
+            onPress={() => setPaymentMethod('ONLINE')}
           >
             <Ionicons
-              name={paymentMethod === 'CASHFREE' ? 'radio-button-on' : 'radio-button-off'}
+              name={paymentMethod === 'ONLINE' ? 'radio-button-on' : 'radio-button-off'}
               size={20}
-              color={paymentMethod === 'CASHFREE' ? '#FF7A00' : '#9CA3AF'}
+              color={paymentMethod === 'ONLINE' ? '#FF7A00' : '#9CA3AF'}
             />
             <View className="ml-3 flex-1">
               <Text className="text-[#171A1F] text-sm font-extrabold">
-                UPI / Online Payment (Cashfree)
+                UPI / Online Payment
               </Text>
               <Text className="text-gray-500 text-xs mt-0.5 font-medium">
                 Instant pay via Google Pay, PhonePe, Paytm, Cards, NetBanking
@@ -584,10 +578,20 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* FOOTER */}
-      <View className="bg-white px-4 py-3.5 border-t border-ruvo-border flex-row items-center justify-between shadow-lg">
+      <View
+        style={{
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          paddingBottom: bottomPadding + 8,
+          paddingTop: 12,
+          paddingHorizontal: 16,
+        }}
+        className="flex-row items-center justify-between shadow-lg"
+      >
         <View>
-          <Text className="text-ruvo-muted text-[10px] font-black uppercase tracking-wider">Total Amount</Text>
-          <Text className="text-2xl font-black text-ruvo-ink">
+          <Text style={{ color: colors.textSecondary }} className="text-[10px] font-black uppercase tracking-wider">Total Amount</Text>
+          <Text style={{ color: colors.textPrimary }} className="text-2xl font-black">
             {pricingLoading ? '...' : `₹${grandTotal}`}
           </Text>
         </View>

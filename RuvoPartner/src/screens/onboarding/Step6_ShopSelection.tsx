@@ -10,7 +10,7 @@ import {
   View, ScrollView, StyleSheet, Text, TouchableOpacity,
   ActivityIndicator, FlatList, RefreshControl, Modal, Platform, Dimensions, Image, Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
@@ -87,6 +87,7 @@ interface ShopMapModalProps {
 const ShopMapModal: React.FC<ShopMapModalProps> = ({
   shop, visible, isSelected, onToggle, onClose, colors, typography,
 }) => {
+  const insets = useSafeAreaInsets();
   const [loading,  setLoading]  = useState(false);
   const [region,   setRegion]   = useState<Region | null>(null);
   const mapRef = useRef<MapView>(null);
@@ -173,7 +174,10 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
         )}
 
         {/* Address & Gallery info card */}
-        <ScrollView style={[mms.infoCard, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        <ScrollView
+          style={[mms.infoCard, { backgroundColor: colors.card, borderTopColor: colors.border }]}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}
+        >
           <View style={mms.infoRow}>
             {shop.logo ? (
               <Image source={{ uri: shop.logo }} style={mms.shopLogoImg} />
@@ -251,6 +255,7 @@ const ShopMapModal: React.FC<ShopMapModalProps> = ({
 };
 
 export const Step6_ShopSelection = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute();
   // Detect if opened as post-approval ManageShops vs onboarding Step6
@@ -560,7 +565,7 @@ export const Step6_ShopSelection = () => {
       {!isManageMode && <StepBar current={5} colors={colors} typography={typography} />}
 
       <ScrollView
-        contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]}
+        contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, paddingBottom: Math.max(insets.bottom, 16) + 32 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

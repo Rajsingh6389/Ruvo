@@ -982,8 +982,18 @@ public class RazorpayRouteService {
         }
     }
 
+    public String getCleanKeyId() {
+        return keyId != null ? keyId.replace("\"", "").replace("'", "").trim() : "";
+    }
+
+    public String getCleanKeySecret() {
+        return keySecret != null ? keySecret.replace("\"", "").replace("'", "").trim() : "";
+    }
+
     private boolean isCredentialsConfigured() {
-        return keyId != null && !keyId.isBlank() && keySecret != null && !keySecret.isBlank();
+        String cleanId = getCleanKeyId();
+        String cleanSecret = getCleanKeySecret();
+        return !cleanId.isBlank() && !cleanSecret.isBlank();
     }
 
     private String sanitizePhone(String phone) {
@@ -1015,7 +1025,7 @@ public class RazorpayRouteService {
                 .connectTimeout(java.time.Duration.ofSeconds(10))
                 .build();
         
-        String auth = keyId + ":" + keySecret;
+        String auth = getCleanKeyId() + ":" + getCleanKeySecret();
         String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
         
         java.net.http.HttpRequest.Builder requestBuilder = java.net.http.HttpRequest.newBuilder()

@@ -24,18 +24,20 @@ function MainApp() {
   const isDark = theme === 'dark';
 
   return (
-    <SafeAreaProvider>
+    <>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={isDark ? colors.background : '#FFFFFF'}
       />
       <AppNavigator theme={isDark ? DarkTheme : LightTheme} />
-    </SafeAreaProvider>
+    </>
   );
 }
 
+import * as ExpoSplashScreen from 'expo-splash-screen';
+
 function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Poppins_400Regular,
     Poppins_500Medium,
     Poppins_600SemiBold,
@@ -43,24 +45,42 @@ function App() {
     Poppins_800ExtraBold,
   });
 
-  if (!fontsLoaded) {
+  const [timeoutPassed, setTimeoutPassed] = React.useState(false);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => {
+      setTimeoutPassed(true);
+      ExpoSplashScreen.hideAsync().catch(() => {});
+    }, 1200);
+    return () => clearTimeout(t);
+  }, []);
+
+  React.useEffect(() => {
+    if (fontsLoaded || fontError) {
+      ExpoSplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError && !timeoutPassed) {
     return null;
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <AlertProvider>
-          <ToastProvider>
-            <DeliveryLocationProvider>
-              <CartProvider>
-                <MainApp />
-              </CartProvider>
-            </DeliveryLocationProvider>
-          </ToastProvider>
-        </AlertProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <AlertProvider>
+            <ToastProvider>
+              <DeliveryLocationProvider>
+                <CartProvider>
+                  <MainApp />
+                </CartProvider>
+              </DeliveryLocationProvider>
+            </ToastProvider>
+          </AlertProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

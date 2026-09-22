@@ -14,13 +14,14 @@ import {
   Animated,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
+import { getTabBarTotalHeight } from '../../constants/layout';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { getMyOrders } from '../../services/orderService';
@@ -98,7 +99,8 @@ export const HomeScreen = () => {
   const [shopsLoading, setShopsLoading] = useState(false);
   const [nearbyProducts, setNearbyProducts] = useState<any[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
-  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
 
   const { width: screenWidth } = useWindowDimensions();
   const horizontalPadding = screenWidth < 360 ? 12 : 16;
@@ -324,7 +326,7 @@ export const HomeScreen = () => {
         {/* Logo and Location Row */}
         <View className="flex-row items-center justify-between mb-sm">
           {/* Prominent Large Top-Left RuVo Icon */}
-          <View style={{ marginRight: 8, backgroundColor: '#FFFFFF', padding: 2, borderRadius: 16, elevation: 4 }}>
+          <View style={{ marginRight: 8, backgroundColor: '#000000', padding: 2, borderRadius: 16, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 }}>
             <Image
               source={ruvoIcon}
               style={{ width: 50, height: 50, borderRadius: 14, resizeMode: 'contain' }}
@@ -449,7 +451,7 @@ export const HomeScreen = () => {
                         style={{
                           position: 'absolute',
                           bottom: -6,
-                          backgroundColor: '#16A34A',
+                          backgroundColor: '#FF7A00',
                           paddingHorizontal: 6,
                           paddingVertical: 2,
                           borderRadius: 8,
@@ -543,7 +545,7 @@ export const HomeScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         className="flex-1"
-        contentContainerStyle={{ paddingBottom: tabBarHeight + (activeOrder ? 80 : 20) }}
+        contentContainerStyle={{ paddingBottom: totalTabBarHeight + (activeOrder ? 84 : 20) }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#F4B400']} />
         }
@@ -554,6 +556,7 @@ export const HomeScreen = () => {
         {/* ── Growth Banners (Shop & Partner) ─────────────── */}
         <RuvoBanner
           data={getOnboardBanners()}
+          onPress={() => (navigation.navigate as any)(ROUTES.REGISTER_SHOP)}
         />
 
         {/* ── Shop by Category (White Background Container with Rounded Selection Items) ──── */}
@@ -743,7 +746,7 @@ export const HomeScreen = () => {
 
       {/* ── Floating Active Order Widget (Above Tab Navigator) ─────────────────── */}
       {activeOrder && (
-        <View style={{ position: 'absolute', bottom: tabBarHeight + 12, left: 12, right: 12, zIndex: 100 }}>
+        <View style={{ position: 'absolute', bottom: totalTabBarHeight + 12, left: 12, right: 12, zIndex: 100 }}>
           <Pressable
             onPress={() => (navigation.navigate as any)(ROUTES.CUSTOMER_TRACKING, { orderId: activeOrder.id })}
             style={{

@@ -1,7 +1,43 @@
 import { useEffect, useRef } from 'react';
 import { Vibration, Platform } from 'react-native';
+import { Audio } from 'expo-av';
 import { useToast } from '../context/ToastContext';
 import { Order } from '../types/order';
+
+const shopOrderSound = require('../../assets/images/sound/new_order.wav');
+
+let loadedSoundObj: Audio.Sound | null = null;
+
+async function playShopAlert() {
+  try {
+    try {
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+    } catch (modeErr) {}
+
+    if (loadedSoundObj) {
+      await loadedSoundObj.replayAsync().catch(async () => {
+        await loadedSoundObj?.unloadAsync().catch(() => {});
+        loadedSoundObj = null;
+      });
+    }
+
+    if (!loadedSoundObj) {
+      const { sound } = await Audio.Sound.createAsync(
+        shopOrderSound,
+        { shouldPlay: true, volume: 1.0 }
+      );
+      loadedSoundObj = sound;
+      await sound.playAsync().catch(() => {});
+    }
+  } catch (soundErr) {
+    console.warn('[useOrderAlerts] Sound play error:', soundErr);
+  }
+}
 
 export function useOrderAlerts(orders: any[]) {
   const previousOrdersRef = useRef<Order[]>([]);
@@ -13,63 +49,16 @@ export function useOrderAlerts(orders: any[]) {
     // 1. Trigger strong vibration pattern
     try {
       if (Platform.OS === 'android') {
-        console.log('[useOrderAlerts] 📳 Android Vibration pattern executing...');
         Vibration.vibrate([0, 600, 200, 600, 200, 600], false);
       } else {
-        console.log('[useOrderAlerts] 📳 iOS Vibration executing...');
         Vibration.vibrate(600);
       }
     } catch (err) {
-      console.warn('[useOrderAlerts] ⚠️ Vibration error:', err);
+      console.warn('[useOrderAlerts] Vibration error:', err);
     }
 
-    // 2. Play audio alert (Expo AV if native module linked, or Web Audio API fallback)
-    try {
-      let playedAudio = false;
-      
-      try {
-        const expoAvStatus = await import('expo-av').catch(() => null);
-        if (expoAvStatus && expoAvStatus.Audio) {
-          console.log('[useOrderAlerts] 🎵 Playing local sound file via expo-av...');
-          const soundObject = new expoAvStatus.Audio.Sound();
-          await soundObject.loadAsync(require('../../assets/images/sound/New Order Received A.wav'));
-          await soundObject.playAsync();
-          playedAudio = true;
-          soundObject.setOnPlaybackStatusUpdate((status: any) => {
-            if (status.isLoaded && status.didJustFinish) {
-              soundObject.unloadAsync().catch(() => {});
-            }
-          });
-        }
-      } catch (e) {
-        console.log('[useOrderAlerts] ℹ️ expo-av not available, falling back...');
-      }
-      
-      // Fallback for Web / Expo Go environments using HTML5 Audio synthesis
-      if (!playedAudio && typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext)) {
-        console.log('[useOrderAlerts] 🔊 Playing synthesized order alert chime via Web Audio API...');
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioCtx();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.6);
-        playedAudio = true;
-      }
-
-      if (!playedAudio) {
-        console.log('[useOrderAlerts] ℹ️ Native ExponentAV not present in this Expo Go session. Relying on Android Vibration + Visual Toast.');
-      }
-    } catch (soundErr) {
-      console.log('[useOrderAlerts] ℹ️ Audio playback skipped:', soundErr);
-    }
+    // 2. Play audio alert via Expo AV
+    playShopAlert();
   };
 
   useEffect(() => {

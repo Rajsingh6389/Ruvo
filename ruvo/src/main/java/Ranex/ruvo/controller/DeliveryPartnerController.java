@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/delivery-partners")
+@RequestMapping({"/api/delivery-partners", "/api/partners"})
 @CrossOrigin(origins = "*")
 public class DeliveryPartnerController {
 
@@ -43,6 +43,80 @@ public class DeliveryPartnerController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
         return auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyPartnerProfile() {
+        String mobile = getCurrentUserMobile();
+        if (mobile == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+
+        Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findByUserIdFlexible(mobile)
+                .or(() -> deliveryPartnerRepository.findByPhoneFlexible(mobile));
+
+        Optional<Ranex.ruvo.model.User> uOpt = Optional.empty();
+        if (userRepository != null) {
+            uOpt = userRepository.findByMobileNumberFlexible(mobile);
+        }
+
+        // Self-heal status synchronization
+        boolean isApproved = false;
+        if (partnerOpt.isPresent() && Boolean.TRUE.equals(partnerOpt.get().getApproved())) {
+            isApproved = true;
+        } else if (uOpt.isPresent() && uOpt.get().getStatus() == Ranex.ruvo.model.AccountStatus.APPROVED) {
+            isApproved = true;
+            if (partnerOpt.isPresent()) {
+                partnerOpt.get().setApproved(true);
+                deliveryPartnerRepository.save(partnerOpt.get());
+            }
+        }
+
+        String status = isApproved ? "APPROVED" : (partnerOpt.isPresent() && !"UNVERIFIED".equalsIgnoreCase(partnerOpt.get().getBankVerificationStatus()) ? "UNDER_REVIEW" : "NEW");
+
+        java.util.Map<String, Object> resp = new java.util.HashMap<>();
+        if (partnerOpt.isPresent()) {
+            DeliveryPartner dp = partnerOpt.get();
+            resp.put("id", dp.getId());
+            resp.put("partnerId", dp.getId());
+            resp.put("userId", dp.getUserId());
+            resp.put("name", dp.getName());
+            resp.put("phone", dp.getPhone());
+            resp.put("mobileNumber", dp.getPhone());
+            resp.put("approved", isApproved);
+            resp.put("isApproved", isApproved);
+            resp.put("status", status);
+            resp.put("verificationStatus", status);
+            resp.put("profileStatus", status);
+            resp.put("bankVerificationStatus", dp.getBankVerificationStatus());
+            resp.put("bankAccountNumber", dp.getBankAccountNumber());
+            resp.put("ifscCode", dp.getIfscCode());
+            resp.put("bankName", dp.getBankName());
+            resp.put("bankAccountHolder", dp.getBankAccountHolder());
+            resp.put("aadhaarVerified", dp.getAadhaarVerified());
+            resp.put("available", dp.getAvailable());
+            resp.put("isAvailable", dp.getAvailable());
+            resp.put("active", dp.getActive());
+            resp.put("razorpayAccountId", dp.getRazorpayAccountId());
+            resp.put("preferredShopIds", dp.getPreferredShopIds());
+        } else if (uOpt.isPresent()) {
+            Ranex.ruvo.model.User u = uOpt.get();
+            resp.put("id", u.getId());
+            resp.put("partnerId", u.getId());
+            resp.put("userId", u.getId());
+            resp.put("name", u.getName());
+            resp.put("phone", u.getMobileNumber());
+            resp.put("mobileNumber", u.getMobileNumber());
+            resp.put("approved", isApproved);
+            resp.put("isApproved", isApproved);
+            resp.put("status", status);
+            resp.put("verificationStatus", status);
+            resp.put("profileStatus", status);
+            resp.put("isAvailable", u.getIsAvailable());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Partner profile not found");
+        }
+
+        resp.put("data", new java.util.HashMap<>(resp));
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/register")
@@ -187,6 +261,14 @@ public class DeliveryPartnerController {
         Optional<DeliveryPartner> partnerOpt = deliveryPartnerRepository.findById(id);
         if (partnerOpt.isPresent()) {
             DeliveryPartner partner = partnerOpt.get();
+
+            String bankStatus = partner.getBankVerificationStatus();
+            if (!"READY_FOR_ADMIN".equalsIgnoreCase(bankStatus) && !"ADMIN_PENDING".equalsIgnoreCase(bankStatus) && !"VERIFIED".equalsIgnoreCase(bankStatus)) {
+                return ResponseEntity
+                        .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                        .body("Cannot approve delivery partner with unverified bank account. Current bank status: " + (bankStatus != null ? bankStatus : "UNVERIFIED"));
+            }
+
             partner.setApproved(true);
             partner.setAadhaarVerified(true);
 

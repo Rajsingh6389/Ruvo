@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -215,6 +215,8 @@ export const GroceriesScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { location, isLoading: locationLoading, refreshFromGps } = useDeliveryLocation();
   const { cartCount, cartTotal } = useCart();
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom, 12);
 
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -429,13 +431,13 @@ export const GroceriesScreen = () => {
             );
           })}
 
-          <View style={{ height: cartCount > 0 ? 90 : 30 }} />
+          <View style={{ height: (cartCount > 0 ? 84 : 16) + bottomPadding }} />
         </ScrollView>
       )}
 
       {/* ── Sticky Bottom Floating Cart Bar ───────────────────── */}
       {cartCount > 0 && (
-        <View style={styles.floatingCartBar}>
+        <View style={[styles.floatingCartBar, { bottom: bottomPadding + 8 }]}>
           <TouchableOpacity
             style={styles.cartBarContent}
             activeOpacity={0.9}

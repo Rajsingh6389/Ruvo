@@ -13,23 +13,26 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
 import { partnerService } from '../services/partnerService';
 import { EmptyState } from '../components/ui/EmptyState';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 type NotifItem = {
   id: number;
   title: string;
-  message: string;
+  message?: string;
+  body?: string;
   type: string;
   isRead: boolean;
   createdAt: string;
   orderId?: number;
+  data?: any;
 };
 
 const formatAgo = (isoDate: string): string => {
@@ -43,25 +46,30 @@ const formatAgo = (isoDate: string): string => {
 };
 
 const iconForType = (type: string): keyof typeof Ionicons.glyphMap => {
-  if (type === 'DELIVERY_REQUEST') return 'bicycle';
+  if (type === 'DELIVERY_REQUEST' || type === 'NEW_DELIVERY_REQUEST') return 'bicycle';
   if (type === 'DELIVERY_ASSIGNED') return 'checkmark-circle';
   if (type === 'OUT_FOR_DELIVERY') return 'navigate';
   if (type === 'DELIVERED') return 'cube';
-  if (type === 'CANCELLED_NO_PARTNER_FOUND') return 'close-circle';
+  if (type === 'CANCELLED_NO_PARTNER_FOUND' || type === 'ORDER_CANCELLED') return 'close-circle';
+  if (type?.includes('EARNINGS')) return 'wallet';
   return 'notifications';
 };
 
 const colorForType = (type: string): string => {
-  if (type === 'DELIVERY_REQUEST') return '#F97316';
+  if (type === 'DELIVERY_REQUEST' || type === 'NEW_DELIVERY_REQUEST') return '#F97316';
   if (type === 'DELIVERY_ASSIGNED') return '#16A34A';
   if (type === 'OUT_FOR_DELIVERY') return '#3B82F6';
   if (type === 'DELIVERED') return '#16A34A';
-  if (type === 'CANCELLED_NO_PARTNER_FOUND') return '#EF4444';
+  if (type === 'CANCELLED_NO_PARTNER_FOUND' || type === 'ORDER_CANCELLED') return '#EF4444';
+  if (type?.includes('EARNINGS')) return '#10B981';
   return '#8B5CF6';
 };
 
 export const NotificationsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const { token } = useAuth();
+  const navigation = useNavigation<any>();
   const [items, setItems] = useState<NotifItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -80,11 +88,29 @@ export const NotificationsScreen = () => {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const markRead = async (item: NotifItem) => {
-    if (!token || item.isRead) return;
-    try {
-      await partnerService.markNotificationRead(token, item.id);
-      setItems(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
-    } catch {}
+    if (token && !item.isRead) {
+      try {
+        await partnerService.markNotificationRead(token, item.id);
+        setItems(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
+      } catch {}
+    }
+
+    // Navigation
+    const notifType = item.type;
+    const orderId = item.orderId;
+    if (notifType === 'NEW_DELIVERY_REQUEST' || notifType === 'DELIVERY_REQUEST') {
+      navigation.navigate('Deliveries');
+    } else if (notifType === 'DELIVERY_ASSIGNED' || notifType === 'OUT_FOR_DELIVERY') {
+      if (orderId) {
+        navigation.navigate('ActiveDelivery', { deliveryId: orderId, orderId });
+      } else {
+        navigation.navigate('Deliveries');
+      }
+    } else if (notifType?.includes('EARNINGS')) {
+      navigation.navigate('Earnings');
+    } else if (notifType?.includes('ACCOUNT') || notifType?.includes('BANK')) {
+      navigation.navigate('VerificationStatus');
+    }
   };
 
   const markAllRead = async () => {
@@ -136,7 +162,7 @@ export const NotificationsScreen = () => {
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={load} tintColor="#16A34A" colors={['#16A34A']} />
         }
-        contentContainerClassName={`px-lg pt-lg pb-2xl ${items.length === 0 ? 'flex-grow' : ''}`}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: totalTabBarHeight + 20, flexGrow: items.length === 0 ? 1 : undefined }}
         ItemSeparatorComponent={() => <View className="h-sm" />}
         ListEmptyComponent={
           loading
@@ -175,7 +201,7 @@ export const NotificationsScreen = () => {
                     </Text>
                   </View>
                   <Text className="text-sm text-warm-600 leading-5" numberOfLines={3}>
-                    {item.message}
+                    {item.message || item.body || ''}
                   </Text>
                   {item.orderId && (
                     <View className="mt-xs bg-warm-200 self-start px-sm py-xs rounded-md flex-row items-center gap-xs">

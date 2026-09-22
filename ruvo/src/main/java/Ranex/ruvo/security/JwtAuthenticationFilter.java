@@ -25,13 +25,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
              Long identityId = jwt.getIdentityId(t);
             if (identityId != null) {
                 String role = jwt.getRole(t);
-                String cleanRole = (role != null ? role : "DELIVERY_PARTNER").replace("ROLE_", "");
-                List<SimpleGrantedAuthority> authorities = java.util.Arrays.asList(
-                    new SimpleGrantedAuthority("ROLE_" + cleanRole),
-                    new SimpleGrantedAuthority(cleanRole),
-                    new SimpleGrantedAuthority("ROLE_DELIVERY_PARTNER"),
-                    new SimpleGrantedAuthority("ROLE_PARTNER")
-                );
+                String cleanRole = (role != null ? role : "USER").replace("ROLE_", "");
+                List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + cleanRole));
+                authorities.add(new SimpleGrantedAuthority(cleanRole));
+                if ("DELIVERY_PARTNER".equalsIgnoreCase(cleanRole) || "PARTNER".equalsIgnoreCase(cleanRole)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_DELIVERY_PARTNER"));
+                    authorities.add(new SimpleGrantedAuthority("ROLE_PARTNER"));
+                }
                 var d = org.springframework.security.core.userdetails.User.withUsername("identity:" + identityId).password("")
                         .authorities(authorities).build();
                 var a = new UsernamePasswordAuthenticationToken(d, null, d.getAuthorities());

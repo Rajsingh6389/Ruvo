@@ -194,7 +194,8 @@ public class OrderController {
             orderItemRepository.save(item);
         }
 
-        // Phase 5 - Notify shopkeeper
+        // Phase 5 - Notify shopkeeper and customer
+        notificationService.notifyCustomerOrderPlaced(saved);
         notificationService.notifyShop(saved);
 
         return ResponseEntity.ok(Map.of("success", true, "orderId", saved.getId(), "message", "Order placed successfully!"));
@@ -461,6 +462,10 @@ public class OrderController {
         order.setOrderStatus(OrderStatus.SHOP_ACCEPTED);
         orderRepository.save(order);
 
+        Optional<Shop> shopOpt = shopRepository.findById(order.getShopId());
+        String shopName = shopOpt.map(Shop::getName).orElse("Shop");
+        notificationService.notifyCustomerOrderAccepted(order, shopName);
+
         // Start delivery assignment process
         order.setOrderStatus(OrderStatus.DELIVERY_ASSIGNMENT);
         orderRepository.save(order);
@@ -486,8 +491,13 @@ public class OrderController {
         orderRepository.save(order);
 
         // Trigger refund logic for online payments
+        try {
+            refundService.autoRefundIfEligible(order);
+        } catch (Exception ignored) {}
 
-        notificationService.notifyCustomer(order, "Order Cancelled", "Your order was not accepted by the shop.", "SHOP_REJECTED");
+        Optional<Shop> shopOpt = shopRepository.findById(order.getShopId());
+        String shopName = shopOpt.map(Shop::getName).orElse("Shop");
+        notificationService.notifyCustomerOrderRejected(order, shopName);
         return ResponseEntity.ok(Map.of("success", true, "message", "Order rejected"));
     }
 
@@ -570,6 +580,27 @@ public class OrderController {
         order.setDeliveryPartnerId(partnerId);
         order.setOrderStatus(OrderStatus.DELIVERY_ASSIGNED);
         orderRepository.save(order);
+
+        // Sync or Create Delivery entity for partner app endpoints
+        Delivery delivery = deliveryRepository.findByOrderId(order.getId()).orElse(null);
+        if (delivery == null) {
+            Shop shop = order.getShopId() != null ? shopRepository.findById(order.getShopId()).orElse(null) : null;
+            String pickupAddress = shop != null && shop.getAddress() != null ? shop.getAddress() : "Shop Location";
+            delivery = Delivery.builder()
+                .orderId(order.getId())
+                .partnerId(partnerId)
+                .status("ASSIGNED")
+                .pickupLocation(pickupAddress)
+                .deliveryLocation(order.getDeliveryAddress() != null ? order.getDeliveryAddress() : "Customer Address")
+                .deliveryFee(order.getDeliveryFee() != null ? order.getDeliveryFee().doubleValue() : 40.0)
+                .assignedAt(Instant.now())
+                .build();
+        } else {
+            delivery.setPartnerId(partnerId);
+            delivery.setStatus("ASSIGNED");
+            delivery.setAssignedAt(Instant.now());
+        }
+        deliveryRepository.save(delivery);
 
         notificationService.notifyCustomer(order, "Delivery Assigned",
             partner.getName() + " is picking up your order. Contact: " + partner.getPhone(), "DELIVERY_ASSIGNED");

@@ -23,11 +23,13 @@ import { NotificationPopup } from '../components/NotificationPopup';
 import { useDeliveryRequestSound } from '../hooks/useNotificationSound';
 
 import { useToast } from '../context/ToastContext';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 export const DashboardScreen = ({ navigation }: any) => {
   const { user, token, refreshProfile } = useAuth();
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const [online, setOnline] = useState(false);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [active, setActive] = useState<Delivery | null>(null);
@@ -349,6 +351,7 @@ export const DashboardScreen = ({ navigation }: any) => {
 
       <ScrollView
         className="flex-1"
+        contentContainerStyle={{ paddingBottom: totalTabBarHeight + 20 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -676,7 +679,7 @@ export const DashboardScreen = ({ navigation }: any) => {
             </View>
 
             {/* Actions */}
-            <View className="flex-row gap-lg mt-2 pb-xs">
+            <View className="flex-row gap-lg mt-2" style={{ paddingBottom: Math.max(insets.bottom, 16) + 12 }}>
               <TouchableOpacity
                 onPress={() => incomingRequest && handleRejectRequest(incomingRequest.requestId)}
                 disabled={actionBusy}

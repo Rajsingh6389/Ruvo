@@ -16,7 +16,7 @@ import {
   Image,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -31,6 +31,8 @@ import { useToast } from '../context/ToastContext';
 const states = ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERED'];
 
 export const ActiveDeliveryScreen = () => {
+  const insets = useSafeAreaInsets();
+  const bottomActionPadding = Math.max(insets.bottom, 16);
   const { token } = useAuth();
   const { showToast } = useToast();
   const route = useRoute<any>();
@@ -186,7 +188,7 @@ export const ActiveDeliveryScreen = () => {
         </View>
       </View>
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 110 + bottomActionPadding }} showsVerticalScrollIndicator={false}>
         {/* Timeline Progress */}
         <Animated.View entering={FadeInUp.duration(500)}>
           <View className="mb-5 bg-[#1C2026] border border-gray-800 rounded-[28px] p-5 shadow-lg shadow-black/40">
@@ -319,7 +321,7 @@ export const ActiveDeliveryScreen = () => {
 
       {/* Action Footer */}
       {action && (
-        <View className="absolute bottom-0 w-full px-6 pb-8 pt-4 bg-[#171A1F]/90 border-t border-gray-800">
+        <View className="absolute bottom-0 w-full px-6 pt-4 bg-[#171A1F]/90 border-t border-gray-800" style={{ paddingBottom: bottomActionPadding + 8 }}>
           <TouchableOpacity
             disabled={busy}
             onPress={action.handler}
@@ -346,7 +348,8 @@ export const ActiveDeliveryScreen = () => {
         <View className="flex-1 bg-black/80 justify-end">
           <Animated.View
             entering={FadeInUp.duration(400)}
-            className="bg-[#1C2026] rounded-t-[32px] p-6 border-t border-gray-800 pb-10"
+            className="bg-[#1C2026] rounded-t-[32px] p-6 border-t border-gray-800"
+            style={{ paddingBottom: bottomActionPadding + 16 }}
           >
             {/* Modal Header */}
             <View className="flex-row items-center justify-between mb-4">

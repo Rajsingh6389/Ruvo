@@ -11,7 +11,7 @@
       "package": "com.ruvo.shop",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#173F35"
+        "backgroundColor": "#000000"
       },
       "config": {
         "googleMaps": {
@@ -25,11 +25,6 @@
         "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
       }
     },
-    "splash": {
-      "image": "./assets/images/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7F8F3"
-    },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
       "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
@@ -38,9 +33,16 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#000000"
+        }
+      ],
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
       [
         "expo-location",
         {
@@ -48,6 +50,7 @@
         }
       ],
       "expo-asset",
+      "expo-notifications",
       [
         "expo-build-properties",
         {

@@ -30,7 +30,7 @@ const STEPS_SUMMARY = [
 export const Step7_Success = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { token } = useAuth();
+  const { token, setVerificationStatus } = useAuth();
 
   const selectedShopCount = route.params?.selectedShopCount || 0;
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected'>('pending');
@@ -59,29 +59,58 @@ export const Step7_Success = () => {
     if (!token) return;
     setChecking(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partners/me`, {
+      let res = await fetch(`${API_BASE_URL}/api/partners/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!res.ok) {
+        res = await fetch(`${API_BASE_URL}/api/partner/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+      if (!res.ok) {
+        res = await fetch(`${API_BASE_URL}/api/partner/verification/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
       if (!res.ok) return;
-      const data = await res.json();
+
+      const json = await res.json();
+      const data = json.data || json;
+
       const approved =
-        data.status === 'APPROVED' || data.approved === true ||
-        data.isApproved === true || data.verificationStatus === 'APPROVED';
-      const rejected = data.status === 'REJECTED';
-      if (approved) setApprovalStatus('approved');
-      else if (rejected) setApprovalStatus('rejected');
+        json.status === 'APPROVED' || json.approved === true || json.isApproved === true || json.verificationStatus === 'APPROVED' ||
+        data.status === 'APPROVED' || data.approved === true || data.isApproved === true || data.verificationStatus === 'APPROVED' ||
+        data.profileStatus === 'APPROVED';
+
+      const rejected =
+        json.status === 'REJECTED' || data.status === 'REJECTED' || data.profileStatus === 'REJECTED';
+
+      if (approved) {
+        setApprovalStatus('approved');
+        if (setVerificationStatus) {
+          setVerificationStatus('APPROVED');
+        }
+      } else if (rejected) {
+        setApprovalStatus('rejected');
+        if (setVerificationStatus) {
+          setVerificationStatus('REJECTED');
+        }
+      }
     } catch {} finally {
       setChecking(false);
     }
-  }, [token]);
+  }, [token, setVerificationStatus]);
 
   useEffect(() => {
     checkApproval();
-    const interval = setInterval(checkApproval, 10000);
+    const interval = setInterval(checkApproval, 8000);
     return () => clearInterval(interval);
   }, [checkApproval]);
 
   const handleGoToDashboard = () => {
+    if (setVerificationStatus) {
+      setVerificationStatus('APPROVED');
+    }
     navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
   };
 

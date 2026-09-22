@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
@@ -25,8 +25,11 @@ import { useNewDeliverySound } from '../hooks/useNotificationSound';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Skeleton } from '../components/ui/Skeleton';
 import { useToast } from '../context/ToastContext';
+import { getTabBarTotalHeight } from '../constants/layout';
 
 export const AvailableDeliveriesScreen = () => {
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const { token } = useAuth();
   const { showToast } = useToast();
   const navigation = useNavigation<any>();
@@ -44,7 +47,21 @@ export const AvailableDeliveriesScreen = () => {
     isRefresh ? setRefreshing(true) : setLoading(true);
     try {
       setError(null);
-      setRuns(await api<Delivery[]>('/api/partner/deliveries/available', token));
+      const [availableRuns, activeRuns] = await Promise.all([
+        api<Delivery[]>('/api/partner/deliveries/available', token).catch(() => []),
+        api<Delivery[]>('/api/partner/deliveries', token).catch(() => []),
+      ]);
+      const act = Array.isArray(activeRuns) ? activeRuns : [];
+      const av = Array.isArray(availableRuns) ? availableRuns : [];
+      const seen = new Set<number>();
+      const combined: Delivery[] = [];
+      for (const d of [...act, ...av]) {
+        if (d && d.id && !seen.has(d.id)) {
+          seen.add(d.id);
+          combined.push(d);
+        }
+      }
+      setRuns(combined);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -55,8 +72,14 @@ export const AvailableDeliveriesScreen = () => {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const accept = async (run: Delivery) => {
+  const handleAction = async (run: Delivery) => {
     if (!token) return;
+    const isAssigned = ['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(run.status);
+    if (isAssigned) {
+      navigation.navigate('ActiveDelivery', { deliveryId: run.id });
+      return;
+    }
+
     setBusy(run.id);
     try {
       await api(`/api/partner/deliveries/${run.id}/accept`, token, { method: 'POST' });
@@ -145,7 +168,7 @@ export const AvailableDeliveriesScreen = () => {
               progressBackgroundColor="#1C2026"
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 60, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: totalTabBarHeight + 24, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center mt-10">
@@ -229,9 +252,9 @@ export const AvailableDeliveriesScreen = () => {
                   </View>
                 </View>
 
-                {/* Accept Button */}
+                {/* Action Button */}
                 <TouchableOpacity
-                  onPress={() => accept(item)}
+                  onPress={() => handleAction(item)}
                   disabled={busy === item.id}
                   activeOpacity={0.8}
                   className={`h-14 rounded-2xl flex-row items-center justify-center gap-2 ${busy === item.id ? 'bg-[#FF7A00]/70' : 'bg-[#FF7A00]'}`}
@@ -241,9 +264,15 @@ export const AvailableDeliveriesScreen = () => {
                     <ActivityIndicator color="#FFF" />
                   ) : (
                     <>
-                      <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                      <Ionicons
+                        name={['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(item.status) ? 'arrow-forward-circle' : 'checkmark-circle'}
+                        size={18}
+                        color="#FFF"
+                      />
                       <Text className="text-white font-black tracking-widest uppercase">
-                        Accept Delivery Run
+                        {['ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(item.status)
+                          ? 'Open Active Delivery'
+                          : 'Accept Delivery Run'}
                       </Text>
                     </>
                   )}

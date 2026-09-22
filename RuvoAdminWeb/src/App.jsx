@@ -91,7 +91,7 @@ const AdminApp = () => {
     <ErrorBoundary>
       <Routes>
         <Route element={<AdminLayout onRefresh={loadData} loading={loading} />}>
-          <Route index element={<DashboardPage stats={stats} loading={loading} />} />
+          <Route index element={<DashboardPage stats={stats} loading={loading} onRefresh={loadData} />} />
           <Route
             path="approvals"
             element={<ApprovalsPage shops={shops} partners={partners} onRefresh={loadData} />}

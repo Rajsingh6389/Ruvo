@@ -11,6 +11,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
@@ -167,6 +168,8 @@ const ProductDetailsScreen = () => {
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const { showToast } = useToast();
+  const insets = useSafeAreaInsets();
+  const bottomActionPadding = Math.max(insets.bottom, 16);
 
   const handleAddToCart = () => {
     if (!isAuthenticated) {
@@ -303,7 +306,7 @@ const ProductDetailsScreen = () => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 5, paddingBottom: 100 + bottomActionPadding }}
       >
         {/* PRODUCT IMAGE */}
         <Animated.View 
@@ -663,15 +666,19 @@ const ProductDetailsScreen = () => {
       <Animated.View 
         entering={FadeInDown.delay(300).duration(500).springify()}
         style={{ borderColor: colors.border }}
-        className="absolute left-0 right-0 bottom-0 overflow-hidden rounded-t-[40px] border-t"
+        className="absolute left-0 right-0 bottom-0 overflow-hidden rounded-t-[36px] border-t"
       >
-        <BlurView intensity={80} tint={theme === 'dark' ? 'dark' : 'light'} className="px-5 pt-5 pb-safe items-center">
-          <View className="flex-row w-full gap-4 pb-3">
+        <BlurView
+          intensity={85}
+          tint={theme === 'dark' ? 'dark' : 'light'}
+          style={{ paddingBottom: bottomActionPadding, paddingTop: 16, paddingHorizontal: 20, alignItems: 'center' }}
+        >
+          <View className="flex-row w-full gap-4">
           <TouchableOpacity
             activeOpacity={0.82}
             disabled={!available || isShopOffline}
-            style={{ backgroundColor: colors.surface }}
-            className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center gap-2 ${
+            style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+            className={`flex-1 h-14 rounded-[18px] flex-row items-center justify-center gap-2 ${
               available && !isShopOffline
                 ? 'opacity-100'
                 : 'opacity-50'
@@ -680,10 +687,10 @@ const ProductDetailsScreen = () => {
           >
             <Ionicons
               name="cart"
-              size={22}
+              size={20}
               color={available && !isShopOffline ? colors.textPrimary : colors.textSecondary}
             />
-            <Text style={{ color: available && !isShopOffline ? colors.textPrimary : colors.textSecondary }} className="text-[15px] font-black tracking-wide">
+            <Text style={{ color: available && !isShopOffline ? colors.textPrimary : colors.textSecondary }} className="text-[14px] font-black tracking-wide">
               Add to Cart
             </Text>
           </TouchableOpacity>
@@ -691,23 +698,27 @@ const ProductDetailsScreen = () => {
           <TouchableOpacity
             activeOpacity={0.82}
             disabled={!available || submitting || isShopOffline}
-            className={`flex-1 h-16 rounded-[20px] flex-row items-center justify-center shadow-sm ${
-              !available || submitting || isShopOffline
-                ? 'bg-zinc-800'
-                : 'bg-ruvo-yellow'
-            }`}
+            style={{
+              backgroundColor: !available || submitting || isShopOffline ? '#27272A' : '#FF8A00',
+              elevation: 4,
+              shadowColor: '#FF8A00',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+            }}
+            className="flex-1 h-14 rounded-[18px] flex-row items-center justify-center"
             onPress={handleBuyNow}
           >
             {submitting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name={isShopOffline ? "moon" : "flash"} size={18} color={available && !isShopOffline ? "#1A1A1A" : "#9CA3AF"} />
+                <Ionicons name={isShopOffline ? "moon" : "flash"} size={17} color={available && !isShopOffline ? "#FFFFFF" : "#9CA3AF"} />
                 <Text
-                  className={`font-black tracking-wide ml-1 ${
+                  className={`font-black tracking-wide ml-1.5 text-[14px] ${
                     !available || isShopOffline
                       ? 'text-zinc-400'
-                      : 'text-black'
+                      : 'text-white'
                   }`}
                 >
                   {isShopOffline ? 'Shop Closed' : 'Buy Now'}

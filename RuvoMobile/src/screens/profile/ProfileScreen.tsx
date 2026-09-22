@@ -9,7 +9,7 @@ import {
   Switch,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { SPACING } from '../../theme/spacing';
+import { getTabBarTotalHeight } from '../../constants/layout';
 
 type MenuItem = {
   id: string;
@@ -29,6 +30,8 @@ type MenuItem = {
 };
 
 export const ProfileScreen = () => {
+  const insets = useSafeAreaInsets();
+  const totalTabBarHeight = getTabBarTotalHeight(insets.bottom);
   const { user, logout } = useAuth();
   const { colors, typography, radius, shadows, spacing, theme, toggleTheme, mode, setMode } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -121,7 +124,7 @@ export const ProfileScreen = () => {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: spacing.navClearance }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: totalTabBarHeight + 24 }]}
       >
         {/* ─ PROFILE HERO ──────────────────────────────────────────────── */}
         <View style={styles.heroSection}>

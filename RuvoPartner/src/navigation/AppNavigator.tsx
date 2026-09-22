@@ -66,9 +66,15 @@ export type TabParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator<TabParamList>();
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getTabBarHeight } from '../constants/layout';
+
 // ── Bottom tab navigator (shown only after APPROVED) ─────────────────────────
 const TabNavigator = () => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = getTabBarHeight(insets.bottom);
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -78,8 +84,8 @@ const TabNavigator = () => {
         tabBarStyle: {
           backgroundColor: '#171A1F',
           borderTopColor: '#1F2937',
-          height: 64,
-          paddingBottom: 6,
+          height: tabBarHeight,
+          paddingBottom: Math.max(insets.bottom, 6),
           paddingTop: 6,
           elevation: 16,
           shadowColor: '#000',
@@ -131,14 +137,22 @@ const TabNavigator = () => {
 };
 
 // ── Root navigator ────────────────────────────────────────────────────────────
+import { useNotificationHandler } from '../hooks/useNotificationHandler';
+
+function NotificationHandlerBridge() {
+  useNotificationHandler();
+  return null;
+}
+
 export const AppNavigator = () => {
   const { isAuthenticated, isLoading, verificationStatus } = useAuth();
-  const { colors, theme } = useTheme();
+  const { theme } = useTheme();
   const [launchComplete, setLaunchComplete] = useState(false);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FAF7F0' }}>
       <NavigationContainer theme={theme === 'dark' ? DarkTheme : LightTheme}>
+        <NotificationHandlerBridge />
         <Stack.Navigator screenOptions={{ headerShown: false }}>
 
           {/* ── Not logged in ──────────────────────────────────────── */}

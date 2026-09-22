@@ -164,6 +164,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
       });
       const body = await res.json().catch(() => null);
       if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
+      if (body?.data?.otpCode) setOtp(String(body.data.otpCode));
       setStep(2);
     } catch (err: any) {
       setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);

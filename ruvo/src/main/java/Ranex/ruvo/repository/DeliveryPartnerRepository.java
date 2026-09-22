@@ -11,9 +11,23 @@ import java.util.Optional;
 @Repository
 public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner, Long> {
     
-    Optional<DeliveryPartner> findByUserId(String userId);
-    Optional<DeliveryPartner> findByAuthIdentityId(Long authIdentityId);
-    Optional<DeliveryPartner> findByPhone(String phone);
+    Optional<DeliveryPartner> findFirstByUserIdOrderByIdDesc(String userId);
+
+    default Optional<DeliveryPartner> findByUserId(String userId) {
+        return findFirstByUserIdOrderByIdDesc(userId);
+    }
+
+    Optional<DeliveryPartner> findFirstByAuthIdentityIdOrderByIdDesc(Long authIdentityId);
+
+    default Optional<DeliveryPartner> findByAuthIdentityId(Long authIdentityId) {
+        return findFirstByAuthIdentityIdOrderByIdDesc(authIdentityId);
+    }
+
+    Optional<DeliveryPartner> findFirstByPhoneOrderByIdDesc(String phone);
+
+    default Optional<DeliveryPartner> findByPhone(String phone) {
+        return findFirstByPhoneOrderByIdDesc(phone);
+    }
 
     default Optional<DeliveryPartner> findByPhoneFlexible(String phone) {
         if (phone == null || phone.isBlank()) return Optional.empty();
@@ -91,7 +105,7 @@ public interface DeliveryPartnerRepository extends JpaRepository<DeliveryPartner
 
 
     @Query("SELECT dp FROM DeliveryPartner dp WHERE (dp.approved IS NULL OR dp.approved = false) " +
-           "AND dp.bankAccountNumber IS NOT NULL AND dp.bankAccountNumber != ''")
+           "AND dp.bankVerificationStatus IN ('READY_FOR_ADMIN', 'ADMIN_PENDING')")
     List<DeliveryPartner> findPendingApproval();
 
     List<DeliveryPartner> findByShopId(Long shopId);

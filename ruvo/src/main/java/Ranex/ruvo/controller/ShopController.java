@@ -30,10 +30,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/shops")
 @CrossOrigin(origins = "*")
+@lombok.NoArgsConstructor
+@lombok.AllArgsConstructor
 public class ShopController {
 
     @Autowired
     private ShopRepository shopRepository;
+
+    @Autowired
+    private Ranex.ruvo.repository.AuthIdentityRepository authIdentityRepository;
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -57,17 +62,58 @@ public class ShopController {
     }
 
     private boolean principalMatchesOwner(String ownerId, Long authIdentityId) {
+        if (isAdmin()) return true;
         String principal = getCurrentPrincipal();
         if (principal == null) return false;
         if (principal.startsWith("identity:")) {
             String identity = principal.substring("identity:".length());
-            return identity.equals(ownerId) || (authIdentityId != null && identity.equals(String.valueOf(authIdentityId)));
+            if (identity.equals(ownerId) || (authIdentityId != null && identity.equals(String.valueOf(authIdentityId)))) {
+                return true;
+            }
+            try {
+                Long id = Long.parseLong(identity);
+                java.util.Optional<Ranex.ruvo.model.AuthIdentity> authOpt = authIdentityRepository.findById(id);
+                if (authOpt.isPresent()) {
+                    String mobile = authOpt.get().getMobileNumber();
+                    String clean = mobile != null ? mobile.replaceAll("[^0-9]", "") : "";
+                    if (clean.length() == 12 && clean.startsWith("91")) clean = clean.substring(2);
+                    if (mobile != null && mobile.equals(ownerId)) return true;
+                    if (!clean.isEmpty() && clean.equals(ownerId)) return true;
+                }
+            } catch (Exception ignored) {}
+            return false;
         }
         return principal.equals(ownerId);
     }
 
     private boolean canManageShop(Shop shop) {
-        return isAdmin() || (shop != null && principalMatchesOwner(shop.getOwnerId(), shop.getAuthIdentityId()));
+        if (shop == null) return false;
+        if (isAdmin()) return true;
+        String principal = getCurrentPrincipal();
+        if (principal == null) return false;
+        if (principal.startsWith("identity:")) {
+            String identity = principal.substring("identity:".length());
+            if (identity.equals(shop.getOwnerId()) || (shop.getAuthIdentityId() != null && identity.equals(String.valueOf(shop.getAuthIdentityId())))) {
+                return true;
+            }
+            try {
+                Long id = Long.parseLong(identity);
+                java.util.Optional<Ranex.ruvo.model.AuthIdentity> authOpt = authIdentityRepository.findById(id);
+                if (authOpt.isPresent()) {
+                    String mobile = authOpt.get().getMobileNumber();
+                    String clean = mobile != null ? mobile.replaceAll("[^0-9]", "") : "";
+                    if (clean.length() == 12 && clean.startsWith("91")) clean = clean.substring(2);
+                    if (mobile != null && (mobile.equals(shop.getPhone()) || mobile.equals(shop.getOwnerId()))) {
+                        return true;
+                    }
+                    if (!clean.isEmpty() && (clean.equals(shop.getPhone()) || clean.equals(shop.getOwnerId()))) {
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {}
+            return false;
+        }
+        return principal.equals(shop.getOwnerId());
     }
 
 
@@ -175,17 +221,50 @@ public class ShopController {
     // =========================================================
 
     @GetMapping("/mine")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<List<Shop>> getMyShops(
-            @RequestParam String ownerId,
+            @RequestParam(required = false) String ownerId,
             HttpServletRequest request
     ) {
-        if (!isAdmin() && !principalMatchesOwner(ownerId, null)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        String principal = getCurrentPrincipal();
+        Long authIdentityId = null;
+        String mobile = null;
+        String cleanMobile = null;
+
+        if (principal != null && principal.startsWith("identity:")) {
+            try {
+                authIdentityId = Long.parseLong(principal.substring("identity:".length()));
+                java.util.Optional<Ranex.ruvo.model.AuthIdentity> authOpt = authIdentityRepository.findById(authIdentityId);
+                if (authOpt.isPresent()) {
+                    mobile = authOpt.get().getMobileNumber();
+                    if (mobile != null) {
+                        cleanMobile = mobile.replaceAll("[^0-9]", "");
+                        if (cleanMobile.length() == 12 && cleanMobile.startsWith("91")) {
+                            cleanMobile = cleanMobile.substring(2);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        } else if (principal != null) {
+            mobile = principal;
         }
 
-        List<Shop> shops =
-                shopRepository.findByOwnerId(ownerId);
+        List<Shop> shops = shopRepository.findByOwnerFlexible(
+                ownerId,
+                authIdentityId,
+                mobile,
+                cleanMobile
+        );
+
+        // Auto-link authIdentityId for legacy records
+        if (authIdentityId != null) {
+            for (Shop shop : shops) {
+                if (shop.getAuthIdentityId() == null) {
+                    shop.setAuthIdentityId(authIdentityId);
+                    shopRepository.save(shop);
+                }
+            }
+        }
 
         shops.forEach(shop ->
                 prepareShopResponse(shop, request)
@@ -221,7 +300,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> addShop(
             @RequestBody Shop shop
     ) {
@@ -261,7 +340,8 @@ public class ShopController {
         }
 
         shop.setId(null);
-        if (shop.getApproved() == null) shop.setApproved(false);
+        shop.setApproved(false);
+        shop.setBankVerificationStatus("UNVERIFIED");
         if (shop.getActive() == null) shop.setActive(true);
         if (shop.getSettlementBlocked() == null) shop.setSettlementBlocked(false);
         if (shop.getCodBlocked() == null) shop.setCodBlocked(false);
@@ -389,7 +469,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> uploadShop(
             @RequestParam("shop") String shopJson,
             @RequestPart("logo") MultipartFile logo,
@@ -544,6 +624,7 @@ public class ShopController {
 
             // Admin approval required
             shop.setApproved(false);
+            shop.setBankVerificationStatus("UNVERIFIED");
 
             Shop savedShop =
                     shopRepository.save(shop);
@@ -571,7 +652,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/{id}/aadhaar")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> uploadAadhaarDetails(
             @PathVariable Long id,
             @RequestParam("aadhaarNumber") String aadhaarNumber,
@@ -627,6 +708,15 @@ public class ShopController {
         if (shopOpt.isPresent()) {
 
             Shop shop = shopOpt.get();
+
+            // Strict Gate: Cannot approve shop if bank account has not passed Razorpay & RuVo verification
+            String bankStatus = shop.getBankVerificationStatus();
+            if (!"READY_FOR_ADMIN".equalsIgnoreCase(bankStatus) && !"ADMIN_PENDING".equalsIgnoreCase(bankStatus) && !"VERIFIED".equalsIgnoreCase(bankStatus)) {
+                return ResponseEntity
+                        .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                        .body("Cannot approve shop with unverified bank account. Current bank status: " + (bankStatus != null ? bankStatus : "UNVERIFIED"));
+            }
+
             shop.setApproved(true);
             shop.setAadhaarVerified(true);
 
@@ -661,7 +751,7 @@ public class ShopController {
     // =========================================================
 
     @PostMapping("/{id}/request-approval")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> requestApprovalAgain(
             @PathVariable Long id,
             @RequestParam String ownerId
@@ -684,6 +774,14 @@ public class ShopController {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body("You can only request approval for your own shop.");
+        }
+
+        // Strict Gate: Direct API calls cannot bypass Razorpay Bank Verification
+        String bankStatus = shop.getBankVerificationStatus();
+        if (!"READY_FOR_ADMIN".equalsIgnoreCase(bankStatus) && !"ADMIN_PENDING".equalsIgnoreCase(bankStatus) && !"VERIFIED".equalsIgnoreCase(bankStatus)) {
+            return ResponseEntity
+                    .status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body("Bank account must be verified before admin approval request can be created. Current bank status: " + (bankStatus != null ? bankStatus : "UNVERIFIED"));
         }
 
         if (Boolean.TRUE.equals(shop.getApproved())) {
@@ -721,13 +819,40 @@ public class ShopController {
         return ResponseEntity.ok().build();
     }
 
+    // =========================================================
+    // 10.1 Delete / Reset Shop (Admin or Owner)
+    // =========================================================
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
+    public ResponseEntity<?> deleteShop(
+            @PathVariable Long id
+    ) {
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+        if (shopOpt.isEmpty()) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body("Shop not found with id: " + id);
+        }
+
+        Shop shop = shopOpt.get();
+        if (!isAdmin() && !canManageShop(shop)) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("You can only delete your own shop.");
+        }
+
+        shopRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Shop deleted successfully. You can now register a fresh shop."));
+    }
+
 
     // =========================================================
     // 10.5 Toggle Active Status (Admin / Owner)
     // =========================================================
 
     @PatchMapping("/{id}/active")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> toggleActiveStatus(
             @PathVariable Long id,
             @RequestParam boolean active
@@ -829,7 +954,7 @@ public class ShopController {
     // =========================================================
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> updateShopJson(
             @PathVariable Long id,
             @RequestBody Shop updatedShop,
@@ -870,7 +995,7 @@ public class ShopController {
     }
 
     @PutMapping("/upload/{id}")
-    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN', 'USER')")
     public ResponseEntity<?> updateShopWithImages(
             @PathVariable Long id,
             @RequestParam("shop") String shopJson,

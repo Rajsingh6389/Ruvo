@@ -9,7 +9,7 @@ import {
   View, ScrollView, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, Text,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +35,7 @@ const VEHICLE_OPTIONS: { type: VehicleType; icon: React.ComponentProps<typeof Io
 const FUEL_OPTIONS: FuelType[] = ['Petrol', 'Diesel', 'EV'];
 
 export const Step2_VehicleType = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { token } = useAuth();
   const { colors, typography, spacing, shadows } = useTheme();
@@ -81,7 +82,7 @@ export const Step2_VehicleType = () => {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
       <StepBar current={2} colors={colors} typography={typography} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[s.scroll, { paddingHorizontal: spacing.gutter, paddingBottom: Math.max(insets.bottom, 16) + 32 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <ScreenHeader
             icon="bicycle-outline"
             title="Vehicle Type"
