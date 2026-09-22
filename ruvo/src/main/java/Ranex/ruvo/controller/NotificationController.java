@@ -70,7 +70,8 @@ public class NotificationController {
      * Get user notifications
      */
     @GetMapping("/mine")
-    public ResponseEntity<?> getUserNotifications(@RequestParam Long userId) {
+    public ResponseEntity<?> getUserNotifications(@RequestParam(required = false) Long userId) {
+        if (userId == null) return ResponseEntity.ok(List.of());
         try {
             List<PushNotification> notifications = notificationService.getUserNotifications(userId);
             List<Map<String, Object>> notifList = notifications.stream()
@@ -90,7 +91,8 @@ public class NotificationController {
      * Get unread notification count
      */
     @GetMapping("/unread-count")
-    public ResponseEntity<?> getUnreadCount(@RequestParam Long userId) {
+    public ResponseEntity<?> getUnreadCount(@RequestParam(required = false) Long userId) {
+        if (userId == null) return ResponseEntity.ok(Map.of("success", true, "count", 0));
         try {
             long count = notificationService.getUnreadCount(userId);
             return ResponseEntity.ok(Map.of(
@@ -128,7 +130,8 @@ public class NotificationController {
      * Mark all notifications as read
      */
     @PostMapping("/mark-all-read")
-    public ResponseEntity<?> markAllAsRead(@RequestParam Long userId) {
+    public ResponseEntity<?> markAllAsRead(@RequestParam(required = false) Long userId) {
+        if (userId == null) return ResponseEntity.badRequest().body(Map.of("success", false, "message", "userId is required"));
         try {
             notificationService.markAllAsRead(userId);
             return ResponseEntity.ok(Map.of(

@@ -4,19 +4,19 @@ export const PaymentsPage = ({ payments }) => {
   return (
     <div className="panel">
       <div className="panel-header">
-        <h2>Cashfree & Gateway Transactions ({payments.length})</h2>
+        <h2>Razorpay & Gateway Transactions ({payments.length})</h2>
       </div>
 
       <div className="table-responsive">
         <table>
           <thead>
             <tr>
-              <th>Txn ID</th>
-              <th>Order ID</th>
-              <th>Amount</th>
-              <th>Payment Gateway</th>
-              <th>Status</th>
-              <th>Timestamp</th>
+              <th>TXN ID</th>
+              <th>ORDER ID</th>
+              <th>AMOUNT</th>
+              <th>PAYMENT GATEWAY</th>
+              <th>STATUS</th>
+              <th>TIMESTAMP</th>
             </tr>
           </thead>
           <tbody>
@@ -34,7 +34,7 @@ export const PaymentsPage = ({ payments }) => {
                   <td>
                     <strong>₹{p.amount}</strong>
                   </td>
-                  <td>{p.gateway || 'CASHFREE'}</td>
+                  <td>{p.gateway || 'RAZORPAY'}</td>
                   <td>
                     <span className={`badge ${p.status === 'SUCCESS' ? 'badge-approved' : 'badge-pending'}`}>
                       {p.status}
@@ -44,9 +44,9 @@ export const PaymentsPage = ({ payments }) => {
                 </tr>
               ))
             )}
-          </tbody>
-        </table>
-      </div>
+        </tbody>
+      </table>
     </div>
+    </div >
   );
 };

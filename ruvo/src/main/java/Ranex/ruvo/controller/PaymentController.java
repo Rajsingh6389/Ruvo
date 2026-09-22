@@ -477,6 +477,133 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("success", true, "message", "Payment marked as failed."));
     }
 
+    @PostMapping("/pay-cod-online/{orderId}")
+    @Transactional
+    public ResponseEntity<?> payCodOnline(@PathVariable Long orderId, @RequestBody Map<String, String> payload) {
+        String userId = payload.get("userId");
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "userId is required."));
+        }
+        
+        Order order = orderRepository.findById(orderId).orElse(null);
+        if (order == null || !order.getUserId().equals(userId)) {
+            return ResponseEntity.status(404).body(Map.of("message", "Order not found."));
+        }
+        
+        if (!"COD".equals(order.getPaymentMethod()) && !"CASH".equals(order.getPaymentMethod())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Order is not currently COD or CASH."));
+        }
+        
+        if ("SUCCESS".equalsIgnoreCase(order.getPaymentStatus()) || "PAID".equalsIgnoreCase(order.getPaymentStatus())) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Order is already paid."));
+        }
+        
+        try {
+            Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
+            String shopVendorId = shop != null ? shop.getRazorpayAccountId() : null;
+            
+            Map<String, Object> rzpRes = razorpayService.createOrder(
+                    String.valueOf(order.getId()),
+                    order.getTotalAmount(),
+                    order.getSubtotal(),
+                    shopVendorId,
+                    "customer@ruvomobile.me",
+                    order.getCustomerPhone() != null ? order.getCustomerPhone() : "9999999999"
+            );
+
+            if (rzpRes == null || rzpRes.get("razorpay_order_id") == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("message", "Razorpay did not return a valid configuration response."));
+            }
+
+            String rzpOrderId = rzpRes.get("razorpay_order_id").toString();
+
+            // Find existing payment or create one
+            Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(
+                Payment.builder().orderId(order.getId()).userId(userId).build()
+            );
+            
+            payment.setPaymentMethod("RAZORPAY");
+            payment.setPaymentStatus("PENDING");
+            payment.setRazorpayOrderId(rzpOrderId);
+            payment.setRazorpayStatus("CREATED");
+            if (payment.getAmount() == null) payment.setAmount(order.getTotalAmount());
+            if (payment.getCurrency() == null) payment.setCurrency("INR");
+            
+            paymentRepository.save(payment);
+
+            order.setPaymentMethod("RAZORPAY");
+            order.setPaymentStatus("PENDING");
+            orderRepository.save(order);
+
+            return ResponseEntity.ok(
+                Map.of(
+                    "success", true,
+                    "orderId", order.getId(),
+                    "paymentMethod", "RAZORPAY",
+                    "razorpayOrderId", rzpOrderId,
+                    "amount", order.getTotalAmount(),
+                    "currency", "INR"
+                )
+            );
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("message", "Failed to initialize Razorpay payment: " + e.getMessage()));
+        }
+    }
+
+    public static class PaymentVerificationRequest {
+        public Long orderId;
+        public String razorpayPaymentId;
+        public String razorpaySignature;
+    }
+
+    @PostMapping("/verify")
+    @Transactional
+    public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerificationRequest request) {
+        if (request.orderId == null || request.razorpayPaymentId == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "orderId and razorpayPaymentId required."));
+        }
+
+        Order order = orderRepository.findById(request.orderId).orElse(null);
+        if (order == null) return ResponseEntity.notFound().build();
+
+        if ("SUCCESS".equalsIgnoreCase(order.getPaymentStatus())) {
+            return ResponseEntity.ok(Map.of("success", true, "message", "Payment already verified"));
+        }
+
+        boolean previousFailed = "FAILED".equalsIgnoreCase(order.getPaymentStatus());
+
+        // Update successful order status
+        order.setPaymentStatus("SUCCESS");
+        
+        // ONLY reset to SHOP_PENDING if the order was barely initiated. We don't want to revert an active delivery.
+        if ("PAYMENT_PENDING".equals(order.getOrderStatus()) || "PAYMENT_FAILED".equals(order.getOrderStatus())) {
+            order.setOrderStatus(OrderStatus.SHOP_PENDING);
+            order.setShopResponseDeadline(Instant.now().plus(10, ChronoUnit.MINUTES));
+        }
+        
+        orderRepository.save(order);
+
+        paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
+            payment.setPaymentStatus("SUCCESS");
+            payment.setRazorpayPaymentId(request.razorpayPaymentId);
+            paymentRepository.save(payment);
+        });
+
+        // Deduct previously credited wallet back if order was marked failed temporarily
+        if (previousFailed && order.getWalletAmountUsed() != null && order.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0) {
+            walletService.debit(order.getUserId(), order.getWalletAmountUsed(), "ORDER-RECOVERED-" + order.getId(), "Re-debit applied to recovered order checkout");
+        }
+
+        try {
+            notificationService.notifyShop(order); // Notify Shop ONLY after success!
+        } catch (Exception e) {
+            System.err.println("[PaymentController] Shop notification failed: " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(Map.of("success", true, "message", "Payment verified and Order placed!"));
+    }
+
     private void restoreReservedStock(List<CartItemRequest> cartItems) {
         for (CartItemRequest item : cartItems) {
             productRepository.findById(item.productId).ifPresent(product -> {

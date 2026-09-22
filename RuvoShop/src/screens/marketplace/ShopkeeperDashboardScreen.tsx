@@ -350,6 +350,28 @@ export default function ShopkeeperDashboardScreen() {
     ]);
   };
 
+  const handleCancelAfterAccept = (orderId: number) => {
+    Alert.alert('Cancel Order', 'Cancel this order? This will stop delivery assignment.', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+          });
+          if (response.ok) {
+            Alert.alert('Order Cancelled', 'The order has been successfully cancelled.');
+            fetchData();
+          } else {
+            Alert.alert('Error', 'Failed to cancel the order. Please try again.');
+          }
+        },
+      },
+    ]);
+  };
+
   const assignPartner = async (partnerId: number) => {
     if (!partnerModalOrder) return;
     setAssigningPartner(true);
@@ -378,6 +400,13 @@ export default function ShopkeeperDashboardScreen() {
     const paymentStatus = ((o as any).paymentStatus || '').toUpperCase();
     if (['CANCELLED', 'FAILED', 'SHOP_REJECTED', 'REJECTED'].includes(status)) return false;
     if (['FAILED', 'PAYMENT_FAILED', 'REFUNDED'].includes(paymentStatus)) return false;
+    
+    // Hide orders from shopkeeper if payment is online and not yet PAID.
+    // E.g., 'PENDING', 'PAYMENT_PENDING' should be hidden for RAZORPAY/ONLINE
+    if (o.paymentMethod !== 'COD' && ['PENDING', 'PAYMENT_PENDING'].includes(paymentStatus)) {
+      return false;
+    }
+    
     return true;
   };
 
@@ -392,11 +421,11 @@ export default function ShopkeeperDashboardScreen() {
     }
   });
 
-  const pendingOrders = orders.filter(o => o.orderStatus === 'SHOP_PENDING');
-  const activeOrders = orders.filter(o =>
-    ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNED', 'OUT_FOR_DELIVERY'].includes(o.orderStatus)
+  const pendingOrders = validOrders.filter(o => o.orderStatus === 'SHOP_PENDING');
+  const activeOrders = validOrders.filter(o =>
+    ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.orderStatus)
   );
-  const completedOrders = orders.filter(o => o.orderStatus === 'DELIVERED');
+  const completedOrders = validOrders.filter(o => o.orderStatus === 'DELIVERED');
 
   const realizedSalesOrders = validOrders.filter(o => ((o as any).paymentStatus || '').toUpperCase() === 'PAID');
   const totalSales = realizedSalesOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -668,6 +697,7 @@ export default function ShopkeeperDashboardScreen() {
             countdowns={countdowns}
             onAccept={handleAccept}
             onReject={handleReject}
+            onCancel={handleCancelAfterAccept}
             onAssignPartner={setPartnerModalOrder}
           />
         )}
@@ -1218,6 +1248,7 @@ function OrdersTab({
   countdowns,
   onAccept,
   onReject,
+  onCancel,
   onAssignPartner,
 }: any) {
   return (
@@ -1267,6 +1298,7 @@ function OrdersTab({
               countdown={countdowns[order.id]}
               onAccept={onAccept}
               onReject={onReject}
+              onCancel={onCancel}
               onAssignPartner={onAssignPartner}
             />
           ))}
@@ -1277,7 +1309,7 @@ function OrdersTab({
 }
 
 // ── Order Card Component ─────────────────────────────────────────────────────
-function OrderCard({ order, index, countdown, onAccept, onReject, onAssignPartner }: any) {
+function OrderCard({ order, index, countdown, onAccept, onReject, onCancel, onAssignPartner }: any) {
   const statusConfig = STATUS_FILTERS.find(s => s.status === order.orderStatus) || STATUS_FILTERS[0];
   const imgUri = formatImageUrl(order.productImageUrl);
 
@@ -1337,6 +1369,12 @@ function OrderCard({ order, index, countdown, onAccept, onReject, onAssignPartne
             {order.orderStatus === 'DELIVERY_ASSIGNMENT' && !order.deliveryPartnerId && (
               <Button onPress={() => onAssignPartner(order)} variant="primary" size="sm" className="mt-sm">
                 Assign Partner
+              </Button>
+            )}
+
+            {['DELIVERY_ASSIGNMENT', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'SHOP_ACCEPTED', 'DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(order.orderStatus) && (
+              <Button onPress={() => { onCancel(order.id); }} variant="danger" size="sm" className="mt-sm">
+                Cancel Order
               </Button>
             )}
           </View>

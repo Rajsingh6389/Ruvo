@@ -28,7 +28,7 @@ import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
 import { API_BASE_URL } from '../../config/api';
-import { initializeCheckout, fetchPricing, PricingResult } from '../../services/orderService';
+import { initializeCheckout, verifyPayment, failPayment, fetchPricing, PricingResult } from '../../services/orderService';
 import { getShopDetails } from '../../services/shopService';
 import { validateCoupon } from '../../services/offerService';
 
@@ -263,10 +263,17 @@ export default function CartScreen() {
           },
           token
         );
+
+        setSubmitting(false);
+        console.log('[CartScreen] initializeCheckout response:', checkoutRes);
         
         if (checkoutRes.success && checkoutRes.razorpayOrderId) {
+          console.log('[CartScreen] Initializing Razorpay Checkout flow...');
           try {
+            console.log('[CartScreen] Attempting to require react-native-razorpay...');
             const RazorpayCheckout = require('react-native-razorpay').default;
+            console.log('[CartScreen] Module required successfully:', RazorpayCheckout);
+
             const options = {
               description: 'Order Payment',
               image: 'https://i.imgur.com/3g7nmJC.png',
@@ -283,14 +290,35 @@ export default function CartScreen() {
               theme: { color: '#FF7A00' }
             };
             
-            RazorpayCheckout.open(options).then((data: any) => {
+            console.log('[CartScreen] Calling RazorpayCheckout.open with options:', JSON.stringify(options, null, 2));
+
+            RazorpayCheckout.open(options).then(async (data: any) => {
+              console.log('[CartScreen] Razorpay payment SUCCESS:', data);
               clearCart();
-              (navigation.navigate as any)(ROUTES.ORDER_SUCCESS, { orderId: checkoutRes.orderId });
-            }).catch(() => {
+              try {
+                await verifyPayment({
+                  orderId: checkoutRes.orderId,
+                  razorpayPaymentId: data.razorpay_payment_id,
+                  razorpayOrderId: data.razorpay_order_id,
+                  razorpaySignature: data.razorpay_signature || '',
+                }, token);
+                (navigation.navigate as any)(ROUTES.ORDER_SUCCESS, { orderId: checkoutRes.orderId });
+              } catch (verifyError: any) {
+                console.error('[CartScreen] Payment verification failed:', verifyError);
+                showToast('Payment verification failed on server.', 'error');
+              }
+            }).catch(async (error: any) => {
+              console.error('[CartScreen] Razorpay payment FAILED/CANCELLED:', error);
+              try {
+                 await failPayment(checkoutRes.orderId, token);
+              } catch (e) {
+                 console.error('[CartScreen] Could not update payment status to failed:', e);
+              }
               showToast('Payment cancelled or failed.', 'error');
             });
             
           } catch (e: any) {
+             console.error('[CartScreen] Failed to load or run RazorpayCheckout module:', e);
              showToast('Razorpay module not linked. Please build native app!', 'error');
           }
         } else {

@@ -25,7 +25,7 @@ export const AdminLayout = ({ onRefresh, loading }) => {
       case '/products':
         return { title: 'Product Catalog', sub: 'All products listed across shopkeepers' };
       case '/payments':
-        return { title: 'Payments', sub: 'Cashfree & payment gateway logs' };
+        return { title: 'Payments', sub: 'Razorpay & payment gateway logs' };
       case '/settlements':
         return { title: 'Settlements', sub: 'Financial payouts for shops & riders' };
       case '/refunds':

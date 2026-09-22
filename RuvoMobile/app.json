@@ -20,11 +20,14 @@
         }
       },
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "ios": {
@@ -45,7 +48,10 @@
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ",
+      "eas": {
+        "projectId": "a7867734-495f-4b45-a681-09ffdb633254"
+      }
     },
     "plugins": [
       [

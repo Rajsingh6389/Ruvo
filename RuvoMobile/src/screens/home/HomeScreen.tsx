@@ -643,7 +643,7 @@ export const HomeScreen = () => {
         </View>
 
         {/* ── First Order Offer ───────────────────────────── */}
-       
+        
 
         {/* ── Popular Stores Near You ───────────────────────── */}
         <SectionHeader
@@ -833,7 +833,7 @@ const RuvoFeatureCarousel: React.FC = () => {
   const item = RUVO_FEATURES[idx];
 
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24, marginVertical: 8 }}>
+    <View style={{ paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, marginVertical: 8 }}>
       {/* Section Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: '900' }}>Why RuVo?</Text>

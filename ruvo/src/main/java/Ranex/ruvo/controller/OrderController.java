@@ -665,6 +665,10 @@ public class OrderController {
             paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
                 if (payment.getRazorpayPaymentId() != null && !payment.getRazorpayPaymentId().isBlank()) {
                     try {
+                        System.out.println("---------- [RUVO DIAGNOSTICS] ----------");
+                        System.out.println("[Split Logic Triggered] Order " + order.getId() + " is DELIVERED.");
+                        System.out.println("Processing Razorpay Route Split Transfer to shopkeeper using Payment ID: " + payment.getRazorpayPaymentId());
+                        System.out.println("----------------------------------------");
                         razorpayRouteService.createTransferOnDelivery(order, payment.getRazorpayPaymentId());
                     } catch (Exception e) {
                         System.err.println("Failed to trigger Razerpay route transfer for order: " + order.getId() + ", Error: " + e.getMessage());

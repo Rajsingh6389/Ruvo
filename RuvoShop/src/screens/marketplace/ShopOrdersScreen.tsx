@@ -92,7 +92,15 @@ const TABS: { key: FilterTab; label: string }[] = [
 
 const tabMatches = (tab: FilterTab, order?: Order): boolean => {
   if (!order) return false;
+  
   const status = order.orderStatus;
+  const paymentStatus = (order.paymentStatus || '').toUpperCase();
+  
+  // Hide online orders that have not been paid yet
+  if (order.paymentMethod !== 'COD' && ['PENDING', 'PAYMENT_PENDING', 'FAILED', 'PAYMENT_FAILED'].includes(paymentStatus)) {
+    return false;
+  }
+
   if (tab === 'ALL') return true;
   if (tab === 'TODAY') {
     if (!order.createdAt) return false;
@@ -100,7 +108,7 @@ const tabMatches = (tab: FilterTab, order?: Order): boolean => {
   }
   if (tab === 'NEW') return ['SHOP_PENDING', 'ORDER_PLACED', 'PAYMENT_PENDING'].includes(status ?? '');
   if (tab === 'PREPARE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY'].includes(status ?? '');
-  if (tab === 'ACTIVE') return ['DELIVERY_ASSIGNMENT','DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED','WAITING_PARTNER','BROADCASTED','SEARCHING_PARTNER', 'PICKED_UP','OUT_FOR_DELIVERY'].includes(status ?? '');
+  if (tab === 'ACTIVE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(status ?? '');
   if (tab === 'COMPLETED') return status === 'DELIVERED';
   if (tab === 'CANCELLED') return ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED','CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP','SHOP_TIMEOUT'].includes(status ?? '');
   return false;

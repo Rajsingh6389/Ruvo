@@ -96,7 +96,7 @@ export const DashboardPage = ({ stats, loading }) => {
             </div>
           </div>
           <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B' }}>Cashfree Gateway</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B' }}>Razorpay Gateway</span>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#D97706', marginTop: 6 }}>🟡 Check Payments Tab</div>
           </div>
           <div style={{ padding: 16, borderRadius: 12, backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>

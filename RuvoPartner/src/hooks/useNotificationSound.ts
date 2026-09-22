@@ -31,7 +31,19 @@ export const useDeliveryRequestSound = (hasIncomingRequest: boolean) => {
       Vibration.vibrate(800);
     }
 
-    // Vibration alert (no expo-av native module dependency)
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sound/new delivery request (1).wav')
+      );
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {});
+        }
+      });
+    } catch (e) {
+      console.log('Failed to play sound', e);
+    }
 
     setPopupMessage('New delivery request!');
     setShowPopup(true);
@@ -65,11 +77,25 @@ export const useNewDeliverySound = (deliveryCount: number) => {
     prevCountRef.current = deliveryCount;
   }, [deliveryCount]);
 
-  const triggerAlert = useCallback((count: number) => {
+  const triggerAlert = useCallback(async (count: number) => {
     if (Platform.OS === 'android') {
       Vibration.vibrate(VIBRATION_PATTERN_NEW_ORDER, false);
     } else {
       Vibration.vibrate(1000);
+    }
+
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../../assets/sound/new delivery request (1).wav')
+      );
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status: any) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync().catch(() => {});
+        }
+      });
+    } catch (e) {
+      console.log('Failed to play sound', e);
     }
 
     setPopupMessage(
@@ -92,10 +118,24 @@ export const useNewDeliverySound = (deliveryCount: number) => {
 /**
  * Manual trigger - call from anywhere
  */
-export const playNotificationAlert = () => {
+export const playNotificationAlert = async () => {
   if (Platform.OS === 'android') {
     Vibration.vibrate(VIBRATION_PATTERN_NEW_REQUEST, false);
   } else {
     Vibration.vibrate(800);
+  }
+
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      require('../../assets/sound/new delivery request (1).wav')
+    );
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate((status: any) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync().catch(() => {});
+      }
+    });
+  } catch (e) {
+    console.log('Failed to play sound', e);
   }
 };

@@ -137,8 +137,13 @@ public class RefundService {
             // Note: Full Razorpay refund API integration requires razorpay_payment_id stored on Payment
             String razorpayPaymentId = payment.getRazorpayPaymentId();
             if (razorpayPaymentId != null && !razorpayPaymentId.isBlank()) {
-                // TODO: call Razorpay refund endpoint when payment id is available
-                // razorpayService.initiateRefund(razorpayPaymentId, refund.getAmount(), refundRef);
+                System.out.println("---------- [RUVO DIAGNOSTICS] ----------");
+                System.out.println("[Refund Logic Triggered] Order " + order.getId() + " cancelled.");
+                System.out.println("Initiating proper Razorpay Refund for Amount: Rs " + refund.getAmount());
+                System.out.println("Using Razorpay Payment ID: " + razorpayPaymentId);
+                System.out.println("----------------------------------------");
+                
+                razorpayService.initiateRefund(razorpayPaymentId, refund.getAmount(), refundRef);
                 System.out.println("[RefundService] Razorpay refund queued for payment: " + razorpayPaymentId + " ref: " + refundRef);
             } else {
                 System.out.println("[RefundService] No razorpay_payment_id found for order " + order.getId() + " — manual refund required.");

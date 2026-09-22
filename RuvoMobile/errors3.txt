@@ -1,0 +1,16 @@
+﻿src/screens/marketplace/CustomerTrackingScreen.tsx(761,20): error TS2339: Property 'notFound' does not exist on type '{ container: { flex: number; backgroundColor: string; }; loader: { flex: number; alignItems: "center"; justifyContent: "center"; backgroundColor: string; }; loaderText: { fontFamily: string; marginTop: number; fontSize: number; }; ... 55 more ...; cancelBtnText: { ...; }; }'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(773,20): error TS2339: Property 'backButton' does not exist on type '{ container: { flex: number; backgroundColor: string; }; loader: { flex: number; alignItems: "center"; justifyContent: "center"; backgroundColor: string; }; loaderText: { fontFamily: string; marginTop: number; fontSize: number; }; ... 55 more ...; cancelBtnText: { ...; }; }'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(783,31): error TS2339: Property 'backButtonText' does not exist on type '{ container: { flex: number; backgroundColor: string; }; loader: { flex: number; alignItems: "center"; justifyContent: "center"; backgroundColor: string; }; loaderText: { fontFamily: string; marginTop: number; fontSize: number; }; ... 55 more ...; cancelBtnText: { ...; }; }'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(843,47): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(843,59): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(858,18): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(859,20): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(859,42): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(860,17): error TS2304: Cannot find name 'user'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(960,52): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: TextProps): Text', gave the following error.
+    Type '{ title: string; subtitle: string; icon: string; }' is not assignable to type 'ReactNode'.
+  Overload 2 of 2, '(props: TextProps, context: any): Text', gave the following error.
+    Type '{ title: string; subtitle: string; icon: string; }' is not assignable to type 'ReactNode'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(1005,61): error TS2339: Property 'userId' does not exist on type 'PartnerLocation'.
+src/screens/marketplace/CustomerTrackingScreen.tsx(1038,14): error TS18048: 'order.couponDiscount' is possibly 'undefined'.

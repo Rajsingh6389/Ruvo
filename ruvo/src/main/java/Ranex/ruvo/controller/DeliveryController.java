@@ -437,7 +437,6 @@ public class DeliveryController {
                             + order.getId() + ": " + e.getMessage());
                     }
                 }
-            }
 
             notificationService.notifyCustomer(order, "Delivered", "Your order has been delivered using OTP verification.", "DELIVERED");
             return ResponseEntity.ok("OTP Verified. Order Delivered successfully!");
