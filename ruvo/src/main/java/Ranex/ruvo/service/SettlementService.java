@@ -86,7 +86,37 @@ public class SettlementService {
             partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION")
         );
         if (existing.isPresent()) {
-            throw new IllegalStateException("A pending settlement already exists for this partner and shop. Complete or cancel it first.");
+            Settlement s = existing.get();
+            // Generate NEW OTP for existing settlement
+            String rawOtp = generateOtp();
+            String otpHash = passwordEncoder.encode(rawOtp);
+            
+            s.setOtpHash(otpHash);
+            s.setOtpExpiresAt(Instant.now().plusSeconds(OTP_EXPIRY_SECONDS));
+            s.setOtpFailedAttempts(0);
+            s.setOtpLocked(false);
+            
+            settlementRepository.save(s);
+            
+            Map<String, Object> resp = new LinkedHashMap<>();
+            resp.put("settlementId", s.getSettlementId());
+            resp.put("shopId", s.getShopId());
+            resp.put("shopName", s.getShopName());
+            resp.put("deliveryPartnerId", partnerId);
+            resp.put("orderCount", s.getOrderCount());
+            resp.put("codCollected", s.getCodCollected());
+            resp.put("deliveryCharge", s.getDeliveryCharge());
+            resp.put("ruvoCommission", s.getRuvoCommission());
+            resp.put("netCashToShop", s.getNetCashToShop());
+            resp.put("partnerGrossEarning", s.getPartnerGrossEarning());
+            resp.put("partnerNetEarning", s.getPartnerNetEarning());
+            resp.put("expiresInSeconds", OTP_EXPIRY_SECONDS);
+            resp.put("status", s.getStatus());
+            
+            if (exposeOtp) {
+                resp.put("otp", rawOtp);
+            }
+            return resp;
         }
 
         // Fetch eligible orders from DB

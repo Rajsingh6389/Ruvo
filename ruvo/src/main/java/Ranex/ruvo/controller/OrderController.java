@@ -47,6 +47,7 @@ public class OrderController {
     private final RefundService refundService;
     private final Ranex.ruvo.repository.PaymentRepository paymentRepository;
     private final Ranex.ruvo.service.RazorpayRouteService razorpayRouteService;
+    private final Ranex.ruvo.service.SettlementService settlementService;
 
     public OrderController(OrderRepository orderRepository,
                            ProductRepository productRepository,
@@ -61,7 +62,8 @@ public class OrderController {
                            Ranex.ruvo.repository.DeliveryRequestRepository deliveryRequestRepository,
                            RefundService refundService,
                            Ranex.ruvo.repository.PaymentRepository paymentRepository,
-                           Ranex.ruvo.service.RazorpayRouteService razorpayRouteService) {
+                           Ranex.ruvo.service.RazorpayRouteService razorpayRouteService,
+                           Ranex.ruvo.service.SettlementService settlementService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
@@ -76,6 +78,7 @@ public class OrderController {
         this.refundService = refundService;
         this.paymentRepository = paymentRepository;
         this.razorpayRouteService = razorpayRouteService;
+        this.settlementService = settlementService;
     }
 
     @PostMapping
@@ -663,13 +666,17 @@ public class OrderController {
         // Trigger payment splitting if Delivered via UPI/Online
         if ("DELIVERED".equalsIgnoreCase(status) && ("ONLINE".equalsIgnoreCase(order.getPaymentMethod()) || "RAZORPAY".equalsIgnoreCase(order.getPaymentMethod()))) {
             paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
-                if (payment.getRazorpayPaymentId() != null && !payment.getRazorpayPaymentId().isBlank()) {
+                if (payment.getRazorpayPaymentId() != null && !payment.getRazorpayPaymentId().isBlank() && !"SUCCESS".equals(payment.getEscrowTransferStatus())) {
                     try {
                         System.out.println("---------- [RUVO DIAGNOSTICS] ----------");
                         System.out.println("[Split Logic Triggered] Order " + order.getId() + " is DELIVERED.");
                         System.out.println("Processing Razorpay Route Split Transfer to shopkeeper using Payment ID: " + payment.getRazorpayPaymentId());
                         System.out.println("----------------------------------------");
-                        razorpayRouteService.createTransferOnDelivery(order, payment.getRazorpayPaymentId());
+                        boolean success = razorpayRouteService.createTransferOnDelivery(order, payment.getRazorpayPaymentId());
+                        if (success) {
+                            payment.setEscrowTransferStatus("SUCCESS");
+                            paymentRepository.save(payment);
+                        }
                     } catch (Exception e) {
                         System.err.println("Failed to trigger Razerpay route transfer for order: " + order.getId() + ", Error: " + e.getMessage());
                     }
@@ -704,5 +711,62 @@ public class OrderController {
             }
         }
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Shopkeeper calls this to verify the handover OTP and confirm COD cash receipt.
+     * Once verified, settlement is marked PAID.
+     */
+    @PostMapping("/{orderId}/verify-handover-otp")
+    public ResponseEntity<?> verifyHandoverOtp(
+            @PathVariable Long orderId,
+            @RequestParam String otp) {
+        Optional<Order> orderOpt = orderRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        Order order = orderOpt.get();
+
+        // 1. Try Individual Order OTP
+        if (order.getHandoverOtp() != null && order.getHandoverOtp().equals(otp)) {
+            // Expire check: 10 minutes
+            if (order.getHandoverOtpGeneratedAt() != null &&
+                    Instant.now().isAfter(order.getHandoverOtpGeneratedAt().plusSeconds(600))) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "OTP has expired. Please ask partner to regenerate."));
+            }
+
+            order.setHandoverOtp(null);
+            order.setHandoverOtpGeneratedAt(null);
+            order.setHandoverVerified(true);
+            order.setPaymentStatus("PAID");
+            orderRepository.save(order);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Cash handover verified. Settlement complete."));
+        }
+
+        // 2. Try Bulk Settlement OTP
+        if (order.getDeliveryPartnerId() != null && order.getShopId() != null) {
+            try {
+                settlementService.verifyPartnerToShopCodSettlement(order.getDeliveryPartnerId(), order.getShopId(), otp);
+                
+                // Clear any individual order OTP just in case
+                order.setHandoverOtp(null);
+                order.setHandoverOtpGeneratedAt(null);
+                order.setHandoverVerified(true);
+                order.setPaymentStatus("PAID");
+                orderRepository.save(order);
+
+                return ResponseEntity.ok(Map.of("success", true, "message", "Bulk Cash settlement verified! All pending orders settled."));
+            } catch (IllegalArgumentException e) {
+                if (e.getMessage() != null && e.getMessage().contains("No pending settlement found")) {
+                    return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid OTP. Please try again."));
+                }
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage() != null ? e.getMessage() : "Invalid OTP."));
+            }
+        }
+
+        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid OTP. Please try again."));
     }
 }

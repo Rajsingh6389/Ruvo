@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +21,7 @@ import { Delivery, Earnings, partnerService } from '../services/partnerService';
 
 export const EarningsScreen = () => {
   const { token } = useAuth();
+  const navigation = useNavigation<any>();
 
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [history, setHistory] = useState<Delivery[]>([]);
@@ -126,6 +127,28 @@ export const EarningsScreen = () => {
                     </View>
                   </View>
                 </View>
+              </Animated.View>
+
+              {/* Shop Settlements Shortcut */}
+              <Animated.View entering={FadeInUp.delay(50).duration(500)} className="px-6 mt-4">
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ShopSettlements')}
+                  className="bg-[#1C2026] border border-gray-800 rounded-[20px] p-4 flex-row items-center justify-between shadow-lg shadow-black/40"
+                  activeOpacity={0.7}
+                >
+                  <View className="flex-row items-center gap-4">
+                    <View className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-[16px] items-center justify-center">
+                      <Ionicons name="storefront" size={20} color="#10B981" />
+                    </View>
+                    <View>
+                      <Text className="text-white font-black text-sm tracking-tight mb-0.5">Shop Settlements</Text>
+                      <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Pay collected COD cash</Text>
+                    </View>
+                  </View>
+                  <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
+                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
               </Animated.View>
 
               {/* Section Header */}

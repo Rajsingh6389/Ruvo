@@ -74,6 +74,7 @@ export const partnerService = {
   pickup: (token: string, id: number, otp?: string) => api<any>(`/api/partner/deliveries/${id}/pickup${otp ? `?otp=${encodeURIComponent(otp)}` : ''}`, token, { method: 'PUT' }),
   startDelivery: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/out-for-delivery`, token, { method: 'PUT' }),
   completeLegacy: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/delivered`, token, { method: 'PUT' }),
+  settlementSummary: (token: string, date?: string) => api<any>(`/api/settlements/partner${date ? `?date=${encodeURIComponent(date)}` : ''}`, token),
   notifications: (token: string) => api<any[]>('/api/notifications/mine', token),
   markNotificationRead: (token: string, id: number) => api(`/api/notifications/${id}/read`, token, { method: 'PATCH' }),
 };

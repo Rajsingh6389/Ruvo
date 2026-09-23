@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { ToastProvider } from './src/context/ToastContext';
+import { OrderModalProvider } from './src/context/OrderModalContext';
 import { ShopNavigator } from './src/ShopNavigator';
 import { installNetworkMonitor } from './src/hooks/useNetworkStatus';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
@@ -39,10 +40,12 @@ export default function App() {
         <AuthProvider requiredRole="SHOP_OWNER">
           <ThemeProvider>
             <ToastProvider>
-              <SafeAreaProvider>
-                <StatusBar barStyle="dark-content" />
-                <ShopNavigator />
-              </SafeAreaProvider>
+              <OrderModalProvider>
+                <SafeAreaProvider>
+                  <StatusBar barStyle="dark-content" />
+                  <ShopNavigator />
+                </SafeAreaProvider>
+              </OrderModalProvider>
             </ToastProvider>
           </ThemeProvider>
         </AuthProvider>

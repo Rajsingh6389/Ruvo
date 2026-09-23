@@ -257,13 +257,20 @@ export default function CheckoutScreen() {
             console.log('[CheckoutScreen] Attempting to require react-native-razorpay...');
             // Lazy import to prevent crashes if module not found/linked
             const RazorpayCheckout = require('react-native-razorpay').default;
-            console.log('[CheckoutScreen] Module required successfully:', RazorpayCheckout);
+            const { NativeModules } = require('react-native');
+            console.log('[CheckoutScreen] Module required successfully:', !!RazorpayCheckout);
             
+            if (!NativeModules.RNRazorpayCheckout) {
+              setSubmitting(false);
+              showToast('Razorpay is not supported in Expo Go. Please use a development build or TestFlight/APK.', 'error');
+              return;
+            }
+
             const options = {
               description: 'Order Payment',
               image: 'https://i.imgur.com/3g7nmJC.png',
               currency: checkoutRes.currency || 'INR',
-              key: 'rzp_test_YourKeyIdHere', // REPLACE THIS WITH REAL KEY
+              key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YourKeyIdHere',
               amount: checkoutRes.amount * 100, // Amount in paise
               name: 'RuVo',
               order_id: checkoutRes.razorpayOrderId,

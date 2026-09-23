@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { Vibration, Platform } from 'react-native';
 import { useToast } from '../context/ToastContext';
+import { useOrderModal } from '../context/OrderModalContext';
 import { Order } from '../types/order';
 
 export function useOrderAlerts(orders: any[]) {
   const previousOrdersRef = useRef<Order[]>([]);
   const { showToast } = useToast();
+  const { showOrderModal } = useOrderModal();
 
   const playAlertSound = async () => {
     console.log('[useOrderAlerts] 🔔 Triggering alert feedback (vibration & audio)...');
@@ -106,6 +108,8 @@ export function useOrderAlerts(orders: any[]) {
           
           console.log(`[useOrderAlerts] 📢 Notification Message: "${notificationMsg}"`);
           showToast(notificationMsg, 'info');
+          // Important: also show the global half-screen modal
+          showOrderModal(o);
         });
         playAlertSound();
       } else {

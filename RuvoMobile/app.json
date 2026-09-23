@@ -14,26 +14,19 @@
         "foregroundImage": "./assets/images/RuvoIcon.png",
         "backgroundColor": "#173F35"
       },
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
-        }
-      },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ]
     },
     "ios": {
       "bundleIdentifier": "com.ruvo.mobile",
       "config": {
-        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+        "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuVo uses your location to find nearby shops and fill delivery addresses.",
@@ -48,12 +41,18 @@
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ",
+      "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY",
       "eas": {
         "projectId": "a7867734-495f-4b45-a681-09ffdb633254"
       }
     },
     "plugins": [
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+        }
+      ],
       [
         "expo-location",
         {

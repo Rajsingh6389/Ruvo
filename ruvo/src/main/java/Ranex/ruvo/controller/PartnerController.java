@@ -527,13 +527,13 @@ public class PartnerController {
                 totalEarnings += d.getDeliveryFee();
                 if (d.getDeliveredAt() != null && d.getDeliveredAt().isAfter(startOfToday)) {
                     todayEarnings += d.getDeliveryFee();
-                    
-                    Optional<Order> orderOpt = orderRepository.findById(d.getOrderId());
-                    if (orderOpt.isPresent()) {
-                        Order o = orderOpt.get();
-                        if ("COD".equalsIgnoreCase(o.getPaymentMethod())) {
-                            shopDues += (o.getTotalAmount().doubleValue() - d.getDeliveryFee());
-                        }
+                }
+
+                Optional<Order> orderOpt = orderRepository.findById(d.getOrderId());
+                if (orderOpt.isPresent()) {
+                    Order o = orderOpt.get();
+                    if ("COD".equalsIgnoreCase(o.getPaymentMethod()) && !Boolean.TRUE.equals(o.getHandoverVerified())) {
+                        shopDues += (o.getTotalAmount().doubleValue() - d.getDeliveryFee());
                     }
                 }
             }
@@ -645,35 +645,4 @@ public class PartnerController {
         return ResponseEntity.ok(Map.of("handoverOtp", otp, "message", "Show this OTP to the shopkeeper."));
     }
 
-    /**
-     * Shopkeeper calls this to verify the handover OTP and confirm COD cash receipt.
-     * Once verified, settlement is marked PAID.
-     */
-    @PostMapping("/settlements/{orderId}/verify-handover-otp")
-    public ResponseEntity<?> verifyHandoverOtp(
-            @PathVariable Long orderId,
-            @RequestParam String otp) {
-        Optional<Order> orderOpt = orderRepository.findById(orderId);
-        if (orderOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        Order order = orderOpt.get();
-
-        if (order.getHandoverOtp() == null || !order.getHandoverOtp().equals(otp)) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid OTP. Please try again."));
-        }
-
-        // Expire check: 10 minutes
-        if (order.getHandoverOtpGeneratedAt() != null &&
-                Instant.now().isAfter(order.getHandoverOtpGeneratedAt().plusSeconds(600))) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "OTP has expired. Please ask partner to regenerate."));
-        }
-
-        order.setHandoverOtp(null);
-        order.setHandoverOtpGeneratedAt(null);
-        order.setHandoverVerified(true);
-        orderRepository.save(order);
-
-        return ResponseEntity.ok(Map.of("success", true, "message", "Cash handover verified. Settlement complete."));
-    }
 }

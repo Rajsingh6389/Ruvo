@@ -174,20 +174,7 @@ export default function ShopkeeperDashboardScreen() {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [partnerModalOrder, setPartnerModalOrder] = useState<any>(null);
   const [assigningPartner, setAssigningPartner] = useState(false);
-  const [incomingOrder, setIncomingOrder] = useState<any>(null);
-  const [ignoredOrderIds, setIgnoredOrderIds] = useState<number[]>([]);
 
-  useEffect(() => {
-    const pending = orders.filter((o: any) => o.orderStatus === 'SHOP_PENDING' && !ignoredOrderIds.includes(o.id));
-    if (pending.length > 0 && !incomingOrder) {
-      setIncomingOrder(pending[0]);
-    } else if (incomingOrder) {
-      const active = orders.find((o: any) => o.id === incomingOrder.id);
-      if (!active || active.orderStatus !== 'SHOP_PENDING') {
-         setIncomingOrder(null);
-      }
-    }
-  }, [orders, incomingOrder, ignoredOrderIds]);
 
   // Countdown state
   const [countdowns, setCountdowns] = useState<Record<number, string>>({});
@@ -789,110 +776,7 @@ export default function ShopkeeperDashboardScreen() {
         </View>
       </Modal>
 
-      {/* Incoming Order Half-Screen Modal */}
-      <Modal
-        visible={!!incomingOrder}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-           if (incomingOrder?.id) setIgnoredOrderIds(prev => [...prev, incomingOrder.id]);
-           setIncomingOrder(null);
-        }}
-      >
-        <View className="flex-1 bg-black/80 justify-end">
-          <TouchableOpacity className="flex-1" onPress={() => {
-             if (incomingOrder?.id) setIgnoredOrderIds(prev => [...prev, incomingOrder.id]);
-             setIncomingOrder(null);
-          }} />
-          <Animated.View entering={FadeInDown.duration(400)} className="bg-white rounded-t-[32px] overflow-hidden shadow-2xl">
-            {/* Urgency Header */}
-            <View className="bg-amber-500 px-xl py-4 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-2">
-                 <Ionicons name="notifications" size={24} color="#FFFFFF" />
-                 <Text className="text-lg font-black text-white uppercase tracking-widest mt-0.5">New Order Alert</Text>
-              </View>
-              {countdowns[incomingOrder?.id] && (
-                 <View className="bg-red-600 px-3 py-1 rounded-full border border-red-400">
-                   <Text className="text-sm font-black text-white tabular-nums">
-                     {countdowns[incomingOrder.id]}
-                   </Text>
-                 </View>
-              )}
-            </View>
 
-            <View className="p-xl">
-              <View className="flex-row items-center justify-between mb-sm">
-                <Text className="text-gray-500 font-bold tracking-wide">ORDER ID #{incomingOrder?.id}</Text>
-                <Badge variant="warning">Awaiting Response</Badge>
-              </View>
-
-              <Text className="text-2xl font-black text-gray-900 mb-xs" numberOfLines={2}>
-                {incomingOrder?.productName || 'Multiple Items Selected'}
-              </Text>
-              {incomingOrder?.items && incomingOrder.items.length > 0 && (
-                <Text className="text-sm font-bold text-gray-500 mb-md">
-                  + {incomingOrder.items.length - 1} additional item{incomingOrder.items.length > 2 ? 's' : ''}
-                </Text>
-              )}
-
-              {/* Order Data Bento Box */}
-              <View className="bg-gray-50 rounded-2xl p-lg border border-gray-100 flex-row gap-lg mb-md">
-                <View className="flex-1 border-r border-gray-200">
-                   <Text className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Total Value</Text>
-                   <Text className="text-2xl font-black text-emerald-600">₹{incomingOrder?.totalAmount}</Text>
-                </View>
-                <View className="flex-1 pl-sm">
-                   <Text className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Payment</Text>
-                   <View className="flex-row items-center gap-xs mt-1">
-                     <Ionicons name={incomingOrder?.paymentMethod === 'COD' ? 'timer-outline' : 'checkmark-circle'} size={18} color={incomingOrder?.paymentMethod === 'COD' ? '#EA580C' : '#16A34A'} />
-                     <Text className="text-base font-black text-gray-900 pt-0.5">
-                       {incomingOrder?.paymentMethod || 'Online'}
-                     </Text>
-                   </View>
-                </View>
-              </View>
-
-              {/* Delivery Data */}
-              <View className="flex-row items-start gap-md mb-xl bg-blue-50/50 p-md rounded-2xl border border-blue-100/50">
-                <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center">
-                  <Ionicons name="location" size={20} color="#2563EB" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-[10px] text-blue-600 font-black mb-0.5 uppercase tracking-wider">Delivery To</Text>
-                  <Text className="text-sm font-bold text-gray-800" numberOfLines={2}>{incomingOrder?.deliveryAddress || 'Customer Address'}</Text>
-                  <Text className="text-xs font-semibold text-gray-500 mt-1">{incomingOrder?.customerName || 'Customer'}</Text>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View className="flex-row gap-md pb-md">
-                <TouchableOpacity 
-                   activeOpacity={0.8}
-                   onPress={() => {
-                      if (incomingOrder?.id) handleReject(incomingOrder.id);
-                   }} 
-                   className="flex-1 bg-white border-2 border-rose-500 py-4 rounded-2xl items-center justify-center shadow-sm"
-                >
-                  <Text className="text-rose-600 font-black text-base uppercase tracking-wider">Reject</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                   activeOpacity={0.8}
-                   onPress={() => {
-                      if (incomingOrder?.id) handleAccept(incomingOrder.id);
-                      setIncomingOrder(null);
-                   }} 
-                   className="flex-[2] bg-emerald-500 border border-emerald-600 py-4 rounded-2xl items-center justify-center shadow-md shadow-emerald-500/20"
-                >
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="checkmark-done" size={20} color="#FFFFFF" />
-                    <Text className="text-white font-black text-base uppercase tracking-widest mt-0.5">Accept Order</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

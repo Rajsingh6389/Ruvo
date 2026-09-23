@@ -63,6 +63,17 @@ public class Payment {
     @Builder.Default
     private String paymentStatus = "PENDING";
 
+    /**
+     * Escrow payout status for Razorpay Route
+     *
+     * PENDING
+     * SUCCESS
+     * FAILED
+     */
+    @Column(name = "escrow_transfer_status", length = 30)
+    @Builder.Default
+    private String escrowTransferStatus = "PENDING";
+
     @Column(
         name = "amount",
         nullable = false,

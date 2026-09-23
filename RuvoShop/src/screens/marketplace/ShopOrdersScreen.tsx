@@ -15,6 +15,8 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,25 +94,20 @@ const TABS: { key: FilterTab; label: string }[] = [
 
 const tabMatches = (tab: FilterTab, order?: Order): boolean => {
   if (!order) return false;
-  
-  const status = order.orderStatus;
-  const paymentStatus = (order.paymentStatus || '').toUpperCase();
-  
-  // Hide online orders that have not been paid yet
-  if (order.paymentMethod !== 'COD' && ['PENDING', 'PAYMENT_PENDING', 'FAILED', 'PAYMENT_FAILED'].includes(paymentStatus)) {
-    return false;
-  }
+  const status = order.orderStatus ?? '';
 
-  if (tab === 'ALL') return true;
+  // Backend already guarantees only PAID or COD orders reach the shopkeeper.
+  // No payment-status filtering needed here.
+  if (tab === 'ALL')       return true;
   if (tab === 'TODAY') {
     if (!order.createdAt) return false;
     return new Date(order.createdAt).toDateString() === new Date().toDateString();
   }
-  if (tab === 'NEW') return ['SHOP_PENDING', 'ORDER_PLACED', 'PAYMENT_PENDING'].includes(status ?? '');
-  if (tab === 'PREPARE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY'].includes(status ?? '');
-  if (tab === 'ACTIVE') return ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(status ?? '');
+  if (tab === 'NEW')       return ['SHOP_PENDING', 'ORDER_PLACED'].includes(status);
+  if (tab === 'PREPARE')   return ['SHOP_ACCEPTED', 'PREPARING', 'READY'].includes(status);
+  if (tab === 'ACTIVE')    return ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(status);
   if (tab === 'COMPLETED') return status === 'DELIVERED';
-  if (tab === 'CANCELLED') return ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED','CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP','SHOP_TIMEOUT'].includes(status ?? '');
+  if (tab === 'CANCELLED') return ['CANCELLED', 'CANCELLED_BY_USER', 'SHOP_REJECTED', 'CANCELLED_NO_PARTNER_FOUND', 'CANCELLED_BY_SHOP', 'SHOP_TIMEOUT'].includes(status);
   return false;
 };
 
@@ -134,6 +131,12 @@ export default function ShopOrdersScreen() {
   const [viewBroadcastId, setViewBroadcastId] = useState<number | null>(null);
   const [liveBroadcastData, setLiveBroadcastData] = useState<any>(null);
 
+  // Handover OTP Modal State
+  const [handoverModalVisible, setHandoverModalVisible] = useState(false);
+  const [handoverOtp, setHandoverOtp] = useState('');
+  const [handoverOrderId, setHandoverOrderId] = useState<number | null>(null);
+  const [verifyingHandover, setVerifyingHandover] = useState(false);
+
   useOrderAlerts(orders);
 
   const fetchOrders = useCallback(async (showLoader = true) => {
@@ -151,9 +154,22 @@ export default function ShopOrdersScreen() {
           if (Array.isArray(mineData) && mineData.length > 0) {
             currentShopId = mineData[0].id;
             setShopId(currentShopId);
+          } else {
+            setLoading(false);
+            setError('No shop found for your account. Please create a shop first.');
+            return;
           }
+        } else {
+          const errText = await shopRes.text().catch(() => '');
+          setLoading(false);
+          setError(`Could not find your shop (${shopRes.status}): ${errText || 'Server error'}`);
+          return;
         }
-      } catch {}
+      } catch (e: any) {
+        setLoading(false);
+        setError(`Network error while finding shop: ${e?.message || 'Unknown'}`);
+        return;
+      }
     }
 
     if (!currentShopId) { setLoading(false); setError('No active shop found.'); return; }
@@ -164,12 +180,16 @@ export default function ShopOrdersScreen() {
       const response = await fetch(`${API_BASE_URL}/api/orders/shop/${currentShopId}`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => '');
+        throw new Error(`Server error ${response.status}: ${errBody || response.statusText}`);
+      }
       const data = await response.json();
-      if (!Array.isArray(data)) throw new Error('Invalid orders response');
+      if (!Array.isArray(data)) throw new Error('Server returned unexpected data format.');
       setOrders([...data].sort((a: Order, b: Order) => Number(b.id || 0) - Number(a.id || 0)));
     } catch (err: any) {
-      setError('Failed to fetch orders.');
+      console.error('[RuVo] ShopOrders fetch error:', err);
+      setError(err?.message || 'Failed to fetch orders. Check your connection.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -333,6 +353,27 @@ export default function ShopOrdersScreen() {
         },
       },
     ]);
+  };
+
+  const handleVerifyHandoverSubmit = async () => {
+    if (!token || !handoverOrderId || handoverOtp.trim().length === 0) return;
+    setVerifyingHandover(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders/${handoverOrderId}/verify-handover-otp?otp=${handoverOtp.trim()}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to verify Handover OTP');
+      
+      showToast('✅ Cash Handover Verified!', 'success');
+      setHandoverModalVisible(false);
+      await fetchOrders(false);
+    } catch (e: any) {
+      Alert.alert('Verification Failed', e.message);
+    } finally {
+      setVerifyingHandover(false);
+    }
   };
 
   const filtered = orders.filter(o => tabMatches(filterTab, o));
@@ -523,7 +564,7 @@ export default function ShopOrdersScreen() {
             const cfg = getStatusCfg(status);
             const isPending = status === 'SHOP_PENDING';
             const processing = processingOrderId === item.id;
-            const isCod = item.paymentMethod?.toUpperCase().includes('COD');
+            const isCod = item.paymentMethod?.toUpperCase().includes('COD') || item.paymentMethod?.toUpperCase().includes('CASH');
             const countdown = countdowns[item.id!];
             const broadcast = broadcastCountdowns[item.id!];
 
@@ -741,6 +782,21 @@ export default function ShopOrdersScreen() {
                       </Text>
                     </View>
                   )}
+                  {/* Preparing / Ready: show cancel only */}
+                  {['PREPARING', 'READY'].includes(status) && (
+                    <View className="mt-md gap-sm">
+                      <Button
+                        variant="danger"
+                        onPress={() => item.id && handleCancelAfterAccept(item.id)}
+                        disabled={processing}
+                      >
+                        {processing ? <ActivityIndicator color="#FFF" size="small" /> : 'Cancel Order'}
+                      </Button>
+                      <Text className="text-[10px] text-gray-500 text-center">
+                        Use only if you are unable to fulfill this order.
+                      </Text>
+                    </View>
+                  )}
                   {/* Active Order Actions */}
                   {['DELIVERY_ASSIGNMENT', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'SHOP_ACCEPTED'].includes(status) && (
                     <View className="mt-md gap-sm">
@@ -807,12 +863,82 @@ export default function ShopOrdersScreen() {
                       </Text>
                     </View>
                   )}
+                  {/* Delivered Actions for COD */}
+                  {status === 'DELIVERED' && isCod && (
+                    item.handoverVerified !== true ? (
+                      <View className="mt-md gap-sm">
+                        <Button
+                          variant="primary"
+                          onPress={() => {
+                            setHandoverOrderId(item.id!);
+                            setHandoverOtp('');
+                            setHandoverModalVisible(true);
+                          }}
+                          disabled={processing}
+                        >
+                          {processing ? <ActivityIndicator color="#171A1F" size="small" /> : 'Receive Cash from Partner'}
+                        </Button>
+                        <Text className="text-[10px] text-gray-500 text-center">
+                          Enter the Partner's Handover OTP to mark cash received.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="mt-md flex-row items-center justify-center p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <Ionicons name="checkmark-done-circle" size={18} color="#059669" />
+                        <Text className="text-emerald-700 font-bold ml-2">Cash Settled</Text>
+                      </View>
+                    )
+                  )}
                 </View>
               </Animated.View>
             );
           }}
         />
       )}
+
+      {/* Handover OTP Modal */}
+      <Modal visible={handoverModalVisible} transparent animationType="fade">
+        <View className="flex-1 bg-black/60 items-center justify-center px-6">
+          <View className="bg-white w-full rounded-3xl p-6 shadow-xl items-center">
+            <View className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 items-center justify-center mb-4">
+              <Ionicons name="cash" size={32} color="#10B981" />
+            </View>
+            <Text className="text-xl font-extrabold text-gray-900 mb-1">Verify Cash Handover</Text>
+            <Text className="text-sm text-gray-500 text-center mb-6">
+              Ask the delivery partner for the 4 or 6-digit OTP to confirm you received the COD cash.
+            </Text>
+            
+            <TextInput
+              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-2xl font-black text-center tracking-[10px] text-gray-900 w-full mb-6"
+              placeholder="------"
+              keyboardType="number-pad"
+              maxLength={6}
+              value={handoverOtp}
+              onChangeText={setHandoverOtp}
+              editable={!verifyingHandover}
+            />
+            
+            <View className="flex-row gap-3 w-full">
+              <TouchableOpacity
+                onPress={() => setHandoverModalVisible(false)}
+                className="flex-1 py-3.5 bg-gray-100 rounded-xl items-center justify-center active:opacity-70"
+                disabled={verifyingHandover}
+              >
+                <Text className="text-sm font-extrabold text-gray-600">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleVerifyHandoverSubmit}
+                disabled={handoverOtp.length < 4 || verifyingHandover}
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center active:opacity-70 ${
+                  handoverOtp.length === 4 ? 'bg-[#10B981]' : 'bg-[#10B981]/50'
+                }`}
+              >
+                {verifyingHandover ? <ActivityIndicator size="small" color="#FFF" /> : <Text className="text-sm font-extrabold text-white">Verify</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

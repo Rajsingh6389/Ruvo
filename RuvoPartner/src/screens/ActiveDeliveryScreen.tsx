@@ -365,7 +365,7 @@ export const ActiveDeliveryScreen = () => {
             {/* OTP Input */}
             <View className="mb-2">
               <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-2 pl-1">
-                6-Digit OTP
+                4-Digit OTP
               </Text>
               <View className={`flex-row items-center h-16 rounded-2xl px-4 border ${focused ? 'bg-[#242933] border-[#FF7A00]' : 'bg-[#171A1F] border-gray-800'} transition-all mb-6`}>
                 <Ionicons name="key-outline" size={24} color="#9CA3AF" />
@@ -375,8 +375,8 @@ export const ActiveDeliveryScreen = () => {
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
                   keyboardType="number-pad"
-                  maxLength={6}
-                  placeholder="••••••"
+                  maxLength={4}
+                  placeholder="••••"
                   placeholderTextColor="#4B5563"
                   className="flex-1 text-white text-3xl font-black ml-3 tracking-[8px] text-center"
                 />

@@ -44,12 +44,24 @@ public class SettlementController {
      * Partner-side Master Summary & Shop-wise List
      */
     @GetMapping("/partner")
-    public ResponseEntity<?> getPartnerSettlements(@RequestParam Long partnerId) {
+    public ResponseEntity<?> getPartnerSettlements(
+            @RequestParam Long partnerId,
+            @RequestParam(required = false) String date) {
+
         List<Order> partnerOrders = orderRepository.findByDeliveryPartnerId(partnerId).stream()
             .filter(o -> "DELIVERED".equalsIgnoreCase(o.getOrderStatus()))
+            .filter(o -> {
+                if (date != null && !date.isEmpty() && o.getDeliveredAt() != null) {
+                    String orderDate = o.getDeliveredAt().atZone(ZoneId.systemDefault()).toLocalDate().toString();
+                    if (!orderDate.equals(date)) {
+                        return false;
+                    }
+                }
+                return true;
+            })
             .toList();
 
-        // COD: partner physically collected cash from customer
+        // Total COD physically collected on this day (or lifetime if no date)
         BigDecimal codCollected = partnerOrders.stream()
             .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()))
             .map(o -> o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO)
@@ -109,7 +121,7 @@ public class SettlementController {
                 .map(o -> o.getPlatformFee() != null ? o.getPlatformFee() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            // Net cash: for COD orders, partner holds cash minus delivery charge
+            // Total Net cash (for UI metrics matching the whole day)
             BigDecimal sNetCod = sCod.subtract(
                 orders.stream()
                     .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()))
@@ -117,7 +129,20 @@ public class SettlementController {
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
             ).max(BigDecimal.ZERO);
 
-            String shopName = shopRepository.findById(shopId).map(Shop::getName).orElse("Shop #" + shopId);
+            // Pending Net Cash (only unsettled orders)
+            BigDecimal sPendingNetCod = orders.stream()
+                .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()) && !Boolean.TRUE.equals(o.getHandoverVerified()))
+                .map(o -> {
+                    BigDecimal total = o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO;
+                    BigDecimal fee = o.getDeliveryFee() != null ? o.getDeliveryFee() : BigDecimal.ZERO;
+                    return total.subtract(fee);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .max(BigDecimal.ZERO);
+
+            Shop shop = shopRepository.findById(shopId).orElse(null);
+            String shopName = shop != null ? shop.getName() : "Shop #" + shopId;
+            String shopLogoUrl = shop != null ? shop.getLogoUrl() : null;
 
             // Check for pending COD settlement
             Optional<Settlement> sOpt = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
@@ -125,21 +150,39 @@ public class SettlementController {
             );
 
             boolean hasCodOrders = orders.stream().anyMatch(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()));
-            String status = hasCodOrders ? sOpt.map(Settlement::getStatus).orElse("PENDING") : "UPI_SETTLED";
+            String status = hasCodOrders ? (sPendingNetCod.compareTo(BigDecimal.ZERO) <= 0 ? "COMPLETED" : sOpt.map(Settlement::getStatus).orElse("PENDING")) : "UPI_SETTLED";
+
+            List<Map<String, Object>> orderDetails = orders.stream()
+                .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()))
+                .map(o -> {
+                    BigDecimal total = o.getTotalAmount() != null ? o.getTotalAmount() : BigDecimal.ZERO;
+                    BigDecimal fee = o.getDeliveryFee() != null ? o.getDeliveryFee() : BigDecimal.ZERO;
+                    Map<String, Object> orderMap = new HashMap<>();
+                    orderMap.put("orderId", o.getId());
+                    orderMap.put("totalAmount", total);
+                    orderMap.put("deliveryFee", fee);
+                    orderMap.put("netCash", total.subtract(fee).max(BigDecimal.ZERO));
+                    orderMap.put("isSettled", Boolean.TRUE.equals(o.getHandoverVerified()));
+                    return orderMap;
+                })
+                .toList();
 
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("shopId", shopId);
             item.put("shopName", shopName);
+            item.put("shopLogoUrl", shopLogoUrl);
             item.put("ordersCount", orders.size());
             item.put("codCount", (int) orders.stream().filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod())).count());
             item.put("upiCount", (int) orders.stream().filter(o -> !"COD".equalsIgnoreCase(o.getPaymentMethod())).count());
             item.put("codCollected", sCod);
             item.put("deliveryCharge", sDel);
             item.put("ruvoCommission", sRuv);
-            item.put("netCashToShop", sNetCod);
+            item.put("netCashToShop", sPendingNetCod); // This is what shows on the Settle button
+            item.put("totalDayNetCash", sNetCod); // Exposing the total for transparency
             item.put("partnerGrossEarning", sDel);
             item.put("partnerNetEarning", sDel.subtract(sRuv).max(BigDecimal.ZERO));
             item.put("status", status);
+            item.put("orders", orderDetails);
             shopList.add(item);
         });
 

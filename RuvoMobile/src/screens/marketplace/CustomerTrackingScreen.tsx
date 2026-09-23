@@ -36,13 +36,21 @@ import { useAuth } from '../../context/AuthContext';
 import { getOrder } from '../../services/orderService';
 import { Order } from '../../types/order';
 
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, RAZORPAY_KEY_ID } from '../../config/api';
+
+import Constants from 'expo-constants';
 
 import MapView, {
   Marker,
   Polyline,
   PROVIDER_GOOGLE,
 } from 'react-native-maps';
+
+// Expo Go does not inject the Google Maps API key from app.json into the native layer,
+// so using PROVIDER_GOOGLE in Expo Go results in a black screen.
+// We fall back to the default provider when running inside Expo Go.
+const isExpoGo = Constants.executionEnvironment === 'storeClient' || Constants.appOwnership === 'expo';
+const MAP_PROVIDER = isExpoGo ? undefined : PROVIDER_GOOGLE;
 
 import { Client } from '@stomp/stompjs';
 
@@ -314,6 +322,9 @@ export default function CustomerTrackingScreen() {
 
   const [promoIndex, setPromoIndex] =
     useState(0);
+
+  const [payingOnline, setPayingOnline] =
+    useState(false);
 
   const pulseAnim =
     useRef(new Animated.Value(1)).current;
@@ -828,7 +839,6 @@ export default function CustomerTrackingScreen() {
   // ───────────────────────────────────────────────────────────────────────────
   // PAY ONLINE (COD ONLY)
   // ───────────────────────────────────────────────────────────────────────────
-  const [payingOnline, setPayingOnline] = useState(false);
 
   const handlePayOnline = async () => {
     if (!orderId || !token || !order) return;
@@ -850,14 +860,14 @@ export default function CustomerTrackingScreen() {
         description: 'Online Payment for COD Order',
         image: 'https://i.imgur.com/3g7nmJC.png',
         currency: data.currency || 'INR',
-        key: 'rzp_test_YourKeyIdHere',
+        key: RAZORPAY_KEY_ID,
         amount: data.amount * 100,
         name: 'RuVo',
         order_id: data.razorpayOrderId,
         prefill: {
-          email: user?.email || 'customer@ruvomobile.me',
-          contact: user?.mobileNumber || (user as any)?.phone || '9999999999',
-          name: user?.name || 'Customer'
+          email: user?.email || '',
+          contact: user?.mobileNumber || (user as any)?.phone || '',
+          name: user?.name || ''
         },
         theme: { color: '#FF7A00' }
       };
@@ -885,7 +895,7 @@ export default function CustomerTrackingScreen() {
   // RENDER
   // ───────────────────────────────────────────────────────────────────────────
 
-  const canCancel = !cancelled && !['OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED'].includes(order.orderStatus || '');
+  const canCancel = !cancelled && !['OUT_FOR_DELIVERY', 'PICKED_UP', 'DELIVERED', 'DELIVERY_ASSIGNED', 'DELIVERY_ASSIGNMENT', 'DELIVERY_BROADCASTED'].includes(order.orderStatus || '');
   const canPayOnline = (order.paymentMethod === 'COD' || order.paymentMethod === 'CASH') && order.paymentStatus !== 'PAID' && order.paymentStatus !== 'SUCCESS';
   
   // Horizontal timeline logic
@@ -919,8 +929,8 @@ export default function CustomerTrackingScreen() {
       <View style={styles.mapContainer}>
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
+          provider={MAP_PROVIDER}
+          style={{ ...StyleSheet.absoluteFillObject }}
           initialRegion={{
             latitude: destination.latitude,
             longitude: destination.longitude,
@@ -943,7 +953,7 @@ export default function CustomerTrackingScreen() {
         </MapView>
         
         {/* Back Button Overlay */}
-        <SafeAreaView style={styles.headerSafeArea}>
+        <SafeAreaView style={styles.headerSafeArea} pointerEvents="box-none">
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonOverlay}>
             <Ionicons name="arrow-back" size={24} color="#171A1F" />
           </TouchableOpacity>
@@ -968,7 +978,7 @@ export default function CustomerTrackingScreen() {
                 <Ionicons name="shield-checkmark" size={20} color="#15803d" />
                 <Text style={styles.otpTitle}>Delivery PIN</Text>
               </View>
-              <Text style={styles.otpSubtitle}>Share this 6-digit PIN with the delivery executive.</Text>
+              <Text style={styles.otpSubtitle}>Share this 4-digit PIN with the delivery executive.</Text>
               <Text style={styles.otpDisplay}>{rawHash}</Text>
             </View>
           )}
@@ -1002,20 +1012,32 @@ export default function CustomerTrackingScreen() {
           )}
 
           {/* Partner Info Block */}
-          {!cancelled && partnerLocation && partnerInfo && (
+          {!cancelled && partnerInfo && (
             <View style={styles.partnerBlock}>
               <Text style={styles.sectionTitle}>Delivery Partner</Text>
               <View style={styles.partnerCard}>
-                <View style={styles.partnerAvatar}>
-                  <Ionicons name="person" size={20} color="#FFF" />
-                </View>
+                <Image
+                  source={{
+                    uri: `https://randomuser.me/api/portraits/men/${(partnerInfo.id ?? 1) % 50}.jpg`,
+                  }}
+                  style={styles.partnerAvatar}
+                />
                 <View style={styles.partnerDetails}>
-                  <Text style={styles.partnerName}>Delivery Executive</Text>
-                  <Text style={styles.partnerRole}>On the way to you</Text>
+                  <Text style={styles.partnerName}>{partnerInfo.name || 'Delivery Partner'}</Text>
+                  <Text style={styles.partnerRole}>{order.orderStatus === 'DELIVERED' ? 'Delivered your order' : 'On the way to you'}</Text>
                 </View>
-                <TouchableOpacity style={styles.callButton}>
-                  <Ionicons name="call" size={20} color="#FFF" />
-                </TouchableOpacity>
+                {partnerInfo.phone ? (
+                  <TouchableOpacity
+                    style={styles.callButton}
+                    onPress={() => Linking.openURL(`tel:${partnerInfo.phone}`)}
+                  >
+                    <Ionicons name="call" size={20} color="#FFF" />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={[styles.callButton, { backgroundColor: '#9CA3AF' }]}>
+                    <Ionicons name="call" size={20} color="#FFF" />
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -1024,7 +1046,18 @@ export default function CustomerTrackingScreen() {
           <View style={styles.itemsBlock}>
             <Text style={styles.sectionTitle}>Order Details</Text>
             <View style={styles.itemRow}>
-              <View style={{ flex: 1 }}>
+              {productImage ? (
+                <Image
+                  source={{ uri: productImage }}
+                  style={styles.itemImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.itemImage, styles.itemImagePlaceholder]}>
+                  <Ionicons name="image-outline" size={22} color="#9CA3AF" />
+                </View>
+              )}
+              <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.itemName}>{order.productName}</Text>
                 <Text style={styles.itemQty}>Qty: {order.quantity || 1}</Text>
               </View>
@@ -1094,11 +1127,7 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   map: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0
+    ...StyleSheet.absoluteFillObject,
   },
   markerCircle: {
     width: 32,
@@ -1330,8 +1359,18 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12
+  },
+  itemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+  },
+  itemImagePlaceholder: {
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   itemName: {
     fontFamily: 'Poppins_600SemiBold',

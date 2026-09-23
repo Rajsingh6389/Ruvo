@@ -23,4 +23,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         "(SELECT s.id FROM Shop s WHERE s.approved = true AND (s.active IS NULL OR s.active = true))"
     )
     List<Product> findExploreProducts();
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Product p SET p.stockQuantity = p.stockQuantity - :quantity WHERE p.id = :productId AND p.stockQuantity >= :quantity")
+    int reduceStockIfAvailable(@org.springframework.data.repository.query.Param("productId") Long productId, @org.springframework.data.repository.query.Param("quantity") Integer quantity);
 }

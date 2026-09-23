@@ -16,6 +16,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { AvailableDeliveriesScreen } from '../screens/AvailableDeliveriesScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { ShopSettlementScreen } from '../screens/ShopSettlementScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { ActiveDeliveryScreen } from '../screens/ActiveDeliveryScreen';
 import { EarningsScreen } from '../screens/EarningsScreen';
@@ -55,6 +56,7 @@ export type RootStackParamList = {
   ActiveDelivery: { deliveryId: number };
   ActiveDevices: undefined;
   History: undefined;
+  ShopSettlements: undefined;
 };
 
 export type TabParamList = {
@@ -159,6 +161,7 @@ export const AppNavigator = () => {
               <Stack.Screen name="ActiveDelivery" component={ActiveDeliveryScreen} />
               <Stack.Screen name="ActiveDevices"  component={ActiveDevicesScreen}  />
               <Stack.Screen name="History"        component={HistoryScreen}        />
+              <Stack.Screen name="ShopSettlements" component={ShopSettlementScreen} />
             </>
 
           /* ── New partner → 7-step onboarding ───────────────────────

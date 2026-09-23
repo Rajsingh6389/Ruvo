@@ -38,4 +38,5 @@ export interface Order {
   customerPhone?: string;
   createdAt?: string;
   updatedAt?: string;
+  handoverVerified?: boolean;
 }

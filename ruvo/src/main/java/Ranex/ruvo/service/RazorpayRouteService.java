@@ -1046,16 +1046,16 @@ public class RazorpayRouteService {
      * Create Transfer for Shop when order is marked DELIVERED
      */
     @Transactional
-    public void createTransferOnDelivery(Order order, String razorpayPaymentId) {
+    public boolean createTransferOnDelivery(Order order, String razorpayPaymentId) {
         if (razorpayPaymentId == null || razorpayPaymentId.isEmpty()) {
             log.error("No razorpayPaymentId provided for transfer of order {}", order.getId());
-            return;
+            return false;
         }
 
         Shop shop = shopRepository.findById(order.getShopId()).orElse(null);
         if (shop == null || shop.getRazorpayAccountId() == null || !shop.getRazorpayAccountId().startsWith("acc_")) {
             log.warn("Shop {} does not have a valid Razorpay Route Linked Account for transfer.", order.getShopId());
-            return;
+            return false;
         }
 
         try {
@@ -1079,12 +1079,14 @@ public class RazorpayRouteService {
             
             if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 202) {
                 log.info("Successfully created transfer of {} paise for order {} to shop {} ({})", amountInPaise, order.getId(), shop.getId(), shop.getRazorpayAccountId());
+                return true;
             } else {
                 log.error("Transfer failed for order {} (HTTP {}): {}", order.getId(), response.statusCode, response.body);
             }
         } catch (Exception e) {
             log.error("Error creating transfer on delivery for order {}: {}", order.getId(), e.getMessage());
         }
+        return false;
     }
 
     private boolean isCredentialsConfigured() {

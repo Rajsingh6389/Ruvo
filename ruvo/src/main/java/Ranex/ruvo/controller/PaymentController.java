@@ -126,7 +126,6 @@ public class PaymentController {
 
         BigDecimal subtotal = BigDecimal.ZERO;
         List<CartItemRequest> cartItems = new ArrayList<>();
-        List<Product> productsToUpdate = new ArrayList<>();
 
         if (request.items != null && !request.items.isEmpty()) {
             for (CartItemRequest itemReq : request.items) {
@@ -155,8 +154,6 @@ public class PaymentController {
                 itemReq.productName = p.getName();
                 itemReq.price = p.getSellingPrice();
                 cartItems.add(itemReq);
-                p.setStockQuantity(p.getStockQuantity() - itemReq.quantity);
-                productsToUpdate.add(p);
             }
         } else if (request.productId != null) {
             if (request.quantity == null || request.quantity <= 0) {
@@ -182,8 +179,6 @@ public class PaymentController {
             itemReq.quantity = request.quantity;
             itemReq.price = product.getSellingPrice();
             cartItems.add(itemReq);
-            product.setStockQuantity(product.getStockQuantity() - request.quantity);
-            productsToUpdate.add(product);
         } else {
             return ResponseEntity.badRequest().body(Map.of("message", "No items or product specified for order."));
         }
@@ -248,8 +243,11 @@ public class PaymentController {
         order.setPaymentMethod(requestedPaymentMethod);
 
         // Deduct stock for all items
-        for (Product p : productsToUpdate) {
-            productRepository.save(p);
+        for (CartItemRequest itemReq : cartItems) {
+            int updatedCount = productRepository.reduceStockIfAvailable(itemReq.productId, itemReq.quantity);
+            if (updatedCount == 0) {
+                throw new RuntimeException("Concurrent checkout failed: Product " + itemReq.productName + " is no longer in stock.");
+            }
         }
 
         String customerName = request.customerName;
@@ -571,6 +569,25 @@ public class PaymentController {
             return ResponseEntity.ok(Map.of("success", true, "message", "Payment already verified"));
         }
 
+        Payment payment = paymentRepository.findByOrderId(order.getId()).orElse(null);
+        if (payment == null || payment.getRazorpayOrderId() == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Payment record not found."));
+        }
+        
+        if (request.razorpaySignature == null || request.razorpaySignature.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Razorpay signature required."));
+        }
+
+        boolean isValid = razorpayService.verifyPaymentSignature(payment.getRazorpayOrderId(), request.razorpayPaymentId, request.razorpaySignature);
+        if (!isValid) {
+            order.setPaymentStatus("FAILED");
+            order.setOrderStatus("PAYMENT_FAILED");
+            orderRepository.save(order);
+            payment.setPaymentStatus("FAILED");
+            paymentRepository.save(payment);
+            return ResponseEntity.status(400).body(Map.of("message", "Invalid payment signature."));
+        }
+
         boolean previousFailed = "FAILED".equalsIgnoreCase(order.getPaymentStatus());
 
         // Update successful order status
@@ -584,11 +601,9 @@ public class PaymentController {
         
         orderRepository.save(order);
 
-        paymentRepository.findByOrderId(order.getId()).ifPresent(payment -> {
-            payment.setPaymentStatus("SUCCESS");
-            payment.setRazorpayPaymentId(request.razorpayPaymentId);
-            paymentRepository.save(payment);
-        });
+        payment.setPaymentStatus("SUCCESS");
+        payment.setRazorpayPaymentId(request.razorpayPaymentId);
+        paymentRepository.save(payment);
 
         // Deduct previously credited wallet back if order was marked failed temporarily
         if (previousFailed && order.getWalletAmountUsed() != null && order.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0) {

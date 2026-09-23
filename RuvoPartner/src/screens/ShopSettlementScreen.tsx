@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -21,6 +22,15 @@ const AMBER = '#D97706';
 const AMBER_LIGHT = '#FEF3C7';
 const BLUE = '#2563EB';
 
+const formatImgUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+};
+
 export const ShopSettlementScreen = () => {
   const { colors } = useTheme();
   const { token, user } = useAuth();
@@ -28,6 +38,18 @@ export const ShopSettlementScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summaryData, setSummaryData] = useState<any>(null);
+
+  const getLocalDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [datesList] = useState<Date[]>(() => {
+    const dArr = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dArr.push(d);
+    }
+    return dArr;
+  });
+  const [selectedDateStr, setSelectedDateStr] = useState<string>(getLocalDateStr(new Date()));
 
   // Settlement OTP Modal
   const [otpModalVisible, setOtpModalVisible] = useState(false);
@@ -39,10 +61,12 @@ export const ShopSettlementScreen = () => {
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [completedSettlement, setCompletedSettlement] = useState<any>(null);
 
-  const fetchSettlementSummary = async () => {
+  const fetchSettlementSummary = async (dateOverride?: string) => {
     try {
       const partnerId = user?.userId || 1;
-      const res = await fetch(`${API_BASE_URL}/api/settlements/partner?partnerId=${partnerId}`, {
+      const targetDate = dateOverride || selectedDateStr;
+      const dateQuery = targetDate ? `&date=${targetDate}` : '';
+      const res = await fetch(`${API_BASE_URL}/api/settlements/partner?partnerId=${partnerId}${dateQuery}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -58,8 +82,9 @@ export const ShopSettlementScreen = () => {
   };
 
   useEffect(() => {
-    fetchSettlementSummary();
-  }, []);
+    setLoading(true);
+    fetchSettlementSummary(selectedDateStr);
+  }, [selectedDateStr]);
 
   // OTP Countdown Timer
   useEffect(() => {
@@ -74,22 +99,26 @@ export const ShopSettlementScreen = () => {
     return () => clearInterval(interval);
   }, [otpModalVisible, timerSeconds]);
 
-  const handleStartSettlement = async (shop: any) => {
+  const handleStartOrderSettlement = async (shop: any, order: any) => {
     setSelectedShop(shop);
     setLoading(true);
     try {
-      const partnerId = user?.userId || 1;
       const res = await fetch(
-        `${API_BASE_URL}/api/settlements/generate-otp?partnerId=${partnerId}&shopId=${shop.shopId}`,
+        `${API_BASE_URL}/api/partner/settlements/${order.orderId}/generate-handover-otp`,
         { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
-      if (res.ok && data.otp) {
-        setOtpData(data);
+      if (res.ok && (data.otp || data.handoverOtp)) {
+        setOtpData({
+          otp: data.otp || data.handoverOtp,
+          codCollected: order.totalAmount,
+          deliveryCharge: order.deliveryFee,
+          netCashToShop: order.netCash,
+          orderId: order.orderId
+        });
         setTimerSeconds(300);
         setOtpModalVisible(true);
       } else {
-        // OTP not returned - show error instead of using fake random OTP
         Alert.alert(
           'Settlement Error',
           data.message || 'Unable to generate settlement OTP. Please try again or contact support.'
@@ -132,18 +161,43 @@ export const ShopSettlementScreen = () => {
         <View style={{ flex: 1 }}>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settlement</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Shop-wise COD & Delivery Earnings
+            Shop-wise Day Settlements
           </Text>
         </View>
         <TouchableOpacity
           style={styles.refreshBtn}
           onPress={() => {
             setRefreshing(true);
-            fetchSettlementSummary();
+            fetchSettlementSummary(selectedDateStr);
           }}
         >
           <Ionicons name="refresh" size={20} color={EMERALD} />
         </TouchableOpacity>
+      </View>
+
+      {/* Date Selector Row */}
+      <View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', gap: 10, paddingBottom: 10, paddingTop: 10 }}>
+          {datesList.map((d, index) => {
+            const dateString = getLocalDateStr(d);
+            const isSelected = selectedDateStr === dateString;
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+            const dayOfMonth = d.getDate();
+            return (
+              <TouchableOpacity
+                key={dateString}
+                onPress={() => setSelectedDateStr(dateString)}
+                style={[
+                  styles.dateBtn,
+                  isSelected ? { backgroundColor: EMERALD, borderColor: EMERALD } : { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }
+                ]}
+              >
+                <Text style={{ fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: isSelected ? '#FFF' : '#64748B', marginBottom: 2 }}>{dayName}</Text>
+                <Text style={{ fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: isSelected ? '#FFF' : '#0F172A' }}>{dayOfMonth}</Text>
+              </TouchableOpacity>
+            )
+          })}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -153,7 +207,7 @@ export const ShopSettlementScreen = () => {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              fetchSettlementSummary();
+              fetchSettlementSummary(selectedDateStr);
             }}
             tintColor={EMERALD}
           />
@@ -191,12 +245,19 @@ export const ShopSettlementScreen = () => {
         <Text style={styles.sectionTitle}>Shop-wise Details</Text>
 
         {/* Shop Cards Table */}
-        {shops.map((s: any) => (
+        {shops.map((s: any) => {
+          const logoUri = formatImgUrl(s.shopLogoUrl);
+          
+          return (
           <View key={s.shopId} style={styles.shopCard}>
             <View style={styles.shopHeaderRow}>
               <View style={styles.shopTitleGroup}>
                 <View style={styles.shopLogo}>
-                  <Ionicons name="storefront" size={20} color={EMERALD} />
+                  {logoUri ? (
+                    <Image source={{ uri: logoUri }} style={{ width: '100%', height: '100%', borderRadius: 19 }} resizeMode="cover" />
+                  ) : (
+                    <Ionicons name="storefront" size={20} color={EMERALD} />
+                  )}
                 </View>
                 <View>
                   <Text style={styles.shopName}>{s.shopName}</Text>
@@ -205,8 +266,10 @@ export const ShopSettlementScreen = () => {
                   </Text>
                 </View>
               </View>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>Pending</Text>
+              <View style={[styles.statusBadge, s.netCashToShop <= 0 ? {backgroundColor: '#DEF7EC'} : {}]}>
+                <Text style={[styles.statusBadgeText, s.netCashToShop <= 0 ? {color: '#046C4E'} : {}]}>
+                  {s.netCashToShop <= 0 ? 'Settled' : 'Pending'}
+                </Text>
               </View>
             </View>
 
@@ -234,26 +297,51 @@ export const ShopSettlementScreen = () => {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.settleBtn}
-              onPress={() => handleStartSettlement(s)}
-            >
-              <Ionicons name="key-outline" size={16} color="#FFF" />
-              <Text style={styles.settleBtnText}>Settle ₹{s.netCashToShop}</Text>
-            </TouchableOpacity>
+            {/* Orders List for Shop */}
+            <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', borderStyle: 'dashed' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#64748B', marginBottom: 8 }}>Order Breakdown</Text>
+              
+              {(!s.orders || s.orders.length === 0) ? (
+                <Text style={{ fontSize: 13, color: '#94A3B8', fontFamily: 'Poppins_600SemiBold' }}>Zero COD orders delivered to this shop on this day.</Text>
+              ) : (
+                s.orders.map((order: any) => (
+                  <View key={order.orderId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                    <View>
+                      <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#0F172A' }}>Order #{order.orderId}</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', fontFamily: 'Poppins_600SemiBold' }}>Net Cash: ₹{order.netCash}</Text>
+                    </View>
+                    
+                    {!order.isSettled ? (
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#FF7A00', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        onPress={() => handleStartOrderSettlement(s, order)}
+                      >
+                        <Ionicons name="key-outline" size={14} color="#FFF" />
+                        <Text style={{ color: '#FFF', fontSize: 12, fontFamily: 'Poppins_700Bold' }}>Settle</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={{ backgroundColor: '#DEF7EC', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 24 }}>
+                        <Text style={{ color: '#046C4E', fontSize: 12, fontFamily: 'Poppins_700Bold' }}>Settled</Text>
+                      </View>
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
           </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {/* OTP Display Modal */}
       <Modal visible={otpModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Ionicons name="lock-closed-outline" size={44} color={EMERALD} />
-            <Text style={styles.modalTitle}>Collect OTP from Shopkeeper</Text>
-            <Text style={styles.modalSub}>
-              Ask {selectedShop?.shopName} to enter this OTP in their app.
-            </Text>
+            <View style={styles.modalContent}>
+              <Ionicons name="lock-closed-outline" size={44} color={EMERALD} />
+              <Text style={styles.modalTitle}>Order #{otpData?.orderId} Settlement</Text>
+              <Text style={styles.modalSub}>
+                Ask {selectedShop?.shopName} to enter this OTP in their app.
+              </Text>
 
             {/* OTP Display Box */}
             <View style={styles.otpBoxContainer}>
@@ -349,6 +437,31 @@ const styles = StyleSheet.create({
   cardLabel: { fontSize: 12, color: '#64748B', fontFamily: 'Poppins_600SemiBold' },
   cardValue: { fontSize: 20, fontFamily: 'Poppins_800ExtraBold', marginTop: 4 },
   sectionTitle: { fontSize: 17, fontFamily: 'Poppins_800ExtraBold', color: '#0F172A', marginBottom: 12 },
+  otpTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins_700Bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  dateBtn: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpSubtitle: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
   shopCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
