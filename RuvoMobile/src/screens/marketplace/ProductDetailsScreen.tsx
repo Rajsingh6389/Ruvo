@@ -16,6 +16,7 @@ import { useCart } from '../../context/CartContext';
 import { useToast } from '../../context/ToastContext';
 import { useTheme } from '../../context/ThemeContext';
 import { API_BASE_URL } from '../../config/api';
+import { getShopById } from '../../services/shopService';
 
 const formatImageUrl = (url?: string) => {
   if (!url) return null;
@@ -149,12 +150,12 @@ const ProductDetailsScreen = () => {
 
   React.useEffect(() => {
     if (product?.shopId) {
-      fetch(`${API_BASE_URL}/api/shops/${product.shopId}`)
-        .then(res => res.json())
+      getShopById(product.shopId)
         .then(data => {
           if (data && data.name) setFetchedShopName(data.name);
-          if (data && (data.logoUrl || data.logo || data.image || data.imageUrl)) {
-            setFetchedShopLogo(formatImageUrl(data.logoUrl || data.logo || data.image || data.imageUrl));
+          const rawData = data as any;
+          if (data && (data.logoUrl || rawData.logo || rawData.image || data.imageUrl)) {
+            setFetchedShopLogo(formatImageUrl(data.logoUrl || rawData.logo || rawData.image || data.imageUrl));
           }
           if (data && data.active === false) {
             setIsShopOffline(true);

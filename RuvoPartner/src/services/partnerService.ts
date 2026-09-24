@@ -74,7 +74,35 @@ export const partnerService = {
   pickup: (token: string, id: number, otp?: string) => api<any>(`/api/partner/deliveries/${id}/pickup${otp ? `?otp=${encodeURIComponent(otp)}` : ''}`, token, { method: 'PUT' }),
   startDelivery: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/out-for-delivery`, token, { method: 'PUT' }),
   completeLegacy: (token: string, id: number) => api<any>(`/api/partner/deliveries/${id}/delivered`, token, { method: 'PUT' }),
-  settlementSummary: (token: string, date?: string) => api<any>(`/api/settlements/partner${date ? `?date=${encodeURIComponent(date)}` : ''}`, token),
+  settlementSummary: (token: string, date?: string, partnerId?: number | string) => {
+    let query = partnerId ? `?partnerId=${partnerId}` : '';
+    if (date) query += query ? `&date=${encodeURIComponent(date)}` : `?date=${encodeURIComponent(date)}`;
+    return api<any>(`/api/settlements/partner${query}`, token);
+  },
+  generateHandoverOtp: (token: string, orderId: number) => api<any>(`/api/partner/settlements/${orderId}/generate-handover-otp`, token, { method: 'POST' }),
   notifications: (token: string) => api<any[]>('/api/notifications/mine', token),
   markNotificationRead: (token: string, id: number) => api(`/api/notifications/${id}/read`, token, { method: 'PATCH' }),
+  
+  // Bank Account
+  getBankStatus: (token: string, partnerId: number | string) => api<any>(`/api/partner/razorpay/bank/status?partnerId=${partnerId}`, token),
+  changeBankAccount: (token: string, body: any) => api<any>('/api/partner/razorpay/bank/change', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+
+  // Shop Preferences
+  getShopPreferences: (token: string) => api<any>('/api/partner/shop-preferences', token),
+  updateShopPreferences: (token: string, shopIds: number[]) => api<any>('/api/partner/shop-preferences', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(shopIds) }),
+
+  // Vehicle Details
+  getVehicleDetails: (token: string) => api<any>('/api/partner/vehicle', token),
+  updateVehicleDetails: (token: string, vehicle: any) => api<any>('/api/partner/vehicle', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vehicle) }),
+
+  // Onboarding
+  getOnboardingFee: () => api<any>('/api/onboarding/fee?type=PARTNER'),
+  submitVerification: (token: string, body: any) => api<any>('/api/partner/verification', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+  
+  // Shops
+  getNearbyShops: (token: string, lat?: number, lng?: number) => {
+    const params = lat != null ? `?lat=${lat}&lng=${lng}&radius=5` : '';
+    return api<any>(`/api/partner/nearby-shops${params}`, token);
+  },
+  getAllShops: (token: string) => api<any>('/api/shops', token),
 };

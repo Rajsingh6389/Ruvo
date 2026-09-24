@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/settlements")
@@ -51,10 +53,13 @@ public class SettlementController {
         List<Order> partnerOrders = orderRepository.findByDeliveryPartnerId(partnerId).stream()
             .filter(o -> "DELIVERED".equalsIgnoreCase(o.getOrderStatus()))
             .filter(o -> {
-                if (date != null && !date.isEmpty() && o.getDeliveredAt() != null) {
-                    String orderDate = o.getDeliveredAt().atZone(ZoneId.systemDefault()).toLocalDate().toString();
-                    if (!orderDate.equals(date)) {
-                        return false;
+                if (date != null && !date.isEmpty()) {
+                    Instant evalTime = o.getDeliveredAt() != null ? o.getDeliveredAt() : o.getCreatedAt();
+                    if (evalTime != null) {
+                        String orderDate = evalTime.atZone(ZoneId.of("Asia/Kolkata")).toLocalDate().toString();
+                        if (!orderDate.equals(date)) {
+                            return false;
+                        }
                     }
                 }
                 return true;
@@ -145,12 +150,12 @@ public class SettlementController {
             String shopLogoUrl = shop != null ? shop.getLogoUrl() : null;
 
             // Check for pending COD settlement
-            Optional<Settlement> sOpt = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
+            List<Settlement> sList = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
                 partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION", "COMPLETED")
             );
 
             boolean hasCodOrders = orders.stream().anyMatch(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()));
-            String status = hasCodOrders ? (sPendingNetCod.compareTo(BigDecimal.ZERO) <= 0 ? "COMPLETED" : sOpt.map(Settlement::getStatus).orElse("PENDING")) : "UPI_SETTLED";
+            String status = hasCodOrders ? (sPendingNetCod.compareTo(BigDecimal.ZERO) <= 0 ? "COMPLETED" : (!sList.isEmpty() ? sList.get(0).getStatus() : "PENDING")) : "UPI_SETTLED";
 
             List<Map<String, Object>> orderDetails = orders.stream()
                 .filter(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()))
@@ -221,11 +226,11 @@ public class SettlementController {
 
         BigDecimal netCashToShop = codCollected.subtract(deliveryCharge).max(BigDecimal.ZERO);
 
-        Optional<Settlement> sOpt = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
+        List<Settlement> sList = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
             partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION", "COMPLETED")
         );
-        String status = sOpt.map(Settlement::getStatus).orElse("PENDING");
-        String settlementId = sOpt.map(Settlement::getSettlementId).orElse(null);
+        String status = !sList.isEmpty() ? sList.get(0).getStatus() : "PENDING";
+        String settlementId = !sList.isEmpty() ? sList.get(0).getSettlementId() : null;
 
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("settlementId", settlementId);
@@ -331,11 +336,11 @@ public class SettlementController {
                 .orElse("Partner #" + partnerId);
 
             // Check for pending COD settlement
-            Optional<Settlement> sOpt = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
+            List<Settlement> sList = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
                 partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION", "COMPLETED")
             );
 
-            String codStatus = sOpt.map(Settlement::getStatus).orElse(null);
+            String codStatus = !sList.isEmpty() ? sList.get(0).getStatus() : null;
             boolean hasCodOrders = orders.stream().anyMatch(o -> "COD".equalsIgnoreCase(o.getPaymentMethod()));
             String status = hasCodOrders ? (codStatus != null ? codStatus : "PENDING") : "UPI_SETTLED";
 
@@ -386,10 +391,10 @@ public class SettlementController {
 
         BigDecimal netCashReceived = codCollected.subtract(deliveryCharge).max(BigDecimal.ZERO);
 
-        Optional<Settlement> sOpt = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
+        List<Settlement> sList = settlementRepository.findByDeliveryPartnerIdAndShopIdAndStatusIn(
             partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION", "COMPLETED")
         );
-        String status = sOpt.map(Settlement::getStatus).orElse("PENDING");
+        String status = !sList.isEmpty() ? sList.get(0).getStatus() : "PENDING";
 
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("deliveryPartnerId", partnerId);

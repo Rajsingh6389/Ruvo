@@ -11,10 +11,14 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../config/api';
+import { partnerService } from '../services/partnerService';
+import { formatImgUrl } from '../utils/imageUrl';
+import { getLocalDateStr } from '../utils/date';
 
 const EMERALD = '#059669';
 const EMERALD_LIGHT = '#ECFDF5';
@@ -22,14 +26,7 @@ const AMBER = '#D97706';
 const AMBER_LIGHT = '#FEF3C7';
 const BLUE = '#2563EB';
 
-const formatImgUrl = (url?: string): string | null => {
-  if (!url) return null;
-  const trimmed = url.trim();
-  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return trimmed;
-  }
-  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-};
+
 
 export const ShopSettlementScreen = () => {
   const { colors } = useTheme();
@@ -38,8 +35,6 @@ export const ShopSettlementScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summaryData, setSummaryData] = useState<any>(null);
-
-  const getLocalDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const [datesList] = useState<Date[]>(() => {
     const dArr = [];
     for (let i = 6; i >= 0; i--) {
@@ -50,6 +45,8 @@ export const ShopSettlementScreen = () => {
     return dArr;
   });
   const [selectedDateStr, setSelectedDateStr] = useState<string>(getLocalDateStr(new Date()));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isLifetime, setIsLifetime] = useState(false);
 
   // Settlement OTP Modal
   const [otpModalVisible, setOtpModalVisible] = useState(false);
@@ -61,16 +58,12 @@ export const ShopSettlementScreen = () => {
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [completedSettlement, setCompletedSettlement] = useState<any>(null);
 
-  const fetchSettlementSummary = async (dateOverride?: string) => {
+  const fetchSettlementSummary = async (dateOverride?: string, lifetime = isLifetime) => {
     try {
       const partnerId = user?.userId || 1;
-      const targetDate = dateOverride || selectedDateStr;
-      const dateQuery = targetDate ? `&date=${targetDate}` : '';
-      const res = await fetch(`${API_BASE_URL}/api/settlements/partner?partnerId=${partnerId}${dateQuery}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const targetDate = lifetime ? '' : (dateOverride || selectedDateStr);
+      const data = await partnerService.settlementSummary(token!, targetDate, partnerId);
+      if (data) {
         setSummaryData(data);
       }
     } catch {
@@ -99,16 +92,45 @@ export const ShopSettlementScreen = () => {
     return () => clearInterval(interval);
   }, [otpModalVisible, timerSeconds]);
 
+  // Polling for Settlement Verification Status
+  useEffect(() => {
+    let pollInterval: any = null;
+    if (otpModalVisible && otpData?.orderId) {
+      pollInterval = setInterval(async () => {
+        try {
+          const partnerId = user?.userId || 1;
+          const targetDate = isLifetime ? '' : selectedDateStr;
+          const data = await partnerService.settlementSummary(token!, targetDate, partnerId);
+          if (data && data.shops) {
+            setSummaryData(data); // update silently in background
+            const currentShop = data.shops.find((s: any) => s.shopId === selectedShop?.shopId);
+            if (currentShop && currentShop.orders) {
+              const currentOrder = currentShop.orders.find((o: any) => o.orderId === otpData.orderId);
+              if (currentOrder && currentOrder.isSettled) {
+                // Verified! Clear polling, set success, close modal
+                clearInterval(pollInterval);
+                setOtpModalVisible(false);
+                setCompletedSettlement({ ...otpData, shopName: selectedShop?.shopName });
+                setTimeout(() => {
+                  setSuccessModalVisible(true);
+                }, 400); // smooth delay before showing success
+              }
+            }
+          }
+        } catch (err) {
+          // ignore poll errors
+        }
+      }, 4000); // poll every 4s
+    }
+    return () => clearInterval(pollInterval);
+  }, [otpModalVisible, otpData]);
+
   const handleStartOrderSettlement = async (shop: any, order: any) => {
     setSelectedShop(shop);
     setLoading(true);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/partner/settlements/${order.orderId}/generate-handover-otp`,
-        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (res.ok && (data.otp || data.handoverOtp)) {
+      const data = await partnerService.generateHandoverOtp(token!, order.orderId);
+      if (data && (data.otp || data.handoverOtp)) {
         setOtpData({
           otp: data.otp || data.handoverOtp,
           codCollected: order.totalAmount,
@@ -176,32 +198,49 @@ export const ShopSettlementScreen = () => {
       </View>
 
       {/* Date Selector Row */}
-      <View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center', gap: 10, paddingBottom: 10, paddingTop: 10 }}>
-          {datesList.map((d, index) => {
-            const dateString = getLocalDateStr(d);
-            const isSelected = selectedDateStr === dateString;
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
-            const dayOfMonth = d.getDate();
-            return (
-              <TouchableOpacity
-                key={dateString}
-                onPress={() => setSelectedDateStr(dateString)}
-                style={[
-                  styles.dateBtn,
-                  isSelected ? { backgroundColor: EMERALD, borderColor: EMERALD } : { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }
-                ]}
-              >
-                <Text style={{ fontSize: 11, fontFamily: 'Poppins_600SemiBold', color: isSelected ? '#FFF' : '#64748B', marginBottom: 2 }}>{dayName}</Text>
-                <Text style={{ fontSize: 16, fontFamily: 'Poppins_800ExtraBold', color: isSelected ? '#FFF' : '#0F172A' }}>{dayOfMonth}</Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12 }}>
+        <TouchableOpacity
+          style={[styles.dateBtn, { flexDirection: 'row', alignItems: 'center' }, !isLifetime ? { backgroundColor: EMERALD, borderColor: EMERALD } : { backgroundColor: colors.card, borderColor: '#E2E8F0' }]}
+          onPress={() => { setIsLifetime(false); setShowDatePicker(true); }}
+        >
+          <Ionicons name="calendar-outline" size={16} color={!isLifetime ? '#FFF' : colors.textPrimary} style={{ marginRight: 6 }} />
+          <Text style={{ color: !isLifetime ? '#FFF' : colors.textPrimary, fontFamily: 'Poppins_600SemiBold', fontSize: 13 }}>
+            {selectedDateStr}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.dateBtn, { flexDirection: 'row', alignItems: 'center' }, isLifetime ? { backgroundColor: EMERALD, borderColor: EMERALD } : { backgroundColor: colors.card, borderColor: '#E2E8F0' }]}
+          onPress={() => { setIsLifetime(true); fetchSettlementSummary('', true); }}
+        >
+          <Ionicons name="infinite" size={16} color={isLifetime ? '#FFF' : colors.textPrimary} style={{ marginRight: 6 }} />
+          <Text style={{ color: isLifetime ? '#FFF' : colors.textPrimary, fontFamily: 'Poppins_600SemiBold', fontSize: 13 }}>
+            All Time
+          </Text>
+        </TouchableOpacity>
       </View>
 
+      {showDatePicker && (
+        <DateTimePicker
+          value={new Date(selectedDateStr || new Date())}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (event.type === 'set' && selectedDate) {
+              const dateStr = getLocalDateStr(selectedDate);
+              setSelectedDateStr(dateStr);
+              setIsLifetime(false);
+              fetchSettlementSummary(dateStr, false);
+            }
+          }}
+        />
+      )}
+
+      {/* Main Content Area */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -223,33 +262,33 @@ export const ShopSettlementScreen = () => {
 
         {/* 4 Summary Cards */}
         <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.cardLabel}>COD Collected</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>COD Collected</Text>
             <Text style={[styles.cardValue, { color: AMBER }]}>₹{codTotal}</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.cardLabel}>Delivery Earnings</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>Delivery Earnings</Text>
             <Text style={[styles.cardValue, { color: BLUE }]}>₹{delEarnings}</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.cardLabel}>Net Cash to Shops</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>Net Cash to Shops</Text>
             <Text style={[styles.cardValue, { color: EMERALD }]}>₹{netCashToShops}</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.cardLabel}>Pending Settlements</Text>
+          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>Pending Settlements</Text>
             <Text style={[styles.cardValue, { color: '#EF4444' }]}>{pendingCount}</Text>
           </View>
         </View>
 
         {/* Section Title */}
-        <Text style={styles.sectionTitle}>Shop-wise Details</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Shop-wise Details</Text>
 
         {/* Shop Cards Table */}
         {shops.map((s: any) => {
           const logoUri = formatImgUrl(s.shopLogoUrl);
           
           return (
-          <View key={s.shopId} style={styles.shopCard}>
+          <View key={s.shopId} style={[styles.shopCard, { backgroundColor: colors.card }]}>
             <View style={styles.shopHeaderRow}>
               <View style={styles.shopTitleGroup}>
                 <View style={styles.shopLogo}>
@@ -260,8 +299,8 @@ export const ShopSettlementScreen = () => {
                   )}
                 </View>
                 <View>
-                  <Text style={styles.shopName}>{s.shopName}</Text>
-                  <Text style={styles.orderSubtext}>
+                  <Text style={[styles.shopName, { color: colors.textPrimary }]}>{s.shopName}</Text>
+                  <Text style={[styles.orderSubtext, { color: colors.textSecondary }]}>
                     {s.ordersCount} Orders · {s.codCount || s.ordersCount} COD
                   </Text>
                 </View>
@@ -279,14 +318,14 @@ export const ShopSettlementScreen = () => {
             <View style={styles.calcRow}>
               <View style={styles.calcBox}>
                 <Text style={styles.calcLabel}>COD Collected</Text>
-                <Text style={styles.calcVal}>₹{s.codCollected}</Text>
+                <Text style={[styles.calcVal, { color: colors.textPrimary }]}>₹{s.codCollected}</Text>
               </View>
 
               <Text style={styles.minusSign}>-</Text>
 
               <View style={styles.calcBox}>
                 <Text style={styles.calcLabel}>Delivery Charge</Text>
-                <Text style={styles.calcVal}>₹{s.deliveryCharge}</Text>
+                <Text style={[styles.calcVal, { color: colors.textPrimary }]}>₹{s.deliveryCharge}</Text>
               </View>
 
               <Text style={styles.equalSign}>=</Text>
@@ -299,16 +338,16 @@ export const ShopSettlementScreen = () => {
 
             {/* Orders List for Shop */}
             <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0', borderStyle: 'dashed' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: '#64748B', marginBottom: 8 }}>Order Breakdown</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Poppins_700Bold', color: colors.textPrimary, marginBottom: 8 }}>Order Breakdown</Text>
               
               {(!s.orders || s.orders.length === 0) ? (
-                <Text style={{ fontSize: 13, color: '#94A3B8', fontFamily: 'Poppins_600SemiBold' }}>Zero COD orders delivered to this shop on this day.</Text>
+                <Text style={{ fontSize: 13, color: colors.textSecondary, fontFamily: 'Poppins_600SemiBold' }}>Zero COD orders delivered to this shop on this day.</Text>
               ) : (
                 s.orders.map((order: any) => (
                   <View key={order.orderId} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
                     <View>
-                      <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: '#0F172A' }}>Order #{order.orderId}</Text>
-                      <Text style={{ fontSize: 12, color: '#64748B', fontFamily: 'Poppins_600SemiBold' }}>Net Cash: ₹{order.netCash}</Text>
+                      <Text style={{ fontSize: 14, fontFamily: 'Poppins_700Bold', color: colors.textPrimary }}>Order #{order.orderId}</Text>
+                      <Text style={{ fontSize: 12, color: colors.textSecondary, fontFamily: 'Poppins_600SemiBold' }}>Net Cash: ₹{order.netCash}</Text>
                     </View>
                     
                     {!order.isSettled ? (
@@ -336,9 +375,9 @@ export const ShopSettlementScreen = () => {
       {/* OTP Display Modal */}
       <Modal visible={otpModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
               <Ionicons name="lock-closed-outline" size={44} color={EMERALD} />
-              <Text style={styles.modalTitle}>Order #{otpData?.orderId} Settlement</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Order #{otpData?.orderId} Settlement</Text>
               <Text style={styles.modalSub}>
                 Ask {selectedShop?.shopName} to enter this OTP in their app.
               </Text>
@@ -363,17 +402,17 @@ export const ShopSettlementScreen = () => {
             </View>
 
             {/* Breakdown summary */}
-            <View style={styles.modalSummaryBox}>
+            <View style={[styles.modalSummaryBox, { backgroundColor: colors.background }]}>
               <View style={styles.summaryLine}>
                 <Text style={styles.sumLabel}>COD Collected:</Text>
-                <Text style={styles.sumVal}>₹{otpData?.codCollected || 0}</Text>
+                <Text style={[styles.sumVal, { color: colors.textPrimary }]}>₹{otpData?.codCollected || 0}</Text>
               </View>
               <View style={styles.summaryLine}>
                 <Text style={styles.sumLabel}>Delivery Charge:</Text>
-                <Text style={styles.sumVal}>₹{otpData?.deliveryCharge || 0}</Text>
+                <Text style={[styles.sumVal, { color: colors.textPrimary }]}>₹{otpData?.deliveryCharge || 0}</Text>
               </View>
               <View style={[styles.summaryLine, { marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#CBD5E1' }]}>
-                <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: '#0F172A' }}>Cash Given to Shopkeeper:</Text>
+                <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: colors.textPrimary }}>Cash Given to Shopkeeper:</Text>
                 <Text style={{ fontFamily: 'Poppins_800ExtraBold', color: EMERALD, fontSize: 16 }}>₹{otpData?.netCashToShop || 0}</Text>
               </View>
             </View>

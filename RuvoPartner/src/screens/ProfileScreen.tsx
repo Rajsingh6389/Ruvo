@@ -21,6 +21,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { API_BASE_URL } from '../config/api';
+import { partnerService } from '../services/partnerService';
+import { formatImgUrl } from '../utils/imageUrl';
 
 interface SelectedShopDetail {
   id: number;
@@ -40,12 +42,6 @@ interface SelectedShopDetail {
   distanceKm?: number;
 }
 
-const formatImgUrl = (url?: string): string | null => {
-  if (!url) return null;
-  const trimmed = url.trim();
-  if (trimmed.startsWith('data:image/') || trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-};
 
 export const ProfileScreen = () => {
   const { user, token, logout, verificationStatus } = useAuth();
@@ -67,18 +63,11 @@ export const ProfileScreen = () => {
       if (!partnerId) return;
       setFetchingBank(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/api/partner/razorpay/bank/status?partnerId=${partnerId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          console.log("[ProfileScreen] Fetched Partner Bank Status:", data.data);
-          if (data && data.data) {
+        const data = await partnerService.getBankStatus(token, partnerId);
+        console.log("[ProfileScreen] Fetched Partner Bank Status:", data?.data);
+        if (data && data.data) {
             setActiveBankAccountMasked(data.data.activeBankAccountMasked !== 'None' ? data.data.activeBankAccountMasked : null);
             setPendingBankAccountMasked(data.data.pendingBankAccountMasked !== 'None' && data.data.pendingBankAccountMasked ? data.data.pendingBankAccountMasked : null);
-          }
-        } else {
-          console.log("[ProfileScreen] Error fetching bank status:", res.status);
         }
       } catch (e) {
          console.log("[ProfileScreen] Exception fetching bank status:", e);
@@ -91,18 +80,11 @@ export const ProfileScreen = () => {
 
   const loadSelectedShops = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/shop-preferences`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const json = await res.json();
-        const arr = json?.data || [];
-        setSelectedShops(arr);
-        if (json?.shopIds) {
-          AsyncStorage.setItem('selectedShopIds', JSON.stringify(json.shopIds)).catch(() => {});
-        }
-      } else {
-        setSelectedShops([]);
+      const json = await partnerService.getShopPreferences(token!);
+      const arr = json?.data || [];
+      setSelectedShops(arr);
+      if (json?.shopIds) {
+        AsyncStorage.setItem('selectedShopIds', JSON.stringify(json.shopIds)).catch(() => {});
       }
     } catch {
       setSelectedShops([]);

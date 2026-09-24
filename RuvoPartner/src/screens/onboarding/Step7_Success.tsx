@@ -17,7 +17,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { API_BASE_URL } from '../../config/api';
+import { partnerService } from '../../services/partnerService';
 import { CtaBtn, InfoBox } from './OnboardingShared';
 
 const STEPS_SUMMARY = [
@@ -62,12 +62,8 @@ export const Step7_Success = () => {
     if (!token) return;
     setChecking(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const response = await res.json();
-      const data = response.data || response;
+      const response = await partnerService.account(token);
+      const data = (response as any).data || response;
       const approved =
         data.status === 'APPROVED' || data.approved === true ||
         data.isApproved === true || data.verificationStatus === 'APPROVED';

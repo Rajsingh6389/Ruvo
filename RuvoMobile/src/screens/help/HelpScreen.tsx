@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,24 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { API_BASE_URL } from '../../config/api';
 import { sw, sh, sf } from '../../utils/responsive';
+import { submitHelpFeedback } from '../../services/helpService';
 
-const CATEGORIES = [
-  { id: 'BUG_REPORT', label: 'Bug Report', icon: 'bug-outline', color: '#E53935' },
-  { id: 'FEATURE_REQUEST', label: 'Feature Request', icon: 'lightbulb-outline', color: '#FFC107' },
-  { id: 'IMPROVEMENT', label: 'Improvement', icon: 'trending-up-outline', color: '#4CAF50' },
-  { id: 'ORDER_ISSUE', label: 'Order Issue', icon: 'receipt-outline', color: '#2196F3' },
-  { id: 'PAYMENT_ISSUE', label: 'Payment Issue', icon: 'card-outline', color: '#9C27B0' },
-  { id: 'GENERAL', label: 'General', icon: 'chatbubble-outline', color: '#607D8B' },
-];
-
-const PRIORITIES = [
-  { id: 'LOW', label: 'Low', color: '#4CAF50' },
-  { id: 'MEDIUM', label: 'Medium', color: '#FFC107' },
-  { id: 'HIGH', label: 'High', color: '#FF9800' },
-  { id: 'URGENT', label: 'Urgent', color: '#E53935' },
-];
+import { CATEGORIES, PRIORITIES } from '../../constants/helpConstants';
 
 export const HelpScreen = () => {
   const { colors } = useTheme();
@@ -67,25 +53,16 @@ export const HelpScreen = () => {
       const userId = (user as any)?.userId || (user as any)?.id;
       const userType = (user as any)?.userType || 'USER';
 
-      const res = await fetch(`${API_BASE_URL}/api/help`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          userId,
-          userType,
-          category,
-          subject: subject.trim(),
-          description: description.trim(),
-          priority,
-        }),
-      });
+      const data = await submitHelpFeedback({
+        userId,
+        userType,
+        category,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority,
+      }, token || '');
 
-      const data = await res.json();
-
-      if (res.ok && data.success) {
+      if (data.success) {
         Alert.alert(
           'Thank You!',
           'Your feedback has been submitted successfully. We will review it and get back to you if needed.',
@@ -94,8 +71,8 @@ export const HelpScreen = () => {
       } else {
         Alert.alert('Error', data.message || 'Failed to submit feedback.');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit feedback. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to submit feedback. Please try again.');
     } finally {
       setSubmitting(false);
     }

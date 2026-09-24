@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { getMyShops } from '../../services/shopService';
+import { getMyShops, onboardRazorpay, pollRazorpayBankStatus } from '../../services/shopService';
 import { API_BASE_URL } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -87,25 +87,17 @@ export const Step3_BankAccount = () => {
       const myShop = shops?.[0];
       if (!myShop) throw new Error('No shop found. Please complete previous steps again.');
 
-      let res = await fetch(`${API_BASE_URL}/api/seller/razorpay/onboard`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          shopId: myShop.id,
-          legalBusinessName: myShop.name,
-          email: myShop.email,
-          phone: myShop.phone,
-          ownerName: accountHolder,
-          bankAccountNumber: accountNumber,
-          ifscCode: ifsc,
-          bankName: bankName,
-        }),
-      });
-
-
-
-      const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || 'Bank verification/registration failed.');
+      const body = await onboardRazorpay(
+        myShop.id,
+        myShop.name,
+        myShop.email,
+        myShop.phone,
+        accountHolder,
+        accountNumber,
+        ifsc,
+        bankName,
+        token || ''
+      );
 
       let bankStatus = body.data?.bankStatus || 'UNDER_REVIEW';
 
@@ -117,9 +109,8 @@ export const Step3_BankAccount = () => {
             attempts++;
             await new Promise(r => setTimeout(r, 4000));
             try {
-               const pollRes = await fetch(`${API_BASE_URL}/api/seller/razorpay/bank/status?shopId=${myShop.id}`, { headers: { Authorization: `Bearer ${token}` } });
-               const pollBody = await pollRes.json();
-               if (pollRes.ok && pollBody.data) {
+               const pollBody = await pollRazorpayBankStatus(myShop.id, token || '');
+               if (pollBody.data) {
                   const activeMask = pollBody.data.activeBankAccountMasked;
                   if (activeMask && activeMask !== 'None') {
                      bankStatus = 'ACTIVE';

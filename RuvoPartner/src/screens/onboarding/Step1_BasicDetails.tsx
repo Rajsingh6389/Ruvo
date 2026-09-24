@@ -20,42 +20,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
 import { API_BASE_URL } from '../../config/api';
+import { partnerService } from '../../services/partnerService';
 import { MapLocationPicker, LocationResult } from '../../components/MapLocationPicker';
 import {
   StepBar, ScreenHeader, SectionCard, FieldLabel,
   StyledInput, CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
-
-const MAPS_API_KEY: string =
-  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
-
-async function googleReverseGeocode(lat: number, lng: number) {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
-    const res  = await fetch(url);
-    const json = await res.json();
-    if (json.status !== 'OK' || !json.results?.length) return null;
-    const best = json.results[0];
-    const comps: Record<string, string> = {};
-    for (const c of best.address_components ?? []) {
-      for (const t of c.types) comps[t] = c.long_name;
-    }
-    const streetParts = [
-      comps['street_number'],
-      comps['route'],
-      comps['sublocality_level_2'],
-      comps['sublocality_level_1'] || comps['sublocality'],
-      comps['neighborhood'],
-    ].filter(Boolean);
-    return {
-      address : streetParts.join(', ') || comps['premise'] || '',
-      city    : comps['locality'] || comps['administrative_area_level_2'] || '',
-      state   : comps['administrative_area_level_1'] || '',
-      pincode : comps['postal_code'] || '',
-    };
-  } catch { return null; }
-}
+import { formatDate } from '../../utils/date';
+import { googleReverseGeocode } from '../../utils/locationUtils';
 
 export const Step1_BasicDetails = () => {
   const navigation = useNavigation<any>();
@@ -82,8 +54,6 @@ export const Step1_BasicDetails = () => {
     onFocus: () => setFocused(name),
     onBlur:  () => setFocused(null),
   });
-
-  const formatDate = (d: Date) => d.toISOString().slice(0, 10);
 
   const useGPS = async () => {
     setLocating(true);
@@ -137,20 +107,14 @@ export const Step1_BasicDetails = () => {
     setError(null);
     setLoading(true);
     try {
-      const res = await authenticatedFetch(`${API_BASE_URL}/api/partner/verification`, {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({
-          fullName    : fullName.trim(),
-          dateOfBirth : dob || null,
-          address     : address.trim(),
-          city        : city.trim(),
-          state       : stateName.trim(),
-          pincode     : pincode.trim(),
-        }),
+      await partnerService.submitVerification(token, {
+        fullName    : fullName.trim(),
+        dateOfBirth : dob || null,
+        address     : address.trim(),
+        city        : city.trim(),
+        state       : stateName.trim(),
+        pincode     : pincode.trim(),
       });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
       navigation.navigate('Step2_VehicleType');
     } catch (e: any) {
       setError(e.message || 'Submission failed. Check your connection.');

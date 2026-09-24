@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { RootStackParamList } from '../../types/navigation';
 import { getPendingShops, approveShop, rejectShop, Shop } from '../../services/shopService';
+import { getPendingPartners, approvePartner, rejectPartner } from '../../services/adminService';
 import { API_BASE_URL } from '../../config/api';
 
 export const AdminDashboardScreen = () => {
@@ -51,13 +52,8 @@ export const AdminDashboardScreen = () => {
     if (!token) return;
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/partners/pending`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setPartners(Array.isArray(data) ? data : (data.data || []));
-      }
+      const data = await getPendingPartners(token);
+      setPartners(Array.isArray(data) ? data : (data.data || []));
     } catch (err: any) {
       setError(err.message || 'Failed to load pending partners.');
     } finally {
@@ -92,19 +88,9 @@ export const AdminDashboardScreen = () => {
         onPress: async () => {
           if (!token) return;
           try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/partners/${partner.partnerId}/approve`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            if (res.ok) {
-              Alert.alert('Success', `${partner.name} has been approved.`);
-              setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
-            } else {
-              Alert.alert('Error', 'Failed to approve partner.');
-            }
+            await approvePartner(partner.partnerId, token);
+            Alert.alert('Success', `${partner.name} has been approved.`);
+            setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
           } catch (err: any) {
             Alert.alert('Error', err.message || 'Failed to approve partner.');
           }
@@ -122,20 +108,9 @@ export const AdminDashboardScreen = () => {
         onPress: async () => {
           if (!token) return;
           try {
-            const res = await fetch(`${API_BASE_URL}/api/admin/partners/${partner.partnerId}/reject`, {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ reason: 'Rejected by admin' })
-            });
-            if (res.ok) {
-              Alert.alert('Rejected', `${partner.name} has been rejected.`);
-              setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
-            } else {
-              Alert.alert('Error', 'Failed to reject partner.');
-            }
+            await rejectPartner(partner.partnerId, 'Rejected by admin', token);
+            Alert.alert('Rejected', `${partner.name} has been rejected.`);
+            setPartners(prev => prev.filter(p => p.partnerId !== partner.partnerId));
           } catch (err: any) {
             Alert.alert('Error', err.message || 'Failed to reject partner.');
           }

@@ -14,7 +14,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { useAuth } from '../../context/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { getMyShops } from '../../services/shopService';
+import { getDeliveryPartnersByShop } from '../../services/deliveryPartnerService';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../context/ToastContext';
@@ -47,15 +48,10 @@ export default function ShopRidersScreen({ navigation, route }: any) {
     if (!currentShopId && (userId || user)) {
       try {
         const ownerId = userId || user?.email || '';
-        const shopRes = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (shopRes.ok) {
-          const mineData = await shopRes.json();
-          if (Array.isArray(mineData) && mineData.length > 0) {
-            currentShopId = mineData[0].id;
-            setShopId(currentShopId);
-          }
+        const mineData = await getMyShops(ownerId, token);
+        if (mineData && mineData.length > 0) {
+          currentShopId = mineData[0].id;
+          setShopId(currentShopId);
         }
       } catch {}
     }
@@ -64,15 +60,8 @@ export default function ShopRidersScreen({ navigation, route }: any) {
 
     if (showLoader) setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/delivery-partners/shop/${currentShopId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRiders(data);
-      } else {
-        throw new Error('Failed to load riders');
-      }
+      const data = await getDeliveryPartnersByShop(currentShopId, token);
+      setRiders(data);
     } catch (e: any) {
       showToast(e.message || 'Could not fetch riders', 'error');
     } finally {

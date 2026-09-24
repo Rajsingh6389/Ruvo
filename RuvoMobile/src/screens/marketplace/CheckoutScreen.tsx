@@ -27,6 +27,7 @@ import {
 } from '../../services/orderService';
 import { ROUTES } from '../../constants/routes';
 import type { Product } from '../../services/productService';
+import { RAZORPAY_KEY_ID } from '../../config/api';
 
 type CheckoutItem = {
   product: Product;
@@ -270,7 +271,7 @@ export default function CheckoutScreen() {
               description: 'Order Payment',
               image: 'https://i.imgur.com/3g7nmJC.png',
               currency: checkoutRes.currency || 'INR',
-              key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YourKeyIdHere',
+              key: RAZORPAY_KEY_ID,
               amount: checkoutRes.amount * 100, // Amount in paise
               name: 'RuVo',
               order_id: checkoutRes.razorpayOrderId,
@@ -288,6 +289,7 @@ export default function CheckoutScreen() {
               console.log('[CheckoutScreen] Razorpay payment SUCCESS:', data);
               if (fromCart) clearCart();
               try {
+                console.log('[CheckoutScreen] Verifying payment on server with orderId:', checkoutRes.orderId);
                 await verifyPayment({
                   orderId: checkoutRes.orderId,
                   razorpayPaymentId: data.razorpay_payment_id,
@@ -295,6 +297,7 @@ export default function CheckoutScreen() {
                   razorpaySignature: data.razorpay_signature || '',
                 }, token);
 
+                console.log('[CheckoutScreen] Payment verified on server. Routing to ORDER_SUCCESS...');
                 navigation.replace(ROUTES.ORDER_SUCCESS, {
                   orderId: checkoutRes.orderId,
                   total: grandTotal,

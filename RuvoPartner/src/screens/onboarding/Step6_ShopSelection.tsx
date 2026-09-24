@@ -25,6 +25,7 @@ import {
   StepBar, ScreenHeader, SectionCard,
   CtaBtn, InfoBox, ErrorBox,
 } from './OnboardingShared';
+import { partnerService } from '../../services/partnerService';
 
 const { height: SCREEN_H } = Dimensions.get('window');
 const MAPS_API_KEY: string =
@@ -315,30 +316,27 @@ export const Step6_ShopSelection = () => {
 
       // Fetch My Shops and Nearby Shops in parallel
       const ownerId = user?.userId || user?.mobileNumber || '';
-      const params = lat != null ? `?lat=${lat}&lng=${lng}&radius=5` : '';
       
       const [nearbyRes, prefsRes] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/api/partner/nearby-shops${params}`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/api/partner/shop-preferences`, { headers: { Authorization: `Bearer ${token}` } })
+        partnerService.getNearbyShops(token!, lat, lng),
+        partnerService.getShopPreferences(token!)
       ]);
 
       let freshNearbyShops: NearbyShop[] = [];
       let freshMyShops: NearbyShop[] = [];
 
-      if (nearbyRes.status === 'fulfilled' && nearbyRes.value.ok) {
-        const data = await nearbyRes.value.json();
-        freshNearbyShops = data?.data ?? [];
-      } else if (nearbyRes.status === 'fulfilled' && nearbyRes.value.status === 404) {
+      if (nearbyRes.status === 'fulfilled' && nearbyRes.value) {
+        freshNearbyShops = nearbyRes.value.data ?? [];
+      } else if (nearbyRes.status === 'rejected') {
          // Fallback if specific partner nearby-shops is unavailable, use standard shops
-         const fallbackRes = await fetch(`${API_BASE_URL}/api/shops`, { headers: { Authorization: `Bearer ${token}` } });
-         if (fallbackRes.ok) {
-           const fbData = await fallbackRes.json();
+         try {
+           const fbData = await partnerService.getAllShops(token!);
            freshNearbyShops = fbData?.data ?? fbData ?? [];
-         }
+         } catch(e) {}
       }
 
-      if (prefsRes.status === 'fulfilled' && prefsRes.value.ok) {
-        const data = await prefsRes.value.json();
+      if (prefsRes.status === 'fulfilled' && prefsRes.value) {
+        const data = prefsRes.value;
         const preferredShops = data?.data ?? [];
         const preferredShopIds: number[] = data?.shopIds ?? [];
         if (preferredShopIds.length > 0) {
@@ -410,29 +408,20 @@ export const Step6_ShopSelection = () => {
       await AsyncStorage.setItem('lastShopSelectionUpdate', Date.now().toString());
       await AsyncStorage.setItem('selectedShopIds', JSON.stringify(shopIdsArray));
 
-      const res = await fetch(`${API_BASE_URL}/api/partner/shop-preferences`, {
-        method : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization : `Bearer ${token}`,
-        },
-        body: JSON.stringify({ shopIds: shopIdsArray }),
-      });
+      try {
+        await partnerService.updateShopPreferences(token!, shopIdsArray);
+      } catch (e: any) {
+        // Ignored for now based on previous 404/501 bypass logic
+      }
 
-      // Accept 2xx or a 404 (endpoint not yet deployed) so the flow isn't blocked
-      if (res.ok || res.status === 404 || res.status === 501) {
-        if (isManageMode) {
-          // Post-approval: just go back to Profile
-          navigation.goBack();
-        } else {
-          // Onboarding: proceed to success/waiting screen
-          navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
-          await clearResubmit();
-          setVerificationStatus('PENDING_APPROVAL');
-        }
+      if (isManageMode) {
+        // Post-approval: just go back to Profile
+        navigation.goBack();
       } else {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.message || `Error ${res.status}`);
+        // Onboarding: proceed to success/waiting screen
+        navigation.navigate('Step7_Success', { selectedShopCount: selected.size });
+        await clearResubmit();
+        setVerificationStatus('PENDING_APPROVAL');
       }
     } catch (e: any) {
       // Non-blocking: still advance so demo always works

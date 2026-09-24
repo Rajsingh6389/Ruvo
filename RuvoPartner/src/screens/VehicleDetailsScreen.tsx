@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { API_BASE_URL } from '../config/api';
+import { partnerService } from '../services/partnerService';
 
 export const VehicleDetailsScreen = () => {
   const navigation = useNavigation<any>();
@@ -33,32 +33,14 @@ export const VehicleDetailsScreen = () => {
   const handleSubmitVehicle = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/vehicle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          vehicleType,
-          vehicleNumber: 'NOT_REQUIRED',
-          vehicleModel: 'Standard',
-          vehicleCapacity: '50',
-          fuelType,
-        }),
+      const body = await partnerService.updateVehicleDetails(token!, {
+        vehicleType,
+        vehicleNumber: 'NOT_REQUIRED',
+        vehicleModel: 'Standard',
+        vehicleCapacity: '50',
+        fuelType,
       });
-
-      const responseText = await res.text();
-      let data: any = {};
-      try {
-        data = responseText ? JSON.parse(responseText) : {};
-      } catch (e) {
-        throw new Error(`Server response error (${res.status}). Please ensure backend is running.`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Vehicle details submission failed.');
-      }
+      const data = body || {};
 
       await setVerificationStatus(data.data?.verificationStatus || 'UNDER_REVIEW');
       Alert.alert('Success', 'Vehicle registration details saved and submitted for review!');

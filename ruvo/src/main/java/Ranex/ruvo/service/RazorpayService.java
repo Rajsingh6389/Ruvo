@@ -47,17 +47,12 @@ public class RazorpayService {
             orderRequest.put("currency", "INR");
             orderRequest.put("receipt", orderId);
 
+            System.out.println("[RazorpayService] Creating order " + orderId + " | Total: INR " + totalAmount);
+
             if (splitAccountId != null && !splitAccountId.isBlank() && productAmount != null && productAmount.compareTo(BigDecimal.ZERO) > 0) {
-                int splitAmountInPaise = productAmount.multiply(new BigDecimal("100")).intValueExact();
-                JSONArray transfers = new JSONArray();
-                JSONObject transfer = new JSONObject();
-                transfer.put("account", splitAccountId);
-                transfer.put("amount", splitAmountInPaise);
-                transfer.put("currency", "INR");
-                transfer.put("notes", new JSONObject().put("ruvo_order", orderId));
-                transfer.put("on_hold", false); // can set to true if you want to hold funds until delivery
-                transfers.put(transfer);
-                orderRequest.put("transfers", transfers);
+                System.out.println("[RazorpayService] Route Split logic deferred until order delivery for order: " + orderId);
+            } else {
+                System.out.println("[RazorpayService] No Route Split performed. (Missing shop account ID or zero product amount)");
             }
 
             Order razorpayOrder = client.orders.create(orderRequest);
@@ -79,6 +74,8 @@ public class RazorpayService {
             int amountInPaise = amount.multiply(new BigDecimal("100")).intValueExact();
             refundRequest.put("amount", amountInPaise);
             refundRequest.put("receipt", receipt);
+            
+            System.out.println("[RazorpayService] Refund money to this account (customer default payment method).");
             client.payments.refund(paymentId, refundRequest);
         } catch (RazorpayException e) {
             throw new RuntimeException("Razorpay refund failed: " + e.getMessage(), e);
@@ -130,6 +127,8 @@ public class RazorpayService {
 
             // Razorpay Transfers API allows transferring from a payment to a linked account
             if (sourcePaymentId != null && !sourcePaymentId.isBlank()) {
+                System.out.println("[RazorpayService] Order DELIVERED! Routing split triggered.");
+                System.out.println("Transferring INR " + amount + " to this account: " + linkedAccountId);
                 client.payments.transfer(sourcePaymentId, transferRequest);
             } else {
                 throw new UnsupportedOperationException("Direct transfer without payment ID requires Route Direct transfers, not supported in basic Route integration.");

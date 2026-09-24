@@ -81,12 +81,11 @@ public class SettlementService {
      */
     @Transactional
     public Map<String, Object> initiatePartnerToShopCodSettlement(Long partnerId, Long shopId) {
-        // Check for existing pending settlement (pessimistic lock)
-        Optional<Settlement> existing = settlementRepository.findByPartnerAndShopForUpdate(
+        List<Settlement> existingList = settlementRepository.findByPartnerAndShopForUpdate(
             partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION")
         );
-        if (existing.isPresent()) {
-            Settlement s = existing.get();
+        if (!existingList.isEmpty()) {
+            Settlement s = existingList.get(0);
             // Generate NEW OTP for existing settlement
             String rawOtp = generateOtp();
             String otpHash = passwordEncoder.encode(rawOtp);
@@ -229,7 +228,7 @@ public class SettlementService {
     public Map<String, Object> verifyPartnerToShopCodSettlement(Long partnerId, Long shopId, String otp) {
         Settlement s = settlementRepository.findByPartnerAndShopForUpdate(
             partnerId, shopId, List.of("PENDING", "OTP_GENERATED", "AWAITING_CONFIRMATION")
-        ).orElseThrow(() -> new IllegalArgumentException("No pending settlement found for this partner and shop."));
+        ).stream().findFirst().orElseThrow(() -> new IllegalArgumentException("No pending settlement found for this partner and shop."));
 
         if ("COMPLETED".equals(s.getStatus())) {
             throw new IllegalStateException("Settlement has already been completed.");

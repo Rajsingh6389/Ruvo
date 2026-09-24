@@ -18,16 +18,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { authService } from '../services/authService';
 
 /* RuVo Partner Login - Premium UI Redesign */
 
-interface AuthToken {
-  accessToken: string;
-  tokenType: string;
-  userId: number | string;
-  role: string;
-}
 interface ApiResponse<T> {
   message: string;
   data: T;
@@ -140,47 +134,30 @@ export const LoginScreen = ({ navigation }: Props) => {
     }
     setError(null);
     setLoading(true);
-    const targetUrl = `${API_BASE_URL}/api/auth/otp/send`;
     try {
-      const res = await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: formatted }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
+      await authService.sendOtp(formatted);
       setStep(2);
     } catch (err: any) {
-      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+      setError(err?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   };
 
   const handleVerifyOtp = async () => {
     if (!otp.trim() || otp.trim().length !== 6) { setError('Please enter the 6-digit OTP code'); return; }
     setError(null);
     setLoading(true);
-    const targetUrl = `${API_BASE_URL}/api/auth/otp/verify`;
     try {
       const formatted = formatMobileNumber(mobile);
-      const res = await fetch(targetUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mobileNumber: formatted,
-          otpCode: otp.trim(),
-          role: requiredRole,
-        }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
-      const { data } = body as ApiResponse<AuthToken>;
+      const data = await authService.verifyOtp(formatted, otp.trim(), requiredRole);
       
       await login(data.accessToken, null, String(data.userId), data.role, 'NEW');
     } catch (err: any) {
-      setError(`Cannot reach server (${targetUrl}): ${err?.message || 'Network request failed'}`);
+      setError(err?.message || 'Invalid OTP code');
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   };
 
   const phoneDigits = mobile.replace(/[^0-9]/g, '').slice(-10);

@@ -64,6 +64,18 @@ public class OrderMaintenanceService {
                 
                 // If it is a cancelled online order and STILL marked as SUCCESS (meaning it hasn't been moved to REFUNDED/REFUND_INITIATED)
                 if (isOnline && isPaid) {
+                    
+                    // Safety migration for old orders: if a refund entry already exists, just update the status and stop polling!
+                    if (refundService.getRefundByOrderId(order.getId()).isPresent()) {
+                        order.setPaymentStatus("REFUND_INITIATED");
+                        orderRepository.save(order);
+                        paymentRepository.findByOrderId(order.getId()).ifPresent(p -> {
+                            p.setPaymentStatus("REFUND_INITIATED");
+                            paymentRepository.save(p);
+                        });
+                        continue;
+                    }
+
                     try {
                         System.out.println("[OrderMaintenanceService] Retrying refund for cancelled order: " + order.getId());
                         refundService.autoRefundIfEligible(order);

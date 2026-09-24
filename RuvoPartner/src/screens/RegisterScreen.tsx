@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { formatDate } from '../utils/date';
 
 // ── Animated Partner Background (Electric Fleet Blue & Cyber Cyan) ──
 const AnimatedPartnerBackground = () => {
@@ -99,8 +100,6 @@ export const RegisterScreen = () => {
     Animated.spring(btnScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
   const pressBtnOut = () =>
     Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
-
-  const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 
   const useCurrentLocation = async () => {
     setLocating(true);

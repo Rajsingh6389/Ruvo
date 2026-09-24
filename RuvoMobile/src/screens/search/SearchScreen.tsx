@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useDeliveryLocation } from '../../context/DeliveryLocationContext';
-import { API_BASE_URL } from '../../config/api';
+import { globalSearch } from '../../services/searchService';
 import { sw, sh, sf } from '../../utils/responsive';
 
 export const SearchScreen = () => {
@@ -48,23 +48,15 @@ export const SearchScreen = () => {
     setHasSearched(true);
 
     try {
-      const params = new URLSearchParams({
-        query: query.trim(),
-        limit: '20',
-      });
+      const data = await globalSearch(
+        query,
+        20,
+        token,
+        location?.latitude || undefined,
+        location?.longitude || undefined
+      );
 
-      if (location?.latitude && location?.longitude) {
-        params.append('latitude', location.latitude.toString());
-        params.append('longitude', location.longitude.toString());
-      }
-
-      const res = await fetch(`${API_BASE_URL}/api/search?${params}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
+      if (data.success) {
         setSearchResults({
           products: data.products || [],
           shops: data.shops || [],

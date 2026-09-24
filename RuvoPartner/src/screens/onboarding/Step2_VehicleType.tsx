@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
-import { API_BASE_URL } from '../../config/api';
+import { partnerService } from '../../services/partnerService';
 import {
   StepBar, ScreenHeader, SectionCard, FieldLabel,
   StyledInput, CtaBtn, InfoBox, ErrorBox,
@@ -58,19 +58,13 @@ export const Step2_VehicleType = () => {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/partner/vehicle`, {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body   : JSON.stringify({
-          vehicleType,
-          vehicleNumber   : 'NOT_REQUIRED',
-          vehicleModel    : 'Standard',
-          vehicleCapacity : '50',
-          fuelType,
-        }),
+      await partnerService.updateVehicleDetails(token, {
+        vehicleType,
+        vehicleNumber   : 'NOT_REQUIRED',
+        vehicleModel    : 'Standard',
+        vehicleCapacity : '50',
+        fuelType,
       });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.message || `Error ${res.status}`);
       navigation.navigate('Step4_OnboardingFee');
     } catch (e: any) {
       setError(e.message || 'Submission failed.');

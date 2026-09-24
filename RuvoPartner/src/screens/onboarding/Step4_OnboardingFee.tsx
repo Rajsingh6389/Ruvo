@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
-import { API_BASE_URL } from '../../config/api';
+import { partnerService } from '../../services/partnerService';
 import {
   StepBar, ScreenHeader, SectionCard,
   CtaBtn, InfoBox, ErrorBox,
@@ -38,8 +38,7 @@ export const Step4_OnboardingFee = () => {
   });
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/onboarding/fee?type=PARTNER`)
-      .then(res => res.json())
+    partnerService.getOnboardingFee()
       .then(data => {
         if (data.success) {
           setFeeInfo({

@@ -36,7 +36,7 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     // Check if shop has any overdue settlements
     boolean existsByShopIdAndStatus(Long shopId, String status);
 
-    Optional<Settlement> findByDeliveryPartnerIdAndShopIdAndStatusIn(Long partnerId, Long shopId, List<String> statuses);
+    List<Settlement> findByDeliveryPartnerIdAndShopIdAndStatusIn(Long partnerId, Long shopId, List<String> statuses);
 
     /**
      * Pessimistic lock to prevent concurrent settlement creation for the same partner+shop.
@@ -44,7 +44,7 @@ public interface SettlementRepository extends JpaRepository<Settlement, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Settlement s WHERE s.deliveryPartnerId = :partnerId " +
            "AND s.shopId = :shopId AND s.status IN :statuses")
-    Optional<Settlement> findByPartnerAndShopForUpdate(@Param("partnerId") Long partnerId,
+    List<Settlement> findByPartnerAndShopForUpdate(@Param("partnerId") Long partnerId,
                                                         @Param("shopId") Long shopId,
                                                         @Param("statuses") List<String> statuses);
 }

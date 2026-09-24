@@ -20,6 +20,7 @@
     openingTime?: string;
     closingTime?: string;
     approved: boolean;
+    active?: boolean;
   }
 
   export interface NewShopInput {
@@ -176,6 +177,14 @@
     }
   }
 
+  export async function requestShopApproval(shopId: number | string, ownerId: string, token: string): Promise<Shop> {
+    const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/request-approval?ownerId=${encodeURIComponent(ownerId)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return parseOrThrow(res);
+  }
+
   export async function getMyShops(ownerId: string, token: string): Promise<Shop[]> {
     const res = await fetch(
       `${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`,
@@ -197,6 +206,29 @@
     }
   }
 
+
+  export async function onboardRazorpay(shopId: number, legalBusinessName: string, email: string | undefined, phone: string, ownerName: string, bankAccountNumber: string, ifscCode: string, bankName: string, token: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/seller/razorpay/onboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        shopId,
+        legalBusinessName,
+        email,
+        phone,
+        ownerName,
+        bankAccountNumber,
+        ifscCode,
+        bankName,
+      }),
+    });
+    return parseOrThrow(res);
+  }
+
+  export async function pollRazorpayBankStatus(shopId: number, token: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/seller/razorpay/bank/status?shopId=${shopId}`, { headers: { Authorization: `Bearer ${token}` } });
+    return parseOrThrow(res);
+  }
 
   /**
    * Determines the correct OnboardingStatus from the backend on login.
@@ -238,8 +270,18 @@
     return getApprovedShops();
   }
 
-  export async function getShopById(id: number | string): Promise<Shop> {
-    const res = await fetch(`${API_BASE_URL}/api/shops/${id}`);
+  export async function getShopById(id: number | string, token?: string): Promise<Shop> {
+    const res = await fetch(`${API_BASE_URL}/api/shops/${id}`, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+    });
+    return parseOrThrow(res);
+  }
+
+  export async function updateShopActiveStatus(shopId: number, active: boolean, token: string): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/active?active=${active}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
     return parseOrThrow(res);
   }
 

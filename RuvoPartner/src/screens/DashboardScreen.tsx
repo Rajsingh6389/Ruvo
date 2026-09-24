@@ -21,6 +21,7 @@ import { Delivery, DeliveryRequest, Earnings, partnerService } from '../services
 import { OfflineBar } from '../components/OfflineBar';
 import { NotificationPopup } from '../components/NotificationPopup';
 import { useDeliveryRequestSound } from '../hooks/useNotificationSound';
+import { locationService } from '../services/locationService';
 
 import { useToast } from '../context/ToastContext';
 
@@ -52,10 +53,7 @@ export const DashboardScreen = ({ navigation }: any) => {
       }
     } catch {}
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
-        headers: { 'User-Agent': 'RuvoPartnerApp/1.0' }
-      });
-      const data = await res.json();
+      const data = await locationService.reverseGeocode(lat, lng);
       if (data && data.display_name) {
         const addr = data.address || {};
         const shortName = [addr.road || addr.suburb, addr.city || addr.town || addr.county, addr.state]

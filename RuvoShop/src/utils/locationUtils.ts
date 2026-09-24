@@ -1,134 +1,75 @@
-import axios from 'axios';
+import Constants from 'expo-constants';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
+const MAPS_API_KEY: string =
+  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
+  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
 
-export type GeocodedAddress = {
-  fullAddress: string;
-  shortAddress: string;
-  house: string;
-  street: string;
-  area: string;
-  city: string;
-  state: string;
-  pincode: string;
-  landmark: string;
-};
-
-function emptyAddress(): GeocodedAddress {
-  return {
-    fullAddress: '',
-    shortAddress: '',
-    house: '',
-    street: '',
-    area: '',
-    city: '',
-    state: '',
-    pincode: '',
-    landmark: '',
-  };
-}
-
-function composeFullAddress(parts: Omit<GeocodedAddress, 'fullAddress' | 'shortAddress'>): string {
-  return [
-    parts.house,
-    parts.street,
-    parts.landmark ? `Near ${parts.landmark}` : '',
-    parts.area,
-    parts.city,
-    parts.state,
-    parts.pincode,
-  ]
-    .map(value => value.trim())
-    .filter(Boolean)
-    .join(', ');
-}
-
-async function callNominatim(lat: number, lon: number): Promise<GeocodedAddress | null> {
+export async function googleReverseGeocode(lat: number, lng: number) {
   try {
-    const response = await axios.get(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
-      { headers: { 'User-Agent': 'RuVoMobileApp' }, timeout: 8000 },
-    );
-    const data = response.data;
-    if (!data || !data.address) return null;
-
-    const address = data.address;
-    const house = [address.house_number, address.building].filter(Boolean).join(' ');
-    const street = address.road || address.pedestrian || address.neighbourhood || '';
-    const area = address.suburb || address.village || address.hamlet || '';
-    const city = address.city || address.town || address.county || '';
-    const state = address.state || '';
-    const pincode = address.postcode || '';
-    const landmark = address.amenity || address.shop || '';
-    const shortAddress = [area || city, state].filter(Boolean).join(', ');
-
-    const details = { house, street, area, city, state, pincode, landmark };
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
+    const res  = await fetch(url);
+    const json = await res.json();
+    if (json.status !== 'OK' || !json.results?.length) return null;
+    const best = json.results[0];
+    const comps: Record<string, string> = {};
+    for (const c of best.address_components ?? []) {
+      for (const t of c.types) comps[t] = c.long_name;
+    }
+    const streetParts = [
+      comps['street_number'],
+      comps['route'],
+      comps['sublocality_level_2'],
+      comps['sublocality_level_1'] || comps['sublocality'],
+      comps['neighborhood'],
+    ].filter(Boolean);
     return {
-      ...details,
-      fullAddress: data.display_name || composeFullAddress(details),
-      shortAddress: shortAddress || data.display_name.split(',').slice(0, 2).join(', '),
+      address : streetParts.join(', ') || comps['premise'] || '',
+      city    : comps['locality'] || comps['administrative_area_level_2'] || '',
+      state   : comps['administrative_area_level_1'] || '',
+      pincode : comps['postal_code'] || '',
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-async function callGoogleGeocoding(lat: number, lon: number): Promise<GeocodedAddress | null> {
+export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const response = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&key=${GOOGLE_MAPS_API_KEY}`,
-      { timeout: 8000 },
-    );
+    const enc = encodeURIComponent(`${address}, India`);
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${enc}&key=${MAPS_API_KEY}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    if (json.status === 'OK' && json.results?.length > 0) {
+      return json.results[0].geometry.location; // { lat, lng }
+    }
+  } catch (err) {}
+  return null;
+}
 
-    if (!response.data?.results?.[0]) return await callNominatim(lat, lon);
+export function composeFullAddress(details: any): string {
+  const parts = [
+    details.house,
+    details.street,
+    details.landmark,
+    details.area,
+    details.city,
+    details.state,
+    details.pincode
+  ].filter(p => !!p && typeof p === 'string' && p.trim() !== '');
 
-    const result = response.data.results[0];
-    const components: any[] = result.address_components || [];
-    const get = (type: string) =>
-      components.find((c: any) => c.types.includes(type))?.long_name ?? '';
+  return parts.join(', ');
+}
 
-    const house = get('street_number') || get('premise');
-    const street = get('route') || get('sublocality_level_2');
-    const area = get('sublocality_level_1') || get('neighborhood');
-    const city = get('locality') || get('administrative_area_level_2');
-    const state = get('administrative_area_level_1');
-    const pincode = get('postal_code');
-    const landmark = get('point_of_interest') || get('establishment');
-    const details = { house, street, area, city, state, pincode, landmark };
-
+export async function geocodeDetails(lat: number, lng: number): Promise<any> {
+    const geo = await googleReverseGeocode(lat, lng);
+    if (!geo) return { house: '', street: '', landmark: '', area: '', city: '', state: '', pincode: '', shortAddress: '', fullAddress: '' };
     return {
-      ...details,
-      fullAddress: result.formatted_address as string,
-      shortAddress: [area || city, state].filter(Boolean).join(', ') ||
-        (result.formatted_address as string).split(',').slice(0, 2).join(', '),
+        house: '',
+        street: geo.address,
+        landmark: '',
+        area: '',
+        city: geo.city,
+        state: geo.state,
+        pincode: geo.pincode,
+        shortAddress: geo.address,
+        fullAddress: composeFullAddress({ house: '', street: geo.address, landmark: '', area: '', city: geo.city, state: geo.state, pincode: geo.pincode })
     };
-  } catch {
-    return await callNominatim(lat, lon);
-  }
 }
-
-export async function geocodeDetails(lat: number, lon: number): Promise<GeocodedAddress> {
-  const result = await callGoogleGeocoding(lat, lon);
-  return result ?? {
-    ...emptyAddress(),
-    fullAddress: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
-    shortAddress: 'Current location',
-  };
-}
-
-export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
-  const result = await geocodeDetails(lat, lon);
-  return result.fullAddress || null;
-}
-
-export async function getShortAddress(lat: number, lon: number): Promise<string | null> {
-  const result = await geocodeDetails(lat, lon);
-  return result.shortAddress || null;
-}
-
-export async function getPincode(lat: number, lon: number): Promise<string | null> {
-  const result = await geocodeDetails(lat, lon);
-  return result.pincode || null;
-}
-
-export { composeFullAddress, emptyAddress };

@@ -117,6 +117,68 @@ export async function getOrder(orderId: number, token: string): Promise<Order> {
   return parseOrThrow(res);
 }
 
+export async function getShopOrders(shopId: number, token: string): Promise<Order[]> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/shop/${shopId}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  return parseOrThrow(res);
+}
+
+export async function getCurrentDeliveryRequest(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/delivery/orders/${orderId}/current-request`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+  });
+  return parseOrThrow(res);
+}
+
+export async function acceptOrder(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/accept`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  return parseOrThrow(res);
+}
+
+export async function generatePickupOtp(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/generate-pickup-otp`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseOrThrow(res);
+}
+
+export async function rejectOrder(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/reject`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  return parseOrThrow(res);
+}
+
+export async function cancelOrderByShopkeeper(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  return parseOrThrow(res);
+}
+
+export async function verifyHandoverOtp(orderId: number, otp: string, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/verify-handover-otp?otp=${otp}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseOrThrow(res);
+}
+
+export async function assignDeliveryPartner(orderId: number, partnerId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/assign-partner?partnerId=${partnerId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseOrThrow(res);
+}
+
 // ---------------------------------------------------------------------------
 // Pricing — fetches delivery/platform fees from the backend based on distance
 // ---------------------------------------------------------------------------

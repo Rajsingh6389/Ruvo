@@ -590,6 +590,8 @@ public class PaymentController {
 
         boolean previousFailed = "FAILED".equalsIgnoreCase(order.getPaymentStatus());
 
+        System.out.println("[PaymentController] Payment Verified! Order ID: " + order.getId() + ". Razorpay will now auto-transfer funds based on route split payload.");
+
         // Update successful order status
         order.setPaymentStatus("SUCCESS");
         

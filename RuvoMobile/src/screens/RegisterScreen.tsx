@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { API_BASE_URL } from '../config/api';
+import { sendOtp, verifyOtp } from '../services/authService';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -157,13 +157,8 @@ export const RegisterScreen = ({ navigation }: Props) => {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: formatted }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) { setError(body?.message ?? 'Failed to send OTP. Please try again.'); return; }
+      const { ok, data } = await sendOtp(formatted);
+      if (!ok) { setError(data?.message ?? 'Failed to send OTP. Please try again.'); return; }
       setStep(2);
     } catch (err: any) {
       setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);
@@ -176,14 +171,9 @@ export const RegisterScreen = ({ navigation }: Props) => {
     setLoading(true);
     try {
       const formatted = formatMobileNumber(mobile);
-      const res = await fetch(`${API_BASE_URL}/api/auth/otp/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: formatted, otpCode: otp.trim(), name: name.trim() }),
-      });
-      const body = await res.json().catch(() => null);
-      if (!res.ok) { setError(body?.message ?? 'Invalid OTP code'); return; }
-      const { data } = body as ApiResponse<AuthToken>;
+      const { ok, data: bodyData } = await verifyOtp(formatted, otp.trim(), { name: name.trim() });
+      if (!ok) { setError(bodyData?.message ?? 'Invalid OTP code'); return; }
+      const { data } = bodyData as ApiResponse<AuthToken>;
       await login(data.accessToken, String(data.userId), data.role);
     } catch (err: any) {
       setError(`Cannot reach server: ${err?.message || 'Network request failed'}`);

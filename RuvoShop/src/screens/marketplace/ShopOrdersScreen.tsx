@@ -25,6 +25,16 @@ import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 
 import { useAuth } from '../../context/AuthContext';
 import { Order } from '../../types/order';
+import { getMyShops, getShopById, updateShopActiveStatus } from '../../services/shopService';
+import { 
+  getShopOrders, 
+  getCurrentDeliveryRequest, 
+  acceptOrder, 
+  generatePickupOtp, 
+  rejectOrder, 
+  cancelOrderByShopkeeper, 
+  verifyHandoverOtp 
+} from '../../services/orderService';
 import { API_BASE_URL } from '../../config/api';
 import { OfflineBar } from '../../components/OfflineBar';
 import { Button } from '../../components/ui/Button';
@@ -146,23 +156,13 @@ export default function ShopOrdersScreen() {
     if (!currentShopId && (userId || user)) {
       try {
         const ownerId = userId || user?.email || '';
-        const shopRes = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-        });
-        if (shopRes.ok) {
-          const mineData = await shopRes.json();
-          if (Array.isArray(mineData) && mineData.length > 0) {
-            currentShopId = mineData[0].id;
-            setShopId(currentShopId);
-          } else {
-            setLoading(false);
-            setError('No shop found for your account. Please create a shop first.');
-            return;
-          }
+        const shops = await getMyShops(ownerId, token);
+        if (shops && shops.length > 0) {
+          currentShopId = shops[0].id;
+          setShopId(currentShopId);
         } else {
-          const errText = await shopRes.text().catch(() => '');
           setLoading(false);
-          setError(`Could not find your shop (${shopRes.status}): ${errText || 'Server error'}`);
+          setError('No shop found for your account. Please create a shop first.');
           return;
         }
       } catch (e: any) {
@@ -177,14 +177,7 @@ export default function ShopOrdersScreen() {
 
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/api/orders/shop/${currentShopId}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-      if (!response.ok) {
-        const errBody = await response.text().catch(() => '');
-        throw new Error(`Server error ${response.status}: ${errBody || response.statusText}`);
-      }
-      const data = await response.json();
+      const data = await getShopOrders(currentShopId, token);
       if (!Array.isArray(data)) throw new Error('Server returned unexpected data format.');
       setOrders([...data].sort((a: Order, b: Order) => Number(b.id || 0) - Number(a.id || 0)));
     } catch (err: any) {
@@ -208,12 +201,8 @@ export default function ShopOrdersScreen() {
     if (viewBroadcastId && token) {
       const fetchLive = async () => {
         try {
-          const response = await fetch(`${API_BASE_URL}/api/delivery/orders/${viewBroadcastId}/current-request`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
-          });
-          if (response.ok) {
-            setLiveBroadcastData(await response.json());
-          }
+          const data = await getCurrentDeliveryRequest(viewBroadcastId, token);
+          setLiveBroadcastData(data);
         } catch (e) {}
       };
       fetchLive();
@@ -270,11 +259,7 @@ export default function ShopOrdersScreen() {
     if (!token) return;
     setProcessingOrderId(orderId);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/accept`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-      if (!response.ok) throw new Error('Failed to accept order');
+      await acceptOrder(orderId, token);
       await fetchOrders(false);
       showToast('✅ Order Accepted! Finding delivery partner...', 'success');
     } catch {
@@ -288,15 +273,10 @@ export default function ShopOrdersScreen() {
     if (!token) return;
     setProcessingOrderId(orderId);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/generate-pickup-otp`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Failed to generate pickup OTP');
-      const data = await response.json();
+      const data = await generatePickupOtp(orderId, token);
       Alert.alert(
         'Handover OTP', 
-        `Share this 6-digit OTP with the delivery partner when they arrive:\n\n⭐ ${data.pickupOtp} ⭐`
+        `Share this 4-digit OTP with the delivery partner when they arrive:\n\n⭐ ${data.pickupOtp} ⭐`
       );
     } catch {
       Alert.alert('Error', 'Failed to generate Pickup OTP');
@@ -313,11 +293,7 @@ export default function ShopOrdersScreen() {
           if (!token) return;
           setProcessingOrderId(orderId);
           try {
-            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/reject`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-            });
-            if (!response.ok) throw new Error('Failed to reject order');
+            await rejectOrder(orderId, token);
             await fetchOrders(false);
             Alert.alert('Order Rejected', 'The order has been rejected.');
           } catch {
@@ -338,11 +314,7 @@ export default function ShopOrdersScreen() {
           if (!token) return;
           setProcessingOrderId(orderId);
           try {
-            const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-            });
-            if (!response.ok) throw new Error('Failed to cancel order');
+            await cancelOrderByShopkeeper(orderId, token);
             await fetchOrders(false);
             Alert.alert('Order Cancelled', 'The order has been successfully cancelled.');
           } catch {
@@ -359,12 +331,7 @@ export default function ShopOrdersScreen() {
     if (!token || !handoverOrderId || handoverOtp.trim().length === 0) return;
     setVerifyingHandover(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${handoverOrderId}/verify-handover-otp?otp=${handoverOtp.trim()}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to verify Handover OTP');
+      await verifyHandoverOtp(handoverOrderId, handoverOtp.trim(), token);
       
       showToast('✅ Cash Handover Verified!', 'success');
       setHandoverModalVisible(false);
@@ -391,10 +358,7 @@ export default function ShopOrdersScreen() {
   // Fetch shop active status
   useEffect(() => {
     if (!shopId || !token) return;
-    fetch(`${API_BASE_URL}/api/shops/${shopId}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    })
-      .then(res => res.ok ? res.json() : null)
+    getShopById(shopId, token)
       .then(data => {
         if (data && typeof data.active === 'boolean') {
           setIsShopActive(data.active);
@@ -408,16 +372,9 @@ export default function ShopOrdersScreen() {
     const nextState = !isShopActive;
     setTogglingStatus(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/shops/${shopId}/active?active=${nextState}`, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-      if (res.ok) {
-        setIsShopActive(nextState);
-        showToast(nextState ? '🟢 Shop is now OPEN & accepting orders' : '🔴 Shop is now CLOSED', 'info');
-      } else {
-        showToast('Failed to update shop status', 'error');
-      }
+      await updateShopActiveStatus(shopId, nextState, token);
+      setIsShopActive(nextState);
+      showToast(nextState ? '🟢 Shop is now OPEN & accepting orders' : '🔴 Shop is now CLOSED', 'info');
     } catch {
       showToast('Network error while updating status', 'error');
     } finally {
@@ -587,6 +544,9 @@ export default function ShopOrdersScreen() {
                         </View>
                       )}
                       <View className="flex-1">
+                        <Text className="text-[10px] font-black text-gray-400 mb-0.5 tracking-wider uppercase">
+                          Order #{item.id}
+                        </Text>
                         <Text className="text-base font-extrabold text-gray-900" numberOfLines={2}>
                           {item.productName} {item.quantity ? `× ${item.quantity}` : ''}
                         </Text>
@@ -778,12 +738,12 @@ export default function ShopOrdersScreen() {
                         {processing ? <ActivityIndicator color="#171A1F" size="small" /> : 'Generate Handover OTP'}
                       </Button>
                       <Text className="text-[10px] text-gray-500 text-center">
-                        Generate and share this 6-digit OTP to confirm order pickup.
+                        Generate and share this 4-digit OTP to confirm order pickup.
                       </Text>
                     </View>
                   )}
-                  {/* Preparing / Ready: show cancel only */}
-                  {['PREPARING', 'READY'].includes(status) && (
+                  {/* Active Orders: show cancel button always */}
+                  {['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(status) && (
                     <View className="mt-md gap-sm">
                       <Button
                         variant="danger"
@@ -851,16 +811,7 @@ export default function ShopOrdersScreen() {
                         </TouchableOpacity>
                       ) : null}
                       
-                      <Button
-                        variant="danger"
-                        onPress={() => item.id && handleCancelAfterAccept(item.id)}
-                        disabled={processing}
-                      >
-                        {processing ? <ActivityIndicator color="#FFF" size="small" /> : 'Cancel Order'}
-                      </Button>
-                      <Text className="text-[10px] text-gray-500 text-center">
-                        Use only if you are unable to fulfill this order.
-                      </Text>
+
                     </View>
                   )}
                   {/* Delivered Actions for COD */}

@@ -33,7 +33,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 
-import { getOrder } from '../../services/orderService';
+import { getOrder, getPartnerDetails, cancelOrder, payCodOnline, verifyPayment } from '../../services/orderService';
 import { Order } from '../../types/order';
 
 import { API_BASE_URL, RAZORPAY_KEY_ID } from '../../config/api';
@@ -43,6 +43,7 @@ import Constants from 'expo-constants';
 import MapView, {
   Marker,
   Polyline,
+  UrlTile,
   PROVIDER_GOOGLE,
 } from 'react-native-maps';
 
@@ -61,218 +62,19 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TrackingMode = 'MAP' | 'PROMOTIONS';
-
-type PartnerLocation = {
-  latitude: number;
-  longitude: number;
-};
-
-type PartnerInfo = {
-  id?: number;
-  name: string;
-  phone: string;
-  locationName?: string;
-  latitude?: number;
-  longitude?: number;
-};
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CANCELLED STATUSES
-// ─────────────────────────────────────────────────────────────────────────────
-
-const CANCELLED_STATUSES = [
-  'SHOP_REJECTED',
-  'CANCELLED',
-  'SHOP_CANCELLED',
-  'SHOP_TIMEOUT',
-  'CANCELLED_SHOP_TIMEOUT',
-  'CANCELLED_BY_SHOP',
-  'CANCELLED_BY_USER',
-  'CANCELLED_NO_PARTNER_FOUND',
-  'FAILED',
-  'PAYMENT_FAILED',
-];
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// TRACKING STEPS
-// ─────────────────────────────────────────────────────────────────────────────
-
-const TRACKING_STEPS = [
-  {
-    key: 'ORDER_PLACED',
-    title: 'Order placed',
-    description: 'We received your order',
-    icon: 'receipt-outline',
-  },
-  {
-    key: 'SHOP_ACCEPTED',
-    title: 'Shop accepted',
-    description: 'Your order is being prepared',
-    icon: 'storefront-outline',
-  },
-  {
-    key: 'DELIVERY_ASSIGNED',
-    title: 'Partner assigned',
-    description: 'A delivery partner is assigned',
-    icon: 'person-outline',
-  },
-  {
-    key: 'OUT_FOR_DELIVERY',
-    title: 'Out for delivery',
-    description: 'Your order is on the way',
-    icon: 'bicycle-outline',
-  },
-  {
-    key: 'DELIVERED',
-    title: 'Delivered',
-    description: 'Order delivered successfully',
-    icon: 'checkmark-circle-outline',
-  },
-] as const;
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PROMOTIONS
-// Ideally these should eventually come from your backend.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const PROMO_BANNERS = [
-  {
-    id: '1',
-    title: 'Fresh groceries from local shops',
-    subtitle: 'Get daily essentials delivered quickly.',
-    image:
-      'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=1000',
-  },
-  {
-    id: '2',
-    title: 'Support local sellers',
-    subtitle: 'Every order helps your neighborhood businesses.',
-    image:
-      'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=1000',
-  },
-];
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-
-function isCancelledStatus(status?: string) {
-  return CANCELLED_STATUSES.includes(status || '');
-}
-
-
-function getTrackingStage(status?: string) {
-  switch (status) {
-    case 'ORDER_PLACED':
-    case 'SHOP_PENDING':
-      return 0;
-
-    case 'SHOP_ACCEPTED':
-    case 'PREPARING':
-    case 'READY':
-      return 1;
-
-    case 'DELIVERY_ASSIGNMENT':
-    case 'DELIVERY_ASSIGNED':
-      return 2;
-
-    case 'PICKED_UP':
-    case 'OUT_FOR_DELIVERY':
-      return 3;
-
-    case 'DELIVERED':
-      return 4;
-
-    default:
-      return 0;
-  }
-}
-
-
-function isLiveStatus(status?: string) {
-  return (
-    status === 'PICKED_UP' ||
-    status === 'OUT_FOR_DELIVERY'
-  );
-}
-
-
-function getStatusText(status?: string) {
-  switch (status) {
-    case 'ORDER_PLACED':
-    case 'SHOP_PENDING':
-      return {
-        title: 'Order placed',
-        subtitle: 'Waiting for the shop to accept your order',
-        icon: 'receipt-outline',
-      };
-
-    case 'SHOP_ACCEPTED':
-    case 'PREPARING':
-    case 'READY':
-      return {
-        title: 'Preparing your order',
-        subtitle: 'The shop is getting your items ready',
-        icon: 'restaurant-outline',
-      };
-
-    case 'DELIVERY_ASSIGNMENT':
-    case 'DELIVERY_ASSIGNED':
-      return {
-        title: 'Partner assigned',
-        subtitle: 'Your delivery partner is getting ready',
-        icon: 'person-outline',
-      };
-
-    case 'PICKED_UP':
-    case 'OUT_FOR_DELIVERY':
-      return {
-        title: 'Out for delivery',
-        subtitle: 'Your order is on the way',
-        icon: 'bicycle-outline',
-      };
-
-    case 'DELIVERED':
-      return {
-        title: 'Delivered',
-        subtitle: 'Your order was delivered successfully',
-        icon: 'checkmark-circle-outline',
-      };
-
-    default:
-      return {
-        title: 'Processing order',
-        subtitle: 'We are processing your order',
-        icon: 'time-outline',
-      };
-  }
-}
-
-
-function formatProductImageUrl(
-  url?: string,
-): string | null {
-  if (!url) return null;
-
-  const trimmed = url.trim();
-
-  if (
-    trimmed.startsWith('data:image/') ||
-    trimmed.startsWith('http://') ||
-    trimmed.startsWith('https://')
-  ) {
-    return trimmed;
-  }
-
-  return `${API_BASE_URL}${
-    trimmed.startsWith('/') ? '' : '/'
-  }${trimmed}`;
-}
+import {
+  TrackingMode,
+  PartnerLocation,
+  PartnerInfo,
+  CANCELLED_STATUSES,
+  TRACKING_STEPS,
+  PROMO_BANNERS,
+  isCancelledStatus,
+  getTrackingStage,
+  isLiveStatus,
+  getStatusText,
+  formatProductImageUrl
+} from '../../utils/orderTrackingUtils';
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,18 +174,7 @@ export default function CustomerTrackingScreen() {
       if (!orderId || !token) return;
 
       try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/orders/${orderId}/partner`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        if (!response.ok) return;
-
-        const data = await response.json();
+        const data = await getPartnerDetails(orderId, token);
 
         if (!data.assigned) {
           setPartnerInfo(null);
@@ -660,29 +451,7 @@ export default function CustomerTrackingScreen() {
             setCancelling(true);
 
             try {
-              const response =
-                await fetch(
-                  `${API_BASE_URL}/api/orders/${orderId}/cancel`,
-                  {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type':
-                        'application/json',
-                      Authorization:
-                        `Bearer ${token}`,
-                    },
-                  },
-                );
-
-              const data =
-                await response.json();
-
-              if (!response.ok) {
-                throw new Error(
-                  data.message ||
-                    'Unable to cancel order',
-                );
-              }
+              const data = await cancelOrder(orderId, token);
 
               setOrder(previous =>
                 previous
@@ -844,16 +613,8 @@ export default function CustomerTrackingScreen() {
     if (!orderId || !token || !order) return;
     setPayingOnline(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/payments/pay-cod-online/${orderId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ userId: String(user?.id || (user as any)?.userId) })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to initialize payment');
+      const userId = String(user?.id || (user as any)?.userId);
+      const data = await payCodOnline(orderId, userId, token);
       
       const RazorpayCheckout = require('react-native-razorpay').default;
       const options = {
@@ -873,11 +634,12 @@ export default function CustomerTrackingScreen() {
       };
 
       RazorpayCheckout.open(options).then((rzpData: any) => {
-         fetch(`${API_BASE_URL}/api/payments/verify`, {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-           body: JSON.stringify({ orderId, razorpayPaymentId: rzpData.razorpay_payment_id, razorpaySignature: rzpData.razorpay_signature })
-         }).then(() => {
+         verifyPayment({
+           orderId,
+           razorpayPaymentId: rzpData.razorpay_payment_id,
+           razorpayOrderId: data.razorpayOrderId,
+           razorpaySignature: rzpData.razorpay_signature
+         }, token).then(() => {
             Alert.alert('Payment Successful', 'Your order is now paid online!');
             handleRefresh();
          });
@@ -921,6 +683,10 @@ export default function CustomerTrackingScreen() {
   }
   const showOtp = ['OUT_FOR_DELIVERY', 'PICKED_UP'].includes(s) && rawHash.length > 0;
 
+  console.log('[DEBUG Map] Destination: ', destination);
+  console.log('[DEBUG Map] Partner Location: ', partnerLocation);
+  console.log('[DEBUG Map] Provider: ', MAP_PROVIDER);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -930,7 +696,7 @@ export default function CustomerTrackingScreen() {
         <MapView
           ref={mapRef}
           provider={MAP_PROVIDER}
-          style={{ ...StyleSheet.absoluteFillObject }}
+          style={{ flex: 1 }}
           initialRegion={{
             latitude: destination.latitude,
             longitude: destination.longitude,
@@ -938,18 +704,55 @@ export default function CustomerTrackingScreen() {
             longitudeDelta: 0.05,
           }}
         >
-          {partnerLocation && (
-            <Marker coordinate={{ latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }}>
-              <View style={styles.markerCircle}>
-                <Ionicons name="bicycle" size={16} color="#FFF" />
+          {/* Static Route: Shop to Home */}
+          {shopLocation && destination && (
+            <Polyline
+              coordinates={[shopLocation, destination]}
+              strokeColor="#9CA3AF"
+              strokeWidth={3}
+              lineDashPattern={[5, 10]}
+            />
+          )}
+
+          {/* Active Route: Partner to Home */}
+          {partnerLocation && destination && (
+            <Polyline
+              coordinates={[
+                { latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) },
+                destination
+              ]}
+              strokeColor={colors.primary}
+              strokeWidth={4}
+            />
+          )}
+
+          {/* Shop Marker */}
+          {shopLocation && (
+            <Marker coordinate={shopLocation} zIndex={1}>
+              <View style={[styles.markerCircle, { backgroundColor: '#F97316' }]}>
+                <Ionicons name="storefront" size={16} color="#FFF" />
               </View>
             </Marker>
           )}
-          <Marker coordinate={destination}>
-            <View style={[styles.markerCircle, { backgroundColor: colors.primary }]}>
+
+          {/* Home Destination Marker */}
+          <Marker coordinate={destination} zIndex={2}>
+            <View style={[styles.markerCircle, { backgroundColor: '#EF4444' }]}>
               <Ionicons name="home" size={16} color="#FFF" />
             </View>
           </Marker>
+
+          {/* Delivery Partner Marker */}
+          {partnerLocation && (
+            <Marker 
+              coordinate={{ latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }}
+              zIndex={3}
+            >
+              <View style={[styles.markerCircle, { backgroundColor: colors.primary, transform: [{ scale: 1.2 }] }]}>
+                <Ionicons name="bicycle" size={18} color="#FFF" />
+              </View>
+            </Marker>
+          )}
         </MapView>
         
         {/* Back Button Overlay */}
@@ -988,6 +791,11 @@ export default function CustomerTrackingScreen() {
               <Ionicons name="close-circle" size={40} color="#EF4444" />
               <Text style={styles.cancelledTitle}>Order Cancelled</Text>
               <Text style={styles.cancelledSubtitle}>This order has been cancelled.</Text>
+              {(order.paymentMethod === 'ONLINE' || order.paymentMethod === 'RAZORPAY') && (
+                 <Text style={[styles.cancelledSubtitle, { color: '#059669', marginTop: 8, fontWeight: '700' }]}>
+                   Your refund has been initiated and will be credited to your account within 5-7 business days.
+                 </Text>
+              )}
             </View>
           ) : (
             <View style={styles.timelineBlock}>
@@ -1127,7 +935,7 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   markerCircle: {
     width: 32,

@@ -56,8 +56,8 @@ export const EarningsScreen = () => {
       {/* Header */}
       <View className="bg-ruvo-ink/90 border-b border-gray-800 px-6 py-4 flex-row items-center justify-between z-10">
         <View className="flex-1">
-          <Text className="text-xl font-black text-white tracking-tight">Earnings & Payouts</Text>
-          <Text className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
+          <Text className="text-xl text-white tracking-tight" style={{ fontFamily: 'Poppins_800ExtraBold' }}>Earnings & Payouts</Text>
+          <Text className="text-xs text-gray-400 uppercase tracking-widest mt-1" style={{ fontFamily: 'Poppins_700Bold' }}>
             Track daily income & wallet
           </Text>
         </View>
@@ -97,10 +97,10 @@ export const EarningsScreen = () => {
                 >
                   <View className="absolute w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl top-[-20px] right-[-20px] pointer-events-none" />
 
-                  <Text className="text-[11px] font-black text-emerald-400 uppercase tracking-widest mb-2">
+                  <Text className="text-[11px] text-emerald-400 uppercase tracking-widest mb-2" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                     TODAY'S TOTAL EARNINGS
                   </Text>
-                  <Text className="text-5xl font-black text-white tracking-tighter mb-8 shadow-sm">
+                  <Text className="text-5xl text-white tracking-tighter mb-8 shadow-sm" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                     ₹{earnings?.todayEarnings ?? 0}
                   </Text>
 
@@ -109,19 +109,19 @@ export const EarningsScreen = () => {
                     <View>
                       <View className="flex-row items-center gap-1.5 mb-1">
                         <Ionicons name="wallet" size={14} color="#10B981" />
-                        <Text className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">Wallet</Text>
+                        <Text className="text-[10px] text-gray-300 uppercase tracking-widest" style={{ fontFamily: 'Poppins_700Bold' }}>Wallet</Text>
                       </View>
-                      <Text className="text-lg text-white font-black">
+                      <Text className="text-lg text-white" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                         ₹{earnings?.walletBalance ?? 0}
                       </Text>
                     </View>
                     <View className="w-px h-8 bg-emerald-500/20" />
                     <View>
                       <View className="flex-row items-center gap-1.5 mb-1 justify-end">
-                        <Text className="text-[10px] text-gray-300 font-bold uppercase tracking-widest">All Time</Text>
+                        <Text className="text-[10px] text-gray-300 uppercase tracking-widest" style={{ fontFamily: 'Poppins_700Bold' }}>All Time</Text>
                         <Ionicons name="trending-up" size={14} color="#10B981" />
                       </View>
-                      <Text className="text-lg text-white font-black text-right">
+                      <Text className="text-lg text-white text-right" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                         ₹{earnings?.totalEarnings ?? 0}
                       </Text>
                     </View>
@@ -133,29 +133,29 @@ export const EarningsScreen = () => {
               <Animated.View entering={FadeInUp.delay(50).duration(500)} className="px-6 mt-4">
                 <TouchableOpacity
                   onPress={() => navigation.navigate('ShopSettlements')}
-                  className="bg-[#1C2026] border border-gray-800 rounded-[20px] p-4 flex-row items-center justify-between shadow-lg shadow-black/40"
-                  activeOpacity={0.7}
+                  className="bg-[#10B981] rounded-[20px] p-4 flex-row items-center justify-between shadow-lg shadow-[#10B981]/40"
+                  activeOpacity={0.8}
                 >
                   <View className="flex-row items-center gap-4">
-                    <View className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-[16px] items-center justify-center">
-                      <Ionicons name="storefront" size={20} color="#10B981" />
+                    <View className="w-12 h-12 bg-white/20 rounded-[16px] items-center justify-center">
+                      <Ionicons name="storefront" size={22} color="#FFF" />
                     </View>
                     <View>
-                      <Text className="text-white font-black text-sm tracking-tight mb-0.5">Shop Settlements</Text>
-                      <Text className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Pay collected COD cash</Text>
+                      <Text className="text-white text-base tracking-tight mb-0.5" style={{ fontFamily: 'Poppins_800ExtraBold' }}>Shop Settlements</Text>
+                      <Text className="text-[#ECFDF5] text-[10px] uppercase tracking-widest" style={{ fontFamily: 'Poppins_700Bold' }}>Pay collected COD cash</Text>
                     </View>
                   </View>
-                  <View className="w-8 h-8 rounded-full bg-white/5 items-center justify-center">
-                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
+                    <Ionicons name="chevron-forward" size={16} color="#FFF" />
                   </View>
                 </TouchableOpacity>
               </Animated.View>
 
               {/* Section Header */}
               <Animated.View entering={FadeInUp.delay(100).duration(500)} className="px-6 mt-8 mb-4 flex-row items-center justify-between">
-                <Text className="text-[11px] font-black text-gray-500 uppercase tracking-widest pl-1">Delivery History</Text>
+                <Text className="text-[11px] text-gray-500 uppercase tracking-widest pl-1" style={{ fontFamily: 'Poppins_800ExtraBold' }}>Delivery History</Text>
                 <View className="bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-                  <Text className="text-white font-black text-[10px] tracking-widest uppercase">
+                  <Text className="text-white text-[10px] tracking-widest uppercase" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                     {history.length} runs
                   </Text>
                 </View>
@@ -169,8 +169,8 @@ export const EarningsScreen = () => {
               <View className="w-24 h-24 bg-[#FF7A00]/10 border border-[#FF7A00]/20 rounded-3xl items-center justify-center mb-6">
                 <Ionicons name="receipt" size={44} color="#FF7A00" />
               </View>
-              <Text className="text-lg font-black text-white mb-2 text-center">No completed runs yet</Text>
-              <Text className="text-xs text-gray-400 font-bold text-center leading-5 px-6">
+              <Text className="text-lg text-white mb-2 text-center" style={{ fontFamily: 'Poppins_800ExtraBold' }}>No completed runs yet</Text>
+              <Text className="text-xs text-gray-400 text-center leading-5 px-6" style={{ fontFamily: 'Poppins_700Bold' }}>
                 Completed delivery earnings will appear here once you start accepting runs.
               </Text>
             </View>
@@ -185,16 +185,16 @@ export const EarningsScreen = () => {
                   </View>
 
                   <View className="flex-1">
-                    <Text className="text-base font-black text-white tracking-tight mb-0.5">
+                    <Text className="text-base text-white tracking-tight mb-0.5" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                       Order #{item.orderId}
                     </Text>
-                    <Text className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+                    <Text className="text-[11px] text-gray-400 uppercase tracking-widest" style={{ fontFamily: 'Poppins_700Bold' }}>
                       Run #{item.id}
                     </Text>
                   </View>
 
                   <View className="items-end">
-                    <Text className="text-xl font-black text-emerald-400">
+                    <Text className="text-xl text-emerald-400" style={{ fontFamily: 'Poppins_800ExtraBold' }}>
                       +₹{item.deliveryFee}
                     </Text>
                   </View>

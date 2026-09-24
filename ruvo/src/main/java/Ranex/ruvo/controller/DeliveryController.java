@@ -59,6 +59,7 @@ public class DeliveryController {
     private final Ranex.ruvo.repository.PaymentRepository paymentRepository;
     private final Ranex.ruvo.repository.OrderItemRepository orderItemRepository;
     private final Ranex.ruvo.repository.ShopRepository shopRepository;
+    private final Ranex.ruvo.service.RefundService refundService;
 
     public DeliveryController(DeliveryService deliveryService, 
                               DeliveryPartnerRepository deliveryPartnerRepository, 
@@ -73,7 +74,8 @@ public class DeliveryController {
                               RazorpayService razorpayService,
                               Ranex.ruvo.repository.PaymentRepository paymentRepository,
                               Ranex.ruvo.repository.OrderItemRepository orderItemRepository,
-                              Ranex.ruvo.repository.ShopRepository shopRepository) {
+                              Ranex.ruvo.repository.ShopRepository shopRepository,
+                              Ranex.ruvo.service.RefundService refundService) {
         this.deliveryService = deliveryService;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.deliveryRequestRepository = deliveryRequestRepository;
@@ -88,6 +90,7 @@ public class DeliveryController {
         this.paymentRepository = paymentRepository;
         this.orderItemRepository = orderItemRepository;
         this.shopRepository = shopRepository;
+        this.refundService = refundService;
     }
 
     private String getCurrentUserEmail() {
@@ -242,7 +245,7 @@ public class DeliveryController {
         }
 
         // Generate 6-digit OTP
-        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
         
         order.setOrderStatus(OrderStatus.OUT_FOR_DELIVERY);
         order.setPickedUpAt(java.time.Instant.now());
@@ -513,15 +516,21 @@ public class DeliveryController {
         // Expire all pending delivery requests for this order
         List<Ranex.ruvo.model.DeliveryRequest> requests = deliveryRequestRepository.findByOrderId(orderId);
         for (Ranex.ruvo.model.DeliveryRequest req : requests) {
-            if ("PENDING".equals(req.getStatus())) {
-                req.setStatus("EXPIRED");
-                deliveryRequestRepository.save(req);
-            }
+            req.setStatus("EXPIRED");
+            deliveryRequestRepository.save(req);
         }
+        // Cancel actual delivery if assigned
+        deliveryRepository.findByOrderId(orderId).ifPresent(delivery -> {
+            delivery.setStatus("CANCELLED");
+            deliveryRepository.save(delivery);
+        });
 
         // Set order status to CANCELLED_BY_SHOP
         order.setOrderStatus(OrderStatus.CANCELLED_BY_SHOP);
         orderRepository.save(order);
+
+        // Initiate full automated refund if order was paid online
+        refundService.autoRefundIfEligible(order);
 
         // Notify customer
         notificationService.notifyCustomer(

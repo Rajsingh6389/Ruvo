@@ -153,6 +153,11 @@ public class RefundService {
             refund.setStatus(RefundStatus.PROCESSING);
             refund.setUpdatedAt(Instant.now());
 
+            order.setPaymentStatus("REFUND_INITIATED");
+            orderRepository.save(order);
+            payment.setPaymentStatus("REFUND_INITIATED");
+            paymentRepository.save(payment);
+
         } catch (Exception e) {
             // Mark as failed but don't throw - let admin handle manually
             refund.setStatus(RefundStatus.FAILED);

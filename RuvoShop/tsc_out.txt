@@ -1,0 +1,4 @@
+src/context/DeliveryLocationContext.tsx(13,3): error TS2305: Module '"../utils/locationUtils"' has no exported member 'composeFullAddress'.
+src/context/DeliveryLocationContext.tsx(14,3): error TS2305: Module '"../utils/locationUtils"' has no exported member 'geocodeDetails'.
+src/screens/marketplace/ShopkeeperDashboardScreen.tsx(193,42): error TS2345: Argument of type 'string | number' is not assignable to parameter of type 'string'.
+  Type 'number' is not assignable to type 'string'.

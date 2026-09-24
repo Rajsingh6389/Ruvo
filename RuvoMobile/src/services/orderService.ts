@@ -173,3 +173,33 @@ export async function checkServiceability(
   );
   return parseOrThrow(res);
 }
+
+export async function getPartnerDetails(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/partner`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return parseOrThrow(res);
+}
+
+export async function cancelOrder(orderId: number, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return parseOrThrow(res);
+}
+
+export async function payCodOnline(orderId: number, userId: string, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/payments/pay-cod-online/${orderId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ userId }),
+  });
+  return parseOrThrow(res);
+}

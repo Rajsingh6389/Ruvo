@@ -10,6 +10,7 @@ import { DarkTheme, LightTheme } from './theme/theme';
 import { RuvoLaunchScreen } from './components/launch/RuvoLaunchScreen';
 import { Text } from 'react-native';
 import { API_BASE_URL } from './config/api';
+import { getMyShops } from './services/shopService';
 
 // Auth
 import { LoginScreen } from './screens/LoginScreen';
@@ -76,12 +77,9 @@ function MainDrawerNavigator() {
       if (!token || !userId) return;
       const ownerId = userId;
       try {
-        const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
+        const data = await getMyShops(ownerId, token);
         if (Array.isArray(data) && data.length > 0) {
-          const shop = data[0];
+          const shop = data[0] as any;
           setShopName(shop.name || shopName);
           setShopCategory(shop.category || shopCategory);
           const firstImage = Array.isArray(shop.images) && shop.images.length > 0 ? shop.images[0] : null;

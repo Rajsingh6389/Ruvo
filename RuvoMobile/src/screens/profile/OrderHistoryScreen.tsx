@@ -17,22 +17,12 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { getMyOrders } from '../../services/orderService';
 import { Order } from '../../types/order';
-import { API_BASE_URL } from '../../config/api';
+import { ACTIVE_STATUSES, CANCELLED_STATUSES, formatProductImageUrl } from '../../utils/orderTrackingUtils';
 import { OrderSkeleton } from '../../components/OrderSkeleton';
 import { OfflineBar } from '../../components/OfflineBar';
 import { SPACING } from '../../theme/spacing';
 
 // ─── Status groups ────────────────────────────────────────────────────────────
-const ACTIVE_STATUSES = [
-  'SHOP_PENDING', 'SHOP_ACCEPTED', 'DELIVERY_ASSIGNMENT',
-  'DELIVERY_ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY',
-];
-
-const CANCELLED_STATUSES = [
-  'CANCELLED', 'SHOP_REJECTED', 'SHOP_TIMEOUT',
-  'CANCELLED_SHOP_TIMEOUT', 'CANCELLED_BY_SHOP',
-  'CANCELLED_NO_PARTNER_FOUND', 'REJECTED',
-];
 
 // ─── Status colour palette ────────────────────────────────────────────────────
 // GREEN  → Delivered
@@ -74,13 +64,6 @@ const getStatusTheme = (status: string): StatusTheme =>
   };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const formatProductImageUrl = (url?: string): string | null => {
-  if (!url) return null;
-  const trimmed = url.trim();
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  return `${API_BASE_URL}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-};
-
 const formatDate = (iso?: string): string => {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-IN', {

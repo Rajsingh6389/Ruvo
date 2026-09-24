@@ -109,7 +109,7 @@ class SettlementServiceTest {
     @DisplayName("Initiate COD Settlement creates Settlement and SettlementOrder snapshots")
     void testInitiateSettlement_Success() {
         when(settlementRepository.findByPartnerAndShopForUpdate(eq(10L), eq(1L), anyList()))
-                .thenReturn(Optional.empty());
+                .thenReturn(List.of());
 
         when(orderRepository.findEligibleForSettlement(1L, 10L))
                 .thenReturn(List.of(order1, order2));
@@ -164,7 +164,7 @@ class SettlementServiceTest {
                 .build();
 
         when(settlementRepository.findByPartnerAndShopForUpdate(eq(10L), eq(1L), anyList()))
-                .thenReturn(Optional.of(pending));
+                .thenReturn(List.of(pending));
 
         SettlementOrder so1 = SettlementOrder.builder().id(1L).settlementId(1001L).orderId(101L).platformFee(new BigDecimal("15.00")).build();
         SettlementOrder so2 = SettlementOrder.builder().id(2L).settlementId(1001L).orderId(102L).platformFee(new BigDecimal("10.00")).build();
@@ -199,7 +199,7 @@ class SettlementServiceTest {
                 .build();
 
         when(settlementRepository.findByPartnerAndShopForUpdate(eq(10L), eq(1L), anyList()))
-                .thenReturn(Optional.of(pending));
+                .thenReturn(List.of(pending));
 
         assertThrows(IllegalStateException.class, () ->
                 settlementService.verifyPartnerToShopCodSettlement(10L, 1L, "999999")

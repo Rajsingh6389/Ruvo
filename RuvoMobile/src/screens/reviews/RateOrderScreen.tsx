@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { API_BASE_URL } from '../../config/api';
+import { checkCanReview, submitOrderReview } from '../../services/reviewService';
 import { sw, sh, sf } from '../../utils/responsive';
 
 export const RateOrderScreen = () => {
@@ -39,13 +39,9 @@ export const RateOrderScreen = () => {
     if (!userId || !orderId) return;
 
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/reviews/can-review?userId=${userId}&orderId=${orderId}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      const data = await res.json();
+      const { ok, canReview } = await checkCanReview(userId, orderId, token);
 
-      if (res.ok && !data.canReview) {
+      if (ok && !canReview) {
         Alert.alert('Already Reviewed', 'You have already reviewed this order.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
@@ -64,25 +60,16 @@ export const RateOrderScreen = () => {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/reviews`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          userId: (user as any)?.userId || (user as any)?.id,
-          shopId,
-          orderId,
-          rating,
-          reviewText: reviewText.trim(),
-          isAnonymous,
-        }),
-      });
+      const { ok, data } = await submitOrderReview({
+        userId: (user as any)?.userId || (user as any)?.id,
+        shopId,
+        orderId,
+        rating,
+        reviewText: reviewText.trim(),
+        isAnonymous,
+      }, token);
 
-      const data = await res.json();
-
-      if (res.ok && data.success) {
+      if (ok && data.success) {
         Alert.alert('Thank You!', 'Your review has been submitted successfully.', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);

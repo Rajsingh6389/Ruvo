@@ -21,41 +21,12 @@ import { useTheme } from '../../context/ThemeContext';
 import { RADIUS } from '../../theme/radius';
 import { API_BASE_URL } from '../../config/api';
 import { MapLocationPicker, LocationResult } from '../../components/MapLocationPicker';
+import { uploadShop, registerShop } from '../../services/shopService';
+import { googleReverseGeocode } from '../../utils/locationUtils';
 import {
   StepBar, SectionCard, FieldLabel,
   StyledInput, CtaBtn, ErrorBox, formatErrorMessage,
 } from './OnboardingShared';
-
-const MAPS_API_KEY: string =
-  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
-
-async function googleReverseGeocode(lat: number, lng: number) {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${MAPS_API_KEY}&language=en`;
-    const res  = await fetch(url);
-    const json = await res.json();
-    if (json.status !== 'OK' || !json.results?.length) return null;
-    const best = json.results[0];
-    const comps: Record<string, string> = {};
-    for (const c of best.address_components ?? []) {
-      for (const t of c.types) comps[t] = c.long_name;
-    }
-    const streetParts = [
-      comps['street_number'],
-      comps['route'],
-      comps['sublocality_level_2'],
-      comps['sublocality_level_1'] || comps['sublocality'],
-      comps['neighborhood'],
-    ].filter(Boolean);
-    return {
-      address : streetParts.join(', ') || comps['premise'] || '',
-      city    : comps['locality'] || comps['administrative_area_level_2'] || '',
-      state   : comps['administrative_area_level_1'] || '',
-      pincode : comps['postal_code'] || '',
-    };
-  } catch { return null; }
-}
 
 const CATEGORIES = [
   { key: 'Grocery',             icon: 'basket-outline'         as const },
@@ -242,84 +213,9 @@ export const Step1_ShopDetails = () => {
       let createdShop: any = null;
 
       if (logo?.uri) {
-        // Use multipart upload endpoint /api/shops/upload
-        const formData = new FormData();
-        formData.append('shop', JSON.stringify(shopPayload));
-
-        formData.append('logo', {
-          uri: logo.uri,
-          name: logo.fileName || 'logo.jpg',
-          type: logo.mimeType || (logo.type && logo.type.includes('/') ? logo.type : 'image/jpeg'),
-        } as any);
-
-        if (banner?.uri) {
-          formData.append('banner', {
-            uri: banner.uri,
-            name: banner.fileName || 'banner.jpg',
-            type: banner.mimeType || (banner.type && banner.type.includes('/') ? banner.type : 'image/jpeg'),
-          } as any);
-        }
-
-        galleryImages.forEach((img, idx) => {
-          formData.append('images', {
-            uri: img.uri,
-            name: img.fileName || `gallery_${idx}.jpg`,
-            type: img.mimeType || (img.type && img.type.includes('/') ? img.type : 'image/jpeg'),
-          } as any);
-        });
-
-        let uploaded = false;
-        try {
-          const res = await fetch(`${API_BASE_URL}/api/shops/upload`, {
-            method: 'POST',
-            headers: {
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: formData,
-          });
-
-          if (res.ok) {
-            uploaded = true;
-            createdShop = await res.json().catch(() => null);
-          } else if (res.status === 401) {
-            throw new Error('Session expired. Please log in again.');
-          } else {
-            const errData = await res.text().catch(() => '');
-            console.log('\n=======================================');
-            console.log('SHOP MULTIPART UPLOAD FAILED!');
-            console.log('Status code:', res.status);
-            console.log('Error details:', errData);
-            console.log('=======================================\n');
-            throw new Error(`Upload failed (Status ${res.status}): ${errData.substring(0, 50)}... Check console logs for details.`);
-          }
-        } catch (e: any) {
-          if (e?.message?.includes('Session expired') || e?.message?.includes('Upload failed')) throw e;
-          console.log('\n=======================================');
-          console.log('SHOP MULTIPART UPLOAD NETWORK ERROR!');
-          console.log('Message:', e?.message);
-          console.log('=======================================\n');
-          throw new Error('Network error during upload: ' + e?.message);
-        }
-
-        // We removed the JSON fallback when a logo is present, 
-        // to prevent silent failures where the logo isn't saved.
+        createdShop = await uploadShop(shopPayload, logo, banner, token || '', galleryImages);
       } else {
-        // Standard JSON register endpoint /api/shops
-        const res = await fetch(`${API_BASE_URL}/api/shops`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(shopPayload),
-        });
-
-        if (!res.ok) {
-          const errData = await res.text().catch(() => '');
-          console.warn('Shop create response:', res.status, errData);
-          throw new Error(formatErrorMessage(errData) || `Shop registration failed (${res.status})`);
-        }
-        createdShop = await res.json().catch(() => null);
+        createdShop = await registerShop(shopPayload as any, token || '');
       }
 
       if (!createdShop?.id) {

@@ -30,6 +30,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
+import { isToday } from '../utils/date';
 
 type HistoryItem = {
   id: number;
@@ -46,17 +47,6 @@ type HistoryItem = {
   shopName?: string;
   items?: { productName: string; quantity: number }[];
 };
-
-function isToday(dateStr?: string): boolean {
-  if (!dateStr) return false;
-  const d = new Date(dateStr);
-  const now = new Date();
-  return (
-    d.getDate() === now.getDate() &&
-    d.getMonth() === now.getMonth() &&
-    d.getFullYear() === now.getFullYear()
-  );
-}
 
 export const HistoryScreen = () => {
   const { token } = useAuth();

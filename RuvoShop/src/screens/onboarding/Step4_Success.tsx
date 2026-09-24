@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { getMyShops, requestShopApproval } from '../../services/shopService';
 import { CtaBtn, InfoBox } from './OnboardingShared';
 
 const STEPS_SUMMARY = [
@@ -77,21 +78,7 @@ export const Step4_Success = () => {
     setStatusMessage(null);
     const ownerIdParam = userId || (user as any)?.phone || 'owner_default';
     try {
-      const headers: Record<string, string> = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerIdParam)}`, { headers });
-
-      if (res.status === 401) {
-        setStatusMessage('Session expired. Please log out and log in again.');
-        return;
-      }
-      if (!res.ok) {
-        const message = await res.text().catch(() => '');
-        setStatusMessage(message || 'Could not check approval status.');
-        return;
-      }
-      const data = await res.json();
+      const data = await getMyShops(ownerIdParam, token || '');
       const shops: any[] = (Array.isArray(data) ? data : [data]).filter(Boolean);
       setOwnedShops(shops);
       const approved = shops.find(s => s.approved === true || s.isApproved === true || s.status === 'APPROVED');
@@ -107,8 +94,12 @@ export const Step4_Success = () => {
         setStatusMessage('Your shop application was rejected or deleted by the admin. Please edit your details and submit again.'); 
       }
       else { setStatusMessage('Your shop request is still waiting for admin approval.'); }
-    } catch {
-      setStatusMessage('Network error while checking approval status.');
+    } catch (err: any) {
+      if (err.message?.includes('Token expired') || err.message?.includes('Session expired')) {
+        setStatusMessage('Session expired. Please log out and log in again.');
+      } else {
+        setStatusMessage('Network error while checking approval status.');
+      }
     } finally {
       setChecking(false);
     }
@@ -132,12 +123,7 @@ export const Step4_Success = () => {
     setStatusMessage(null);
     const ownerIdParam = userId || (user as any)?.phone || 'owner_default';
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/shops/${latestShop.id}/request-approval?ownerId=${encodeURIComponent(ownerIdParam)}`,
-        { method: 'POST', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) } }
-      );
-      if (!res.ok) { const m = await res.text().catch(() => ''); throw new Error(m || 'Could not request review.'); }
-      const updated = await res.json().catch(() => latestShop);
+      const updated = await requestShopApproval(latestShop.id, ownerIdParam, token || '').catch(() => latestShop);
       setOwnedShops(prev => prev.length > 0 ? [updated, ...prev.slice(1)] : [updated]);
       setApprovalStatus(updated?.approved ? 'approved' : 'pending');
       setStatusMessage(updated?.approved ? 'Your shop is already approved.' : 'Admin review requested. Ask admin to refresh approvals.');

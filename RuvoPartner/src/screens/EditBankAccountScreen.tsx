@@ -14,7 +14,7 @@ import AnimatedRN, { FadeInUp, FadeIn } from 'react-native-reanimated';
 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { API_BASE_URL } from '../config/api';
+import { partnerService } from '../services/partnerService';
 
 const BANKS = [
   'State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank',
@@ -49,15 +49,11 @@ export const EditBankAccountScreen = () => {
     const load = async () => {
       if (!token || !partnerId) { setFetching(false); return; }
       try {
-        const res = await fetch(`${API_BASE_URL}/api/partner/razorpay/bank/status?partnerId=${partnerId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.data) {
-            const bankData = data.data;
-            const activeMask = bankData.activeBankAccountMasked !== 'None' ? bankData.activeBankAccountMasked : null;
-            const pendingMask = bankData.pendingBankAccountMasked !== 'None' && bankData.pendingBankAccountMasked ? bankData.pendingBankAccountMasked : null;
+        const body = await partnerService.getBankStatus(token, partnerId);
+        if (body && body.data) {
+          const bankData = body.data;
+          const activeMask = bankData.activeBankAccountMasked !== 'None' ? bankData.activeBankAccountMasked : null;
+          const pendingMask = bankData.pendingBankAccountMasked !== 'None' && bankData.pendingBankAccountMasked ? bankData.pendingBankAccountMasked : null;
             
             setActiveBankAccountMasked(activeMask);
             setPendingBankAccountMasked(pendingMask);
@@ -75,7 +71,6 @@ export const EditBankAccountScreen = () => {
               ifsc: bankData.activeIfsc !== 'None' ? bankData.activeIfsc : ''
             }));
           }
-        }
       } catch (e) {
           setIsEditing(true);
       } finally {
@@ -102,32 +97,18 @@ export const EditBankAccountScreen = () => {
     try {
       if (!partnerId) throw new Error("Partner ID not found.");
       
-      const res = await fetch(`${API_BASE_URL}/api/partner/razorpay/bank/change`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          partnerId: partnerId,
-          accountNumber: accountNumber.trim(),
-          ifscCode: ifsc.trim().toUpperCase(),
-          beneficiaryName: accountHolder.trim(),
-          bankName: bankName.trim(),
-          confirmChange: true,
-        }),
+      await partnerService.changeBankAccount(token!, {
+        partnerId: partnerId,
+        accountNumber: accountNumber.trim(),
+        ifscCode: ifsc.trim().toUpperCase(),
+        beneficiaryName: accountHolder.trim(),
+        bankName: bankName.trim(),
+        confirmChange: true,
       });
 
-      if (res.ok) {
-        setSaved(true);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
-        setTimeout(() => navigation.goBack(), 1800);
-      } else {
-        const raw = await res.text();
-        try {
-          const json = JSON.parse(raw);
-          throw new Error(json.message || `Error ${res.status}`);
-        } catch(e: any) {
-          throw new Error(e.message || raw || `Error ${res.status}`);
-        }
-      }
+      setSaved(true);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+      setTimeout(() => navigation.goBack(), 1800);
     } catch (e: any) {
       setError(e?.message ?? 'Could not save bank details. Please try again.');
     } finally {

@@ -385,6 +385,16 @@ public class OrderController {
         }
         orderRepository.save(order);
 
+        List<Ranex.ruvo.model.DeliveryRequest> requests = deliveryRequestRepository.findByOrderId(order.getId());
+        for (Ranex.ruvo.model.DeliveryRequest req : requests) {
+            req.setStatus("EXPIRED");
+            deliveryRequestRepository.save(req);
+        }
+        deliveryRepository.findByOrderId(order.getId()).ifPresent(delivery -> {
+            delivery.setStatus("CANCELLED");
+            deliveryRepository.save(delivery);
+        });
+
         // Trigger refund for online payments
         try {
             refundService.autoRefundIfEligible(order);
@@ -409,7 +419,7 @@ public class OrderController {
         }
 
         // Generate 6-digit OTP
-        String otp = String.format("%06d", new java.util.Random().nextInt(1000000));
+        String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
         order.setPickupOtp(otp);
         order.setPickupOtpGeneratedAt(Instant.now());
         order.setPickupOtpVerified(false);
@@ -444,6 +454,16 @@ public class OrderController {
             });
         }
         orderRepository.save(order);
+
+        List<Ranex.ruvo.model.DeliveryRequest> requests = deliveryRequestRepository.findByOrderId(order.getId());
+        for (Ranex.ruvo.model.DeliveryRequest req : requests) {
+            req.setStatus("EXPIRED");
+            deliveryRequestRepository.save(req);
+        }
+        deliveryRepository.findByOrderId(order.getId()).ifPresent(delivery -> {
+            delivery.setStatus("CANCELLED");
+            deliveryRepository.save(delivery);
+        });
 
         // Trigger refund for online payments
         try {

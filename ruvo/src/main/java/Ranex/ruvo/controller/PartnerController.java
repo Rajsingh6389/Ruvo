@@ -290,6 +290,9 @@ public class PartnerController {
                         .filter(d -> "ASSIGNED".equalsIgnoreCase(d.getStatus())
                                 || "PICKED_UP".equalsIgnoreCase(d.getStatus())
                                 || "OUT_FOR_DELIVERY".equalsIgnoreCase(d.getStatus()))
+                        .filter(d -> d.getOrderId() == null || orderRepository.findById(d.getOrderId())
+                                .map(o -> o.getOrderStatus() == null || !o.getOrderStatus().toUpperCase().startsWith("CANCELLED"))
+                                .orElse(true))
                         .toList();
                 return ResponseEntity.ok(active);
             } catch (Exception e) {
@@ -302,6 +305,9 @@ public class PartnerController {
                 .filter(d -> "ASSIGNED".equalsIgnoreCase(d.getStatus())
                         || "PICKED_UP".equalsIgnoreCase(d.getStatus())
                         || "OUT_FOR_DELIVERY".equalsIgnoreCase(d.getStatus()))
+                .filter(d -> d.getOrderId() == null || orderRepository.findById(d.getOrderId())
+                        .map(o -> o.getOrderStatus() == null || !o.getOrderStatus().toUpperCase().startsWith("CANCELLED"))
+                        .orElse(true))
                 .toList();
         return ResponseEntity.ok(active);
     }
@@ -326,6 +332,9 @@ public class PartnerController {
 
         if (delivery.getOrderId() != null) {
             orderRepository.findById(delivery.getOrderId()).ifPresent(order -> {
+                if (order.getOrderStatus() != null && order.getOrderStatus().toUpperCase().startsWith("CANCELLED")) {
+                    map.put("status", "CANCELLED");
+                }
                 map.put("totalAmount", order.getTotalAmount());
                 map.put("paymentMethod", order.getPaymentMethod());
                 map.put("paymentStatus", order.getPaymentStatus());
@@ -453,7 +462,7 @@ public class PartnerController {
             Order order = orderOpt.get();
             order.setOrderStatus("OUT_FOR_DELIVERY");
             if (order.getDeliveryOtpHash() == null || order.getDeliveryOtpHash().trim().isEmpty()) {
-                String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+                String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
                 order.setDeliveryOtpHash(otp);
                 order.setDeliveryOtpVerified(false);
             }
@@ -637,7 +646,7 @@ public class PartnerController {
         }
 
         // Generate 4-digit OTP and store as handoverOtp on order
-        String otp = String.format("%04d", new java.util.Random().nextInt(10000));
+        String otp = String.format("%04d", new java.util.Random().nextInt(9000) + 1000);
         order.setHandoverOtp(otp);
         order.setHandoverOtpGeneratedAt(Instant.now());
         orderRepository.save(order);

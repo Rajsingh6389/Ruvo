@@ -43,27 +43,21 @@ import { EmptyState, CompactEmptyState } from '../../components/ui/EmptyState';
 import { DashboardSkeleton, OrderCardSkeleton } from '../../components/ui/Skeleton';
 import { useOrderAlerts } from '../../hooks/useOrderAlerts';
 
+import { getMyShops, getShopById, updateShopActiveStatus } from '../../services/shopService';
+import { 
+  getShopOrders, 
+  acceptOrder, 
+  rejectOrder, 
+  cancelOrderByShopkeeper, 
+  assignDeliveryPartner 
+} from '../../services/orderService';
+import { getShopDeliveryPartners } from '../../services/deliveryPartnerService';
+import { getMyNotifications } from '../../services/notificationService';
+import { getPlatformFeeSummary, payPlatformFee } from '../../services/settlementService';
 import { getProductsByShop } from '../../services/productService';
 
 // ── Types ────────────────────────────────────────────────────────────────────
-interface Order {
-  id: number;
-  productName: string;
-  productImageUrl?: string;
-  quantity: number;
-  totalAmount: number;
-  deliveryFee?: number;
-  platformFee?: number;
-  subtotal?: number;
-  orderStatus: string;
-  paymentMethod: string;
-  paymentStatus?: string;
-  deliveryAddress: string;
-  deliveryPartnerId?: number | null;
-  shopResponseDeadline?: string;
-  createdAt?: string;
-  userId?: string;
-}
+import { Order } from '../../types/order';
 
 interface Notification {
   id: number;
@@ -196,14 +190,11 @@ export default function ShopkeeperDashboardScreen() {
       const ownerId = userId || user?.id || user?.email || '';
       if (ownerId) {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/shops/mine?ownerId=${encodeURIComponent(ownerId)}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const mineData = await res.json();
-          if (Array.isArray(mineData) && mineData.length > 0) {
-            activeShopId = mineData[0].id;
+          const shops = await getMyShops(String(ownerId), token);
+          if (shops && shops.length > 0) {
+            activeShopId = shops[0].id;
             setCurrentShopId(activeShopId);
-            setShop(mineData[0]);
+            setShop(shops[0]);
           }
         } catch (err) {}
       }
@@ -216,37 +207,24 @@ export default function ShopkeeperDashboardScreen() {
     }
 
     try {
-      const [shopRes, ordersRes, notifRes, partnersRes, settlementRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/shops/${activeShopId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/api/orders/shop/${activeShopId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/api/notifications/mine`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/api/orders/shop/${activeShopId}/delivery-partners`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/api/settlements/shopkeeper/platform-fee-summary?shopId=${activeShopId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+      const activeShopIdNum = Number(activeShopId);
+      const safeToken = token || '';
+      
+      const [shopData, ordersData, notifData, partnersData, settlementData] = await Promise.all([
+        getShopById(String(activeShopId), safeToken).catch(() => null),
+        getShopOrders(activeShopIdNum, safeToken).catch(() => []),
+        getMyNotifications(safeToken).catch(() => []),
+        getShopDeliveryPartners(activeShopIdNum, safeToken).catch(() => []),
+        getPlatformFeeSummary(activeShopIdNum, safeToken).catch(() => null),
       ]);
 
-      const shopData = await shopRes.json();
-      const ordersData = await ordersRes.json();
-      const notifData = await notifRes.json();
-      const partnersData = await partnersRes.json();
-      const settlementData = await settlementRes.json().catch(() => null);
-
-      if (shopRes.ok) setShop(shopData);
+      if (shopData) setShop(shopData);
       if (Array.isArray(ordersData)) setOrders(ordersData.reverse());
       if (Array.isArray(notifData)) {
-        setNotifications(notifData.filter(n => n.type === 'SHOP_NEW_ORDER' || n.type?.startsWith('SHOP')));
+        setNotifications(notifData.filter((n: any) => n.type === 'SHOP_NEW_ORDER' || n?.type?.startsWith('SHOP')));
       }
       if (Array.isArray(partnersData)) setPartners(partnersData);
-      if (settlementData && !settlementData.error) setSettlementSummary(settlementData);
+      if (settlementData && !(settlementData as any).error) setSettlementSummary(settlementData);
 
       // Fetch products using helper + fallback
       try {
@@ -284,6 +262,7 @@ export default function ShopkeeperDashboardScreen() {
     const timer = setInterval(() => {
       const newCountdowns: Record<number, string> = {};
       orders.forEach(o => {
+        if (!o.id) return;
         if (o.orderStatus === 'SHOP_PENDING' && o.shopResponseDeadline) {
           const diff = new Date(o.shopResponseDeadline).getTime() - Date.now();
           if (diff <= 0) {
@@ -303,20 +282,13 @@ export default function ShopkeeperDashboardScreen() {
   // ── Order Actions ────────────────────────────────────────────────────────
   const handleAccept = async (orderId: number) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/accept`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        fetchData();
-        const targetOrder = orders.find(o => o.id === orderId);
-        if (targetOrder) setPartnerModalOrder(targetOrder);
-      } else {
-        Alert.alert('Error', data.message || 'Failed to accept order');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Network error');
+      if (!orderId) return;
+      await acceptOrder(orderId, token || '');
+      fetchData();
+      const targetOrder = orders.find(o => o.id === orderId);
+      if (targetOrder) setPartnerModalOrder(targetOrder);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Network error');
     }
   };
 
@@ -327,11 +299,12 @@ export default function ShopkeeperDashboardScreen() {
         text: 'Reject',
         style: 'destructive',
         onPress: async () => {
-          const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/reject`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) fetchData();
+          try {
+            await rejectOrder(orderId, token || '');
+            fetchData();
+          } catch (e) {
+            Alert.alert('Error', 'Failed to reject order');
+          }
         },
       },
     ]);
@@ -344,14 +317,11 @@ export default function ShopkeeperDashboardScreen() {
         text: 'Yes, Cancel',
         style: 'destructive',
         onPress: async () => {
-          const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/cancel-by-shopkeeper`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-          });
-          if (response.ok) {
+          try {
+            await cancelOrderByShopkeeper(orderId, token || '');
             Alert.alert('Order Cancelled', 'The order has been successfully cancelled.');
             fetchData();
-          } else {
+          } catch (e) {
             Alert.alert('Error', 'Failed to cancel the order. Please try again.');
           }
         },
@@ -363,20 +333,13 @@ export default function ShopkeeperDashboardScreen() {
     if (!partnerModalOrder) return;
     setAssigningPartner(true);
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/orders/${partnerModalOrder.id}/assign-partner?partnerId=${partnerId}`,
-        { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
-      );
-      const data = await res.json();
-      if (res.ok) {
-        Alert.alert('Success', `Delivery assigned successfully`);
-        setPartnerModalOrder(null);
-        fetchData();
-      } else {
-        Alert.alert('Error', data.message || 'Failed to assign partner');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Network error');
+      if (!partnerModalOrder?.id) return;
+      await assignDeliveryPartner(partnerModalOrder.id, partnerId, token || '');
+      Alert.alert('Success', `Delivery assigned successfully`);
+      setPartnerModalOrder(null);
+      fetchData();
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Network error');
     }
     setAssigningPartner(false);
   };
@@ -410,7 +373,7 @@ export default function ShopkeeperDashboardScreen() {
 
   const pendingOrders = validOrders.filter(o => o.orderStatus === 'SHOP_PENDING');
   const activeOrders = validOrders.filter(o =>
-    ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.orderStatus)
+    ['SHOP_ACCEPTED', 'PREPARING', 'READY', 'DELIVERY_ASSIGNMENT', 'DELIVERY_ASSIGNED', 'DELIVERY_BROADCASTED', 'WAITING_PARTNER', 'BROADCASTED', 'SEARCHING_PARTNER', 'PICKED_UP', 'OUT_FOR_DELIVERY'].includes(o.orderStatus || '')
   );
   const completedOrders = validOrders.filter(o => o.orderStatus === 'DELIVERED');
 
@@ -840,15 +803,8 @@ function DashboardTab({
                     if (!shop?.id || !token) return;
                     const newActiveStatus = !(shop.active ?? true);
                     try {
-                      const res = await fetch(`${API_BASE_URL}/api/shops/${shop.id}/active?active=${newActiveStatus}`, {
-                        method: 'PATCH',
-                        headers: { Authorization: `Bearer ${token}` },
-                      });
-                      if (res.ok) {
-                        setShop((prev: any) => ({ ...prev, active: newActiveStatus }));
-                      } else {
-                        Alert.alert('Error', 'Failed to update shop active status');
-                      }
+                      await updateShopActiveStatus(shop.id, newActiveStatus, token);
+                      setShop((prev: any) => ({ ...prev, active: newActiveStatus }));
                     } catch (e) {
                       Alert.alert('Error', 'Network error');
                     }
@@ -912,13 +868,9 @@ function DashboardTab({
                       text: `Pay Now ₹${amount}`,
                       onPress: async () => {
                         try {
-                          const res = await fetch(`${API_BASE_URL}/api/settlements/shopkeeper/pay-platform-fee?shopId=${shop?.id}`, {
-                            method: 'POST',
-                          });
-                          if (res.ok) {
-                            Alert.alert('Success', 'RuVo Commission settled successfully! Your shop status is fully active.');
-                            if (onRefresh) onRefresh();
-                          }
+                          await payPlatformFee(shop.id, token);
+                          Alert.alert('Success', 'RuVo Commission settled successfully! Your shop status is fully active.');
+                          if (onRefresh) onRefresh();
                         } catch (err) {
                           Alert.alert('Success', `Simulated RuVo Commission Payment of ₹${amount} completed!`);
                         }
@@ -1176,10 +1128,10 @@ function OrdersTab({
         <View className="gap-md">
           {orders.map((order: Order, idx: number) => (
             <OrderCard
-              key={order.id}
+              key={order.id || idx}
               order={order}
               index={idx}
-              countdown={countdowns[order.id]}
+              countdown={order.id ? countdowns[order.id] : undefined}
               onAccept={onAccept}
               onReject={onReject}
               onCancel={onCancel}
