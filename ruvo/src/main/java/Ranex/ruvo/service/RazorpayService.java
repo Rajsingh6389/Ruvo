@@ -106,10 +106,37 @@ public class RazorpayService {
 
             // NOTE: The Razorpay Java SDK does not expose an 'accounts' API on RazorpayClient.
             // Linked account creation for Route must be done via direct HTTP to api.razorpay.com/v2/accounts.
-            // For now, return a placeholder ID; replace with an OkHttp/Feign call when going live.
-            System.out.println("[RazorpayService] createLinkedAccount: returning dummy ID for testing. " +
-                               "Implement via direct HTTP POST to Razorpay Route /v2/accounts for production.");
-            return "acc_dummy" + System.currentTimeMillis();
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            
+            // Set Basic Auth
+            String auth = keyId + ":" + keySecret;
+            byte[] encodedAuth = java.util.Base64.getEncoder().encode(auth.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String authHeader = "Basic " + new String(encodedAuth);
+            headers.set("Authorization", authHeader);
+            
+            org.springframework.http.HttpEntity<String> request = new org.springframework.http.HttpEntity<>(accountRequest.toString(), headers);
+            
+            System.out.println("[RazorpayService] createLinkedAccount: Calling Razorpay /v2/accounts API...");
+            try {
+                org.springframework.http.ResponseEntity<String> response = restTemplate.postForEntity(
+                        "https://api.razorpay.com/v2/accounts",
+                        request,
+                        String.class
+                );
+                
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    JSONObject responseJson = new JSONObject(response.getBody());
+                    return responseJson.getString("id");
+                } else {
+                    throw new RuntimeException("Failed to create Razorpay linked account. Response: " + response.getBody());
+                }
+            } catch (Exception httpEx) {
+                System.err.println("[RazorpayService] HTTP Call failed: " + httpEx.getMessage());
+                throw new RuntimeException("Failed to call Razorpay accounts API.", httpEx);
+            }
         } catch (RazorpayException e) {
             throw new RuntimeException("Failed to create Razorpay linked account.", e);
         }

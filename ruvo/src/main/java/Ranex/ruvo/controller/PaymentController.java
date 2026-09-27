@@ -372,13 +372,13 @@ public class PaymentController {
                 );
 
                 if (rzpRes == null) {
-                    savedOrder.setPaymentStatus("FAILED");
-                    savedOrder.setOrderStatus("PAYMENT_FAILED");
-                    orderRepository.save(savedOrder);
                     restoreReservedStock(cartItems);
                     if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
                         walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
                     }
+                    List<OrderItem> items = orderItemRepository.findByOrderId(savedOrder.getId());
+                    orderItemRepository.deleteAll(items);
+                    orderRepository.delete(savedOrder);
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body(Map.of("message", "Razorpay did not return a response."));
                 }
@@ -386,13 +386,13 @@ public class PaymentController {
                 String rzpOrderId = rzpRes.get("razorpay_order_id") != null ? rzpRes.get("razorpay_order_id").toString() : null;
 
                 if (rzpOrderId == null || rzpOrderId.isBlank()) {
-                    savedOrder.setPaymentStatus("FAILED");
-                    savedOrder.setOrderStatus("PAYMENT_FAILED");
-                    orderRepository.save(savedOrder);
                     restoreReservedStock(cartItems);
                     if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
                         walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
                     }
+                    List<OrderItem> items = orderItemRepository.findByOrderId(savedOrder.getId());
+                    orderItemRepository.deleteAll(items);
+                    orderRepository.delete(savedOrder);
                     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                             .body(Map.of("message", "Razorpay order ID missing."));
                 }
@@ -424,13 +424,13 @@ public class PaymentController {
                 );
 
             } catch (Exception e) {
-                savedOrder.setPaymentStatus("FAILED");
-                savedOrder.setOrderStatus("PAYMENT_FAILED");
-                orderRepository.save(savedOrder);
                 restoreReservedStock(cartItems);
                 if (walletAmountUsed.compareTo(BigDecimal.ZERO) > 0) {
                     walletService.credit(request.userId, walletAmountUsed, "ORDER-FAILED-" + savedOrder.getId(), "Refund wallet debit after payment initialization failure");
                 }
+                List<OrderItem> items = orderItemRepository.findByOrderId(savedOrder.getId());
+                orderItemRepository.deleteAll(items);
+                orderRepository.delete(savedOrder);
 
                 return ResponseEntity.internalServerError().body(Map.of("message", "Failed to create Cashfree payment order: " + e.getMessage()));
             }
@@ -451,28 +451,19 @@ public class PaymentController {
             if ("SUCCESS".equalsIgnoreCase(order.getPaymentStatus()) || "DELIVERED".equalsIgnoreCase(order.getOrderStatus())) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Successful or delivered orders cannot be marked failed."));
             }
-            boolean alreadyFailed = "FAILED".equalsIgnoreCase(order.getPaymentStatus())
-                    || "PAYMENT_FAILED".equalsIgnoreCase(order.getPaymentStatus())
-                    || "PAYMENT_FAILED".equalsIgnoreCase(order.getOrderStatus());
-            order.setPaymentStatus("FAILED");
-            order.setOrderStatus("PAYMENT_FAILED");
-            orderRepository.save(order);
-            if (!alreadyFailed) {
-                restoreReservedStock(order.getId());
-                if (order.getWalletAmountUsed() != null && order.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0) {
-                    walletService.credit(order.getUserId(), order.getWalletAmountUsed(), "ORDER-FAILED-" + order.getId(), "Refund wallet debit after failed payment");
-                }
+            
+            restoreReservedStock(order.getId());
+            if (order.getWalletAmountUsed() != null && order.getWalletAmountUsed().compareTo(BigDecimal.ZERO) > 0) {
+                walletService.credit(order.getUserId(), order.getWalletAmountUsed(), "ORDER-FAILED-" + order.getId(), "Refund wallet debit after failed payment");
             }
-
-            Optional<Payment> paymentOpt = paymentRepository.findByOrderId(order.getId());
-            if (paymentOpt.isPresent()) {
-                Payment payment = paymentOpt.get();
-                payment.setPaymentStatus("FAILED");
-                paymentRepository.save(payment);
-            }
+            
+            paymentRepository.findByOrderId(order.getId()).ifPresent(paymentRepository::delete);
+            List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+            orderItemRepository.deleteAll(items);
+            orderRepository.delete(order);
         }
 
-        return ResponseEntity.ok(Map.of("success", true, "message", "Payment marked as failed."));
+        return ResponseEntity.ok(Map.of("success", true, "message", "Payment marked as failed and order removed from database."));
     }
 
     @PostMapping("/pay-cod-online/{orderId}")

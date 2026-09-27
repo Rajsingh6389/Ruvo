@@ -30,6 +30,7 @@ import DeliveryPartnerAssignmentScreen from './screens/marketplace/DeliveryPartn
 import { EditShopScreen } from './screens/marketplace/EditShopScreen';
 import NotificationsScreen from './screens/marketplace/NotificationsScreen';
 import { ManageOffersScreen } from './screens/marketplace/ManageOffersScreen';
+import BillingScreen from './screens/marketplace/BillingScreen';
 
 // Onboarding screens
 import { Step1_ShopDetails } from './screens/onboarding/Step1_ShopDetails';
@@ -60,6 +61,7 @@ export type ShopStackParamList = {
   DeliveryPartnerAssignment: { orderId: string };
   Notifications: undefined;
   ManageOffers: undefined;
+  Billing: { shop: any };
 };
 
 const Stack = createNativeStackNavigator<ShopStackParamList>();
@@ -264,6 +266,7 @@ export const ShopNavigator = () => {
                 <Stack.Screen name="DeliveryPartnerAssignment" component={DeliveryPartnerAssignmentScreen} />
                 <Stack.Screen name="Notifications" component={NotificationsScreen} />
                 <Stack.Screen name="ManageOffers" component={ManageOffersScreen} />
+                <Stack.Screen name="Billing" component={BillingScreen} />
               </>
             )}
           </Stack.Navigator>

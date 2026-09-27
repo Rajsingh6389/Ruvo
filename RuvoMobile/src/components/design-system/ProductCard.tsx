@@ -122,7 +122,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {product.image ? (
           <Image
             source={{ uri: product.image }}
-            className="w-full h-full"
+            className={`w-full h-full ${((product as any).shopDisabledDueToSettlement || (product as any).shopActive === false) ? 'opacity-50 grayscale' : ''}`}
             resizeMode="cover"
           />
         ) : (
@@ -143,6 +143,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             color={isFavorite ? '#DC2626' : colors.textHint}
           />
         </Pressable>
+
+        {(((product as any).shopDisabledDueToSettlement || (product as any).shopActive === false)) && (
+          <View className="absolute z-10 w-full h-full items-center justify-center bg-black/10">
+            <View className="bg-red-600 px-2 py-1 rounded">
+              <Text className="text-[10px] text-white font-black uppercase">Offline</Text>
+            </View>
+          </View>
+        )}
 
         {/* Discount Badge */}
         {discount > 0 && (

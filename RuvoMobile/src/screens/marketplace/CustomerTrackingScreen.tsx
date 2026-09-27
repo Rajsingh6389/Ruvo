@@ -45,7 +45,20 @@ import MapView, {
   Polyline,
   UrlTile,
   PROVIDER_GOOGLE,
+  AnimatedRegion
 } from 'react-native-maps';
+
+export const calculateBearing = (startLat: number, startLng: number, endLat: number, endLng: number) => {
+  const toRad = (n: number) => n * Math.PI / 180;
+  const toDeg = (n: number) => n * 180 / Math.PI;
+  const dLng = toRad(endLng - startLng);
+  const startLatRad = toRad(startLat);
+  const endLatRad = toRad(endLat);
+  const y = Math.sin(dLng) * Math.cos(endLatRad);
+  const x = Math.cos(startLatRad) * Math.sin(endLatRad) - Math.sin(startLatRad) * Math.cos(endLatRad) * Math.cos(dLng);
+  let brng = toDeg(Math.atan2(y, x));
+  return (brng + 360) % 360;
+};
 
 // Expo Go does not inject the Google Maps API key from app.json into the native layer,
 // so using PROVIDER_GOOGLE in Expo Go results in a black screen.
@@ -137,6 +150,35 @@ export default function CustomerTrackingScreen() {
   const mapRef =
     useRef<MapView | null>(null);
 
+  const [partnerHeading, setPartnerHeading] = useState<number>(0);
+
+  const partnerAnimated = useRef(new AnimatedRegion({
+    latitude: 28.6139,
+    longitude: 77.2090, 
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  })).current;
+
+  const updatePartnerAnimatedLocation = useCallback((lat: number, lng: number) => {
+    setPartnerLocation(prev => {
+      if (!prev) {
+        partnerAnimated.setValue({ latitude: lat, longitude: lng, latitudeDelta: 0.05, longitudeDelta: 0.05 });
+        return { latitude: lat, longitude: lng };
+      }
+      const h = calculateBearing(prev.latitude, prev.longitude, lat, lng);
+      if (h !== 0 && (Math.abs(prev.latitude - lat) > 0.00001 || Math.abs(prev.longitude - lng) > 0.00001)) {
+        setPartnerHeading(h);
+      }
+      partnerAnimated.timing({
+        latitude: lat,
+        longitude: lng,
+        duration: 2000,
+        useNativeDriver: false,
+      } as any).start();
+      return { latitude: lat, longitude: lng };
+    });
+  }, [partnerAnimated]);
+
 
   // ───────────────────────────────────────────────────────────────────────────
   // PULSE
@@ -194,10 +236,7 @@ export default function CustomerTrackingScreen() {
           typeof data.latitude === 'number' &&
           typeof data.longitude === 'number'
         ) {
-          setPartnerLocation({
-            latitude: data.latitude,
-            longitude: data.longitude,
-          });
+          updatePartnerAnimatedLocation(data.latitude, data.longitude);
         }
       } catch {
         // silent
@@ -335,10 +374,7 @@ export default function CustomerTrackingScreen() {
               typeof location.longitude ===
                 'number'
             ) {
-              setPartnerLocation({
-                latitude: location.latitude,
-                longitude: location.longitude,
-              });
+              updatePartnerAnimatedLocation(location.latitude, location.longitude);
             }
           } catch {
             // invalid websocket message
@@ -704,6 +740,11 @@ export default function CustomerTrackingScreen() {
             longitudeDelta: 0.05,
           }}
         >
+          {/* Tile Fallback in Expo Go / No Provider mode */}
+          {MAP_PROVIDER === undefined && (
+            <UrlTile urlTemplate="https://a.tile.openstreetmap.de/{z}/{x}/{y}.png" maximumZ={19} />
+          )}
+
           {/* Static Route: Shop to Home */}
           {shopLocation && destination && (
             <Polyline
@@ -744,14 +785,15 @@ export default function CustomerTrackingScreen() {
 
           {/* Delivery Partner Marker */}
           {partnerLocation && (
-            <Marker 
-              coordinate={{ latitude: Number(partnerLocation.latitude), longitude: Number(partnerLocation.longitude) }}
+            <Marker.Animated 
+              coordinate={partnerAnimated as any}
               zIndex={3}
+              anchor={{ x: 0.5, y: 0.5 }}
             >
-              <View style={[styles.markerCircle, { backgroundColor: colors.primary, transform: [{ scale: 1.2 }] }]}>
+              <View style={[styles.markerCircle, { backgroundColor: colors.primary, transform: [{ scale: 1.2 }, { rotate: `${partnerHeading}deg` }] }]}>
                 <Ionicons name="bicycle" size={18} color="#FFF" />
               </View>
-            </Marker>
+            </Marker.Animated>
           )}
         </MapView>
         

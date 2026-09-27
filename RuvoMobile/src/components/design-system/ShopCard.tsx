@@ -44,7 +44,7 @@ export const ShopCard: React.FC<ShopCardProps> = ({
         {bannerUrl ? (
           <Image
             source={{ uri: bannerUrl }}
-            className="w-full h-full"
+            className={`w-full h-full ${((shop as any).disabledDueToSettlement || (shop as any).active === false) ? 'opacity-50' : ''}`}
             resizeMode="cover"
           />
         ) : (
@@ -58,15 +58,23 @@ export const ShopCard: React.FC<ShopCardProps> = ({
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
-              className="w-full h-full rounded-full"
+              className={`w-full h-full rounded-full ${((shop as any).disabledDueToSettlement || (shop as any).active === false) ? 'opacity-50 grayscale' : ''}`}
               resizeMode="cover"
             />
           ) : (
-            <View className="w-full h-full bg-ruvo-yellow items-center justify-center">
+            <View className={`w-full h-full bg-ruvo-yellow items-center justify-center ${((shop as any).disabledDueToSettlement || (shop as any).active === false) ? 'opacity-50' : ''}`}>
               <Ionicons name="business" size={20} color="#231C10" />
             </View>
           )}
         </View>
+
+        {(((shop as any).disabledDueToSettlement || (shop as any).active === false)) && (
+          <View className="absolute top-2 right-2 px-sm py-xs rounded-full bg-red-600/90 shadow-sm border border-red-800">
+            <Text className="text-[10px] font-bold text-white uppercase tracking-wider">
+              Settlement Overdue
+            </Text>
+          </View>
+        )}
 
         {/* Status Badge on Top Right */}
         {shop.status && (

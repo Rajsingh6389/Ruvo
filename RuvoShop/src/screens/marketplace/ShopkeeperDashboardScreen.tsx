@@ -53,8 +53,9 @@ import {
 } from '../../services/orderService';
 import { getShopDeliveryPartners } from '../../services/deliveryPartnerService';
 import { getMyNotifications } from '../../services/notificationService';
-import { getPlatformFeeSummary, payPlatformFee } from '../../services/settlementService';
+import { getPlatformFeeSummary, payPlatformFee, verifyPlatformFee } from '../../services/settlementService';
 import { getProductsByShop } from '../../services/productService';
+import RazorpayCheckout from 'react-native-razorpay';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 import { Order } from '../../types/order';
@@ -457,6 +458,7 @@ export default function ShopkeeperDashboardScreen() {
                 { icon: 'add-circle-outline', label: 'Add Product', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.ADD_PRODUCT, { shopId }); } },
                 { icon: 'create-outline', label: 'Edit Shop', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_SHOP, { shop }); } },
                 { icon: 'card-outline', label: 'Bank Account', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.EDIT_BANK_ACCOUNT); } },
+                { icon: 'wallet-outline', label: 'Billing & Subscriptions', onPress: () => { closeDrawer(); navigation.navigate('Billing', { shop }); } },
                 { icon: 'bicycle-outline', label: 'Delivery Riders', onPress: () => { closeDrawer(); navigation.navigate(ROUTES.DELIVERY_ASSIGNMENT, { shopId, viewPartnersOnly: true }); } },
               ].map((item) => (
                 <TouchableOpacity
@@ -633,6 +635,7 @@ export default function ShopkeeperDashboardScreen() {
             onNavigateOrders={() => navigation.navigate(ROUTES.SHOP_ORDERS, { shopId })}
             onNavigateProducts={() => navigation.navigate(ROUTES.MY_PRODUCTS, { shopId })}
             onNavigateAddProduct={() => navigation.navigate(ROUTES.ADD_PRODUCT, { shopId })}
+            onNavigateBilling={() => navigation.navigate('Billing', { shop })}
             onNavigateEditProduct={(product: any) =>
               navigation.navigate(ROUTES.EDIT_PRODUCT, { product, productId: product.id, shopId })
             }
@@ -763,6 +766,7 @@ function DashboardTab({
   onNavigateProducts,
   onNavigateAddProduct,
   onNavigateEditProduct,
+  onNavigateBilling,
 }: any) {
   const shopLogo = getShopLogoUrl(shop);
   const recentProducts = products.slice(0, 4);
@@ -790,11 +794,17 @@ function DashboardTab({
               <Text className="text-xs text-gray-600 font-semibold mt-0.5" numberOfLines={1}>
                 {`${shop?.category || 'General Merchant'} • ${shop?.address || 'Verified Partner'}`}
               </Text>
-              <View className="flex-row items-center justify-between gap-xs mt-3 pt-2.5 border-t border-gray-100">
+            <View className="flex-row items-center justify-between gap-xs mt-3 pt-2.5 border-t border-gray-100">
                 <View className="flex-1">
                   <Text className="text-[11px] font-bold text-gray-600">
-                    {(shop?.active ?? true) ? '🟢 Accepting Orders' : '🔴 Shop is Offline'}
+                    {(shop?.active ?? true) ? '🟢 Accepting Orders' : '🔴 Shop is Disabled'}
                   </Text>
+                  {shop?.disabledDueToSettlement && (
+                      <Text className="text-[10px] font-bold text-rose-600">Disabled due to unpaid commission</Text>
+                  )}
+                  {shop?.subscriptionActive === false && (
+                      <Text className="text-[10px] font-bold text-rose-600">Disabled due to inactive subscription</Text>
+                  )}
                 </View>
 
                 <TouchableOpacity
@@ -825,67 +835,60 @@ function DashboardTab({
         </Card>
       </Animated.View>
 
-      {/* ── RuVo Platform Fee COD Settlement Banner (2-Day Grace & Pay Now) ── */}
-      {Boolean(settlementSummary && Number(settlementSummary.unpaidPlatformFee || 0) > 0) && (
+      {/* ── Shop Disabled Warning Banners (Settlement & Subscription) ── */}
+      {Boolean(shop?.disabledDueToSettlement || shop?.subscriptionActive === false || (settlementSummary && settlementSummary.overdue)) && (
         <Animated.View entering={FadeInDown.delay(70).duration(400)} className="mb-lg">
-          <Card variant="default" className="p-md bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden relative">
+          <Card variant="default" className="p-md bg-rose-50 rounded-3xl border border-rose-200 shadow-sm overflow-hidden relative">
             <View className="flex-row items-center justify-between mb-xs">
               <View className="flex-row items-center gap-xs">
-                <View className="w-8 h-8 rounded-full bg-ruvo-yellow-soft items-center justify-center">
-                  <Ionicons name="card" size={18} color="#D99B00" />
+                <View className="w-8 h-8 rounded-full bg-rose-100 items-center justify-center">
+                  <Ionicons name="warning-outline" size={18} color="#DC2626" />
                 </View>
                 <View>
-                  <Text className="text-sm font-black text-gray-900">RuVo COD Commission</Text>
-                  <Text className="text-[10px] text-gray-600 font-semibold">2-Day Auto Settlement Grace</Text>
+                  <Text className="text-sm font-black text-rose-900">Your Shop is Disabled!</Text>
+                  <Text className="text-[10px] text-rose-700 font-semibold mt-0.5">
+                    {shop?.subscriptionActive === false 
+                      ? 'You must have an active subscription to receive orders.'
+                      : 'You have outstanding commission payments.'}
+                  </Text>
                 </View>
               </View>
-              <View className="bg-ruvo-yellow-soft px-2.5 py-1 rounded-full border border-ruvo-yellow">
-                <Text className="text-xs font-black text-ruvo-yellow-dark">
-                  ₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)} Due
-                </Text>
-              </View>
-            </View>
-
-            <View className="bg-warm-50 p-sm rounded-xl border border-gray-100 my-xs flex-row items-center justify-between">
-              <View className="flex-row items-center gap-xs">
-                <Ionicons name="time" size={16} color={settlementSummary.overdue ? '#DC2626' : '#EA580C'} />
-                <Text className="text-xs font-bold text-gray-700">Settlement Deadline:</Text>
-              </View>
-              <Text className={`text-xs font-black ${settlementSummary.overdue ? 'text-red-600' : 'text-orange-600'}`}>
-                {settlementSummary.overdue ? 'OVERDUE (Shop Disabled)' : `${settlementSummary.hoursRemaining ?? 48} Hours Left`}
-              </Text>
             </View>
 
             <TouchableOpacity
-              onPress={() => {
-                const amount = Number(settlementSummary.unpaidPlatformFee).toFixed(2);
-                Alert.alert(
-                  'Pay RuVo Commission',
-                  `Proceeding to clear ₹${amount} unpaid platform commission via RuVo Pay UPI.`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: `Pay Now ₹${amount}`,
-                      onPress: async () => {
-                        try {
-                          await payPlatformFee(shop.id, token);
-                          Alert.alert('Success', 'RuVo Commission settled successfully! Your shop status is fully active.');
-                          if (onRefresh) onRefresh();
-                        } catch (err) {
-                          Alert.alert('Success', `Simulated RuVo Commission Payment of ₹${amount} completed!`);
-                        }
-                      },
-                    },
-                  ]
-                );
-              }}
-              className="mt-xs bg-ruvo-yellow py-2.5 rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
+              onPress={onNavigateBilling}
+              className="mt-sm bg-rose-600 py-2.5 rounded-xl items-center justify-center flex-row gap-2 shadow-sm"
             >
-              <Ionicons name="checkmark-done-circle" size={18} color="#231C10" />
-              <Text className="text-xs font-black text-gray-900 uppercase tracking-wider">
-                Pay RuVo Commission Now (₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)})
+              <Ionicons name="card" size={18} color="#FFFFFF" />
+              <Text className="text-xs font-black text-white uppercase tracking-wider">
+                Manage Billing & Activate Shop
               </Text>
             </TouchableOpacity>
+          </Card>
+        </Animated.View>
+      )}
+
+      {/* ── Imminent Settlement Warning Banner ── */}
+      {Boolean(!shop?.disabledDueToSettlement && settlementSummary && Number(settlementSummary.unpaidPlatformFee || 0) > 0 && !settlementSummary.overdue) && (
+        <Animated.View entering={FadeInDown.delay(70).duration(400)} className="mb-lg">
+          <Card variant="default" className="p-md bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden relative">
+             <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-xs">
+                  <Ionicons name="time" size={18} color="#EA580C" />
+                  <View>
+                    <Text className="text-xs font-bold text-gray-900">COD Settlement Due</Text>
+                    <Text className={`text-[10px] font-black text-orange-600`}>
+                      {settlementSummary.hoursRemaining ?? 48} Hours Left
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={onNavigateBilling}
+                  className="bg-ruvo-yellow px-3 py-1.5 rounded-full"
+                >
+                  <Text className="text-[10px] font-black text-ruvo-yellow-dark">PAY ₹{Number(settlementSummary.unpaidPlatformFee).toFixed(2)}</Text>
+                </TouchableOpacity>
+             </View>
           </Card>
         </Animated.View>
       )}

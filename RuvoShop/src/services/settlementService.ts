@@ -22,3 +22,12 @@ export async function payPlatformFee(shopId: number, token: string): Promise<any
   });
   return parseOrThrow(res);
 }
+
+export async function verifyPlatformFee(shopId: number, rzpDetails: any, token: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/settlements/shopkeeper/pay-platform-fee/verify?shopId=${shopId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(rzpDetails)
+  });
+  return parseOrThrow(res);
+}

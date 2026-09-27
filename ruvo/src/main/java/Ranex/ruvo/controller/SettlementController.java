@@ -9,6 +9,7 @@ import Ranex.ruvo.repository.OrderRepository;
 import Ranex.ruvo.repository.SettlementRepository;
 import Ranex.ruvo.repository.ShopRepository;
 import Ranex.ruvo.service.SettlementService;
+import Ranex.ruvo.service.RazorpayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,17 +29,20 @@ public class SettlementController {
     private final ShopRepository shopRepository;
     private final OrderRepository orderRepository;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
+    private final RazorpayService razorpayService;
 
     public SettlementController(SettlementService settlementService,
                                 SettlementRepository settlementRepository,
                                 ShopRepository shopRepository,
                                 OrderRepository orderRepository,
-                                DeliveryPartnerRepository deliveryPartnerRepository) {
+                                DeliveryPartnerRepository deliveryPartnerRepository,
+                                RazorpayService razorpayService) {
         this.settlementService = settlementService;
         this.settlementRepository = settlementRepository;
         this.shopRepository = shopRepository;
         this.orderRepository = orderRepository;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
+        this.razorpayService = razorpayService;
     }
 
     /**
@@ -494,7 +498,56 @@ public class SettlementController {
      * POST /api/settlements/shopkeeper/pay-platform-fee
      */
     @PostMapping("/shopkeeper/pay-platform-fee")
-    public ResponseEntity<?> payPlatformFee(@RequestParam Long shopId, @RequestParam(required = false) String paymentRef) {
+    public ResponseEntity<?> payPlatformFeeInit(@RequestParam Long shopId) {
+        Shop shop = shopRepository.findById(shopId).orElse(null);
+        if (shop == null) return ResponseEntity.notFound().build();
+
+        java.math.BigDecimal amount = shop.getUnpaidPlatformFee();
+        if (amount == null || amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "No outstanding commission fee."));
+        }
+        
+        try {
+            Map<String, Object> rzpRes = razorpayService.createOrder(
+                          "COMMISSION-" + shopId + "-" + System.currentTimeMillis(),
+                          amount,
+                          amount,
+                          null,
+                          shop.getEmail() != null ? shop.getEmail() : "vendor@ruvomobile.me",
+                          shop.getPhone() != null ? shop.getPhone() : "9999999999"
+                  );
+            if (rzpRes == null || rzpRes.get("razorpay_order_id") == null) {
+                return ResponseEntity.status(500).body(Map.of("message", "Razorpay creation failed."));
+            }
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "razorpayOrderId", rzpRes.get("razorpay_order_id").toString(),
+                "amount", amount
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Razorpay error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * POST /api/settlements/shopkeeper/pay-platform-fee/verify
+     */
+    @PostMapping("/shopkeeper/pay-platform-fee/verify")
+    public ResponseEntity<?> payPlatformFeeVerify(@RequestParam Long shopId, @RequestBody Map<String, String> payload) {
+        String rzpOrderId = payload.get("razorpayOrderId");
+        String rzpPaymentId = payload.get("razorpayPaymentId");
+        String rzpSignature = payload.get("razorpaySignature");
+        
+        if (rzpOrderId == null || rzpPaymentId == null || rzpSignature == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Missing Razorpay details."));
+        }
+
+        boolean valid = razorpayService.verifyPaymentSignature(rzpOrderId, rzpPaymentId, rzpSignature);
+        
+        if (!valid) {
+            return ResponseEntity.status(400).body(Map.of("message", "Invalid payment signature."));
+        }
+
         Shop shop = shopRepository.findById(shopId).orElse(null);
         if (shop == null) return ResponseEntity.notFound().build();
 

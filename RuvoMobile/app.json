@@ -11,8 +11,8 @@
     "android": {
       "package": "com.ruvo.mobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/RuvoIcon.png",
-        "backgroundColor": "#173F35"
+        "foregroundImage": "./assets/images/RuvoMobileLogo.png",
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
@@ -40,7 +40,7 @@
       }
     },
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/RuvoIcon.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },

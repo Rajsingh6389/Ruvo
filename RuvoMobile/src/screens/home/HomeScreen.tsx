@@ -87,7 +87,7 @@ const HOME_NAV_ITEMS = [
 export const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, userId, token } = useAuth();
-  const { colors, theme: activeTheme } = useTheme();
+  const { colors, theme: activeTheme, toggleTheme } = useTheme();
   const isDark = activeTheme === 'dark';
   const { location, isLoading: locationLoading } = useDeliveryLocation();
 
@@ -202,7 +202,12 @@ export const HomeScreen = () => {
       for (const s of (result || []).slice(0, 6)) {
         const prods = await getProductsByShop(s.id);
         if (Array.isArray(prods)) {
-          allProducts.push(...prods.filter(p => p.isAvailable !== false).map(p => ({ ...p, shopName: s.name })));
+          allProducts.push(...prods.filter(p => p.isAvailable !== false).map(p => ({ 
+            ...p, 
+            shopName: s.name,
+            shopActive: (s as any).active,
+            shopDisabledDueToSettlement: (s as any).disabledDueToSettlement
+          })));
         }
       }
       setNearbyProducts(allProducts.slice(0, 10));
@@ -355,12 +360,24 @@ export const HomeScreen = () => {
             </View>
           </Pressable>
 
-          {/* Notification Icon */}
-          <Pressable
-            className="relative p-2"
-            onPress={() => (navigation.navigate as any)(ROUTES.NOTIFICATIONS)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
+          <View className="flex-row items-center">
+            {/* Theme Toggle */}
+            <Pressable
+              className="relative p-2 mr-1"
+              onPress={toggleTheme}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name={isDark ? "sunny" : "moon"} size={20} color="#FFFFFF" />
+              </View>
+            </Pressable>
+
+            {/* Notification Icon */}
+            <Pressable
+              className="relative p-2"
+              onPress={() => (navigation.navigate as any)(ROUTES.NOTIFICATIONS)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
             <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="notifications-outline" size={22} color="#FFFFFF" />
             </View>
@@ -368,6 +385,7 @@ export const HomeScreen = () => {
               <Text style={{ color: '#FF6B35' }} className="text-[9px] font-black">3</Text>
             </View>
           </Pressable>
+        </View>
         </View>
 
         {/* ── Premium service carousel ───────────────────────────────────────── */}

@@ -222,6 +222,26 @@ public class PartnerAdminController {
             verifications.save(k);
         });
 
+        // Trigger Razorpay Linked Account Rollback and DB persistence clearing
+        if (deliveryPartnerRepository != null && razorpayService != null && user != null) {
+            Optional<DeliveryPartner> dpOpt = deliveryPartnerRepository.findByUserIdFlexible(String.valueOf(user.getId()));
+            if (dpOpt.isEmpty() && user.getMobileNumber() != null) {
+                dpOpt = deliveryPartnerRepository.findByPhoneFlexible(user.getMobileNumber());
+            }
+            if (dpOpt.isPresent()) {
+                DeliveryPartner dp = dpOpt.get();
+                dp.setApproved(false);
+                dp.setRazorpayAccountId(null);
+                dp.setBankAccountNumber(null);
+                dp.setIfscCode(null);
+                deliveryPartnerRepository.save(dp);
+                
+                // Also clear entities
+                sellerBankAccountRepository.findByPartnerIdOrderByCreatedAtDesc(dp.getId()).forEach(sellerBankAccountRepository::delete);
+                linkedAccountRepository.findByPartnerId(dp.getId()).ifPresent(linkedAccountRepository::delete);
+            }
+        }
+
         return ResponseEntity.ok(ApiResponse.ok("Partner profile rejected with specified reason", null));
     }
 

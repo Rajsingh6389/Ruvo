@@ -626,7 +626,14 @@ export const NearbyShopsScreen = () => {
                         {isSmallDevice ? (
                            <View className="flex-row items-center gap-3">
                              <View style={{ backgroundColor: colors.surfaceSunken, borderColor: colors.border }} className="w-20 h-20 items-center justify-center rounded-[18px] overflow-hidden border">
-                               <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
+                               <Image source={{ uri: productImage(product) }} className={`w-full h-full ${((selectedShop as any)?.active === false || (selectedShop as any)?.disabledDueToSettlement) ? 'opacity-50 grayscale' : ''}`} resizeMode="contain" />
+                               {((selectedShop as any)?.active === false || (selectedShop as any)?.disabledDueToSettlement) && (
+                                  <View className="absolute z-10 w-full h-full items-center justify-center bg-black/10">
+                                    <View className="bg-red-600 px-1 py-1 rounded">
+                                      <Text className="text-[7px] text-white font-black">UNAVAILABLE</Text>
+                                    </View>
+                                  </View>
+                               )}
                              </View>
                              <View className="flex-1 justify-center">
                                <Text style={{ color: colors.textPrimary }} className="text-sm font-black leading-tight flex-wrap" numberOfLines={2}>{product.name}</Text>
@@ -644,8 +651,15 @@ export const NearbyShopsScreen = () => {
                            </View>
                         ) : (
                            <View>
-                             <View style={{ backgroundColor: colors.surfaceSunken, borderColor: colors.border }} className="w-full h-24 items-center justify-center rounded-[18px] mb-2 overflow-hidden border">
-                               <Image source={{ uri: productImage(product) }} className="w-full h-full" resizeMode="contain" />
+                             <View style={{ backgroundColor: colors.surfaceSunken, borderColor: colors.border }} className="w-full h-24 items-center justify-center rounded-[18px] mb-2 overflow-hidden border relative">
+                               <Image source={{ uri: productImage(product) }} className={`w-full h-full ${((selectedShop as any)?.active === false || (selectedShop as any)?.disabledDueToSettlement) ? 'opacity-50 grayscale' : ''}`} resizeMode="contain" />
+                               {((selectedShop as any)?.active === false || (selectedShop as any)?.disabledDueToSettlement) && (
+                                  <View className="absolute z-10 w-full h-full items-center justify-center bg-black/10">
+                                    <View className="bg-red-600 px-1 py-1 rounded">
+                                      <Text className="text-[8px] text-white font-black">UNAVAILABLE</Text>
+                                    </View>
+                                  </View>
+                               )}
                              </View>
                              <Text style={{ color: colors.textPrimary }} className="text-sm font-black leading-tight" numberOfLines={2}>{product.name}</Text>
                              <Text style={{ color: colors.textSecondary }} className="text-[10px] font-medium mt-1">{product.variant}</Text>

@@ -135,6 +135,17 @@ public class Shop {
     @Column(name = "disabled_due_to_settlement", nullable = false)
     private Boolean disabledDueToSettlement = false;
 
+    // Subscription
+    @Column(name = "subscription_type")
+    private String subscriptionType; // e.g. "FREE_TIER", "MONTHLY", "YEARLY"
+
+    @Column(name = "subscription_expiry")
+    private java.time.LocalDateTime subscriptionExpiry;
+
+    @Builder.Default
+    @Column(name = "subscription_active", nullable = false)
+    private Boolean subscriptionActive = true;
+
     @PrePersist
     public void prePersist() {
         if (this.approved == null) this.approved = false;
@@ -143,5 +154,6 @@ public class Shop {
         if (this.codBlocked == null) this.codBlocked = false;
         if (this.unpaidPlatformFee == null) this.unpaidPlatformFee = java.math.BigDecimal.ZERO;
         if (this.disabledDueToSettlement == null) this.disabledDueToSettlement = false;
+        if (this.subscriptionActive == null) this.subscriptionActive = true;
     }
 }

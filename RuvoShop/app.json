@@ -4,13 +4,13 @@
     "slug": "ruvo-shop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/RuvoShopLogo.png",
     "scheme": "ruvo-shop",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.ruvo.shop",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
+        "foregroundImage": "./assets/images/RuvoShopLogo.png",
         "backgroundColor": "#173F35"
       },
       "config": {
@@ -26,7 +26,7 @@
       }
     },
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/RuvoShopIcon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F7F8F3"
     },

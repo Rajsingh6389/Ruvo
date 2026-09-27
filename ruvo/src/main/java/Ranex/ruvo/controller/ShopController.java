@@ -289,6 +289,14 @@ public class ShopController {
         if (shop.getSettlementBlocked() == null) shop.setSettlementBlocked(false);
         if (shop.getCodBlocked() == null) shop.setCodBlocked(false);
 
+        long totalShops = shopRepository.count();
+        if (totalShops < 100) {
+            shop.setSubscriptionType("FREE_TIER");
+            shop.setSubscriptionActive(true);
+        } else {
+            shop.setSubscriptionActive(false);
+        }
+
         Shop savedShop = shopRepository.save(shop);
         return ResponseEntity.ok(savedShop);
     }
@@ -342,12 +350,25 @@ public class ShopController {
             dto.put("closingTime", shop.getClosingTime());
             dto.put("approved", shop.getApproved());
             dto.put("active", shop.getActive());
+            dto.put("disabledDueToSettlement", shop.getDisabledDueToSettlement());
             // Added distanceKm for the response array
             dto.put("distanceKm", Math.round(distanceKm * 10.0) / 10.0);
             return dto;
         }).toList();
 
-        response.put("shops", shopDtos);
+        List<Map<String, Object>> sortedShopDtos = new java.util.ArrayList<>(shopDtos);
+        sortedShopDtos.sort((a, b) -> {
+            boolean aActive = Boolean.TRUE.equals(a.get("active")) && !Boolean.TRUE.equals(a.get("disabledDueToSettlement"));
+            boolean bActive = Boolean.TRUE.equals(b.get("active")) && !Boolean.TRUE.equals(b.get("disabledDueToSettlement"));
+            if (aActive != bActive) {
+                return aActive ? -1 : 1; // active shops first
+            }
+            Double distA = (Double) a.get("distanceKm");
+            Double distB = (Double) b.get("distanceKm");
+            return Double.compare(distA != null ? distA : 0.0, distB != null ? distB : 0.0);
+        });
+
+        response.put("shops", sortedShopDtos);
         
         return ResponseEntity.ok(response);
     }
@@ -568,6 +589,14 @@ public class ShopController {
             // Admin approval required
             shop.setApproved(false);
 
+            long totalShops = shopRepository.count();
+            if (totalShops < 100) {
+                shop.setSubscriptionType("FREE_TIER");
+                shop.setSubscriptionActive(true);
+            } else {
+                shop.setSubscriptionActive(false);
+            }
+
             Shop savedShop =
                     shopRepository.save(shop);
 
@@ -738,14 +767,28 @@ public class ShopController {
             @PathVariable Long id
     ) {
 
-        if (!shopRepository.existsById(id)) {
-
+        java.util.Optional<Shop> shopOpt = shopRepository.findById(id);
+        if (shopOpt.isEmpty()) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
                     .body("Shop not found with id: " + id);
         }
 
-        shopRepository.deleteById(id);
+        Shop shop = shopOpt.get();
+        // Rollback onboarding fields
+        shop.setApproved(false);
+        shop.setActive(false);
+        shop.setRazorpayAccountId(null);
+        shop.setBankAccountNumber(null);
+        shop.setIfscCode(null);
+        shopRepository.save(shop);
+
+        // Delete associated bank and linked account entities to force re-entry
+        java.util.List<Ranex.ruvo.model.SellerBankAccount> banks = sellerBankAccountRepository.findByShopIdOrderByCreatedAtDesc(shop.getId());
+        banks.forEach(sellerBankAccountRepository::delete);
+
+        java.util.Optional<Ranex.ruvo.model.RazorpayLinkedAccount> linked = linkedAccountRepository.findByShopId(shop.getId());
+        linked.ifPresent(linkedAccountRepository::delete);
 
         return ResponseEntity.ok().build();
     }

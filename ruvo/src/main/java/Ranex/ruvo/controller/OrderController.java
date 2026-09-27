@@ -220,7 +220,8 @@ public class OrderController {
             if ("PAYMENT_FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
                 "FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
                 "PAYMENT_FAILED".equalsIgnoreCase(o.getOrderStatus()) ||
-                "FAILED".equalsIgnoreCase(o.getOrderStatus())) {
+                "FAILED".equalsIgnoreCase(o.getOrderStatus()) ||
+                "PAYMENT_PENDING".equalsIgnoreCase(o.getOrderStatus())) {
                 continue;
             }
 
@@ -283,7 +284,16 @@ public class OrderController {
     @GetMapping("/shop/{shopId}")
     public ResponseEntity<List<Order>> getShopOrders(@PathVariable Long shopId) {
         List<Order> orders = orderRepository.findByShopId(shopId);
+        List<Order> validOrders = new ArrayList<>();
         for (Order o : orders) {
+            // Filter out incomplete or failed online payment orders
+            if ("PAYMENT_FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
+                "FAILED".equalsIgnoreCase(o.getPaymentStatus()) ||
+                "PAYMENT_FAILED".equalsIgnoreCase(o.getOrderStatus()) ||
+                "PAYMENT_PENDING".equalsIgnoreCase(o.getOrderStatus())) {
+                continue;
+            }
+
             checkAndTimeoutOrder(o);
             if ((o.getProductImageUrl() == null || o.getProductImageUrl().isEmpty()) && o.getProductId() != null) {
                 productRepository.findById(o.getProductId()).ifPresent(p -> {
@@ -297,8 +307,9 @@ public class OrderController {
             if (items != null && !items.isEmpty()) {
                 o.setItems(items);
             }
+            validOrders.add(o);
         }
-        return ResponseEntity.ok(orders);
+        return ResponseEntity.ok(validOrders);
     }
 
     private void checkAndTimeoutOrder(Order order) {

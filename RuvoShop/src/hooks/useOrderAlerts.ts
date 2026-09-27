@@ -9,6 +9,7 @@ export function useOrderAlerts(orders: any[]) {
   const { showToast } = useToast();
   const { showOrderModal } = useOrderModal();
 
+
   const playAlertSound = async () => {
     console.log('[useOrderAlerts] 🔔 Triggering alert feedback (vibration & audio)...');
     
@@ -30,21 +31,19 @@ export function useOrderAlerts(orders: any[]) {
       let playedAudio = false;
       
       try {
-        const expoAvStatus = await import('expo-av').catch(() => null);
-        if (expoAvStatus && expoAvStatus.Audio) {
-          console.log('[useOrderAlerts] 🎵 Playing local sound file via expo-av...');
-          const soundObject = new expoAvStatus.Audio.Sound();
-          await soundObject.loadAsync(require('../../assets/images/sound/New Order Received A.wav'));
-          await soundObject.playAsync();
-          playedAudio = true;
-          soundObject.setOnPlaybackStatusUpdate((status: any) => {
-            if (status.isLoaded && status.didJustFinish) {
-              soundObject.unloadAsync().catch(() => {});
-            }
-          });
-        }
+        console.log('[useOrderAlerts] 🎵 Playing local sound file via expo-av...');
+        const { Audio } = await import('expo-av');
+        const soundObject = new Audio.Sound();
+        await soundObject.loadAsync(require('../../assets/images/sound/New Order Received A.wav'));
+        await soundObject.playAsync();
+        playedAudio = true;
+        soundObject.setOnPlaybackStatusUpdate((status: any) => {
+          if (status.isLoaded && status.didJustFinish) {
+            soundObject.unloadAsync().catch(() => {});
+          }
+        });
       } catch (e) {
-        console.log('[useOrderAlerts] ℹ️ expo-av not available, falling back...');
+        console.log('[useOrderAlerts] ℹ️ expo-av error:', e);
       }
       
       // Fallback for Web / Expo Go environments using HTML5 Audio synthesis
