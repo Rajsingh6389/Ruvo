@@ -27,7 +27,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { LocationPickerModal } from '../../components/LocationPickerModal';
 import { RootStackParamList } from '../../types/navigation';
 import { ROUTES } from '../../constants/routes';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, RAZORPAY_KEY_ID } from '../../config/api';
 import { initializeCheckout, verifyPayment, failPayment, fetchPricing, PricingResult } from '../../services/orderService';
 import { getShopDetails } from '../../services/shopService';
 import { validateCoupon } from '../../services/offerService';
@@ -284,7 +284,7 @@ export default function CartScreen() {
               description: 'Order Payment',
               image: 'https://i.imgur.com/3g7nmJC.png',
               currency: checkoutRes.currency || 'INR',
-              key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YourKeyIdHere',
+              key: RAZORPAY_KEY_ID,
               amount: checkoutRes.amount * 100,
               name: 'RuVo',
               order_id: checkoutRes.razorpayOrderId,

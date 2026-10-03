@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as Location from 'expo-location';
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
+import { GOOGLE_MAPS_API_KEY } from '../config/api';
 
 export type GeocodedAddress = {
   fullAddress: string;

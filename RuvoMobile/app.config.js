@@ -1,4 +1,4 @@
-{
+export default {
   "expo": {
     "name": "Ruvo",
     "slug": "RuvoMobile",
@@ -9,10 +9,11 @@
     "scheme": "ruvomobile",
     "userInterfaceStyle": "automatic",
     "android": {
+      "icon": "./assets/images/ruvo-mobile-icon.png",
       "package": "com.ruvo.mobile",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/RuvoMobileLogo.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/images/ruvo-mobile-foreground.png",
+        "backgroundColor": "#FFD21C"
       },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
@@ -24,14 +25,14 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+          "apiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },
     "ios": {
       "bundleIdentifier": "com.ruvo.mobile",
       "config": {
-        "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+        "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuVo uses your location to find nearby shops and fill delivery addresses.",
@@ -39,14 +40,9 @@
         "NSPhotoLibraryUsageDescription": "RuVo needs photo library access to select images for uploads."
       }
     },
-    "splash": {
-      "image": "./assets/images/RuvoIcon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY",
+      "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       "eas": {
         "projectId": "a7867734-495f-4b45-a681-09ffdb633254"
       }
@@ -55,7 +51,7 @@
       [
         "react-native-maps",
         {
-          "androidGoogleMapsApiKey": "AIzaSyBDZpXzgOnYwCbVvWnvrorVmlqi5cbIXRY"
+          "androidGoogleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       ],
       [
@@ -73,7 +69,14 @@
       "expo-asset",
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/RuvoMobile_Foreground.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFD21C"
+        }
+      ],
       [
         "expo-build-properties",
         {
@@ -85,3 +88,4 @@
     ]
   }
 }
+;
