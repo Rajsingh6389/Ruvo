@@ -19,11 +19,7 @@ import MapView, { Marker, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import Constants from 'expo-constants';
-
-const MAPS_API_KEY: string =
-  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
+import { GOOGLE_MAPS_API_KEY as MAPS_API_KEY } from '../config/api';
 
 export interface LocationResult {
   latitude: number;

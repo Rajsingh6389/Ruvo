@@ -1,38 +1,34 @@
-{
+export default {
   "expo": {
     "name": "Ruvo Shop",
     "slug": "ruvo-shop",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/RuvoShopLogo.png",
+    "icon": "./assets/images/ruvo-shop-icon.png",
     "scheme": "ruvo-shop",
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.ruvo.shop",
+      "icon": "./assets/images/ruvo-shop-icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/RuvoShopLogo.png",
-        "backgroundColor": "#173F35"
+        "foregroundImage": "./assets/images/ruvo-shop-foreground.png",
+        "backgroundColor": "#FFD21C"
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+          "apiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },
     "ios": {
       "bundleIdentifier": "com.ruvo.shop",
       "config": {
-        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+        "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
-    },
-    "splash": {
-      "image": "./assets/images/RuvoShopIcon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7F8F3"
     },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+      "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     },
     "web": {
       "bundler": "metro"
@@ -40,7 +36,14 @@
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/RuvoShop_Foreground.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFD21C"
+        }
+      ],
       [
         "expo-location",
         {
@@ -58,4 +61,4 @@
       ]
     ]
   }
-}
+};

@@ -28,9 +28,7 @@ import {
 import { partnerService } from '../../services/partnerService';
 
 const { height: SCREEN_H } = Dimensions.get('window');
-const MAPS_API_KEY: string =
-  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
+import { GOOGLE_MAPS_API_KEY } from '../../config/api';
 const MAX_SHOPS = 10;
 
 interface NearbyShop {

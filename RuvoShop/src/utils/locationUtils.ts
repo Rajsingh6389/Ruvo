@@ -1,8 +1,6 @@
-import Constants from 'expo-constants';
+import { GOOGLE_MAPS_API_KEY } from '../config/api';
 
-const MAPS_API_KEY: string =
-  (Constants.expoConfig?.extra as any)?.googleMapsApiKey ||
-  'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ';
+const MAPS_API_KEY: string = GOOGLE_MAPS_API_KEY;
 
 export async function googleReverseGeocode(lat: number, lng: number) {
   try {

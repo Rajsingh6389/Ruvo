@@ -8,7 +8,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { getPlatformFeeSummary, payPlatformFee, verifyPlatformFee } from '../../services/settlementService';
-import { API_BASE_URL } from '../../config/api';
+import { API_BASE_URL, RAZORPAY_KEY_ID } from '../../config/api';
 
 export default function BillingScreen() {
   const navigation = useNavigation();
@@ -68,7 +68,7 @@ export default function BillingScreen() {
                 description: 'RuVo Platform Commission',
                 image: 'https://ruvo.in/logo.png',
                 currency: 'INR',
-                key: 'rzp_test_TeL3XG6Qt29UWC',
+                key: RAZORPAY_KEY_ID,
                 amount: initRes.amount * 100,
                 name: shop.name || 'RuVo Settlement',
                 order_id: initRes.razorpayOrderId,
@@ -116,7 +116,7 @@ export default function BillingScreen() {
         description: `RuVo ${plan} Subscription`,
         image: 'https://ruvo.in/logo.png',
         currency: 'INR',
-        key: 'rzp_test_TeL3XG6Qt29UWC',
+        key: RAZORPAY_KEY_ID,
         amount: Math.round(Number(initData.amount) * 100),
         name: 'RuVo Subscriptions',
         order_id: initData.razorpay_order_id,

@@ -29,6 +29,16 @@ export const API_BASE_URL: string = __DEV__
   ? (ENV_URL || DEV_FALLBACK)
   : (ENV_URL || EXTRA?.apiBaseUrl || '');
 
+export const GOOGLE_MAPS_API_KEY: string =
+  typeof (globalThis as any).process !== 'undefined' && (globalThis as any).process.env?.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+    ? (globalThis as any).process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
+    : (EXTRA?.googleMapsApiKey || 'AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ');
+
+export const RAZORPAY_KEY_ID: string =
+  typeof (globalThis as any).process !== 'undefined' && (globalThis as any).process.env?.EXPO_PUBLIC_RAZORPAY_KEY_ID
+    ? (globalThis as any).process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID
+    : 'rzp_test_TeL3XG6Qt29UWC';
+
 if (!API_BASE_URL) {
   console.error(
     'RuVo: API_BASE_URL is not configured for production. ' +

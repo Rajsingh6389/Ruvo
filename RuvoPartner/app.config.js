@@ -1,17 +1,17 @@
-{
+export default {
   "expo": {
     "name": "RuvoPartner",
     "slug": "RuvoPartner",
     "version": "1.0.0",
     "sdkVersion": "57.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/RuvoPartnerLogo.png",
+    "icon": "./assets/images/ruvo-partner-icon.png",
     "scheme": "ruvopartner",
     "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.ruvo.partner",
       "config": {
-        "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+        "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RuvoPartner needs your location to track deliveries and update your availability.",
@@ -20,13 +20,14 @@
       }
     },
     "android": {
+      "icon": "./assets/images/ruvo-partner-icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/RuvoPartnerLogo.png",
-        "backgroundColor": "#173F35"
+        "foregroundImage": "./assets/images/ruvo-partner-foreground.png",
+        "backgroundColor": "#FFD21C"
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+          "apiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       },
       "predictiveBackGestureEnabled": false,
@@ -36,19 +37,21 @@
       "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
-    "splash": {
-      "image": "./assets/images/RuvoIcon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#F7F8F3"
-    },
     "extra": {
       "apiBaseUrl": "https://api.ruvo.in",
-      "googleMapsApiKey": "AIzaSyDUhMspUQnPIjzOzzDNimx5vCP1-8HRGxQ"
+      "googleMapsApiKey": process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
     },
     "plugins": [
       "expo-font",
       "expo-secure-store",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/RuvoPartner_Foreground.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#FFD21C"
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-location",
@@ -67,4 +70,4 @@
       ]
     ]
   }
-}
+};
